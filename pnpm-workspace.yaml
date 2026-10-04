@@ -1,0 +1,6 @@
+# Match Expo's pnpm template layout for native-tool compatibility.
+nodeLinker: hoisted
+engineStrict: true
+allowBuilds:
+  # ESLint's import resolver prepares its platform-specific native binding.
+  unrs-resolver@1.12.2: true
