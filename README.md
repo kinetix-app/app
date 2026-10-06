@@ -141,15 +141,28 @@ Install SDK/native packages with `pnpm exec expo install <package> --pnpm` to se
 
 Use cache-clearing or dependency reinstallation only when the error justifies it. Preserve uncommitted work and diagnose the first failure before changing tool versions.
 
-## Pull request CI
+## CI
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request, including draft PRs and documentation changes. It checks GitHub's PR merge commit on Ubuntu 24.04 using Node from `.node-version` and pnpm from `package.json`. It restores the pnpm store, installs with `--frozen-lockfile`, then runs TypeScript, ESLint, Prettier, Jest with coverage, Expo Doctor and Android/iOS/web export. Each check must succeed; the job stops on failure. Coverage appears in the test logs and has no percentage threshold yet.
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and on pushes to `master`, using Node from `.node-version` and pnpm from `package.json`. It has two jobs:
 
-The workflow uses commit-pinned actions, a read-only repository token, no persisted checkout credentials and no application secrets. A newer commit cancels the previous run for the same PR; each job has a 20-minute timeout. No branch/path filters are used, so the required check can run for every PR.
+- **Frontend checks:** checks out GitHub's merge commit on Ubuntu 24.04, restores the pnpm store, installs with `--frozen-lockfile`, then runs TypeScript, ESLint, Prettier, Jest with coverage, Expo Doctor and Android/iOS/web export. The job stops on failure and uploads the Jest LCOV report. Coverage appears in the test logs and has no percentage threshold yet.
+- **SonarCloud:** uploads the analysis and coverage report to SonarCloud. This check is advisory: it reports the quality gate without failing the build because `sonar.qualitygate.wait` is not set.
+
+The workflow uses commit-pinned actions, a read-only repository token and no persisted checkout credentials. A newer commit cancels the previous run for the same PR; each job has a timeout. No branch/path filters are used, so the required check can run for every PR.
 
 Once the workflow has run on GitHub, configure branch protection/rulesets to require **Frontend checks** and a teammate's review. Creating this workflow does not configure repository protection. Read the failed step's logs, reproduce its command from this repository root and push the fix; keep CI commands aligned with local development scripts.
 
-This PR workflow verifies code, tests and bundling. Native compilation/device testing, API integration, advisory scanning and release signing/distribution require their own verification. On 4 October 2026, actionlint validated the workflow and all run commands passed in a clean temporary checkout with the pinned toolchain. Its first GitHub-hosted run is still pending.
+This workflow verifies code, tests and bundling. Native compilation/device testing, API integration and release signing/distribution require their own verification. On 4 October 2026, actionlint validated the workflow and all run commands passed in a clean temporary checkout with the pinned toolchain. Its first GitHub-hosted run is still pending.
+
+### SonarCloud setup
+
+CI-based analysis needs a SonarCloud project bound to the GitHub repository and a repository secret:
+
+1. In the SonarCloud organization `kinetix-app`, import `kinetix-app/app`, then disable **Automatic Analysis** so CI-based analysis with coverage is used.
+2. Confirm `sonar.projectKey` in [sonar-project.properties](sonar-project.properties) matches the imported project (`kinetix-frontend`) and the `-Dsonar.organization` value in the workflow matches (`kinetix-app`).
+3. Create a personal access token and store it as the `SONAR_TOKEN` repository secret.
+
+Pull requests from forks do not receive repository secrets, so the SonarCloud job is skipped for fork pull requests; the **Frontend checks** job still runs. The scanner needs full history, so the SonarCloud job checks out with `fetch-depth: 0` and downloads the coverage artifact produced by **Frontend checks**. Pull-request runs are analyzed in the pull-request context, and pushes to `master` update the project's main branch.
 
 ## Verification and known limits
 
