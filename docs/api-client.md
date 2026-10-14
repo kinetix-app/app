@@ -28,7 +28,7 @@ Set `EXPO_PUBLIC_API_URL` to the backend origin, without `/api/v1`. Paths start 
 
 ## Clerk
 
-Clerk is the default auth mode:
+Clerk is the release-build auth mode. Select it explicitly to exercise its screen in a development build:
 
 ```dotenv
 EXPO_PUBLIC_AUTH_MODE=clerk
@@ -53,13 +53,13 @@ The request interceptor reads the header for every request. A token provider all
 
 ## Development Basic Auth
 
-Development builds can explicitly select:
+Development builds default to Basic when the auth-mode value is blank. They can also explicitly select:
 
 ```dotenv
 EXPO_PUBLIC_AUTH_MODE=basic
 ```
 
-A future development sign-in screen supplies credentials at runtime:
+The development sign-in screen accepts email/password inputs, supplies credentials at runtime and verifies them by calling `/api/v1/me`:
 
 ```ts
 authService.setBasicCredentials(username, password);
@@ -67,4 +67,10 @@ await apiClient.get<Account>('/api/v1/me');
 authService.clear();
 ```
 
-Basic mode is rejected in release builds. Credentials do not belong in `EXPO_PUBLIC_` variables, source code or ordinary persistent storage. The frontend service prepares the header; the backend still needs its development Basic Auth implementation before these requests can authenticate. Restart Metro after changing public environment values.
+Sign-in only succeeds after `/api/v1/me` returns a valid account. Failed attempts retain the entered form values and clear the auth header; sign-out clears the header and form. Basic mode is rejected in release builds. Credentials do not belong in `EXPO_PUBLIC_` variables, source code or ordinary persistent storage. The frontend service prepares the header; the backend still needs its development Basic Auth implementation before these requests can authenticate. Restart Metro after changing public environment values.
+
+## Issue and commit scope
+
+- [DEV02 — frontend #6](https://github.com/kinetix-app/app/issues/6): development email/password form, Basic header and sign-out. Requires [DEV01 — backend #7](https://github.com/kinetix-app/app-rest/issues/7).
+- [ENV01 — frontend #7](https://github.com/kinetix-app/app/issues/7): production Clerk configuration and methods. Displayed controls remain disabled until the SDK/provider connection is implemented.
+- Shared API/auth/schema commits reference both frontend issues. Neither issue is closed by preparatory work.

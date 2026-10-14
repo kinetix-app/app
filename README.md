@@ -2,7 +2,7 @@
 
 The Android and iOS client for a university fitness project. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.
 
-**Current status — 4 October 2026:** the Expo/React Native foundation is initialized with a Kinetix starter screen, navigation, strict TypeScript and public configuration validation. Product features and backend integration are not implemented. Native compilation and device execution still need verification on the team's Android/iOS toolchains.
+**Current status:** the Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth and the production Clerk SDK/provider connection remain pending; native compilation and device execution still need verification.
 
 Android and iOS are the delivery targets. Web-compatible code and browser previews are useful, but complete web support is not currently committed.
 
@@ -14,7 +14,7 @@ Use `apiClient.get<ResponseType>(path)` and the other HTTP helpers for typed JSO
 
 [Frontend issue #7](https://github.com/kinetix-app/app/issues/7) tracks Clerk setup and release configuration. Both the Android package and iOS bundle identifier are **`cat.udl.kinetix`**; the app URL scheme is `kinetix`.
 
-See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and remaining implementation. The branch adds public Clerk configuration and the authenticated account API foundation. Clerk sign-in, secure session storage and the account/profile UI are pending; the starter screen is still the runtime entry point.
+See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and remaining implementation. Development builds default to the Basic email/password form ([DEV02 #6](https://github.com/kinetix-app/app/issues/6)); release builds show the production Clerk methods. The Clerk controls are disabled until SDK/provider setup is connected. Secure session storage and profile editing UI remain pending.
 
 ## Where this repository fits
 
@@ -69,10 +69,10 @@ Clone this repository and use the existing app; do not run `create-expo-app` ins
 
 1. Open a terminal in this repository's root, where `package.json` lives. Switch to the pinned Node version using your preferred version manager.
 2. Run `pnpm install --frozen-lockfile` to install dependencies from `pnpm-lock.yaml`. A missing/outdated lockfile must be fixed rather than bypassed.
-3. Optionally copy `.env.example` to `.env.local`. Leave `EXPO_PUBLIC_API_URL` blank for the standalone starter screen; set it to the agreed backend URL when integrating an API. The app rejects malformed/non-HTTP URLs and URLs containing credentials, query strings or fragments. Keep local environment files untracked.
+3. Copy `.env.example` to `.env.local`. Set `EXPO_PUBLIC_API_URL` to the backend origin reachable from your device. Leave `EXPO_PUBLIC_AUTH_MODE` blank for Basic in development builds and Clerk in release builds. The app rejects malformed/non-HTTP URLs and URLs containing credentials, query strings or fragments. Keep local environment files untracked.
 4. Start an Android emulator or connect/authorize a physical device. On macOS, choose an iOS simulator or arrange device signing.
 5. Build/install the development app using `pnpm android` or, on macOS, `pnpm ios`. Keep Metro running; for later JavaScript-only sessions use the start script.
-6. Check that the Kinetix starter screen loads, then verify a documented backend flow once implemented. Report the platform/device and actual result.
+6. Development builds show email/password inputs. Enter credentials from the backend development allowlist; sign-in calls `GET /api/v1/me` and only succeeds after the server accepts the credentials. The [DEV01 backend adapter](https://github.com/kinetix-app/app-rest/issues/7) is required for this flow. Report the platform/device and actual result.
 
 The following commands are configured:
 
@@ -94,7 +94,7 @@ Also use `pnpm run doctor` for Expo compatibility checks, `pnpm export --platfor
 
 ### Native configuration and app identity
 
-`app.json` defines the display name **Kinetix**, slug/scheme `kinetix` and provisional Android/iOS identifiers `com.example.kinetix`. Choose owned release identifiers before signing/distribution. Expo template icons and neutral starter styles are placeholders, not approved branding or design tokens.
+`app.json` defines the display name **Kinetix**, slug/scheme `kinetix` and Android/iOS identifiers `cat.udl.kinetix`. Expo template icons and neutral starter styles are placeholders, not approved branding or design tokens.
 
 Android/iOS directories are generated and ignored under Continuous Native Generation. Make reproducible native changes through app configuration/config plugins. After such a change, rebuild with the platform command. If regenerated native projects are necessary, use `pnpm exec expo prebuild --clean`; it replaces generated directories, so first preserve any manual native work. Never treat unrecorded native edits as durable application source. [CNG guide](https://docs.expo.dev/workflow/continuous-native-generation/)
 

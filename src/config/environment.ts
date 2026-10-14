@@ -41,7 +41,7 @@ export function getClerkPublishableKey(): string | undefined {
 export type AuthMode = 'basic' | 'clerk';
 
 export function resolveAuthMode(value: string | undefined, development: boolean): AuthMode {
-  const mode = value?.trim() || 'clerk';
+  const mode = value?.trim() || (development ? 'basic' : 'clerk');
   if (mode !== 'basic' && mode !== 'clerk') {
     throw new Error('EXPO_PUBLIC_AUTH_MODE must be basic or clerk.');
   }
