@@ -76,7 +76,7 @@ With the pinned Node 24.21.0/pnpm 11.23.0 toolchain and registry access:
 4. Add account/profile screens with loading/error states, retained form values after failed saves and current-device logout. Client guards do not replace backend token verification.
 5. Run the frontend CI commands and native builds, then demonstrate real provider sign-in, session restoration, logout and two-account isolation. Record production and pilot results separately on issue #7 and link related ACC01 evidence.
 
-No Clerk SDK packages were installed in this session: registry access is unavailable, and the available Node runtime does not satisfy the pinned version. The existing manifest/lockfile remains consistent. Jest, full type/lint/format checks, Expo Doctor, bundle export and native/provider validation remain pending; focused checks are reported separately in the handoff.
+No Clerk SDK packages were installed in this session: registry access is unavailable, and the available Node runtime does not satisfy the pinned version. The existing manifest/lockfile remains consistent. GitHub CI on the pinned toolchain passed dependency installation, TypeScript, lint, formatting and all 36 Jest tests. Expo Doctor failed on eight existing Expo patch-version mismatches; bundling did not run and SonarCloud was skipped. See [the CI run](https://github.com/kinetix-app/app/actions/runs/38609997118). Align dependencies using Expo tooling when registry access is available. Native/provider validation remains pending.
 
 ## References
 
