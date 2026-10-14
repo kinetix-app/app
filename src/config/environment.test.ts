@@ -1,4 +1,4 @@
-import { resolveApiBaseUrl } from './environment';
+import { resolveApiBaseUrl, resolveClerkPublishableKey } from './environment';
 
 describe('public API URL configuration', () => {
   test.each([undefined, '', '   '])('allows an unset URL for the standalone starter', (value) => {
@@ -30,4 +30,27 @@ describe('public API URL configuration', () => {
       'must not contain credentials, query parameters or fragments',
     );
   });
+});
+
+describe('public Clerk configuration', () => {
+  test.each([undefined, '', '   '])('allows an unconfigured instance: %s', (value) => {
+    expect(resolveClerkPublishableKey(value)).toBeUndefined();
+  });
+
+  test.each(['pk_test_aW5zdGFuY2UuY2xlcmsuYWNjb3VudHMuZGV2JA==', 'pk_live_bGl2ZSQ='])(
+    'accepts public keys for separate instances',
+    (value) => expect(resolveClerkPublishableKey(` ${value} `)).toBe(value),
+  );
+
+  test.each(['sk_test_do-not-embed', 'not-a-key', 'pk_test_'])(
+    'rejects invalid or secret keys without echoing their value',
+    (value) => {
+      expect(() => resolveClerkPublishableKey(value)).toThrow('Clerk publishable key');
+      try {
+        resolveClerkPublishableKey(value);
+      } catch (error) {
+        expect(String(error)).not.toContain(value);
+      }
+    },
+  );
 });
