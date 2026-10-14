@@ -6,6 +6,12 @@ The Android and iOS client for a university fitness project. The product brings 
 
 Android and iOS are the delivery targets. Web-compatible code and browser previews are useful, but complete web support is not currently committed.
 
+## Clerk authentication work
+
+[Frontend issue #7](https://github.com/kinetix-app/app/issues/7) tracks Clerk setup and release configuration. Both the Android package and iOS bundle identifier are **`cat.udl.kinetix`**; the app URL scheme is `kinetix`.
+
+See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and remaining implementation. The branch adds public Clerk configuration and the authenticated account API foundation. Clerk sign-in, secure session storage and the account/profile UI are pending; the starter screen is still the runtime entry point.
+
 ## Where this repository fits
 
 | Area                       | Responsibility                                                                                                                     |

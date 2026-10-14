@@ -24,3 +24,16 @@ export function resolveApiBaseUrl(value: string | undefined): string | undefined
 export function getApiBaseUrl(): string | undefined {
   return resolveApiBaseUrl(process.env.EXPO_PUBLIC_API_URL);
 }
+
+export function resolveClerkPublishableKey(value: string | undefined): string | undefined {
+  const key = value?.trim();
+  if (!key) return undefined;
+  if (!/^pk_(test|live)_[A-Za-z0-9+/=_-]+$/.test(key)) {
+    throw new Error('EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY must be a Clerk publishable key.');
+  }
+  return key;
+}
+
+export function getClerkPublishableKey(): string | undefined {
+  return resolveClerkPublishableKey(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+}

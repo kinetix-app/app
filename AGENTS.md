@@ -13,6 +13,8 @@ Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeS
 - Put runtime code/assets and consumed token exports here. Management owns requirements, designs, authoritative tokens and architecture/decision records. Backend owns FastAPI, migrations, permissions and AI/provider integrations.
 - Keep this checkout independently installable. Do not import runtime files from sibling checkouts, add cross-repository relative documentation links, or require private coordination instructions or host-specific paths.
 - This file contains shared frontend practices only. Keep credentials, private workspace context and local agent/tool settings out of published content. Preserve this explicitly requested file during scaffold integration; do not replace it with generated tool configuration.
+- Whenever starting frontend Clerk authentication work, assign [frontend Clerk issue #7](https://github.com/kinetix-app/app/issues/7) to `Elcris1` and set its Status to In Progress in [Project 7](https://github.com/orgs/kinetix-app/projects/7). Record work and setup actions on that issue; link related backend work to [ACC01](https://github.com/kinetix-app/app-rest/issues/1).
+- Android package/namespace and iOS bundle identifier are `cat.udl.kinetix`; the Expo URL scheme is `kinetix`.
 - GitHub issues and the configured Project define tasks/current status. Use verified issue URLs or full repository-qualified references. Repository/Project mapping is pending; do not invent URLs or claim publication. Local verification checklists are not a second task board.
 
 ## Foundation and dependencies
