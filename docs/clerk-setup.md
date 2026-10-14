@@ -65,7 +65,7 @@ Branch: `feature/env01-clerk-authentication`.
 - `src/services/authService.ts` owns the auth header in memory. Select `clerk` or development-only `basic` through `EXPO_PUBLIC_AUTH_MODE`. See [API client usage](api-client.md).
 - `src/features/accounts/api.ts` validates the backend account response and defines `GET /api/v1/me` and `PATCH /api/v1/me/profile`. PATCH preserves omitted versus explicit null fields.
 
-These modules are groundwork. They are not yet connected to the starter screen or a Clerk session. Sign-in is not implemented yet. No private server-state cache is introduced in this increment.
+The production Clerk screen displays Google, Apple (iOS) and email method controls. They stay disabled with an unavailable message until the Clerk SDK and providers are connected; they do not simulate authentication. No private server-state cache is introduced in this increment.
 
 ## Next implementation steps
 
