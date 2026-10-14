@@ -37,3 +37,23 @@ export function resolveClerkPublishableKey(value: string | undefined): string | 
 export function getClerkPublishableKey(): string | undefined {
   return resolveClerkPublishableKey(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
 }
+
+export type AuthMode = 'basic' | 'clerk';
+
+export function resolveAuthMode(value: string | undefined, development: boolean): AuthMode {
+  const mode = value?.trim() || 'clerk';
+  if (mode !== 'basic' && mode !== 'clerk') {
+    throw new Error('EXPO_PUBLIC_AUTH_MODE must be basic or clerk.');
+  }
+  if (mode === 'basic' && !development) {
+    throw new Error('Basic auth is only available in development builds.');
+  }
+  return mode;
+}
+
+export function getAuthMode(): AuthMode {
+  return resolveAuthMode(
+    process.env.EXPO_PUBLIC_AUTH_MODE,
+    typeof __DEV__ !== 'undefined' && __DEV__,
+  );
+}

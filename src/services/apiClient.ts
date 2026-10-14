@@ -1,129 +1,80 @@
+import { getApiBaseUrl } from '@/config/environment';
+import { authService, type AuthService } from '@/services/authService';
+
 export class ApiError extends Error {
   readonly status: number;
 
-  constructor(status: number, message: string) {
-    super(message);
+  constructor(status: number) {
+    super(`API request failed (${status}).`);
     this.name = 'ApiError';
     this.status = status;
   }
 }
 
-/** Pass Clerk's ordinary getToken() here; never decode JWTs or persist bearer tokens here. */
-export type GetSessionToken = () => Promise<string | null>;
-
-type RequestOptions = {
-  method?: 'GET' | 'PATCH';
-  body?: unknown;
-  signal?: AbortSignal;
+type RequestOptions<T> = Omit<RequestInit, 'body' | 'method'> & {
+  schema?: { parse: (value: unknown) => T };
 };
 
-export type ApiClient = {
-  request: (path: string, options?: RequestOptions) => Promise<unknown>;
-  dispose: () => void;
-};
-
-function abortError(): Error {
-  const error = new Error('Request canceled.');
-  error.name = 'AbortError';
-  return error;
-}
-
-function checkAborted(signal: AbortSignal): void {
-  if (signal.aborted) throw abortError();
-}
-
-/** Create one client per Clerk session; dispose it before logout or account changes. */
 export function createApiClient(
-  baseUrl: string,
-  getToken: GetSessionToken,
-  timeoutMs = 15000,
-): ApiClient {
-  const url = new URL(baseUrl);
-  if (
-    !['http:', 'https:'].includes(url.protocol) ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash
-  ) {
-    throw new Error('The API base URL must be an HTTP(S) URL without credentials or query data.');
+  baseUrl: string | undefined,
+  auth: Pick<AuthService, 'getAuthorizationHeader'> = authService,
+) {
+  /** Pass a schema for runtime validation and inferred response types. */
+  async function request<T>(
+    path: string,
+    method: string,
+    body?: unknown,
+    options: RequestOptions<T> = {},
+  ): Promise<T> {
+    if (!baseUrl) throw new Error('Set EXPO_PUBLIC_API_URL before making API requests.');
+    if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) {
+      throw new Error('API requests require a local path starting with /.');
+    }
+    const { schema, ...requestOptions } = options;
+    const headers = new Headers(requestOptions.headers);
+    headers.set('Accept', 'application/json');
+    const authorization = await auth.getAuthorizationHeader();
+    if (authorization) headers.set('Authorization', authorization);
+    else headers.delete('Authorization');
+    if (body !== undefined) headers.set('Content-Type', 'application/json');
+
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    if (options.signal?.aborted) controller.abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
+    const timeout = setTimeout(abort, 15000);
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
+        ...requestOptions,
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: controller.signal,
+        credentials: 'omit',
+        redirect: 'error',
+      });
+      if (!response.ok) throw new ApiError(response.status);
+      const data: unknown = response.status === 204 ? undefined : await response.json();
+      return schema ? schema.parse(data) : (data as T);
+    } finally {
+      clearTimeout(timeout);
+      options.signal?.removeEventListener('abort', abort);
+    }
   }
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    throw new Error('The API timeout must be positive.');
-  }
-  const root = url.toString().replace(/\/$/, '');
-  const requests = new Set<AbortController>();
-  let disposed = false;
 
   return {
-    dispose() {
-      disposed = true;
-      requests.forEach((controller) => controller.abort());
-      requests.clear();
-    },
-    async request(path, { method = 'GET', body, signal } = {}) {
-      // Accept only local API paths so callers cannot send session tokens to another origin.
-      if (!/^\/api\/v1\/[a-z0-9/_-]+$/.test(path)) {
-        throw new Error('Expected a path under /api/v1/.');
-      }
-      const controller = new AbortController();
-      const abort = () => controller.abort();
-      if (disposed || signal?.aborted) controller.abort();
-      checkAborted(controller.signal);
-      signal?.addEventListener('abort', abort, { once: true });
-      requests.add(controller);
-      const timeout = setTimeout(abort, timeoutMs);
-      let rejectCancellation: () => void = () => {};
-      const canceled = new Promise<never>((_, reject) => {
-        rejectCancellation = () => {
-          reject(abortError());
-        };
-        controller.signal.addEventListener('abort', rejectCancellation, { once: true });
-      });
-
-      try {
-        // Read a fresh token on each request so SDK renewal is respected.
-        const token = await Promise.race([getToken(), canceled]);
-        checkAborted(controller.signal);
-        if (!token) throw new ApiError(401, 'Sign in to continue.');
-        const response = await Promise.race([
-          fetch(`${root}${path}`, {
-            method,
-            headers: {
-              Accept: 'application/json',
-              Authorization: `Bearer ${token}`,
-              ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-            },
-            body: body === undefined ? undefined : JSON.stringify(body),
-            signal: controller.signal,
-            credentials: 'omit',
-            redirect: 'error',
-            cache: 'no-store',
-          }),
-          canceled,
-        ]);
-        checkAborted(controller.signal);
-        if (!response.ok) {
-          const message =
-            response.status === 401
-              ? 'Your session has expired. Sign in again.'
-              : response.status === 403
-                ? 'Account access denied.'
-                : response.status === 422
-                  ? 'Check your profile details and try again.'
-                  : 'The request could not be completed. Try again.';
-          throw new ApiError(response.status, message);
-        }
-        const data: unknown = await Promise.race([response.json(), canceled]);
-        // Ignore a response that finished after logout or an account switch.
-        checkAborted(controller.signal);
-        return data;
-      } finally {
-        clearTimeout(timeout);
-        controller.signal.removeEventListener('abort', rejectCancellation);
-        signal?.removeEventListener('abort', abort);
-        requests.delete(controller);
-      }
-    },
+    get: <T = unknown>(path: string, options?: RequestOptions<T>) =>
+      request<T>(path, 'GET', undefined, options),
+    post: <T = unknown>(path: string, body?: unknown, options?: RequestOptions<T>) =>
+      request<T>(path, 'POST', body, options),
+    put: <T = unknown>(path: string, body?: unknown, options?: RequestOptions<T>) =>
+      request<T>(path, 'PUT', body, options),
+    patch: <T = unknown>(path: string, body?: unknown, options?: RequestOptions<T>) =>
+      request<T>(path, 'PATCH', body, options),
+    delete: <T = void>(path: string, options?: RequestOptions<T>) =>
+      request<T>(path, 'DELETE', undefined, options),
   };
 }
+
+export type ApiClient = ReturnType<typeof createApiClient>;
+export const apiClient = createApiClient(getApiBaseUrl());

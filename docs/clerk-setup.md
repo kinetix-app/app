@@ -61,7 +61,8 @@ Branch: `feature/env01-clerk-authentication`.
 
 - `app.json` defines the native identifiers.
 - `src/config/environment.ts` reads optional public Clerk configuration and rejects secret-key input without echoing the input in errors.
-- `src/services/apiClient.ts` accepts a session's token getter, requests a fresh token for each operation, cancels requests on disposal/caller abort/timeout, and returns safe status-based errors. It stores no bearer tokens and does not retry profile writes.
+- `src/services/apiClient.ts` provides generic JSON requests (`get<T>`, `post<T>`, `put<T>`, `patch<T>`, `delete<T>`) with a shared Authorization interceptor, caller cancellation and a 15-second HTTP timeout.
+- `src/services/authService.ts` owns the auth header in memory. Select `clerk` or development-only `basic` through `EXPO_PUBLIC_AUTH_MODE`. See [API client usage](api-client.md).
 - `src/features/accounts/api.ts` validates the backend account response and defines `GET /api/v1/me` and `PATCH /api/v1/me/profile`. PATCH preserves omitted versus explicit null fields.
 
 These modules are groundwork. They are not yet connected to the starter screen or a Clerk session. Sign-in is not implemented yet. No private server-state cache is introduced in this increment.
@@ -72,7 +73,7 @@ With the pinned Node 24.21.0/pnpm 11.23.0 toolchain and registry access:
 
 1. Retry `npx -y clerk@latest init`; inspect what it installed/configured. Complete missing compatible SDK/native dependencies using `pnpm exec expo install ... --pnpm`, review peer dependencies and commit `package.json` with the generated lockfile. Clerk's current 4.x documentation uses `@clerk/expo`; do not copy obsolete `@clerk/clerk-expo` imports. Verify Expo 57 compatibility against the installed package rather than stale Core 3 examples.
 2. Add `ClerkProvider` and the SDK token cache backed by `expo-secure-store`, then implement Email OTP and native Google/Apple sign-in with their config plugins. Missing configuration should show a setup state; never fall back to a demo identity. Handle pending sessions, provider cancellation, invalid/expired codes and resend failures.
-3. Once Clerk restoration finishes, create an API client for that session using the ordinary SDK `getToken()`. Dispose it when the session changes. Keep identity/session values in TanStack Query keys, cancel and clear private queries on account changes, and wire native focus/connectivity.
+3. Once Clerk restoration finishes, call `authService.setTokenProvider(getToken)` with the ordinary SDK token getter. Call `authService.clear()` on logout/account changes. Feature code uses the shared `apiClient`; see [API client usage](api-client.md). Clear any private feature state when the account changes.
 4. Add account/profile screens with loading/error states, retained form values after failed saves and current-device logout. Client guards do not replace backend token verification.
 5. Run the frontend CI commands and native builds, then demonstrate real provider sign-in, session restoration, logout and two-account isolation. Record production and pilot results separately on issue #7 and link related ACC01 evidence.
 

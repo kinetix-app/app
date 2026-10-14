@@ -6,6 +6,10 @@ The Android and iOS client for a university fitness project. The product brings 
 
 Android and iOS are the delivery targets. Web-compatible code and browser previews are useful, but complete web support is not currently committed.
 
+## API requests and authentication
+
+Use `apiClient.get<ResponseType>(path)` and the other HTTP helpers for typed JSON responses. The shared auth service supplies the Authorization header using environment-selected Clerk or development Basic Auth. See [usage examples](docs/api-client.md).
+
 ## Clerk authentication work
 
 [Frontend issue #7](https://github.com/kinetix-app/app/issues/7) tracks Clerk setup and release configuration. Both the Android package and iOS bundle identifier are **`cat.udl.kinetix`**; the app URL scheme is `kinetix`.

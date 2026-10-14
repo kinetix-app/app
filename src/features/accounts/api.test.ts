@@ -1,4 +1,7 @@
+import { createApiClient } from '@/services/apiClient';
+
 import { getAccount, parseAccount, updateProfile } from './api';
+import { accountSchema } from './schemas';
 
 const account = {
   id: 'bf08d0a0-6ae6-4a7a-8d3f-8dbe890bd395',
@@ -23,15 +26,19 @@ test.each([
   { ...account, created_at: 'invalid' },
   { ...account, profile: { ...account.profile, timezone: 5 } },
 ])('rejects an invalid account response', (value) => {
-  expect(() => parseAccount(value)).toThrow('invalid account');
+  expect(() => parseAccount(value)).toThrow();
 });
 
 test('uses the authenticated endpoints and preserves explicit clearing versus omitted fields', async () => {
-  const client = { request: jest.fn().mockResolvedValue(account), dispose: jest.fn() };
+  const client = createApiClient('https://api.example');
+  const get = jest.spyOn(client, 'get').mockResolvedValue(account);
+  const patch = jest.spyOn(client, 'patch').mockResolvedValue(account);
   await getAccount(client);
   await updateProfile(client, { display_name: null });
-  expect(client.request.mock.calls).toEqual([
-    ['/api/v1/me', { signal: undefined }],
-    ['/api/v1/me/profile', { method: 'PATCH', body: { display_name: null }, signal: undefined }],
-  ]);
+  expect(get).toHaveBeenCalledWith('/api/v1/me', { schema: accountSchema, signal: undefined });
+  expect(patch).toHaveBeenCalledWith(
+    '/api/v1/me/profile',
+    { display_name: null },
+    { schema: accountSchema, signal: undefined },
+  );
 });
