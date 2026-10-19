@@ -3,11 +3,13 @@ import { authService, type AuthService } from '@/services/authService';
 
 export class ApiError extends Error {
   readonly status: number;
+  readonly authScheme: string | undefined;
 
-  constructor(status: number) {
+  constructor(status: number, authScheme?: string) {
     super(`API request failed (${status}).`);
     this.name = 'ApiError';
     this.status = status;
+    this.authScheme = authScheme;
   }
 }
 
@@ -53,7 +55,9 @@ export function createApiClient(
         credentials: 'omit',
         redirect: 'error',
       });
-      if (!response.ok) throw new ApiError(response.status);
+      if (!response.ok) {
+        throw new ApiError(response.status, response.headers?.get('WWW-Authenticate') ?? undefined);
+      }
       const data: unknown = response.status === 204 ? undefined : await response.json();
       return schema ? schema.parse(data) : (data as T);
     } finally {

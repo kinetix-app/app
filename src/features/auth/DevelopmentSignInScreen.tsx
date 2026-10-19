@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Button,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { getApiBaseUrl } from '@/config/environment';
 import { getAccount, type Account } from '@/features/accounts/api';
 import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
@@ -38,6 +39,10 @@ export function DevelopmentSignInScreen() {
       setError('Enter your email and password.');
       return;
     }
+    if (!getApiBaseUrl()) {
+      setError('Set EXPO_PUBLIC_API_URL to your backend address, then restart the app.');
+      return;
+    }
     const controller = new AbortController();
     request.current = controller;
     setPending(true);
@@ -52,11 +57,25 @@ export function DevelopmentSignInScreen() {
     } catch (cause) {
       authService.clear();
       if (!controller.signal.aborted) {
-        setError(
-          cause instanceof ApiError && cause.status === 401
-            ? 'The email or password was not accepted.'
-            : 'Unable to sign in. Check your connection and try again.',
-        );
+        if (cause instanceof ApiError) {
+          if (cause.status === 401 && cause.authScheme?.toLowerCase().startsWith('bearer')) {
+            setError(
+              'The API is using Clerk. Set backend AUTH_MODE=basic for development sign-in.',
+            );
+          } else if (cause.status === 401) {
+            setError(
+              'The email or password was not accepted. Use an account configured on the backend.',
+            );
+          } else if (cause.status === 403) {
+            setError('Account access denied.');
+          } else {
+            setError(`The API returned an error (${cause.status}). Check the backend service.`);
+          }
+        } else {
+          setError(
+            'Unable to reach the API or read its response. Check the backend address and connection.',
+          );
+        }
       }
     } finally {
       if (!controller.signal.aborted) setPending(false);

@@ -2,5 +2,8 @@
 nodeLinker: hoisted
 engineStrict: true
 allowBuilds:
+  # Reviewed postinstall scripts only print funding banners; no build is needed.
+  browser-tabs-lock@1.3.0: false
+  core-js@3.47.0: false
   # ESLint's import resolver prepares its platform-specific native binding.
   unrs-resolver@1.12.2: true

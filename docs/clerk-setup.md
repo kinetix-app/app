@@ -1,89 +1,109 @@
-# Clerk setup — frontend issue #7
+# Authentication setup
 
-Tracking: [ENV01 — app#7](https://github.com/kinetix-app/app/issues/7). Related backend: [ACC01](https://github.com/kinetix-app/app-rest/issues/1), delivered in [backend PR #6](https://github.com/kinetix-app/app-rest/pull/6).
+Tracking: [ENV01 — app#7](https://github.com/kinetix-app/app/issues/7), [DEV02 — app#6](https://github.com/kinetix-app/app/issues/6), [ACC01](https://github.com/kinetix-app/app-rest/issues/1) and [DEV01](https://github.com/kinetix-app/app-rest/issues/7).
 
-## Native identifiers
+## Implemented behavior
 
-| Configuration               | Value             |
-| --------------------------- | ----------------- |
-| Android package / namespace | `cat.udl.kinetix` |
-| iOS bundle identifier       | `cat.udl.kinetix` |
-| App display name            | `Kinetix`         |
-| Expo URL scheme             | `kinetix`         |
+| Build/environment  | Frontend                                             | Backend                                                           |
+| ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| Development        | Basic email/password form by default                 | `APP_ENV=development` defaults to Basic                           |
+| Clerk pilot        | Set `EXPO_PUBLIC_AUTH_MODE=clerk`; use `pk_test_...` | Set `AUTH_MODE=clerk`; use the matching development issuer/secret |
+| Production release | Clerk; requires `pk_live_...`; rejects Basic         | `APP_ENV=production` defaults to Clerk and rejects Basic          |
 
-These identifiers are set in `app.json`. Register Android and iOS as separate native applications in Clerk. The Apple Team ID/App ID prefix and Android certificate fingerprints come from the actual signing configuration; the package identifier alone is insufficient. Rebuild native apps after configuration/plugin changes.
+`@clerk/expo` provides email-code sign-in and sign-up, Google and Apple OAuth. Google/Apple open the system browser through the SDK's `useSSO()` and return to the app. This implementation does not use the native Google credential picker or native Apple sheet. Email verification supports resend, invalid/expired codes and retry after errors. Provider cancellation returns to sign-in.
 
-## CLI setup first
+Clerk's token cache uses `expo-secure-store` on native platforms. The screen waits for session restoration, then supplies the ordinary `getToken()` to the shared API client, allowing SDK token renewal. `/api/v1/me` must return a valid account before the connected state appears. Account state is mounted per session; logout/account changes cancel outstanding account requests and remove the auth header. No private query cache is introduced. Clerk `signOut()` signs out this device. Previously issued backend JWTs can remain valid until expiration plus clock skew; immediate/all-device revocation is outside this increment.
 
-Use the repository's pinned toolchain. Inspect source auth dependencies, routes and session handling before initialization; do not read existing environment files. There is currently no frontend authentication provider to migrate.
+## Development Basic setup
 
-```sh
-npx -y clerk@latest init
+In the backend's ignored `.env`:
+
+```dotenv
+APP_ENV=development
+AUTH_MODE=basic
+BASIC_AUTH_USERS={"your-email@example.test":"choose-your-own-local-password"}
 ```
 
-Let the CLI detect Expo and pnpm. In supported agent environments, it can provision a claimable development application and write temporary keys. Relay the environment filename and claim instruction it prints without exposing keys. Some Expo setup may still require the manual quickstart. Do not claim an application or select an existing application on the owner's behalf. To link a particular existing app, Eloi supplies its application ID; otherwise the CLI's default accountless flow applies when supported.
+Start PostgreSQL, apply migrations and start the backend as described in its README. In this app's ignored `.env` or `.env.local`:
 
-After SDK wiring and visible native sign-in/sign-up/user controls are present:
-
-```sh
-npx -y clerk@latest doctor
-pnpm start
+```dotenv
+EXPO_PUBLIC_API_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_AUTH_MODE=basic
 ```
 
-Eloi should make the first real test account. Claiming temporary applications with `npx -y clerk@latest auth login`, choosing sign-in methods and running `npx -y clerk@latest deploy` for production are subsequent owner actions. Temporary development keys are not production credentials. Email OTP, Google and Apple are the agreed methods; organizations are outside this increment.
+Use `http://localhost:8000` for an iOS simulator/browser, or a reachable LAN address for a phone. Enter the configured backend credentials in the app. There are no built-in accounts. Wrong credentials keep the user signed out. Basic credentials stay in memory and are cleared on sign-out; an app restart requires signing in again. Restart the API/Metro after environment changes.
 
-The initialization attempt in this session failed while downloading the CLI: `getaddrinfo ENOTFOUND registry.npmjs.org`. It did not provision a Clerk application or generate keys. No existing environment files were inspected. Retry once registry access and the pinned Node toolchain are available.
+## Configure the existing Clerk application
 
-## Actions for Eloi
+Use the owner's existing application in the [Clerk Dashboard](https://dashboard.clerk.com/); create one only if none exists. Local development keys do not establish that a production instance or providers are ready.
 
-1. **Clerk access and environments.** Create/select the Kinetix Clerk application and give implementers dashboard access. The pilot uses its development instance. Issue #7 also owns a separate production instance, its required domain/DNS setup, production provider credentials and release settings. Do not switch a pilot backend to a production issuer without switching its keys and the app's publishable key together.
-2. **Enable the Native API** under Clerk's Native applications settings. Register `cat.udl.kinetix` for both platforms. For Android, provide the actual SHA-256 signing-certificate fingerprint; for iOS, provide the App ID prefix/Team ID and bundle identifier. Register the certificates used by both local development and release builds when applicable.
-3. **Enable Email OTP.** Enable email sign-in/sign-up with verification codes. Disable passwords and verification links for the intended passwordless flow. Keep required profile fields compatible with minimal sign-up; the backend's local display name/timezone can initially be null.
-4. **Google credentials.** Create Google Cloud OAuth clients for Web, Android (`cat.udl.kinetix` plus its signing certificate's SHA-1) and iOS (`cat.udl.kinetix`). Enable Google in Clerk with custom credentials. Put the Web client ID and client secret in Clerk; use Clerk's exact redirect URI. Provide the public Web/iOS/Android client IDs and iOS reversed-client URL scheme for app configuration. The Google secret belongs in Clerk, never `EXPO_PUBLIC_` configuration. Add the required consent-screen test users during development.
-5. **Apple credentials.** Register an Apple App ID for `cat.udl.kinetix`, enable Sign in with Apple and configure the Apple connection in Clerk. Supply the Team ID/App ID prefix. Browser/Android Apple flows require additional Apple web configuration; the initial native Apple target is iOS. Validate on a signed physical iOS device.
-6. **Local environment.** Use the temporary keys written by `clerk init` when supported, or set the existing application’s public key. Set a reachable backend origin in the ignored environment file (for manual setup, `.env.local`). Development uses `pk_test_...`; production uses `pk_live_...`. No secret keys are needed in this repository.
+1. Under **User & authentication**, require email, enable email sign-up/sign-in with **verification codes**, and disable passwords and email verification links. Do not require extra name, username or phone fields for this minimal sign-up form.
+2. Enable **Google** and **Apple** social connections. For production, enter the providers' production OAuth credentials in Clerk. Google needs a web OAuth client for this browser flow. Apple needs its web Services ID, Team ID, Key ID and signing key plus the domain/return URL setup Clerk specifies. Use the exact provider callback URL shown by Clerk; it differs from the app callback. Provider secrets remain in Clerk.
+3. Enable Clerk's **Native API** and register Android package/namespace and iOS bundle identifier **`cat.udl.kinetix`**. Supply the actual signing certificate fingerprints and Apple Team ID/App ID prefix requested by the dashboard.
+4. Register **`kinetix://sso-callback`** as an allowed native/mobile redirect URL. `app.json` sets scheme `kinetix`; `src/app/sso-callback.tsx` returns to the authentication screen. The optional browser preview uses its actual origin plus `/sso-callback`, which must also be allowed when used.
+5. Match frontend and backend keys to the **same instance**. For a local Clerk pilot:
 
    ```dotenv
+   # Frontend public settings
+   EXPO_PUBLIC_AUTH_MODE=clerk
    EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
    EXPO_PUBLIC_API_URL=http://10.0.2.2:8000
    ```
 
-   The API URL is the origin without `/api/v1`. `10.0.2.2` reaches the host from the Android emulator. Use a device-reachable host address for physical devices and HTTPS for production.
+   ```dotenv
+   # Backend private settings
+   APP_ENV=development
+   AUTH_MODE=clerk
+   CLERK_ISSUER=https://your-instance.clerk.accounts.dev
+   CLERK_SECRET_KEY=sk_test_...
+   CLERK_AUTHORIZED_PARTIES=[]
+   ```
 
-7. **Matching backend.** In the backend's ignored environment, configure the same instance's `CLERK_ISSUER` and `CLERK_SECRET_KEY`, apply migrations and start the API. Set actual authorized-party values if tokens contain `azp`; the native token contract allows it to be absent. Use ordinary Clerk session tokens (`getToken()`), without a custom JWT template.
-8. **Production.** Complete Clerk's production domain/DNS requirements, register release signing certificates, configure production provider credentials and use production keys in both app and backend. Confirm session lifetime/logout expectations. Release builds must contain no demo identities or development Basic Auth credentials. Never send secret keys in issue comments or commit them.
+   Use Clerk's exact Frontend API origin for `CLERK_ISSUER`. Native tokens may omit `azp`; if present, the backend requires its exact value in `CLERK_AUTHORIZED_PARTIES`. Add browser origins for web testing. Use standard session tokens without a custom JWT template. Basic credentials are never accepted in Clerk mode.
 
-Dashboard access and provider account credentials should be shared through the team's secure channel. Public publishable keys, native identifiers, Team ID and certificate fingerprints are sufficient for app-side configuration; do not send Apple private keys or Google client secrets to the app developer.
+6. Rebuild native apps with `pnpm android` / `pnpm ios` after installing the SDK and its SecureStore/browser config plugins. A JavaScript reload cannot add native modules.
 
-## Implementation started
+## Production configuration
 
-Branch: `feature/env01-clerk-authentication`.
+Complete the production instance's domain/DNS setup and Google/Apple credentials in Clerk before building the release. Set these values in the release build environment and backend deployment; placeholders below must be replaced:
 
-- `app.json` defines the native identifiers.
-- `src/config/environment.ts` reads optional public Clerk configuration and rejects secret-key input without echoing the input in errors.
-- `src/services/apiClient.ts` provides generic JSON requests (`get<T>`, `post<T>`, `put<T>`, `patch<T>`, `delete<T>`) with a shared Authorization interceptor, caller cancellation and a 15-second HTTP timeout.
-- `src/services/authService.ts` owns the auth header in memory. Select `clerk` or development-only `basic` through `EXPO_PUBLIC_AUTH_MODE`. See [API client usage](api-client.md).
-- `src/features/accounts/api.ts` validates the backend account response and defines `GET /api/v1/me` and `PATCH /api/v1/me/profile`. PATCH preserves omitted versus explicit null fields.
+```dotenv
+# Frontend release environment: public values only
+EXPO_PUBLIC_AUTH_MODE=clerk
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
+EXPO_PUBLIC_API_URL=https://your-api-domain
+```
 
-The production Clerk screen displays Google, Apple (iOS) and email method controls. They stay disabled with an unavailable message until the Clerk SDK and providers are connected; they do not simulate authentication. No private server-state cache is introduced in this increment.
+```dotenv
+# Backend deployment: keep the secret in its environment/secret manager
+APP_ENV=production
+AUTH_MODE=clerk
+CLERK_ISSUER=https://your-production-clerk-frontend-api
+CLERK_SECRET_KEY=sk_live_...
+CLERK_AUTHORIZED_PARTIES=[]
+BASIC_AUTH_USERS={}
+```
 
-## Next implementation steps
+The production backend requires the issuer/secret at startup. Database settings and explicit migrations are still required. Use HTTPS for deployed traffic. Register release signing information and verify the provider return URLs against this production instance. Never put the backend secret or Basic passwords in `EXPO_PUBLIC_` variables.
 
-With the pinned Node 24.21.0/pnpm 11.23.0 toolchain and registry access:
+## Verification before shipping
 
-1. Retry `npx -y clerk@latest init`; inspect what it installed/configured. Complete missing compatible SDK/native dependencies using `pnpm exec expo install ... --pnpm`, review peer dependencies and commit `package.json` with the generated lockfile. Clerk's current 4.x documentation uses `@clerk/expo`; do not copy obsolete `@clerk/clerk-expo` imports. Verify Expo 57 compatibility against the installed package rather than stale Core 3 examples.
-2. Add `ClerkProvider` and the SDK token cache backed by `expo-secure-store`, then implement Email OTP and native Google/Apple sign-in with their config plugins. Missing configuration should show a setup state; never fall back to a demo identity. Handle pending sessions, provider cancellation, invalid/expired codes and resend failures.
-3. Once Clerk restoration finishes, call `authService.setTokenProvider(getToken)` with the ordinary SDK token getter. Call `authService.clear()` on logout/account changes. Feature code uses the shared `apiClient`; see [API client usage](api-client.md). Clear any private feature state when the account changes.
-4. Add account/profile screens with loading/error states, retained form values after failed saves and current-device logout. Client guards do not replace backend token verification.
-5. Run the frontend CI commands and native builds, then demonstrate real provider sign-in, session restoration, logout and two-account isolation. Record production and pilot results separately on issue #7 and link related ACC01 evidence.
+Automated tests verify SDK calls and error handling with mocks, authenticated header renewal/cleanup, Basic sign-in acceptance/failure, and cancellation of stale account requests. Backend tests separately verify real PostgreSQL persistence and account isolation. These do not demonstrate real provider sign-in.
 
-No Clerk SDK packages were installed in this session: registry access is unavailable, and the available Node runtime does not satisfy the pinned version. The existing manifest/lockfile remains consistent. GitHub CI on the pinned toolchain passed dependency installation, TypeScript, lint, formatting and all 36 Jest tests. Expo Doctor failed on eight existing Expo patch-version mismatches; bundling did not run and SonarCloud was skipped. See [the CI run](https://github.com/kinetix-app/app/actions/runs/38609997118). Align dependencies using Expo tooling when registry access is available. Native/provider validation remains pending.
+On the agreed Android/iOS devices and with production settings, verify:
+
+- Email sign-up/sign-in, wrong/expired codes, resend failure and recovery.
+- Google/Apple success, cancellation and provider failure.
+- `/me` provisions once and retains the same UUID after renewal and restart.
+- Secure session restoration after app restart and current-device logout.
+- Two accounts show separate profiles; no old account response appears after switching.
+- Release builds reject Basic and development Clerk keys.
+
+Record results on ENV01 and link ACC01. Profile editing UI, account deletion/linking synchronization, and any change to the offline JWT revocation contract remain separate ACC01 work.
 
 ## References
 
-- [Clerk CLI](https://clerk.com/docs/cli)
 - [Clerk Expo quickstart](https://clerk.com/docs/expo/getting-started/quickstart)
-- [Native Google sign-in](https://clerk.com/docs/expo/guides/configure/auth-strategies/sign-in-with-google)
-- [Native Apple sign-in](https://clerk.com/docs/expo/guides/configure/auth-strategies/sign-in-with-apple)
-- [Expo's Clerk integration guide](https://docs.expo.dev/guides/using-clerk/)
+- [Email OTP flow](https://clerk.com/docs/guides/development/custom-flows/authentication/email-sms-otp)
+- [SDK OAuth flow](https://clerk.com/docs/guides/development/custom-flows/authentication/oauth-connections)
 - [Backend authentication setup](https://github.com/kinetix-app/app-rest/blob/master/docs/authentication.md)

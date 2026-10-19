@@ -6,7 +6,7 @@ These instructions apply to this React Native frontend repository. Read [README.
 
 Build the Android/iOS client for goals, nutrition, gym/running/cycling/walking tracking, live shared training, social feed, FriendsLeague, reusable meals/exercises/penalties, exercise-form analysis and AI coaching. Web is an optional extension, not a committed feature-parity target. Do not reintroduce professional trainer/services businesses, payments or sponsored leagues from abandoned concepts.
 
-Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeScript, a starter screen and public configuration tests. Feature flows, backend integration and native device validation remain outstanding. Inspect actual implementation before claiming a feature is complete.
+Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeScript, a starter screen and public configuration tests. Authentication now includes development Basic sign-in and Clerk email OTP/Google/Apple OAuth with secure session storage and account API integration. Production provider configuration and native device validation remain outstanding. Inspect actual implementation before claiming a feature is complete.
 
 ## Repository boundaries and sources of truth
 

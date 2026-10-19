@@ -1,4 +1,4 @@
-import { resolveApiBaseUrl, resolveClerkPublishableKey } from './environment';
+import { resolveApiBaseUrl, resolveAuthMode, resolveClerkPublishableKey } from './environment';
 
 describe('public API URL configuration', () => {
   test.each([undefined, '', '   '])('allows an unset URL for the standalone starter', (value) => {
@@ -53,4 +53,27 @@ describe('public Clerk configuration', () => {
       }
     },
   );
+});
+
+describe('authentication configuration', () => {
+  test('release Clerk configuration requires a live key', () => {
+    expect(() => resolveClerkPublishableKey('pk_test_aGVsbG8', false)).toThrow('production');
+    expect(resolveClerkPublishableKey('pk_live_aGVsbG8', false)).toBe('pk_live_aGVsbG8');
+  });
+  test.each([undefined, '', '   '])('defaults by build environment: %s', (value) => {
+    expect(resolveAuthMode(value, true)).toBe('basic');
+    expect(resolveAuthMode(value, false)).toBe('clerk');
+  });
+
+  test('allows Clerk verification in development', () => {
+    expect(resolveAuthMode('clerk', true)).toBe('clerk');
+  });
+
+  test('rejects Basic in production', () => {
+    expect(() => resolveAuthMode('basic', false)).toThrow('only available in development');
+  });
+
+  test('rejects obsolete mode names', () => {
+    expect(() => resolveAuthMode('dev_basic', true)).toThrow('must be basic or clerk');
+  });
 });

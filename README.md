@@ -2,7 +2,7 @@
 
 The Android and iOS client for a university fitness project. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.
 
-**Current status:** the Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth and the production Clerk SDK/provider connection remain pending; native compilation and device execution still need verification.
+**Current status:** the Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth must be configured with a local credential allowlist; the Clerk SDK implements email OTP, Google/Apple OAuth, secure native session storage, restoration and logout. Production dashboard setup and native/provider verification remain required.
 
 Android and iOS are the delivery targets. Web-compatible code and browser previews are useful, but complete web support is not currently committed.
 
@@ -14,7 +14,7 @@ Use `apiClient.get<ResponseType>(path)` and the other HTTP helpers for typed JSO
 
 [Frontend issue #7](https://github.com/kinetix-app/app/issues/7) tracks Clerk setup and release configuration. Both the Android package and iOS bundle identifier are **`cat.udl.kinetix`**; the app URL scheme is `kinetix`.
 
-See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and remaining implementation. Development builds default to the Basic email/password form ([DEV02 #6](https://github.com/kinetix-app/app/issues/6)); release builds show the production Clerk methods. The Clerk controls are disabled until SDK/provider setup is connected. Secure session storage and profile editing UI remain pending.
+See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and release verification. Development builds default to the Basic email/password form ([DEV02 #6](https://github.com/kinetix-app/app/issues/6)); release builds show the production Clerk methods. The SDK supports email OTP and Google/Apple through the system browser, with SecureStore session persistence. Release builds require a production Clerk key. Profile editing UI remains pending.
 
 ## Where this repository fits
 
@@ -86,7 +86,7 @@ The following commands are configured:
 | `pnpm typecheck`                 | Check TypeScript without emitting files                           |
 | `pnpm lint`                      | Check code with the project's Expo ESLint configuration           |
 | `pnpm format:check`              | Check Prettier formatting                                         |
-| `pnpm test`                      | Run the public configuration boundary tests                       |
+| `pnpm test`                      | Run configuration, API and authentication behavior tests          |
 
 The platform run commands generate native projects, install native dependencies and can start Metro themselves. Reuse an existing server instead of starting competing sessions. `pnpm start` connects to an already installed development build; `pnpm web` provides the optional browser preview without Android/iOS tools.
 
@@ -100,9 +100,9 @@ Android/iOS directories are generated and ignored under Continuous Native Genera
 
 ### Connecting to the backend
 
-`localhost` on a phone refers to the phone. For the standard Android Emulator, `10.0.2.2` reaches the development computer's loopback interface. A physical device generally needs the computer's reachable LAN address, with the backend listening on an appropriate interface and the firewall allowing that development connection. Confirm the team's API port rather than guessing it. [Android Emulator networking](https://developer.android.com/studio/run/emulator-networking)
+`localhost` on an Android emulator or phone refers to that device. Use `http://10.0.2.2:8000` for the standard Android Emulator, `http://localhost:8000` for an iOS simulator or browser, and `http://<computer-LAN-IP>:8000` for a physical device. For physical-device access, set backend `API_BIND_ADDRESS=0.0.0.0`, allow port 8000 through the computer firewall, and keep both devices on the same trusted network. The backend otherwise binds to loopback only. [Android Emulator networking](https://developer.android.com/studio/run/emulator-networking)
 
-Use HTTPS for deployed APIs. A local HTTP setup may need platform-specific configuration; do not weaken production transport settings. Browser previews additionally need the backend's explicit CORS configuration. Metro connectivity and API connectivity are separate: loading the UI does not prove the API is reachable. [React Native security](https://reactnative.dev/docs/security), [FastAPI CORS](https://fastapi.tiangolo.com/tutorial/cors/)
+Use HTTPS for deployed APIs. A local HTTP setup may need platform-specific configuration; do not weaken production transport settings. Native Android/iOS requests do not use browser CORS; CORS applies to the optional browser preview and is configured on the backend through `CORS_ALLOWED_ORIGINS`. Metro connectivity and API connectivity are separate: loading the UI does not prove the API is reachable. [React Native security](https://reactnative.dev/docs/security), [FastAPI CORS](https://fastapi.tiangolo.com/tutorial/cors/)
 
 `EXPO_PUBLIC_` configuration is visible in the compiled app. Use it only for public values such as the API URL. AI/provider keys and service credentials belong in the backend. [Expo environment variables](https://docs.expo.dev/guides/environment-variables/)
 

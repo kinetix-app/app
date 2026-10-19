@@ -34,7 +34,7 @@ Clerk is the release-build auth mode. Select it explicitly to exercise its scree
 EXPO_PUBLIC_AUTH_MODE=clerk
 ```
 
-Once Clerk is connected, register its ordinary token getter:
+The Clerk session screen registers its ordinary token getter after restoration:
 
 ```ts
 import { authService } from '@/services/authService';
@@ -49,7 +49,7 @@ authService.setToken(token);
 authService.clear();
 ```
 
-The request interceptor reads the header for every request. A token provider allows Clerk to renew tokens. `clear()` removes both the stored header and the provider. Clerk and SecureStore own persistent session storage; this service keeps only in-memory state. SDK setup and sign-in UI are still pending.
+The request interceptor reads the header for every request. A token provider allows Clerk to renew tokens. `clear()` removes both the stored header and the provider. Clerk and SecureStore own persistent session storage; this service keeps only in-memory state. The SDK sign-in screen handles restoration, logout and per-session account state; see [Clerk setup](clerk-setup.md).
 
 ## Development Basic Auth
 
@@ -67,10 +67,10 @@ await apiClient.get<Account>('/api/v1/me');
 authService.clear();
 ```
 
-Sign-in only succeeds after `/api/v1/me` returns a valid account. Failed attempts retain the entered form values and clear the auth header; sign-out clears the header and form. Basic mode is rejected in release builds. Credentials do not belong in `EXPO_PUBLIC_` variables, source code or ordinary persistent storage. The frontend service prepares the header; the backend still needs its development Basic Auth implementation before these requests can authenticate. Restart Metro after changing public environment values.
+Sign-in only succeeds after `/api/v1/me` returns a valid account. Failed attempts retain the entered form values and clear the auth header; sign-out clears the header and form. Basic mode is rejected in release builds. Credentials do not belong in `EXPO_PUBLIC_` variables, source code or ordinary persistent storage. The backend defaults to Basic outside production. Configure `BASIC_AUTH_USERS` mapping the exact email/usernames to passwords in its ignored environment. Restart the API after configuration changes. There are no built-in credentials. The database must be running with migrations applied so `/api/v1/me` can resolve the account. Restart Metro after changing public environment values.
 
 ## Issue and commit scope
 
 - [DEV02 — frontend #6](https://github.com/kinetix-app/app/issues/6): development email/password form, Basic header and sign-out. Requires [DEV01 — backend #7](https://github.com/kinetix-app/app-rest/issues/7).
-- [ENV01 — frontend #7](https://github.com/kinetix-app/app/issues/7): production Clerk configuration and methods. Displayed controls remain disabled until the SDK/provider connection is implemented.
+- [ENV01 — frontend #7](https://github.com/kinetix-app/app/issues/7): production Clerk configuration and methods. SDK email OTP and Google/Apple OAuth are implemented; production provider/device verification remains required.
 - Shared API/auth/schema commits reference both frontend issues. Neither issue is closed by preparatory work.
