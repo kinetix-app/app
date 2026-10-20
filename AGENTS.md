@@ -6,13 +6,15 @@ These instructions apply to this React Native frontend repository. Read [README.
 
 Build the Android/iOS client for goals, nutrition, gym/running/cycling/walking tracking, live shared training, social feed, FriendsLeague, reusable meals/exercises/penalties, exercise-form analysis and AI coaching. Web is an optional extension, not a committed feature-parity target. Do not reintroduce professional trainer/services businesses, payments or sponsored leagues from abandoned concepts.
 
-Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeScript, a starter screen and public configuration tests. Feature flows, backend integration and native device validation remain outstanding. Inspect actual implementation before claiming a feature is complete.
+Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeScript, a starter screen and public configuration tests. Authentication now includes development Basic sign-in and Clerk email OTP/Google/Apple OAuth with secure session storage and account API integration. Production provider configuration and native device validation remain outstanding. Inspect actual implementation before claiming a feature is complete.
 
 ## Repository boundaries and sources of truth
 
 - Put runtime code/assets and consumed token exports here. Management owns requirements, designs, authoritative tokens and architecture/decision records. Backend owns FastAPI, migrations, permissions and AI/provider integrations.
 - Keep this checkout independently installable. Do not import runtime files from sibling checkouts, add cross-repository relative documentation links, or require private coordination instructions or host-specific paths.
 - This file contains shared frontend practices only. Keep credentials, private workspace context and local agent/tool settings out of published content. Preserve this explicitly requested file during scaffold integration; do not replace it with generated tool configuration.
+- Whenever starting frontend Clerk authentication work, assign [frontend Clerk issue #7](https://github.com/kinetix-app/app/issues/7) to `Elcris1` and set its Status to In Progress in [Project 7](https://github.com/orgs/kinetix-app/projects/7). Record work and setup actions on that issue; link related backend work to [ACC01](https://github.com/kinetix-app/app-rest/issues/1).
+- Android package/namespace and iOS bundle identifier are `cat.udl.kinetix`; the Expo URL scheme is `kinetix`.
 - GitHub issues and the configured Project define tasks/current status. Use verified issue URLs or full repository-qualified references. Repository/Project mapping is pending; do not invent URLs or claim publication. Local verification checklists are not a second task board.
 
 ## Foundation and dependencies
@@ -39,7 +41,8 @@ Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeS
 - Use TanStack Query for server data once integrated. Include identity/filters in keys, tune retries/freshness, wire native focus/connectivity, and cancel/clear private queries on logout/account change. Do not duplicate server records in another global store.
 - Use React Hook Form/Zod for substantial forms. Validate finite values, units and domain limits; a keyboard type is not validation. Show field errors and retain input after failed saves.
 - Layouts own navigation/providers. Route parameters carry identifiers/harmless filters, not credentials or personal records. Handle session restoration before redirecting; client guards never replace backend permissions.
-- Use one shared request client with authorization, cancellation/timeouts and consistent errors. Feature API modules own operations; screens/routes do not construct ad hoc requests. Do not blindly retry mutations without an agreed idempotency contract.
+- Use the shared generic `apiClient` for HTTP requests. `authService` supplies the Authorization header: Clerk bearer tokens in release builds, with runtime Basic email/password credentials in development builds by default. Explicit `clerk` mode can exercise Clerk in development; release builds reject Basic mode. Keep credentials in memory; let Clerk/SecureStore own durable session storage. Feature API modules own operations; screens/routes do not construct ad hoc requests. Do not blindly retry mutations without an agreed idempotency contract.
+- Define runtime response/input schemas with Zod in each feature’s `schemas.ts` and infer TypeScript types from them. Pass `{ schema }` to API requests for validation and return-type inference; plain generics do not validate external data.
 - Implement agreed backend contracts. Keep generated types/client or reproducible generation local to this repository; generation is not runtime validation. Do not invent authentication, pagination or error schemas.
 - Show loading, empty, pending, success and failure states where relevant. Do not show an optimistic write as persisted before confirmation. Offline writes/draft recovery need agreed behavior, not an implicit promise from query caching.
 

@@ -2,9 +2,19 @@
 
 The Android and iOS client for a university fitness project. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.
 
-**Current status — 4 October 2026:** the Expo/React Native foundation is initialized with a Kinetix starter screen, navigation, strict TypeScript and public configuration validation. Product features and backend integration are not implemented. Native compilation and device execution still need verification on the team's Android/iOS toolchains.
+**Current status:** the Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth must be configured with a local credential allowlist; the Clerk SDK implements email OTP, Google/Apple OAuth, secure native session storage, restoration and logout. Production dashboard setup and native/provider verification remain required.
 
 Android and iOS are the delivery targets. Web-compatible code and browser previews are useful, but complete web support is not currently committed.
+
+## API requests and authentication
+
+Use `apiClient.get<ResponseType>(path)` and the other HTTP helpers for typed JSON responses. The shared auth service supplies the Authorization header using environment-selected Clerk or development Basic Auth. See [usage examples](docs/api-client.md).
+
+## Clerk authentication work
+
+[Frontend issue #7](https://github.com/kinetix-app/app/issues/7) tracks Clerk setup and release configuration. Both the Android package and iOS bundle identifier are **`cat.udl.kinetix`**; the app URL scheme is `kinetix`.
+
+See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and release verification. Development builds default to the Basic email/password form ([DEV02 #6](https://github.com/kinetix-app/app/issues/6)); release builds show the production Clerk methods. The SDK supports email OTP and Google/Apple through the system browser, with SecureStore session persistence. Release builds require a production Clerk key. Profile editing UI remains pending.
 
 ## Where this repository fits
 
@@ -59,10 +69,10 @@ Clone this repository and use the existing app; do not run `create-expo-app` ins
 
 1. Open a terminal in this repository's root, where `package.json` lives. Switch to the pinned Node version using your preferred version manager.
 2. Run `pnpm install --frozen-lockfile` to install dependencies from `pnpm-lock.yaml`. A missing/outdated lockfile must be fixed rather than bypassed.
-3. Optionally copy `.env.example` to `.env.local`. Leave `EXPO_PUBLIC_API_URL` blank for the standalone starter screen; set it to the agreed backend URL when integrating an API. The app rejects malformed/non-HTTP URLs and URLs containing credentials, query strings or fragments. Keep local environment files untracked.
+3. Copy `.env.example` to `.env.local`. Set `EXPO_PUBLIC_API_URL` to the backend origin reachable from your device. Leave `EXPO_PUBLIC_AUTH_MODE` blank for Basic in development builds and Clerk in release builds. The app rejects malformed/non-HTTP URLs and URLs containing credentials, query strings or fragments. Keep local environment files untracked.
 4. Start an Android emulator or connect/authorize a physical device. On macOS, choose an iOS simulator or arrange device signing.
 5. Build/install the development app using `pnpm android` or, on macOS, `pnpm ios`. Keep Metro running; for later JavaScript-only sessions use the start script.
-6. Check that the Kinetix starter screen loads, then verify a documented backend flow once implemented. Report the platform/device and actual result.
+6. Development builds show email/password inputs. Enter credentials from the backend development allowlist; sign-in calls `GET /api/v1/me` and only succeeds after the server accepts the credentials. The [DEV01 backend adapter](https://github.com/kinetix-app/app-rest/issues/7) is required for this flow. Report the platform/device and actual result.
 
 The following commands are configured:
 
@@ -76,7 +86,7 @@ The following commands are configured:
 | `pnpm typecheck`                 | Check TypeScript without emitting files                           |
 | `pnpm lint`                      | Check code with the project's Expo ESLint configuration           |
 | `pnpm format:check`              | Check Prettier formatting                                         |
-| `pnpm test`                      | Run the public configuration boundary tests                       |
+| `pnpm test`                      | Run configuration, API and authentication behavior tests          |
 
 The platform run commands generate native projects, install native dependencies and can start Metro themselves. Reuse an existing server instead of starting competing sessions. `pnpm start` connects to an already installed development build; `pnpm web` provides the optional browser preview without Android/iOS tools.
 
@@ -84,15 +94,15 @@ Also use `pnpm run doctor` for Expo compatibility checks, `pnpm export --platfor
 
 ### Native configuration and app identity
 
-`app.json` defines the display name **Kinetix**, slug/scheme `kinetix` and provisional Android/iOS identifiers `com.example.kinetix`. Choose owned release identifiers before signing/distribution. Expo template icons and neutral starter styles are placeholders, not approved branding or design tokens.
+`app.json` defines the display name **Kinetix**, slug/scheme `kinetix` and Android/iOS identifiers `cat.udl.kinetix`. Expo template icons and neutral starter styles are placeholders, not approved branding or design tokens.
 
 Android/iOS directories are generated and ignored under Continuous Native Generation. Make reproducible native changes through app configuration/config plugins. After such a change, rebuild with the platform command. If regenerated native projects are necessary, use `pnpm exec expo prebuild --clean`; it replaces generated directories, so first preserve any manual native work. Never treat unrecorded native edits as durable application source. [CNG guide](https://docs.expo.dev/workflow/continuous-native-generation/)
 
 ### Connecting to the backend
 
-`localhost` on a phone refers to the phone. For the standard Android Emulator, `10.0.2.2` reaches the development computer's loopback interface. A physical device generally needs the computer's reachable LAN address, with the backend listening on an appropriate interface and the firewall allowing that development connection. Confirm the team's API port rather than guessing it. [Android Emulator networking](https://developer.android.com/studio/run/emulator-networking)
+`localhost` on an Android emulator or phone refers to that device. Use `http://10.0.2.2:8000` for the standard Android Emulator, `http://localhost:8000` for an iOS simulator or browser, and `http://<computer-LAN-IP>:8000` for a physical device. For physical-device access, set backend `API_BIND_ADDRESS=0.0.0.0`, allow port 8000 through the computer firewall, and keep both devices on the same trusted network. The backend otherwise binds to loopback only. [Android Emulator networking](https://developer.android.com/studio/run/emulator-networking)
 
-Use HTTPS for deployed APIs. A local HTTP setup may need platform-specific configuration; do not weaken production transport settings. Browser previews additionally need the backend's explicit CORS configuration. Metro connectivity and API connectivity are separate: loading the UI does not prove the API is reachable. [React Native security](https://reactnative.dev/docs/security), [FastAPI CORS](https://fastapi.tiangolo.com/tutorial/cors/)
+Use HTTPS for deployed APIs. A local HTTP setup may need platform-specific configuration; do not weaken production transport settings. Native Android/iOS requests do not use browser CORS; CORS applies to the optional browser preview and is configured on the backend through `CORS_ALLOWED_ORIGINS`. Metro connectivity and API connectivity are separate: loading the UI does not prove the API is reachable. [React Native security](https://reactnative.dev/docs/security), [FastAPI CORS](https://fastapi.tiangolo.com/tutorial/cors/)
 
 `EXPO_PUBLIC_` configuration is visible in the compiled app. Use it only for public values such as the API URL. AI/provider keys and service credentials belong in the backend. [Expo environment variables](https://docs.expo.dev/guides/environment-variables/)
 

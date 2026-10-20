@@ -24,3 +24,45 @@ export function resolveApiBaseUrl(value: string | undefined): string | undefined
 export function getApiBaseUrl(): string | undefined {
   return resolveApiBaseUrl(process.env.EXPO_PUBLIC_API_URL);
 }
+
+export function resolveClerkPublishableKey(
+  value: string | undefined,
+  development = true,
+): string | undefined {
+  const key = value?.trim();
+  if (!key) return undefined;
+  if (!/^pk_(test|live)_[A-Za-z0-9+/=_-]+$/.test(key)) {
+    throw new Error('EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY must be a Clerk publishable key.');
+  }
+  if (!development && !key.startsWith('pk_live_')) {
+    throw new Error('Release builds require a production Clerk publishable key.');
+  }
+  return key;
+}
+
+export function getClerkPublishableKey(): string | undefined {
+  return resolveClerkPublishableKey(
+    process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    typeof __DEV__ !== 'undefined' && __DEV__,
+  );
+}
+
+export type AuthMode = 'basic' | 'clerk';
+
+export function resolveAuthMode(value: string | undefined, development: boolean): AuthMode {
+  const mode = value?.trim() || (development ? 'basic' : 'clerk');
+  if (mode !== 'basic' && mode !== 'clerk') {
+    throw new Error('EXPO_PUBLIC_AUTH_MODE must be basic or clerk.');
+  }
+  if (mode === 'basic' && !development) {
+    throw new Error('Basic auth is only available in development builds.');
+  }
+  return mode;
+}
+
+export function getAuthMode(): AuthMode {
+  return resolveAuthMode(
+    process.env.EXPO_PUBLIC_AUTH_MODE,
+    typeof __DEV__ !== 'undefined' && __DEV__,
+  );
+}
