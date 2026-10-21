@@ -1,25 +1,31 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Button,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ActionButton } from '@/components/ActionButton';
+import { BrandHeader } from '@/components/BrandHeader';
+import { IconTextField } from '@/components/IconTextField';
 import { getApiBaseUrl } from '@/config/environment';
 import { getAccount, type Account } from '@/features/accounts/api';
 import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
+import { colors } from '@/theme/colors';
+
+import { authStyles as styles } from './authStyles';
 
 export function DevelopmentSignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
@@ -88,6 +94,7 @@ export function DevelopmentSignInScreen() {
     setAccount(null);
     setEmail('');
     setPassword('');
+    setShowPassword(false);
     setError('');
   }
 
@@ -97,26 +104,45 @@ export function DevelopmentSignInScreen() {
         style={styles.screen}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.form}>
-            <Text accessibilityRole="header" style={styles.title}>
-              Kinetix
-            </Text>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <BrandHeader />
             {account ? (
               <>
-                <Text style={styles.subtitle}>
-                  Welcome{account.profile.display_name ? `, ${account.profile.display_name}` : ''}.
-                </Text>
-                <Text>Your account is connected.</Text>
-                <Button title="Sign out" onPress={signOut} />
+                <View style={styles.heading}>
+                  <Text style={styles.title}>
+                    Welcome
+                    {account.profile.display_name ? `, ${account.profile.display_name}` : ''}.
+                  </Text>
+                  <Text style={styles.subtitle}>Your account is connected.</Text>
+                </View>
+                <ActionButton
+                  title="Sign out"
+                  variant="outline"
+                  icon="log-out-outline"
+                  iconPosition="start"
+                  onPress={signOut}
+                  style={styles.primaryAction}
+                />
               </>
             ) : (
               <>
-                <Text style={styles.subtitle}>Development sign-in</Text>
-                <Text nativeID="email-label">Email</Text>
-                <TextInput
+                <View style={styles.heading}>
+                  <Text style={styles.title}>Sign in to continue</Text>
+                  <Text style={styles.subtitle}>Development sign-in</Text>
+                </View>
+                <Text nativeID="email-label" style={styles.label}>
+                  Email
+                </Text>
+                <IconTextField
+                  icon="mail-outline"
                   accessibilityLabel="Email"
                   accessibilityLabelledBy="email-label"
+                  placeholder="Enter your email"
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="email"
@@ -124,37 +150,65 @@ export function DevelopmentSignInScreen() {
                   value={email}
                   onChangeText={setEmail}
                   editable={!pending}
-                  style={styles.input}
                 />
-                <Text nativeID="password-label">Password</Text>
-                <TextInput
+                <Text nativeID="password-label" style={styles.label}>
+                  Password
+                </Text>
+                <IconTextField
+                  icon="lock-closed-outline"
                   accessibilityLabel="Password"
                   accessibilityLabelledBy="password-label"
+                  placeholder="Enter your password"
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="current-password"
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
                   editable={!pending}
                   onSubmitEditing={() => {
                     void signIn();
                   }}
-                  style={styles.input}
+                  trailing={
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                      hitSlop={8}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={21}
+                        color={colors.icon}
+                      />
+                    </Pressable>
+                  }
                 />
                 {error ? (
                   <Text accessibilityRole="alert" style={styles.error}>
                     {error}
                   </Text>
                 ) : null}
-                {pending ? <ActivityIndicator accessibilityLabel="Signing in" /> : null}
-                <Button
+                {pending ? (
+                  <ActivityIndicator
+                    accessibilityLabel="Signing in"
+                    color={colors.accent}
+                    style={styles.status}
+                  />
+                ) : null}
+                <ActionButton
                   title="Sign in"
+                  icon="arrow-forward"
                   disabled={pending}
                   onPress={() => {
                     void signIn();
                   }}
+                  style={styles.primaryAction}
                 />
+                <Text style={styles.terms}>
+                  By continuing, you agree to our Terms of Service
+                  {'\n'}and Privacy Policy.
+                </Text>
               </>
             )}
           </View>
@@ -163,13 +217,3 @@ export function DevelopmentSignInScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#ffffff' },
-  content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  form: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: 12 },
-  title: { fontSize: 36, fontWeight: '700', color: '#111111' },
-  subtitle: { fontSize: 22, color: '#111111' },
-  input: { borderWidth: 1, borderColor: '#777777', borderRadius: 8, padding: 12, fontSize: 16 },
-  error: { color: '#a00000' },
-});

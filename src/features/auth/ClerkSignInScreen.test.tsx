@@ -130,7 +130,7 @@ test.each(['Google', 'Apple'])('activates the SDK session returned by %s', async
   const setActive = jest.fn().mockResolvedValue(undefined);
   mockSso.mockResolvedValue({ createdSessionId: 'sess_social', setActive });
   render(<ClerkSignInScreen />);
-  fireEvent.press(screen.getByText(`Continue with ${provider}`));
+  fireEvent.press(screen.getByLabelText(`Continue with ${provider}`));
   await waitFor(() => expect(setActive).toHaveBeenCalledWith({ session: 'sess_social' }));
   expect(mockSso).toHaveBeenCalledWith({
     strategy: `oauth_${provider.toLowerCase()}`,
@@ -142,7 +142,7 @@ test('provider cancellation leaves a usable sign-in screen', async () => {
   mockSso.mockResolvedValue({ createdSessionId: null, authSessionResult: { type: 'cancel' } });
   render(<ClerkSignInScreen />);
   await act(async () => {
-    fireEvent.press(screen.getByText('Continue with Google'));
+    fireEvent.press(screen.getByLabelText('Continue with Google'));
   });
   expect(screen.queryByLabelText('Authenticating')).toBeNull();
   expect(screen.queryByRole('alert')).toBeNull();
@@ -152,7 +152,7 @@ test('provider cancellation leaves a usable sign-in screen', async () => {
 test('provider failure shows a retryable error', async () => {
   mockSso.mockRejectedValue(new Error('network'));
   render(<ClerkSignInScreen />);
-  fireEvent.press(screen.getByText('Continue with Apple'));
+  fireEvent.press(screen.getByLabelText('Continue with Apple'));
   await screen.findByText('Provider sign-in could not finish. Please try again.');
 });
 

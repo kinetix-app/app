@@ -4,20 +4,24 @@ import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Button,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ActionButton } from '@/components/ActionButton';
+import { BrandHeader } from '@/components/BrandHeader';
+import { IconTextField } from '@/components/IconTextField';
 import { getAccount, type Account } from '@/features/accounts/api';
 import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
+import { colors } from '@/theme/colors';
+
+import { authStyles as styles } from './authStyles';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -72,33 +76,41 @@ function ConnectedAccount() {
 
   return (
     <View style={styles.content}>
-      <Text accessibilityRole="header" style={styles.title}>
-        Kinetix
-      </Text>
+      <BrandHeader />
       {account ? (
-        <Text>
+        <Text style={styles.body}>
           Welcome{account.profile.display_name ? `, ${account.profile.display_name}` : ''}. Your
           account is connected.
         </Text>
       ) : !error ? (
-        <ActivityIndicator accessibilityLabel="Connecting your account" />
+        <ActivityIndicator accessibilityLabel="Connecting your account" color={colors.accent} />
       ) : null}
-      {error ? <Text accessibilityRole="alert">{error}</Text> : null}
+      {error ? (
+        <Text accessibilityRole="alert" style={styles.error}>
+          {error}
+        </Text>
+      ) : null}
       {error && !leaving ? (
-        <Button
+        <ActionButton
           title="Retry connection"
+          icon="refresh"
           onPress={() => {
             setError('');
             setAttempt((value) => value + 1);
           }}
+          style={styles.primaryAction}
         />
       ) : null}
-      <Button
+      <ActionButton
         title="Sign out"
+        variant="outline"
+        icon="log-out-outline"
+        iconPosition="start"
         disabled={leaving}
         onPress={() => {
           void logout();
         }}
+        style={error && !leaving ? styles.secondaryAction : styles.primaryAction}
       />
     </View>
   );
@@ -200,25 +212,16 @@ function SignInForm() {
 
   return (
     <View style={styles.content}>
-      <Text accessibilityRole="header" style={styles.title}>
-        {creating ? 'Create your account' : 'Sign in to Kinetix'}
-      </Text>
-      <Button
-        title="Continue with Google"
-        disabled={pending}
-        onPress={() => {
-          void social('oauth_google');
-        }}
-      />
-      <Button
-        title="Continue with Apple"
-        disabled={pending}
-        onPress={() => {
-          void social('oauth_apple');
-        }}
-      />
-      <TextInput
+      <BrandHeader />
+      <View style={styles.heading}>
+        <Text style={styles.title}>{creating ? 'Create your account' : 'Sign in to continue'}</Text>
+        <Text style={styles.subtitle}>Your fitness journey starts here.</Text>
+      </View>
+      <Text style={styles.label}>Email</Text>
+      <IconTextField
+        icon="mail-outline"
         accessibilityLabel="Email"
+        placeholder="Enter your email"
         autoCapitalize="none"
         autoCorrect={false}
         autoComplete="email"
@@ -226,70 +229,130 @@ function SignInForm() {
         value={email}
         onChangeText={setEmail}
         editable={!pending && !sent}
-        style={styles.input}
       />
       {sent ? (
         <>
-          <Text>Enter the verification code from your email.</Text>
-          <TextInput
+          <Text style={styles.label}>Enter the verification code from your email.</Text>
+          <IconTextField
+            icon="keypad-outline"
             accessibilityLabel="Email verification code"
+            placeholder="Verification code"
             autoComplete="one-time-code"
             keyboardType="number-pad"
             value={code}
             onChangeText={setCode}
             editable={!pending}
-            style={styles.input}
           />
-          <Button
+          <View style={styles.linkRow}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={pending}
+              onPress={() => {
+                setSent(false);
+                setCode('');
+                setError('');
+              }}
+            >
+              <Text style={styles.link}>Use another email</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: pending || cooldown }}
+              disabled={pending || cooldown}
+              onPress={() => {
+                void sendCode();
+              }}
+            >
+              <Text style={[styles.link, cooldown && { color: colors.textMuted }]}>
+                {cooldown ? 'Resend available in 30 seconds' : 'Resend code'}
+              </Text>
+            </Pressable>
+          </View>
+          <ActionButton
             title="Verify code"
+            icon="arrow-forward"
             disabled={pending}
             onPress={() => {
               void verifyCode();
             }}
-          />
-          <Button
-            title={cooldown ? 'Resend available in 30 seconds' : 'Resend code'}
-            disabled={pending || cooldown}
-            onPress={() => {
-              void sendCode();
-            }}
-          />
-          <Button
-            title="Use another email"
-            disabled={pending}
-            onPress={() => {
-              setSent(false);
-              setCode('');
-              setError('');
-            }}
+            style={styles.primaryAction}
           />
         </>
       ) : (
-        <>
-          <Button
-            title="Send email code"
-            disabled={pending}
-            onPress={() => {
-              void sendCode();
-            }}
-          />
-          <Button
-            title={creating ? 'Already have an account? Sign in' : 'New here? Create account'}
-            disabled={pending}
-            onPress={() => {
-              setCreating(!creating);
-              setCode('');
-              setError('');
-            }}
-          />
-        </>
+        <ActionButton
+          title="Send email code"
+          icon="arrow-forward"
+          disabled={pending}
+          onPress={() => {
+            void sendCode();
+          }}
+          style={styles.primaryAction}
+        />
       )}
-      {pending ? <ActivityIndicator accessibilityLabel="Authenticating" /> : null}
+      {pending ? (
+        <ActivityIndicator
+          accessibilityLabel="Authenticating"
+          color={colors.accent}
+          style={styles.status}
+        />
+      ) : null}
       {error ? (
         <Text accessibilityRole="alert" style={styles.error}>
           {error}
         </Text>
       ) : null}
+      <View style={styles.dividerRow}>
+        <View style={styles.divider} />
+        <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+        <View style={styles.divider} />
+      </View>
+      <View style={styles.socialRow}>
+        <ActionButton
+          title="Google"
+          accessibilityLabel="Continue with Google"
+          variant="outline"
+          icon="logo-google"
+          iconPosition="start"
+          disabled={pending}
+          onPress={() => {
+            void social('oauth_google');
+          }}
+          style={styles.socialButton}
+        />
+        <ActionButton
+          title="Apple"
+          accessibilityLabel="Continue with Apple"
+          variant="outline"
+          icon="logo-apple"
+          iconPosition="start"
+          disabled={pending}
+          onPress={() => {
+            void social('oauth_apple');
+          }}
+          style={styles.socialButton}
+        />
+      </View>
+      {sent ? null : (
+        <Pressable
+          accessibilityRole="button"
+          disabled={pending}
+          onPress={() => {
+            setCreating(!creating);
+            setCode('');
+            setError('');
+          }}
+          style={styles.footer}
+        >
+          <Text style={styles.footerText}>
+            {creating ? 'Already have an account? ' : 'New here? '}
+            <Text style={styles.link}>{creating ? 'Sign in' : 'Create account'}</Text>
+          </Text>
+        </Pressable>
+      )}
+      <Text style={styles.terms}>
+        By continuing, you agree to our Terms of Service
+        {'\n'}and Privacy Policy.
+      </Text>
     </View>
   );
 }
@@ -302,9 +365,13 @@ export function ClerkSignInScreen() {
         style={styles.screen}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {!isLoaded ? (
-            <ActivityIndicator accessibilityLabel="Restoring session" />
+            <ActivityIndicator accessibilityLabel="Restoring session" color={colors.accent} />
           ) : isSignedIn ? (
             <ConnectedAccount key={sessionId} />
           ) : (
@@ -315,12 +382,3 @@ export function ClerkSignInScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#ffffff' },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  content: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: 16 },
-  title: { fontSize: 28, fontWeight: '700', color: '#111111' },
-  input: { borderWidth: 1, borderColor: '#777777', borderRadius: 8, padding: 12, fontSize: 16 },
-  error: { color: '#a00000' },
-});
