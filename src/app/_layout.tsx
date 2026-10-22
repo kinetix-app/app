@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { getApiBaseUrl, getAuthMode } from '@/config/environment';
+import { colors } from '@/theme/colors';
 
 export default function RootLayout() {
   // Reject invalid public configuration before any feature makes a request.
@@ -13,8 +14,10 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="dark" />
+      <Stack
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+      />
+      <StatusBar style="light" />
     </SafeAreaProvider>
   );
 }

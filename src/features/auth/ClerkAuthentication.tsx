@@ -6,14 +6,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getClerkPublishableKey } from '@/config/environment';
 
+import { authStyles } from './authStyles';
 import { ClerkSignInScreen } from './ClerkSignInScreen';
 
 export default function ClerkAuthentication() {
   const publishableKey = getClerkPublishableKey();
   if (!publishableKey) {
     return (
-      <SafeAreaView>
-        <Text accessibilityRole="alert">
+      <SafeAreaView style={authStyles.screen}>
+        <Text accessibilityRole="alert" style={authStyles.error}>
           Sign-in is unavailable. Clerk configuration is missing.
         </Text>
       </SafeAreaView>
