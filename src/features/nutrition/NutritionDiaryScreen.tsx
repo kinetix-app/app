@@ -1,14 +1,17 @@
 import { Feather } from '@expo/vector-icons';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
+import { nutritionApi } from './api';
+
 const macros = [
-  { label: 'Protein', value: 112, goal: 150, color: 'macro-protein' },
-  { label: 'Carbs', value: 180, goal: 240, color: 'macro-carbs' },
-  { label: 'Fat', value: 52, goal: 70, color: 'macro-fat' },
+  { label: 'Protein', field: 'protein', value: 112, color: 'macro-protein' },
+  { label: 'Carbs', field: 'carbohydrates', value: 180, color: 'macro-carbs' },
+  { label: 'Fat', field: 'fats', value: 52, color: 'macro-fat' },
 ] as const;
 
 const meals = [
@@ -40,16 +43,70 @@ const week = [
   { id: '2026-10-25', weekday: 'Sun', day: '25', hasEntries: false, isToday: false },
 ] as const;
 
-export function NutritionDiaryScreen() {
+export function NutritionDiaryScreen({
+  accountId,
+  onBack,
+}: {
+  accountId?: number;
+  onBack?: () => void;
+}) {
+  const [client] = React.useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: 1, staleTime: 30000, gcTime: 0 } },
+      }),
+  );
+
+  React.useEffect(
+    () => () => {
+      void client.cancelQueries();
+      client.clear();
+    },
+    [client],
+  );
+
+  return (
+    <QueryClientProvider client={client}>
+      <NutritionDiary accountId={accountId} onBack={onBack} />
+    </QueryClientProvider>
+  );
+}
+
+function NutritionDiary({ accountId, onBack }: { accountId?: number; onBack?: () => void }) {
   const p = usePalette();
   const [selectedDay, setSelectedDay] = React.useState('2026-10-22');
   const selected = week.find((day) => day.id === selectedDay) ?? week[3];
+  const goal = useQuery({
+    queryKey: ['nutrition', accountId ?? 'anonymous', 'goal'],
+    queryFn: ({ signal }) => nutritionApi.goal(signal),
+  });
+  const macroProgress = macros.map((macro) => {
+    const goalValue = goal.data?.[macro.field];
+    return {
+      ...macro,
+      goalValue,
+      progress: goalValue ? Math.min((macro.value / goalValue) * 100, 100) : 0,
+    };
+  });
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
+            {onBack ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Back to routines"
+                onPress={onBack}
+                style={({ pressed }) => [
+                  styles.backButton,
+                  { backgroundColor: p['surface-300'], opacity: pressed ? 0.55 : 1 },
+                ]}
+              >
+                <Feather name="arrow-left" size={24} color={p.ink} />
+              </Pressable>
+            ) : null}
             <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
               Nutrition
             </Text>
@@ -110,21 +167,26 @@ export function NutritionDiaryScreen() {
                 1,260 kcal
               </Text>
               <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                of 2,100 kcal
+                of {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
               </Text>
             </View>
-            {macros.map((macro) => (
+            {macroProgress.map((macro) => (
               <View key={macro.label} style={styles.macro}>
                 <View style={styles.macroLabelRow}>
                   <Text style={[textStyles['title-md'], { color: p.ink }]}>{macro.label}</Text>
                   <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                    {macro.value} / {macro.goal} g
+                    {macro.value} /{' '}
+                    {macro.goalValue === undefined ? '—' : formatNumber(macro.goalValue)} g
                   </Text>
                 </View>
                 <View
-                  accessibilityLabel={`${macro.label}: ${macro.value} of ${macro.goal} grams`}
+                  accessibilityLabel={`${macro.label}: ${macro.value} of ${macro.goalValue ?? 'unknown'} grams`}
                   accessibilityRole="progressbar"
-                  accessibilityValue={{ min: 0, max: macro.goal, now: macro.value }}
+                  accessibilityValue={
+                    macro.goalValue === undefined
+                      ? undefined
+                      : { min: 0, max: macro.goalValue, now: macro.value }
+                  }
                   style={[styles.progressTrack, { backgroundColor: p['surface-300'] }]}
                 >
                   <View
@@ -132,13 +194,30 @@ export function NutritionDiaryScreen() {
                       styles.progressValue,
                       {
                         backgroundColor: p[macro.color],
-                        width: `${(macro.value / macro.goal) * 100}%`,
+                        width: `${macro.progress}%`,
                       },
                     ]}
                   />
                 </View>
               </View>
             ))}
+            {goal.isError ? (
+              <View style={styles.goalError}>
+                <Text
+                  accessibilityRole="alert"
+                  style={[textStyles['body-sm'], { color: p.danger }]}
+                >
+                  We could not load your nutrition goal.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry loading nutrition goal"
+                  onPress={() => void goal.refetch()}
+                >
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
 
           {meals.map((meal) => (
@@ -199,6 +278,10 @@ export function NutritionDiaryScreen() {
   );
 }
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+}
+
 function Tab({
   icon,
   label,
@@ -232,7 +315,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['space-6'],
     gap: spacing['space-6'],
   },
-  header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing['space-3'],
+  },
+  backButton: {
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    borderRadius: radii['radius-pill'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing['space-1'] },
   dayButton: {
     flex: 1,
@@ -257,6 +352,7 @@ const styles = StyleSheet.create({
   calorieRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   macro: { gap: spacing['space-2'] },
   macroLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  goalError: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   progressTrack: { height: 16, borderRadius: radii['radius-pill'], overflow: 'hidden' },
   progressValue: { height: '100%', borderRadius: radii['radius-pill'] },
   mealGroup: { gap: spacing['space-2'] },
