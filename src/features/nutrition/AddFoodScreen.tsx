@@ -1,0 +1,190 @@
+import { Feather } from '@expo/vector-icons';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+
+const foods = [
+  { name: 'Grilled chicken breast', calories: '165 kcal' },
+  { name: 'Raw chicken breast', calories: '110 kcal' },
+] as const;
+
+export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => void }) {
+  const p = usePalette();
+  const [selected, setSelected] = React.useState<(typeof foods)[number]>(foods[0]);
+  const [amount, setAmount] = React.useState('200');
+  return (
+    <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back to nutrition"
+            onPress={onClose}
+            style={[styles.back, { backgroundColor: p['surface-300'] }]}
+          >
+            <Feather name="arrow-left" size={24} color={p.ink} />
+          </Pressable>
+          <View>
+            <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
+              Add food
+            </Text>
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{meal}</Text>
+          </View>
+        </View>
+        <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
+        <View
+          style={[
+            styles.inputRow,
+            { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+          ]}
+        >
+          <Feather name="search" size={20} color={p['ink-muted']} />
+          <TextInput
+            accessibilityLabel="Search food"
+            defaultValue="Chicken breast"
+            placeholder="Chicken, rice, yogurt…"
+            placeholderTextColor={p['ink-muted']}
+            style={[styles.input, { color: p.ink }]}
+          />
+        </View>
+        <View style={styles.chips}>
+          {['Food', 'Recipe', 'Supermarket'].map((label, index) => (
+            <View
+              key={label}
+              style={[
+                styles.chip,
+                { backgroundColor: index === 0 ? p['brand-soft'] : p['surface-300'] },
+              ]}
+            >
+              <Text style={[textStyles.label, { color: index === 0 ? p['brand-ink'] : p.ink }]}>
+                {label}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
+          {foods.map((food, index) => (
+            <React.Fragment key={food.name}>
+              {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Select ${food.name}`}
+                onPress={() => setSelected(food)}
+                style={styles.foodRow}
+              >
+                <View style={[styles.foodIcon, { backgroundColor: p['surface-300'] }]}>
+                  <Feather name="coffee" size={22} color={p['brand-ink']} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
+                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per 100 g</Text>
+                </View>
+                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>{food.calories}</Text>
+              </Pressable>
+            </React.Fragment>
+          ))}
+        </View>
+        <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
+          <Text style={[textStyles['title-md'], { color: p.ink }]}>{selected.name}</Text>
+          <View style={styles.macroRow}>
+            {[
+              ['31 g', 'Protein'],
+              ['0 g', 'Carbs'],
+              ['3.6 g', 'Fat'],
+            ].map(([value, label]) => (
+              <View key={label} style={styles.flex}>
+                <Text style={[textStyles['metric-md'], { color: p.ink }]}>{value}</Text>
+                <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{label}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per 100 g</Text>
+        </View>
+        <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
+        <View
+          style={[
+            styles.inputRow,
+            { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+          ]}
+        >
+          <TextInput
+            accessibilityLabel="Food amount"
+            keyboardType="decimal-pad"
+            value={amount}
+            onChangeText={setAmount}
+            style={[styles.input, { color: p.ink }]}
+          />
+          <Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>
+        </View>
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Total: 330 kcal</Text>
+        <View
+          accessibilityRole="button"
+          accessibilityState={{ disabled: true }}
+          style={[styles.add, { backgroundColor: p.brand, opacity: 0.55 }]}
+        >
+          <Text style={[textStyles.label, { color: p['on-brand'] }]}>Add to {meal}</Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: {
+    padding: spacing['space-4'],
+    gap: spacing['space-3'],
+    paddingBottom: spacing['space-10'],
+  },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  back: {
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    borderRadius: radii['radius-pill'],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputRow: {
+    minHeight: sizes['control-height'],
+    borderWidth: 1,
+    borderRadius: radii['radius-md'],
+    paddingHorizontal: spacing['space-3'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['space-2'],
+  },
+  input: { flex: 1, ...textStyles.body },
+  chips: { flexDirection: 'row', gap: spacing['space-2'] },
+  chip: {
+    minHeight: sizes['control-height-sm'],
+    paddingHorizontal: spacing['space-3'],
+    borderRadius: radii['radius-pill'],
+    justifyContent: 'center',
+  },
+  results: { borderRadius: radii['radius-lg'], paddingHorizontal: spacing['space-4'] },
+  divider: { height: 1 },
+  foodRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  foodIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii['radius-md'],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flex: { flex: 1 },
+  preview: {
+    borderRadius: radii['radius-lg'],
+    padding: spacing['space-4'],
+    gap: spacing['space-3'],
+  },
+  macroRow: { flexDirection: 'row', gap: spacing['space-2'] },
+  add: {
+    minHeight: sizes['control-height'],
+    marginTop: spacing['space-3'],
+    borderRadius: radii['radius-pill'],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

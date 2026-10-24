@@ -7,31 +7,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 import { nutritionApi } from './api';
+import { AddFoodScreen } from './AddFoodScreen';
 
 const macros = [
-  { label: 'Protein', field: 'protein', value: 112, color: 'macro-protein' },
-  { label: 'Carbs', field: 'carbohydrates', value: 180, color: 'macro-carbs' },
-  { label: 'Fat', field: 'fats', value: 52, color: 'macro-fat' },
+  { label: 'Protein', field: 'protein', color: 'macro-protein' },
+  { label: 'Carbs', field: 'carbohydrates', color: 'macro-carbs' },
+  { label: 'Fat', field: 'fats', color: 'macro-fat' },
 ] as const;
 
-const meals = [
-  {
-    name: 'Breakfast',
-    calories: 470,
-    items: [
-      { name: 'Oatmeal with banana', amount: '80 g', calories: 380 },
-      { name: 'Coffee with milk', amount: '200 ml', calories: 90 },
-    ],
-  },
-  {
-    name: 'Lunch',
-    calories: 790,
-    items: [
-      { name: 'Grilled chicken breast', amount: '200 g', calories: 330 },
-      { name: 'Brown rice', amount: '180 g cooked', calories: 460 },
-    ],
-  },
-] as const;
+// This is the single place the future diary endpoint will populate from meal items.
+const consumed = { calories: 0, protein: 0, carbohydrates: 0, fats: 0 } as const;
+
+const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const;
 
 const week = [
   { id: '2026-10-19', weekday: 'Mon', day: '19', hasEntries: true, isToday: false },
@@ -85,6 +72,7 @@ function NutritionDiary({
 }) {
   const p = usePalette();
   const [selectedDay, setSelectedDay] = React.useState('2026-10-22');
+  const [selectedMeal, setSelectedMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
   const selected = week.find((day) => day.id === selectedDay) ?? week[3];
   const goal = useQuery({
     queryKey: ['nutrition', accountId ?? 'anonymous', 'goal'],
@@ -94,10 +82,15 @@ function NutritionDiary({
     const goalValue = goal.data?.[macro.field];
     return {
       ...macro,
+      value: consumed[macro.field],
       goalValue,
-      progress: goalValue ? Math.min((macro.value / goalValue) * 100, 100) : 0,
+      progress: goalValue ? Math.min((consumed[macro.field] / goalValue) * 100, 100) : 0,
     };
   });
+
+  if (selectedMeal) {
+    return <AddFoodScreen meal={selectedMeal} onClose={() => setSelectedMeal(null)} />;
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
@@ -175,7 +168,7 @@ function NutritionDiary({
             <View style={styles.calorieRow}>
               <View style={styles.calorieCopy}>
                 <Text style={[textStyles['metric-md'], styles.tabular, { color: p.ink }]}>
-                  1,260 kcal
+                  {formatNumber(consumed.calories)} kcal
                 </Text>
                 <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
                   of {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
@@ -241,48 +234,28 @@ function NutritionDiary({
             ) : null}
           </View>
 
-          {meals.map((meal) => (
-            <View key={meal.name} style={styles.mealGroup}>
+          {mealTypes.map((meal) => (
+            <View key={meal} style={styles.mealGroup}>
               <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-                {meal.name.toUpperCase()} · {meal.calories} KCAL
+                {meal.toUpperCase()}
               </Text>
               <View style={[styles.mealCard, { backgroundColor: p['surface-200'] }]}>
-                {meal.items.map((item, index) => (
-                  <React.Fragment key={item.name}>
-                    {index > 0 ? (
-                      <View style={[styles.divider, { backgroundColor: p.line }]} />
-                    ) : null}
-                    <View style={styles.foodRow}>
-                      <View style={[styles.foodIcon, { backgroundColor: p['surface-300'] }]}>
-                        <Feather name="coffee" size={24} color={p['brand-ink']} />
-                      </View>
-                      <View style={styles.foodCopy}>
-                        <Text numberOfLines={1} style={[textStyles['title-md'], { color: p.ink }]}>
-                          {item.name}
-                        </Text>
-                        <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                          {item.amount}
-                        </Text>
-                      </View>
-                      <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                        {item.calories} kcal
-                      </Text>
-                      <Feather name="chevron-right" size={28} color={p['ink-muted']} />
-                    </View>
-                  </React.Fragment>
-                ))}
+                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No food logged yet</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add food to ${meal}`}
+                  onPress={() => setSelectedMeal(meal)}
+                  style={({ pressed }) => [
+                    styles.mealAddButton,
+                    { backgroundColor: p['brand-soft'], opacity: pressed ? 0.65 : 1 },
+                  ]}
+                >
+                  <Feather name="plus" size={20} color={p['brand-ink']} />
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Add food</Text>
+                </Pressable>
               </View>
             </View>
           ))}
-
-          <View
-            accessibilityRole="button"
-            accessibilityState={{ disabled: true }}
-            style={[styles.addFood, { borderColor: p['line-strong'] }]}
-          >
-            <Feather name="plus" size={28} color={p.ink} />
-            <Text style={[textStyles.label, { color: p.ink }]}>Add food</Text>
-          </View>
         </View>
       </ScrollView>
 
@@ -378,25 +351,18 @@ const styles = StyleSheet.create({
   progressTrack: { height: 16, borderRadius: radii['radius-pill'], overflow: 'hidden' },
   progressValue: { height: '100%', borderRadius: radii['radius-pill'] },
   mealGroup: { gap: spacing['space-2'] },
-  mealCard: { borderRadius: radii['radius-xl'], paddingHorizontal: spacing['space-4'] },
-  foodRow: { minHeight: 108, flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
-  foodIcon: {
-    width: sizes['control-height'] + spacing['space-2'],
-    height: sizes['control-height'] + spacing['space-2'],
+  mealCard: {
     borderRadius: radii['radius-lg'],
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: spacing['space-4'],
+    gap: spacing['space-3'],
   },
-  foodCopy: { flex: 1, gap: spacing['space-1'] },
-  divider: { height: 1 },
-  addFood: {
-    minHeight: sizes['control-height'],
-    borderWidth: 2,
+  mealAddButton: {
+    minHeight: sizes['control-height-sm'],
     borderRadius: radii['radius-pill'],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing['space-3'],
+    gap: spacing['space-2'],
   },
   tabular: { fontVariant: ['tabular-nums'] },
   tabBar: {
