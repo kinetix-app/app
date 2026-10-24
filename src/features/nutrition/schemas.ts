@@ -10,3 +10,12 @@ export const nutritionGoalSchema = z.object({
 });
 
 export type NutritionGoal = z.infer<typeof nutritionGoalSchema>;
+
+export const nutritionGoalInputSchema = z.object({
+  calories: z.number().positive().max(999999.99),
+  protein: z.number().nonnegative().max(999999.99),
+  carbohydrates: z.number().nonnegative().max(999999.99),
+  fats: z.number().nonnegative().max(999999.99),
+});
+
+export type NutritionGoalInput = z.infer<typeof nutritionGoalInputSchema>;

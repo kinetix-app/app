@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { usePalette } from '@/theme/tokens';
 import { NutritionDiaryScreen } from '@/features/nutrition/NutritionDiaryScreen';
+import { NutritionGoalEditor } from '@/features/nutrition/NutritionGoalEditor';
 import { trainingApi } from './api';
 import { RoutineEditor } from './RoutineEditor';
 import type { Routine } from './schemas';
@@ -25,6 +26,8 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
   const [showNutrition, setShowNutrition] = useState(false);
+  const [showNutritionGoal, setShowNutritionGoal] = useState(false);
+  const [returnToNutrition, setReturnToNutrition] = useState(false);
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState('');
   const [search, setSearch] = useState('');
@@ -51,7 +54,31 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
     setSaved(true);
   }
   if (showNutrition) {
-    return <NutritionDiaryScreen accountId={accountId} onBack={() => setShowNutrition(false)} />;
+    return (
+      <NutritionDiaryScreen
+        accountId={accountId}
+        onBack={() => setShowNutrition(false)}
+        onEditGoal={() => {
+          setReturnToNutrition(true);
+          setShowNutrition(false);
+          setShowNutritionGoal(true);
+        }}
+      />
+    );
+  }
+  if (showNutritionGoal) {
+    return (
+      <NutritionGoalEditor
+        accountId={accountId}
+        onClose={() => {
+          setShowNutritionGoal(false);
+          if (returnToNutrition) {
+            setReturnToNutrition(false);
+            setShowNutrition(true);
+          }
+        }}
+      />
+    );
   }
   if (editing === 'new' || (typeof editing === 'number' && detail.data)) {
     return (
@@ -104,6 +131,14 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
               title="Temp button for nutrition section"
               secondary
               onPress={() => setShowNutrition(true)}
+            />
+            <Button
+              title="Temp button for nutrition goal"
+              secondary
+              onPress={() => {
+                setReturnToNutrition(false);
+                setShowNutritionGoal(true);
+              }}
             />
             {saved ? (
               <Text accessibilityRole="alert" style={{ color: p.success }}>

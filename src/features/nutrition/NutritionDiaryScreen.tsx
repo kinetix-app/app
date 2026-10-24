@@ -46,9 +46,11 @@ const week = [
 export function NutritionDiaryScreen({
   accountId,
   onBack,
+  onEditGoal,
 }: {
   accountId?: number;
   onBack?: () => void;
+  onEditGoal?: () => void;
 }) {
   const [client] = React.useState(
     () =>
@@ -67,12 +69,20 @@ export function NutritionDiaryScreen({
 
   return (
     <QueryClientProvider client={client}>
-      <NutritionDiary accountId={accountId} onBack={onBack} />
+      <NutritionDiary accountId={accountId} onBack={onBack} onEditGoal={onEditGoal} />
     </QueryClientProvider>
   );
 }
 
-function NutritionDiary({ accountId, onBack }: { accountId?: number; onBack?: () => void }) {
+function NutritionDiary({
+  accountId,
+  onBack,
+  onEditGoal,
+}: {
+  accountId?: number;
+  onBack?: () => void;
+  onEditGoal?: () => void;
+}) {
   const p = usePalette();
   const [selectedDay, setSelectedDay] = React.useState('2026-10-22');
   const selected = week.find((day) => day.id === selectedDay) ?? week[3];
@@ -163,12 +173,23 @@ function NutritionDiary({ accountId, onBack }: { accountId?: number; onBack?: ()
 
           <View style={[styles.summaryCard, { backgroundColor: p['surface-200'] }]}>
             <View style={styles.calorieRow}>
-              <Text style={[textStyles['metric-md'], styles.tabular, { color: p.ink }]}>
-                1,260 kcal
-              </Text>
-              <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                of {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
-              </Text>
+              <View style={styles.calorieCopy}>
+                <Text style={[textStyles['metric-md'], styles.tabular, { color: p.ink }]}>
+                  1,260 kcal
+                </Text>
+                <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
+                  of {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
+                </Text>
+              </View>
+              {onEditGoal ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit nutrition goal"
+                  onPress={onEditGoal}
+                >
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Edit goal</Text>
+                </Pressable>
+              ) : null}
             </View>
             {macroProgress.map((macro) => (
               <View key={macro.label} style={styles.macro}>
@@ -349,7 +370,8 @@ const styles = StyleSheet.create({
     padding: spacing['space-4'],
     gap: spacing['space-3'],
   },
-  calorieRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  calorieRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  calorieCopy: { gap: spacing['space-1'] },
   macro: { gap: spacing['space-2'] },
   macroLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   goalError: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
