@@ -12,6 +12,7 @@ import {
 } from '@tanstack/react-query';
 import { useNetworkState } from 'expo-network';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { usePalette } from '@/theme/tokens';
 import { trainingApi } from './api';
@@ -21,6 +22,7 @@ import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () => void }) {
   const p = usePalette();
+  const router = useRouter();
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
   const [saved, setSaved] = useState(false);
@@ -94,6 +96,11 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
                 setSaved(false);
                 setEditing('new');
               }}
+            />
+            <Button
+              title="Temp button for nutrition section"
+              secondary
+              onPress={() => router.push('/nutrition')}
             />
             {saved ? (
               <Text accessibilityRole="alert" style={{ color: p.success }}>
