@@ -1,0 +1,437 @@
+{
+  "name": "Kinetix",
+  "version": 1,
+  "color": {
+    "themes": [
+      {
+        "id": "dark",
+        "name": "Oscuro"
+      },
+      {
+        "id": "light",
+        "name": "Claro"
+      }
+    ],
+    "tokens": [
+      {
+        "name": "surface-100",
+        "value": {
+          "dark": "#0e1410",
+          "light": "#f4f7f1"
+        },
+        "usage": "Fondo de pantalla. Todo el contenido se apoya sobre esta capa."
+      },
+      {
+        "name": "surface-200",
+        "value": {
+          "dark": "#161d18",
+          "light": "#ffffff"
+        },
+        "usage": "Tarjetas, hojas inferiores y la barra de pesta\u00f1as, sobre surface-100."
+      },
+      {
+        "name": "surface-300",
+        "value": {
+          "dark": "#1e2721",
+          "light": "#e9efe5"
+        },
+        "usage": "Campos de texto, chips sin seleccionar y pistas de barras de progreso, sobre surface-100 y surface-200."
+      },
+      {
+        "name": "line",
+        "value": {
+          "dark": "#2c3830",
+          "light": "#d5ddd0"
+        },
+        "usage": "Divisores finos entre filas. Decorativo: nunca es el \u00fanico indicador de un l\u00edmite."
+      },
+      {
+        "name": "line-strong",
+        "value": {
+          "dark": "#667a6c",
+          "light": "#6f8074"
+        },
+        "usage": "Borde de campos de texto, casillas y controles. Contraste m\u00ednimo 3:1 sobre surface-100, 200 y 300 en ambos temas."
+      },
+      {
+        "name": "ink",
+        "value": {
+          "dark": "#edf2ea",
+          "light": "#101810"
+        },
+        "usage": "Texto principal sobre surface-100, surface-200 y surface-300."
+      },
+      {
+        "name": "ink-muted",
+        "value": {
+          "dark": "#a0aea3",
+          "light": "#4f5f53"
+        },
+        "usage": "Texto secundario, etiquetas y unidades sobre surface-100, surface-200 y surface-300."
+      },
+      {
+        "name": "brand",
+        "value": {
+          "dark": "#b9f35f",
+          "light": "#2e7d2b"
+        },
+        "usage": "Relleno de la acci\u00f3n principal, anillos y l\u00edneas de progreso, y elemento activo. Con texto encima se usa on-brand."
+      },
+      {
+        "name": "on-brand",
+        "value": {
+          "dark": "#0f1b08",
+          "light": "#ffffff"
+        },
+        "usage": "Texto e iconos sobre brand (bot\u00f3n principal, chips seleccionados). 13,6:1 en oscuro y 5,1:1 en claro."
+      },
+      {
+        "name": "brand-soft",
+        "value": {
+          "dark": "#1d2b15",
+          "light": "#ddf0d2"
+        },
+        "usage": "Fondo suave de elementos seleccionados o destacados (opci\u00f3n elegida, tarjeta de objetivo). Texto encima: brand-ink."
+      },
+      {
+        "name": "brand-ink",
+        "value": {
+          "dark": "#b9f35f",
+          "light": "#1f6420"
+        },
+        "usage": "Texto o icono de color de marca sobre surface-100, surface-200 y brand-soft (pesta\u00f1a activa, enlaces)."
+      },
+      {
+        "name": "focus",
+        "value": "{brand}",
+        "usage": "Anillo de foco de 2 px con 2 px de separaci\u00f3n. S\u00f3lido, al menos 3:1 sobre cualquier superficie."
+      },
+      {
+        "name": "danger",
+        "value": {
+          "dark": "#ff8a7a",
+          "light": "#b3261e"
+        },
+        "usage": "Errores, borrar y estados fallidos, sobre surface-200 y surface-300. Siempre acompa\u00f1ado de texto o icono."
+      },
+      {
+        "name": "success",
+        "value": {
+          "dark": "#6ee0a0",
+          "light": "#1b7a45"
+        },
+        "usage": "Serie completada y confirmaciones, sobre surface-200 y surface-300. Siempre con icono de check o texto."
+      },
+      {
+        "name": "warning",
+        "value": {
+          "dark": "#f5c04e",
+          "light": "#8a5a00"
+        },
+        "usage": "Avisos y objetivo superado, sobre surface-200 y surface-300. Siempre con texto."
+      },
+      {
+        "name": "info",
+        "value": {
+          "dark": "#6cbff5",
+          "light": "#0b6aa8"
+        },
+        "usage": "Mensajes informativos neutros, sobre surface-200 y surface-300."
+      },
+      {
+        "name": "macro-protein",
+        "value": {
+          "dark": "#7be0b5",
+          "light": "#1b8a60"
+        },
+        "usage": "Barra de prote\u00ednas. Marca con relleno de al menos 3:1 sobre surface-200 y surface-300; la etiqueta siempre va escrita."
+      },
+      {
+        "name": "macro-carbs",
+        "value": {
+          "dark": "#6cbff5",
+          "light": "#0b6aa8"
+        },
+        "usage": "Barra de hidratos de carbono. Misma regla que macro-protein."
+      },
+      {
+        "name": "macro-fat",
+        "value": {
+          "dark": "#f5c04e",
+          "light": "#a06a00"
+        },
+        "usage": "Barra de grasas. Misma regla que macro-protein."
+      },
+      {
+        "name": "scrim",
+        "value": {
+          "dark": "#000000b3",
+          "light": "#101810a6"
+        },
+        "usage": "Capa oscura detr\u00e1s de hojas inferiores y di\u00e1logos."
+      }
+    ]
+  },
+  "type": {
+    "fonts": [],
+    "families": {
+      "display": "\"Bricolage Grotesque\", \"Figtree\", system-ui, sans-serif",
+      "sans": "\"Figtree\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+    },
+    "groups": [
+      {
+        "name": "Titulares",
+        "family": "display",
+        "styles": [
+          {
+            "name": "display-xl",
+            "fontSize": "40px",
+            "lineHeight": "44px",
+            "fontWeight": 700,
+            "letterSpacing": "-0.02em",
+            "sample": "Buenos d\u00edas, Pol",
+            "usage": "Saludo de la pantalla de inicio y t\u00edtulos de bienvenida. Una vez por pantalla."
+          },
+          {
+            "name": "display-lg",
+            "fontSize": "32px",
+            "lineHeight": "36px",
+            "fontWeight": 700,
+            "letterSpacing": "-0.02em",
+            "sample": "Tu objetivo",
+            "usage": "T\u00edtulo de pantalla en login, selecci\u00f3n de objetivo y perfil."
+          },
+          {
+            "name": "title-lg",
+            "fontSize": "24px",
+            "lineHeight": "30px",
+            "fontWeight": 600,
+            "letterSpacing": "-0.01em",
+            "sample": "Press de banca",
+            "usage": "T\u00edtulo de secci\u00f3n grande y nombre del ejercicio en sesi\u00f3n activa."
+          },
+          {
+            "name": "title-md",
+            "fontSize": "20px",
+            "lineHeight": "26px",
+            "fontWeight": 600,
+            "sample": "Rutinas",
+            "usage": "T\u00edtulo de tarjeta y de grupo de filas."
+          }
+        ]
+      },
+      {
+        "name": "Cifras",
+        "family": "display",
+        "styles": [
+          {
+            "name": "metric-xl",
+            "fontSize": "56px",
+            "lineHeight": "56px",
+            "fontWeight": 700,
+            "letterSpacing": "-0.03em",
+            "sample": "1.840",
+            "usage": "Una sola cifra protagonista por pantalla (calor\u00edas restantes). Usa cifras tabulares."
+          },
+          {
+            "name": "metric-lg",
+            "fontSize": "36px",
+            "lineHeight": "40px",
+            "fontWeight": 700,
+            "letterSpacing": "-0.02em",
+            "sample": "82,4",
+            "usage": "Valor central de un anillo o de una medida."
+          },
+          {
+            "name": "metric-md",
+            "fontSize": "24px",
+            "lineHeight": "28px",
+            "fontWeight": 700,
+            "letterSpacing": "-0.01em",
+            "sample": "120 kg",
+            "usage": "Valor de una serie y totales de una comida."
+          }
+        ]
+      },
+      {
+        "name": "Texto",
+        "family": "sans",
+        "styles": [
+          {
+            "name": "body-lg",
+            "fontSize": "17px",
+            "lineHeight": "26px",
+            "fontWeight": 400,
+            "sample": "Completa tu primera sesi\u00f3n para ver tu progreso.",
+            "usage": "P\u00e1rrafos de introducci\u00f3n y pantallas vac\u00edas."
+          },
+          {
+            "name": "body",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": 400,
+            "sample": "Pechuga de pollo a la plancha",
+            "usage": "Texto base, nombre de alimento y valor de campo."
+          },
+          {
+            "name": "body-sm",
+            "fontSize": "14px",
+            "lineHeight": "20px",
+            "fontWeight": 400,
+            "sample": "3 series \u00b7 8-10 repeticiones",
+            "usage": "Subt\u00edtulo de fila, ayudas y mensajes de error de campo."
+          },
+          {
+            "name": "label",
+            "fontSize": "14px",
+            "lineHeight": "18px",
+            "fontWeight": 600,
+            "letterSpacing": "0.01em",
+            "sample": "Empezar entreno",
+            "usage": "Texto de bot\u00f3n, pesta\u00f1as, chips y etiquetas de campo."
+          },
+          {
+            "name": "caption",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": 500,
+            "letterSpacing": "0.02em",
+            "sample": "kcal restantes",
+            "usage": "Unidades, fechas y leyendas de gr\u00e1fica. Nunca para informaci\u00f3n imprescindible."
+          },
+          {
+            "name": "overline",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": 700,
+            "letterSpacing": "0.08em",
+            "sample": "DESAYUNO",
+            "usage": "Encabezado de grupo en may\u00fasculas (tipos de comida, secciones)."
+          }
+        ]
+      }
+    ]
+  },
+  "spacing": {
+    "tokens": [
+      {
+        "name": "space-1",
+        "value": "4px",
+        "usage": "Separaci\u00f3n entre icono y texto peque\u00f1o."
+      },
+      {
+        "name": "space-2",
+        "value": "8px",
+        "usage": "Separaci\u00f3n entre elementos de una misma fila."
+      },
+      {
+        "name": "space-3",
+        "value": "12px",
+        "usage": "Separaci\u00f3n entre campos de un mismo grupo."
+      },
+      {
+        "name": "space-4",
+        "value": "16px",
+        "usage": "Margen lateral de pantalla y relleno de tarjeta."
+      },
+      {
+        "name": "space-5",
+        "value": "20px",
+        "usage": "Relleno de tarjeta grande."
+      },
+      {
+        "name": "space-6",
+        "value": "24px",
+        "usage": "Separaci\u00f3n entre tarjetas."
+      },
+      {
+        "name": "space-8",
+        "value": "32px",
+        "usage": "Separaci\u00f3n entre secciones."
+      },
+      {
+        "name": "space-10",
+        "value": "40px",
+        "usage": "Aire sobre un t\u00edtulo de pantalla."
+      },
+      {
+        "name": "space-12",
+        "value": "48px",
+        "usage": "Separaci\u00f3n grande en pantallas de bienvenida."
+      }
+    ]
+  },
+  "radius": {
+    "tokens": [
+      {
+        "name": "radius-sm",
+        "value": "8px",
+        "usage": "Chips peque\u00f1os, casillas y huecos de cifra."
+      },
+      {
+        "name": "radius-md",
+        "value": "12px",
+        "usage": "Campos de texto y botones peque\u00f1os."
+      },
+      {
+        "name": "radius-lg",
+        "value": "20px",
+        "usage": "Tarjetas y botones grandes."
+      },
+      {
+        "name": "radius-xl",
+        "value": "28px",
+        "usage": "Hojas inferiores y tarjetas destacadas."
+      },
+      {
+        "name": "radius-pill",
+        "value": "999px",
+        "usage": "Botones principales, chips, barras de progreso y pesta\u00f1as."
+      }
+    ]
+  },
+  "shadow": {
+    "tokens": [
+      {
+        "name": "shadow-card",
+        "value": {
+          "dark": "none",
+          "light": "0 1px 2px rgba(16,24,16,0.06), 0 4px 16px rgba(16,24,16,0.06)"
+        },
+        "usage": "Elevaci\u00f3n de tarjeta. En oscuro la separaci\u00f3n la dan las superficies, no la sombra."
+      },
+      {
+        "name": "shadow-pop",
+        "value": {
+          "dark": "0 8px 32px rgba(0,0,0,0.5)",
+          "light": "0 8px 32px rgba(16,24,16,0.16)"
+        },
+        "usage": "Hojas inferiores, men\u00fas y di\u00e1logos."
+      }
+    ]
+  },
+  "size": {
+    "tokens": [
+      {
+        "name": "tap-min",
+        "value": "44px",
+        "usage": "Tama\u00f1o m\u00ednimo de cualquier zona pulsable."
+      },
+      {
+        "name": "control-height",
+        "value": "52px",
+        "usage": "Alto de botones grandes y campos de texto."
+      },
+      {
+        "name": "control-height-sm",
+        "value": "44px",
+        "usage": "Alto de botones peque\u00f1os y chips; igual a tap-min."
+      },
+      {
+        "name": "tab-bar-height",
+        "value": "64px",
+        "usage": "Alto de la barra de pesta\u00f1as sin la zona segura inferior."
+      }
+    ]
+  }
+}

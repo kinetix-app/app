@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 
 export const accountSchema = z.object({
-  id: z.uuid(),
+  id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   status: z.literal('active'),
   created_at: z.iso.datetime({ offset: true }),
   profile: z.object({

@@ -2,9 +2,11 @@
 
 The Android and iOS client for a university fitness project. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.
 
-**Current status:** the Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth must be configured with a local credential allowlist; the Clerk SDK implements email OTP, Google/Apple OAuth, secure native session storage, restoration and logout. Production dashboard setup and native/provider verification remain required.
+**Current status:** the routine workspace supports catalogue browsing with clickable body parts and name search, named routine creation/editing with an image-and-summary overview and focused set editor, planned kg/repetition sets and themed autoplay exercise videos with image fallback. [Routine workflow and implementation plan](docs/routines.md) documents the API increment. The Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth must be configured with a local credential allowlist; the Clerk SDK implements email OTP, Google/Apple OAuth, secure native session storage, restoration and logout. Production dashboard setup and native/provider verification remain required.
 
 Android and iOS are the delivery targets. Web-compatible code and browser previews are useful, but complete web support is not currently committed.
+
+Design conventions and UI review requirements are declared in [AGENTS.md](AGENTS.md#design-rules-for-every-ui-change), which coding agents read automatically at the repository root. Runtime design tokens live in `src/theme/`.
 
 ## API requests and authentication
 
@@ -88,7 +90,7 @@ The following commands are configured:
 | `pnpm format:check`              | Check Prettier formatting                                         |
 | `pnpm test`                      | Run configuration, API and authentication behavior tests          |
 
-The platform run commands generate native projects, install native dependencies and can start Metro themselves. Reuse an existing server instead of starting competing sessions. `pnpm start` connects to an already installed development build; `pnpm web` provides the optional browser preview without Android/iOS tools.
+The platform run commands generate native projects, install native dependencies and can start Metro themselves. Reuse an existing server instead of starting competing sessions. Rebuild native development clients after adding Expo Video. `pnpm start` connects to an already installed development build; `pnpm web` provides the optional browser preview without Android/iOS tools.
 
 Also use `pnpm run doctor` for Expo compatibility checks, `pnpm export --platform all` to bundle Android/iOS and export static web pages, and `pnpm format` to apply formatting. Exporting bundles does not compile or install a native app.
 
@@ -125,7 +127,7 @@ Use HTTPS for deployed APIs. A local HTTP setup may need platform-specific confi
 
 A goal route, for example, delegates to `GoalScreen` in the goals feature. That screen uses a feature hook/API operation through the shared request client. Saving returns authoritative backend data, and affected cached queries are updated or invalidated. Keep request construction and domain calculations out of route files.
 
-Use local React state for transient UI, TanStack Query for server data when integrated, and React Hook Form/Zod for substantial forms. These packages are part of the accepted approach but are not installed yet. Start with React Native primitives and StyleSheet; design tokens come from management. Keep platform differences behind adapters so optional web support remains practical.
+Use local React state for transient UI, TanStack Query for server data when integrated, and React Hook Form/Zod for substantial forms. TanStack Query and React Hook Form are installed for the routine workflow; Zod validates its API boundaries. Start with React Native primitives and StyleSheet; design tokens come from management. Keep platform differences behind adapters so optional web support remains practical.
 
 ## Your first contribution
 
@@ -200,3 +202,24 @@ pnpm requires an explicit decision for dependencies with install scripts. If ins
 Read [React quick start](https://react.dev/learn) for components, props, state, events and Hooks, then [React Native core components](https://reactnative.dev/docs/intro-react-native-components) for mobile equivalents. Follow with [Expo Router core concepts](https://docs.expo.dev/router/basics/core-concepts/) and the development-build guide linked above. Practice with a small local screen before camera or real-time work; keep exercises separate from claims of delivered features.
 
 The full scope and research rationale live in management. Until verified cross-repository links are available, this README and `AGENTS.md` provide standalone frontend onboarding and coding guidance.
+
+## Routine workspace and design tokens
+
+After verified Basic or Clerk sign-in, the account opens its private routine workspace.
+Create a routine, choose catalogue exercises, add planned kg/repetition sets and save.
+Reopen it to edit its name, selection, order and default sets. Reorder exercise cards using their drag handles; click a name to edit its sets or a thumbnail for exercise details. Failed saves retain input;
+Cancel asks before discarding a dirty form. Session start/completion remain separate work.
+The backend must include the planned-set extension documented in [the routine contract](docs/routines.md).
+
+`src/theme/design-tokens.json` is the standalone export of the supplied Kinetix design
+system. `src/theme/tokens.ts` exposes light/dark palettes, spacing, radii, sizes, typography
+and shadows. Training follows the system appearance; sign-in's compatibility palette uses
+the same dark tokens. Bricolage Grotesque/Figtree font files are not bundled; system fonts
+are the current fallback. No sibling checkout is needed at runtime.
+
+Exercise lists use compact summary responses, with full details fetched on demand. A filter modal supports multiple body parts with removable selection badges and automatic page loading. Routine and exercise lists support name search.
+
+Server queries use identity/filters in their keys, native focus/connectivity integration
+and abort signals. Leaving the account cancels queries and clears its private cache/forms.
+Mutations are not automatically retried. This increment adds `expo-network`; rebuild native
+development clients after installing locked dependencies.

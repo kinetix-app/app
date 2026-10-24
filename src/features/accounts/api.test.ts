@@ -4,7 +4,7 @@ import { getAccount, parseAccount, updateProfile } from './api';
 import { accountSchema } from './schemas';
 
 const account = {
-  id: 'bf08d0a0-6ae6-4a7a-8d3f-8dbe890bd395',
+  id: 1,
   status: 'active',
   created_at: '2026-10-14T12:00:00Z',
   profile: {
@@ -21,7 +21,7 @@ test('accepts the private backend account contract', () => {
 test.each([
   null,
   {},
-  { ...account, id: 'user_clerk-id-is-not-the-local-uuid' },
+  { ...account, id: 'user_clerk-id-is-not-the-local-id' },
   { ...account, status: 'blocked' },
   { ...account, created_at: 'invalid' },
   { ...account, profile: { ...account.profile, timezone: 5 } },

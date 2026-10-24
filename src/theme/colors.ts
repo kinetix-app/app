@@ -1,17 +1,19 @@
-// Runtime export of the sign-in design palette; authoritative tokens are owned by management.
+// Compatibility names for existing sign-in components, derived from the design system.
+import { palette } from './tokens';
+const dark = palette('dark');
 export const colors = {
-  background: '#070D15',
-  surface: '#101B2A',
-  surfaceMuted: '#0B131F',
-  border: '#263447',
-  accent: '#32E68A',
-  onAccent: '#07130D',
-  textPrimary: '#FFFFFF',
-  textHeading: '#F5F7FA',
-  textLabel: '#D9E0E9',
-  textSecondary: '#8C99AA',
-  textMuted: '#718096',
-  textSubtle: '#657286',
-  icon: '#8491A3',
-  error: '#FF6B6B',
+  background: dark['surface-100'],
+  surface: dark['surface-200'],
+  surfaceMuted: dark['surface-300'],
+  border: dark['line-strong'],
+  accent: dark.brand,
+  onAccent: dark['on-brand'],
+  textPrimary: dark.ink,
+  textHeading: dark.ink,
+  textLabel: dark.ink,
+  textSecondary: dark['ink-muted'],
+  textMuted: dark['ink-muted'],
+  textSubtle: dark['ink-muted'],
+  icon: dark['ink-muted'],
+  error: dark.danger,
 } as const;
