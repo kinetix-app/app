@@ -17,6 +17,7 @@ import { ActionButton } from '@/components/ActionButton';
 import { BrandHeader } from '@/components/BrandHeader';
 import { IconTextField } from '@/components/IconTextField';
 import { getAccount, type Account } from '@/features/accounts/api';
+import { TrainingWorkspace } from '@/features/training/TrainingWorkspace';
 import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
 import { colors } from '@/theme/colors';
@@ -74,15 +75,20 @@ function ConnectedAccount() {
     }
   }
 
+  if (account)
+    return (
+      <TrainingWorkspace
+        accountId={account.id}
+        onSignOut={() => {
+          void logout();
+        }}
+      />
+    );
+
   return (
     <View style={styles.content}>
       <BrandHeader />
-      {account ? (
-        <Text style={styles.body}>
-          Welcome{account.profile.display_name ? `, ${account.profile.display_name}` : ''}. Your
-          account is connected.
-        </Text>
-      ) : !error ? (
+      {!error ? (
         <ActivityIndicator accessibilityLabel="Connecting your account" color={colors.accent} />
       ) : null}
       {error ? (
@@ -359,6 +365,7 @@ function SignInForm() {
 
 export function ClerkSignInScreen() {
   const { isLoaded, isSignedIn, sessionId } = useAuth();
+  if (isLoaded && isSignedIn) return <ConnectedAccount key={sessionId} />;
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView
@@ -372,8 +379,6 @@ export function ClerkSignInScreen() {
         >
           {!isLoaded ? (
             <ActivityIndicator accessibilityLabel="Restoring session" color={colors.accent} />
-          ) : isSignedIn ? (
-            <ConnectedAccount key={sessionId} />
           ) : (
             <SignInForm />
           )}

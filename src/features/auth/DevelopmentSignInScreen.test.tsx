@@ -15,6 +15,19 @@ jest.mock('@/config/environment', () => ({
   getAuthMode: () => 'basic',
 }));
 jest.mock('@/features/accounts/api', () => ({ getAccount: jest.fn() }));
+jest.mock('@/features/training/TrainingWorkspace', () => ({
+  TrainingWorkspace: ({ accountId, onSignOut }: { accountId: number; onSignOut: () => void }) => {
+    const { Text, Pressable, View } = jest.requireActual('react-native');
+    return (
+      <View>
+        <Text>Training for account {accountId}</Text>
+        <Pressable onPress={onSignOut}>
+          <Text>Sign out</Text>
+        </Pressable>
+      </View>
+    );
+  },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -35,13 +48,13 @@ test('sign-in waits for backend acceptance and logout clears credentials', async
   });
   render(<DevelopmentSignInScreen />);
   submit();
-  await screen.findByText('Your account is connected.');
+  await screen.findByText('Training for account 1');
   expect(await authService.getAuthorizationHeader()).toBe(
     'Basic YWxpY2VAZXhhbXBsZS50ZXN0OmxvY2FsLXBhc3N3b3Jk',
   );
   fireEvent.press(screen.getByText('Sign out'));
   expect(await authService.getAuthorizationHeader()).toBeUndefined();
-  expect(screen.queryByText('Your account is connected.')).toBeNull();
+  expect(screen.queryByText('Training for account 1')).toBeNull();
 });
 
 test('wrong credentials leave the account signed out and discard the header', async () => {
@@ -52,7 +65,7 @@ test('wrong credentials leave the account signed out and discard the header', as
     'The email or password was not accepted. Use an account configured on the backend.',
   );
   expect(await authService.getAuthorizationHeader()).toBeUndefined();
-  expect(screen.queryByText('Your account is connected.')).toBeNull();
+  expect(screen.queryByText('Training for account 1')).toBeNull();
 });
 
 test('leaving a pending sign-in aborts its API call and clears credentials', async () => {

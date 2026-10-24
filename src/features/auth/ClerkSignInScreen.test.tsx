@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
-import { getAccount } from '@/features/accounts/api';
+import { getAccount, type Account } from '@/features/accounts/api';
 import { authService } from '@/services/authService';
 
 import { ClerkSignInScreen } from './ClerkSignInScreen';
@@ -39,10 +39,24 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: jest.requireActual('react-native').View,
 }));
 jest.mock('@/features/accounts/api', () => ({ getAccount: jest.fn() }));
+jest.mock('@/features/training/TrainingWorkspace', () => ({
+  TrainingWorkspace: ({ accountId, onSignOut }: { accountId: number; onSignOut: () => void }) => {
+    const { Text, Pressable, View } = jest.requireActual('react-native');
+    return (
+      <View>
+        <Text>Training for account {accountId}</Text>
+        <Pressable onPress={onSignOut}>
+          <Text>Sign out</Text>
+        </Pressable>
+      </View>
+    );
+  },
+}));
+
 jest.mock('@/services/authService', () => ({
   authService: { clear: jest.fn(), setTokenProvider: jest.fn() },
 }));
-const account = {
+const account: Account = {
   id: 1,
   status: 'active' as const,
   created_at: '2026-10-14T12:00:00Z',
@@ -159,14 +173,14 @@ test('provider failure shows a retryable error', async () => {
 test('restored sessions connect to the account API and logout clears private state', async () => {
   mockAuth.isSignedIn = true;
   render(<ClerkSignInScreen />);
-  await screen.findByText('Welcome, Alice. Your account is connected.');
+  await screen.findByText('Training for account 1');
   expect(authService.setTokenProvider).toHaveBeenCalledWith(mockGetToken);
   const signal = jest.mocked(getAccount).mock.calls[0][1];
   fireEvent.press(screen.getByText('Sign out'));
   await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
   expect(authService.clear).toHaveBeenCalled();
   expect(signal?.aborted).toBe(true);
-  expect(screen.queryByText('Welcome, Alice. Your account is connected.')).toBeNull();
+  expect(screen.queryByText('Training for account 1')).toBeNull();
 });
 
 test('switching sessions cancels old account requests and never shows their late response', async () => {
@@ -182,13 +196,13 @@ test('switching sessions cancels old account requests and never shows their late
   const oldSignal = jest.mocked(getAccount).mock.calls[0][1];
   jest
     .mocked(getAccount)
-    .mockResolvedValue({ ...account, profile: { ...account.profile, display_name: 'Bob' } });
+    .mockResolvedValue({ ...account, id: 2, profile: { ...account.profile, display_name: 'Bob' } });
   mockAuth.sessionId = 'sess_two';
   view.rerender(<ClerkSignInScreen />);
-  await screen.findByText('Welcome, Bob. Your account is connected.');
+  await screen.findByText('Training for account 2');
   await act(async () => {
     resolveOld(account);
   });
   expect(oldSignal?.aborted).toBe(true);
-  expect(screen.queryByText('Welcome, Alice. Your account is connected.')).toBeNull();
+  expect(screen.queryByText('Training for account 1')).toBeNull();
 });
