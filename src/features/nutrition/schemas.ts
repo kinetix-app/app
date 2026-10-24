@@ -51,3 +51,11 @@ export const mealItemInputSchema = z.object({
   quantity_grams: z.number().positive().max(999999.99),
 });
 export type MealItemInput = z.infer<typeof mealItemInputSchema>;
+export const nutritionDaySchema = z.object({
+  date: z.string(),
+  calories: z.coerce.number(),
+  protein: z.coerce.number(),
+  carbohydrates: z.coerce.number(),
+  fats: z.coerce.number(),
+  items: z.array(mealItemSchema),
+});

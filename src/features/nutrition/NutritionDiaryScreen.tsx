@@ -16,7 +16,6 @@ const macros = [
 ] as const;
 
 // This is the single place the future diary endpoint will populate from meal items.
-const consumed = { calories: 0, protein: 0, carbohydrates: 0, fats: 0 } as const;
 
 const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const;
 
@@ -78,6 +77,11 @@ function NutritionDiary({
     queryKey: ['nutrition', accountId ?? 'anonymous', 'goal'],
     queryFn: ({ signal }) => nutritionApi.goal(signal),
   });
+  const day = useQuery({
+    queryKey: ['nutrition', accountId ?? 'anonymous', 'day', selectedDay],
+    queryFn: ({ signal }) => nutritionApi.day(selectedDay, signal),
+  });
+  const consumed = day.data ?? { calories: 0, protein: 0, carbohydrates: 0, fats: 0, items: [] };
   const macroProgress = macros.map((macro) => {
     const goalValue = goal.data?.[macro.field];
     return {
@@ -89,7 +93,13 @@ function NutritionDiary({
   });
 
   if (selectedMeal) {
-    return <AddFoodScreen meal={selectedMeal} onClose={() => setSelectedMeal(null)} />;
+    return (
+      <AddFoodScreen
+        meal={selectedMeal}
+        onClose={() => setSelectedMeal(null)}
+        onSaved={() => void day.refetch()}
+      />
+    );
   }
 
   return (
@@ -240,7 +250,30 @@ function NutritionDiary({
                 {meal.toUpperCase()}
               </Text>
               <View style={[styles.mealCard, { backgroundColor: p['surface-200'] }]}>
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No food logged yet</Text>
+                {consumed.items
+                  .filter(
+                    (item) => item.meal_type === (meal === 'Snacks' ? 'snack' : meal.toLowerCase()),
+                  )
+                  .map((item) => (
+                    <View key={item.id} style={styles.loggedItem}>
+                      <View style={styles.itemCopy}>
+                        <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
+                        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                          {item.quantity_grams} g
+                        </Text>
+                      </View>
+                      <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                        {formatNumber(item.calories)} kcal
+                      </Text>
+                    </View>
+                  ))}
+                {!consumed.items.some(
+                  (item) => item.meal_type === (meal === 'Snacks' ? 'snack' : meal.toLowerCase()),
+                ) ? (
+                  <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                    No food logged yet
+                  </Text>
+                ) : null}
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Add food to ${meal}`}
@@ -356,6 +389,8 @@ const styles = StyleSheet.create({
     padding: spacing['space-4'],
     gap: spacing['space-3'],
   },
+  loggedItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  itemCopy: { flex: 1, gap: spacing['space-1'] },
   mealAddButton: {
     minHeight: sizes['control-height-sm'],
     borderRadius: radii['radius-pill'],

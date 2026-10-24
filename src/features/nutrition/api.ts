@@ -4,6 +4,7 @@ import {
   foodListSchema,
   mealItemInputSchema,
   mealItemSchema,
+  nutritionDaySchema,
   nutritionGoalInputSchema,
   nutritionGoalSchema,
   type MealItemInput,
@@ -30,4 +31,6 @@ export const nutritionApi = {
     apiClient.post('/api/v1/nutrition/meal-items', mealItemInputSchema.parse(input), {
       schema: mealItemSchema,
     }),
+  day: (date: string, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/nutrition/days/${date}`, { schema: nutritionDaySchema, signal }),
 };

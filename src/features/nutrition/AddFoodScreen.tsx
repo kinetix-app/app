@@ -8,7 +8,15 @@ import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { nutritionApi } from './api';
 import type { Food } from './schemas';
 
-export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => void }) {
+export function AddFoodScreen({
+  meal,
+  onClose,
+  onSaved,
+}: {
+  meal: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const p = usePalette();
   const [search, setSearch] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
@@ -35,7 +43,10 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
         quantity_grams: Math.round(Number(amount) * 100) / 100,
       });
     },
-    onSuccess: onClose,
+    onSuccess: () => {
+      onSaved();
+      onClose();
+    },
   });
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
