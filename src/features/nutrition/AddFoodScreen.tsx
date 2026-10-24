@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +22,20 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
     queryKey: ['nutrition', 'foods', debouncedSearch],
     enabled: Boolean(debouncedSearch),
     queryFn: ({ signal }) => nutritionApi.searchFoods(debouncedSearch, signal),
+  });
+  const save = useMutation({
+    mutationFn: () => {
+      if (!selected) throw new Error('Select a food first.');
+      return nutritionApi.addMealItem({
+        date: '2026-10-22',
+        meal_type: (
+          { Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' } as const
+        )[meal as 'Breakfast'],
+        food_id: selected.id,
+        quantity_grams: Math.round(Number(amount) * 100) / 100,
+      });
+    },
+    onSuccess: onClose,
   });
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
@@ -81,10 +95,25 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Select ${food.name}`}
+                accessibilityState={{ selected: selected?.id === food.id }}
                 onPress={() => setSelected(food)}
-                style={styles.foodRow}
+                style={({ pressed }) => [
+                  styles.foodRow,
+                  {
+                    opacity: pressed ? 0.65 : 1,
+                  },
+                ]}
               >
-                <View style={[styles.foodIcon, { backgroundColor: p['surface-300'] }]}>
+                <View
+                  style={[
+                    styles.foodIcon,
+                    {
+                      backgroundColor: p['surface-300'],
+                      borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
+                      borderWidth: 2,
+                    },
+                  ]}
+                >
                   <Feather name="coffee" size={22} color={p['brand-ink']} />
                 </View>
                 <View style={styles.flex}>
@@ -142,13 +171,20 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
             : '—'}{' '}
           kcal
         </Text>
-        <View
+        <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: true }}
-          style={[styles.add, { backgroundColor: p.brand, opacity: 0.55 }]}
+          accessibilityState={{ disabled: !selected || save.isPending }}
+          disabled={!selected || save.isPending}
+          onPress={() => save.mutate()}
+          style={[
+            styles.add,
+            { backgroundColor: p.brand, opacity: !selected || save.isPending ? 0.55 : 1 },
+          ]}
         >
-          <Text style={[textStyles.label, { color: p['on-brand'] }]}>Add to {meal}</Text>
-        </View>
+          <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+            {save.isPending ? 'Adding…' : `Add to ${meal}`}
+          </Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

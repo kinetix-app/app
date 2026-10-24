@@ -33,3 +33,21 @@ export const foodSchema = z.object({
 });
 export const foodListSchema = z.array(foodSchema);
 export type Food = z.infer<typeof foodSchema>;
+export const mealItemSchema = z.object({
+  id: z.number().int(),
+  meal_type: z.string(),
+  food_id: z.number().int(),
+  name: z.string(),
+  quantity_grams: z.coerce.number(),
+  calories: z.coerce.number(),
+  protein: z.coerce.number(),
+  carbohydrates: z.coerce.number(),
+  fats: z.coerce.number(),
+});
+export const mealItemInputSchema = z.object({
+  date: z.string(),
+  meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  food_id: z.number().int().positive(),
+  quantity_grams: z.number().positive().max(999999.99),
+});
+export type MealItemInput = z.infer<typeof mealItemInputSchema>;

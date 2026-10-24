@@ -2,8 +2,11 @@ import { apiClient } from '@/services/apiClient';
 
 import {
   foodListSchema,
+  mealItemInputSchema,
+  mealItemSchema,
   nutritionGoalInputSchema,
   nutritionGoalSchema,
+  type MealItemInput,
   type NutritionGoalInput,
 } from './schemas';
 
@@ -22,5 +25,9 @@ export const nutritionApi = {
     apiClient.get(`/api/v1/foods?name=${encodeURIComponent(name.trim())}`, {
       schema: foodListSchema,
       signal,
+    }),
+  addMealItem: (input: MealItemInput) =>
+    apiClient.post('/api/v1/nutrition/meal-items', mealItemInputSchema.parse(input), {
+      schema: mealItemSchema,
     }),
 };
