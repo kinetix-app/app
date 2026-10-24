@@ -33,12 +33,39 @@ export const foodSchema = z.object({
 });
 export const foodListSchema = z.array(foodSchema);
 export type Food = z.infer<typeof foodSchema>;
+export const recipeSchema = z.object({
+  id: z.number().int().positive(),
+  user_id: z.number().int().positive(),
+  name: z.string(),
+  servings: z.number().int().positive(),
+  calories: z.coerce.number(),
+  protein: z.coerce.number(),
+  carbohydrates: z.coerce.number(),
+  fats: z.coerce.number(),
+});
+export const recipeListSchema = z.array(recipeSchema);
+export type Recipe = z.infer<typeof recipeSchema>;
+export const recipeInputSchema = z.object({
+  name: z.string().trim().min(1).max(150),
+  servings: z.number().int().positive().max(100),
+  ingredients: z
+    .array(
+      z.object({
+        food_id: z.number().int().positive(),
+        quantity_grams: z.number().positive().max(999999.99),
+      }),
+    )
+    .min(1),
+});
+export type RecipeInput = z.infer<typeof recipeInputSchema>;
 export const mealItemSchema = z.object({
   id: z.number().int(),
   meal_type: z.string(),
-  food_id: z.number().int(),
+  food_id: z.number().int().nullable().optional(),
+  recipe_id: z.number().int().nullable().optional(),
   name: z.string(),
-  quantity_grams: z.coerce.number(),
+  quantity_grams: z.coerce.number().nullable().optional(),
+  servings: z.coerce.number().nullable().optional(),
   calories: z.coerce.number(),
   protein: z.coerce.number(),
   carbohydrates: z.coerce.number(),
@@ -51,6 +78,13 @@ export const mealItemInputSchema = z.object({
   quantity_grams: z.number().positive().max(999999.99),
 });
 export type MealItemInput = z.infer<typeof mealItemInputSchema>;
+export const recipeMealItemInputSchema = z.object({
+  date: z.string(),
+  meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  recipe_id: z.number().int().positive(),
+  servings: z.number().positive().max(999999.99),
+});
+export type RecipeMealItemInput = z.infer<typeof recipeMealItemInputSchema>;
 export const nutritionDaySchema = z.object({
   date: z.string(),
   calories: z.coerce.number(),

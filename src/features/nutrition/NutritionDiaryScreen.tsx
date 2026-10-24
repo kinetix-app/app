@@ -277,7 +277,9 @@ function NutritionDiary({
                       <View style={styles.itemCopy}>
                         <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                          {item.quantity_grams} g
+                          {item.recipe_id
+                            ? `${item.servings} ${item.servings === 1 ? 'serving' : 'servings'}`
+                            : `${item.quantity_grams} g`}
                         </Text>
                       </View>
                       <Text style={[textStyles.body, { color: p['ink-muted'] }]}>

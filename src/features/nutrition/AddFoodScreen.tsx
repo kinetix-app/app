@@ -1,12 +1,12 @@
 import { Feather } from '@expo/vector-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { nutritionApi } from './api';
-import type { Food } from './schemas';
+import type { Food, Recipe } from './schemas';
 
 export function AddFoodScreen({
   meal,
@@ -21,6 +21,8 @@ export function AddFoodScreen({
 }) {
   const p = usePalette();
   const [search, setSearch] = React.useState('');
+  const [tab, setTab] = React.useState<'Food' | 'Recipe'>('Food');
+  const [showRecipeEditor, setShowRecipeEditor] = React.useState(false);
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [selected, setSelected] = React.useState<Food | null>(null);
   const [amount, setAmount] = React.useState('200');
@@ -69,137 +71,430 @@ export function AddFoodScreen({
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{meal}</Text>
           </View>
         </View>
-        <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
-        <View
-          style={[
-            styles.inputRow,
-            { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-          ]}
-        >
-          <Feather name="search" size={20} color={p['ink-muted']} />
-          <TextInput
-            accessibilityLabel="Search food"
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Chicken, rice, yogurt…"
-            placeholderTextColor={p['ink-muted']}
-            style={[styles.input, { color: p.ink }]}
-          />
-        </View>
         <View style={styles.chips}>
-          {['Food', 'Recipe', 'Supermarket'].map((label, index) => (
-            <View
+          {(['Food', 'Recipe'] as const).map((label) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: tab === label }}
+              onPress={() => setTab(label)}
               key={label}
               style={[
                 styles.chip,
-                { backgroundColor: index === 0 ? p['brand-soft'] : p['surface-300'] },
+                { backgroundColor: tab === label ? p['brand-soft'] : p['surface-300'] },
               ]}
             >
-              <Text style={[textStyles.label, { color: index === 0 ? p['brand-ink'] : p.ink }]}>
+              <Text style={[textStyles.label, { color: tab === label ? p['brand-ink'] : p.ink }]}>
                 {label}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </View>
-        <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-          {results.data?.map((food, index) => (
-            <React.Fragment key={food.name}>
-              {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Select ${food.name}`}
-                accessibilityState={{ selected: selected?.id === food.id }}
-                onPress={() => setSelected(food)}
-                style={({ pressed }) => [
-                  styles.foodRow,
+        {tab === 'Food' ? (
+          <>
+            <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
+            <View
+              style={[
+                styles.inputRow,
+                { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+              ]}
+            >
+              <Feather name="search" size={20} color={p['ink-muted']} />
+              <TextInput
+                accessibilityLabel="Search food"
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Chicken, rice, yogurt…"
+                placeholderTextColor={p['ink-muted']}
+                style={[styles.input, { color: p.ink }]}
+              />
+            </View>
+          </>
+        ) : null}
+        {tab === 'Recipe' ? (
+          showRecipeEditor ? (
+            <RecipeEditor onCreated={() => setShowRecipeEditor(false)} />
+          ) : (
+            <RecipePicker
+              meal={meal}
+              date={date}
+              onNewRecipe={() => setShowRecipeEditor(true)}
+              onSaved={onSaved}
+              onClose={onClose}
+            />
+          )
+        ) : null}
+        {tab === 'Food' ? (
+          <>
+            <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
+              {results.data?.map((food, index) => (
+                <React.Fragment key={food.name}>
+                  {index > 0 ? (
+                    <View style={[styles.divider, { backgroundColor: p.line }]} />
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${food.name}`}
+                    accessibilityState={{ selected: selected?.id === food.id }}
+                    onPress={() => setSelected(food)}
+                    style={({ pressed }) => [
+                      styles.foodRow,
+                      {
+                        opacity: pressed ? 0.65 : 1,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.foodIcon,
+                        {
+                          backgroundColor: p['surface-300'],
+                          borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
+                          borderWidth: 2,
+                        },
+                      ]}
+                    >
+                      <Feather name="coffee" size={22} color={p['brand-ink']} />
+                    </View>
+                    <View style={styles.flex}>
+                      <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
+                      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                        Per 100 g
+                      </Text>
+                    </View>
+                    <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                      {food.calories} kcal
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
+              ))}
+              {debouncedSearch && !results.isPending && !results.data?.length ? (
+                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
+              ) : null}
+            </View>
+            {selected ? (
+              <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
+                <Text style={[textStyles['title-md'], { color: p.ink }]}>{selected.name}</Text>
+                <View style={styles.macroRow}>
+                  {[
+                    [`${selected.protein} g`, 'Protein'],
+                    [`${selected.carbohydrates} g`, 'Carbs'],
+                    [`${selected.fats} g`, 'Fat'],
+                  ].map(([value, label]) => (
+                    <View key={label} style={styles.flex}>
+                      <Text style={[textStyles['metric-md'], { color: p.ink }]}>{value}</Text>
+                      <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
+                  Values per 100 g
+                </Text>
+              </View>
+            ) : null}
+            <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
+            <View
+              style={[
+                styles.inputRow,
+                { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+              ]}
+            >
+              <TextInput
+                accessibilityLabel="Food amount"
+                keyboardType="decimal-pad"
+                value={amount}
+                onChangeText={setAmount}
+                style={[styles.input, { color: p.ink }]}
+              />
+              <Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>
+            </View>
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+              Total:{' '}
+              {selected && Number(amount)
+                ? ((selected.calories * Number(amount)) / 100).toFixed(0)
+                : '—'}{' '}
+              kcal
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !selected || save.isPending }}
+              disabled={!selected || save.isPending}
+              onPress={() => save.mutate()}
+              style={[
+                styles.add,
+                { backgroundColor: p.brand, opacity: !selected || save.isPending ? 0.55 : 1 },
+              ]}
+            >
+              <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+                {save.isPending ? 'Adding…' : `Add to ${meal}`}
+              </Text>
+            </Pressable>
+          </>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function RecipePicker({
+  meal,
+  date,
+  onNewRecipe,
+  onSaved,
+  onClose,
+}: {
+  meal: string;
+  date: string;
+  onNewRecipe: () => void;
+  onSaved: () => void;
+  onClose: () => void;
+}) {
+  const p = usePalette();
+  const [selected, setSelected] = React.useState<Recipe | null>(null);
+  const [servings, setServings] = React.useState('1');
+  const recipes = useQuery({
+    queryKey: ['nutrition', 'recipes'],
+    queryFn: ({ signal }) => nutritionApi.recipes(signal),
+  });
+  const save = useMutation({
+    mutationFn: () => {
+      if (!selected) throw new Error('Select a recipe first.');
+      return nutritionApi.addRecipeMealItem({
+        date,
+        meal_type: (
+          { Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' } as const
+        )[meal as 'Breakfast'],
+        recipe_id: selected.id,
+        servings: Number(servings),
+      });
+    },
+    onSuccess: () => {
+      onSaved();
+      onClose();
+    },
+  });
+  const validServings = Number(servings) > 0;
+
+  return (
+    <View style={styles.recipeForm}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onNewRecipe}
+        style={[styles.newRecipe, { borderColor: p['brand-ink'] }]}
+      >
+        <Feather name="plus" size={20} color={p['brand-ink']} />
+        <Text style={[textStyles.label, { color: p['brand-ink'] }]}>New recipe</Text>
+      </Pressable>
+      <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
+        {recipes.data?.map((recipe, index) => (
+          <React.Fragment key={recipe.id}>
+            {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: selected?.id === recipe.id }}
+              accessibilityLabel={`Select ${recipe.name}`}
+              onPress={() => setSelected(recipe)}
+              style={({ pressed }) => [styles.foodRow, { opacity: pressed ? 0.65 : 1 }]}
+            >
+              <View
+                style={[
+                  styles.foodIcon,
                   {
-                    opacity: pressed ? 0.65 : 1,
+                    backgroundColor: p['surface-300'],
+                    borderColor: selected?.id === recipe.id ? p['brand-ink'] : 'transparent',
+                    borderWidth: 2,
                   },
                 ]}
               >
-                <View
-                  style={[
-                    styles.foodIcon,
-                    {
-                      backgroundColor: p['surface-300'],
-                      borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
-                      borderWidth: 2,
-                    },
-                  ]}
-                >
-                  <Feather name="coffee" size={22} color={p['brand-ink']} />
-                </View>
-                <View style={styles.flex}>
-                  <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per 100 g</Text>
-                </View>
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                  {food.calories} kcal
-                </Text>
-              </Pressable>
-            </React.Fragment>
-          ))}
-          {debouncedSearch && !results.isPending && !results.data?.length ? (
-            <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
-          ) : null}
-        </View>
-        {selected ? (
-          <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
-            <Text style={[textStyles['title-md'], { color: p.ink }]}>{selected.name}</Text>
-            <View style={styles.macroRow}>
-              {[
-                [`${selected.protein} g`, 'Protein'],
-                [`${selected.carbohydrates} g`, 'Carbs'],
-                [`${selected.fats} g`, 'Fat'],
-              ].map(([value, label]) => (
-                <View key={label} style={styles.flex}>
-                  <Text style={[textStyles['metric-md'], { color: p.ink }]}>{value}</Text>
-                  <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{label}</Text>
-                </View>
-              ))}
-            </View>
-            <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per 100 g</Text>
-          </View>
+                <Feather name="book-open" size={20} color={p['brand-ink']} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per serving</Text>
+              </View>
+              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                {recipe.calories.toFixed(0)} kcal
+              </Text>
+            </Pressable>
+          </React.Fragment>
+        ))}
+        {!recipes.isPending && !recipes.data?.length ? (
+          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes yet.</Text>
         ) : null}
-        <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
-        <View
-          style={[
-            styles.inputRow,
-            { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-          ]}
-        >
-          <TextInput
-            accessibilityLabel="Food amount"
-            keyboardType="decimal-pad"
-            value={amount}
-            onChangeText={setAmount}
-            style={[styles.input, { color: p.ink }]}
-          />
-          <Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>
-        </View>
-        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Total:{' '}
-          {selected && Number(amount)
-            ? ((selected.calories * Number(amount)) / 100).toFixed(0)
-            : '—'}{' '}
-          kcal
+      </View>
+      <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
+      <View
+        style={[
+          styles.inputRow,
+          { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+        ]}
+      >
+        <TextInput
+          accessibilityLabel="Recipe servings to add"
+          keyboardType="decimal-pad"
+          value={servings}
+          onChangeText={setServings}
+          style={[styles.input, { color: p.ink }]}
+        />
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !selected || !validServings || save.isPending }}
+        disabled={!selected || !validServings || save.isPending}
+        onPress={() => save.mutate()}
+        style={[
+          styles.add,
+          {
+            backgroundColor: p.brand,
+            opacity: !selected || !validServings || save.isPending ? 0.55 : 1,
+          },
+        ]}
+      >
+        <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+          {save.isPending ? 'Adding…' : `Add to ${meal}`}
         </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function RecipeEditor({ onCreated }: { onCreated: () => void }) {
+  const p = usePalette();
+  const queryClient = useQueryClient();
+  const [name, setName] = React.useState('');
+  const [servings, setServings] = React.useState('1');
+  const [search, setSearch] = React.useState('');
+  const [ingredients, setIngredients] = React.useState<Array<{ food: Food; grams: string }>>([]);
+  const results = useQuery({
+    queryKey: ['nutrition', 'foods', 'recipe', search.trim()],
+    enabled: Boolean(search.trim()),
+    queryFn: ({ signal }) => nutritionApi.searchFoods(search.trim(), signal),
+  });
+  const save = useMutation({
+    mutationFn: () =>
+      nutritionApi.createRecipe({
+        name: name.trim(),
+        servings: Number(servings),
+        ingredients: ingredients.map(({ food, grams }) => ({
+          food_id: food.id,
+          quantity_grams: Number(grams),
+        })),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['nutrition', 'recipes'] });
+      onCreated();
+    },
+  });
+  const valid =
+    Boolean(name.trim()) &&
+    Number.isInteger(Number(servings)) &&
+    Number(servings) > 0 &&
+    ingredients.length > 0 &&
+    ingredients.every(({ grams }) => Number(grams) > 0);
+
+  return (
+    <View style={styles.recipeForm}>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>Create recipe</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>Recipe name</Text>
+      <TextInput
+        accessibilityLabel="Recipe name"
+        value={name}
+        onChangeText={setName}
+        placeholder="Chicken rice bowl"
+        placeholderTextColor={p['ink-muted']}
+        style={[
+          styles.textInput,
+          { backgroundColor: p['surface-300'], borderColor: p['line-strong'], color: p.ink },
+        ]}
+      />
+      <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
+      <TextInput
+        accessibilityLabel="Recipe servings"
+        keyboardType="number-pad"
+        value={servings}
+        onChangeText={setServings}
+        style={[
+          styles.textInput,
+          { backgroundColor: p['surface-300'], borderColor: p['line-strong'], color: p.ink },
+        ]}
+      />
+      <Text style={[textStyles.label, { color: p.ink }]}>Add ingredients</Text>
+      <View
+        style={[
+          styles.inputRow,
+          { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+        ]}
+      >
+        <Feather name="search" size={20} color={p['ink-muted']} />
+        <TextInput
+          accessibilityLabel="Search ingredient"
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search foods…"
+          placeholderTextColor={p['ink-muted']}
+          style={[styles.input, { color: p.ink }]}
+        />
+      </View>
+      {results.data?.map((food) => (
         <Pressable
+          key={food.id}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !selected || save.isPending }}
-          disabled={!selected || save.isPending}
-          onPress={() => save.mutate()}
-          style={[
-            styles.add,
-            { backgroundColor: p.brand, opacity: !selected || save.isPending ? 0.55 : 1 },
-          ]}
+          accessibilityLabel={`Add ${food.name} as an ingredient`}
+          onPress={() => {
+            setIngredients((current) => [...current, { food, grams: '100' }]);
+            setSearch('');
+          }}
+          style={[styles.ingredientSearchRow, { borderColor: p.line }]}
         >
-          <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-            {save.isPending ? 'Adding…' : `Add to ${meal}`}
-          </Text>
+          <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
+          <Feather name="plus" size={20} color={p['brand-ink']} />
         </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      ))}
+      {ingredients.map(({ food, grams }, index) => (
+        <View
+          key={`${food.id}-${index}`}
+          style={[styles.ingredientRow, { backgroundColor: p['surface-200'] }]}
+        >
+          <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
+          <TextInput
+            accessibilityLabel={`${food.name} quantity`}
+            keyboardType="decimal-pad"
+            value={grams}
+            onChangeText={(value) =>
+              setIngredients((current) =>
+                current.map((ingredient, itemIndex) =>
+                  itemIndex === index ? { ...ingredient, grams: value } : ingredient,
+                ),
+              )
+            }
+            style={[styles.gramsInput, { color: p.ink, borderColor: p['line-strong'] }]}
+          />
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>g</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${food.name}`}
+            onPress={() =>
+              setIngredients((current) => current.filter((_, itemIndex) => itemIndex !== index))
+            }
+          >
+            <Feather name="x" size={20} color={p['ink-muted']} />
+          </Pressable>
+        </View>
+      ))}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !valid || save.isPending }}
+        disabled={!valid || save.isPending}
+        onPress={() => save.mutate()}
+        style={[
+          styles.add,
+          { backgroundColor: p.brand, opacity: !valid || save.isPending ? 0.55 : 1 },
+        ]}
+      >
+        <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+          {save.isPending ? 'Creating…' : 'Create recipe'}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -235,6 +530,39 @@ const styles = StyleSheet.create({
     borderRadius: radii['radius-pill'],
     justifyContent: 'center',
   },
+  recipeForm: { gap: spacing['space-3'] },
+  newRecipe: {
+    minHeight: sizes['control-height-sm'],
+    borderWidth: 1,
+    borderRadius: radii['radius-pill'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing['space-2'],
+  },
+  textInput: {
+    minHeight: sizes['control-height'],
+    borderWidth: 1,
+    borderRadius: radii['radius-md'],
+    paddingHorizontal: spacing['space-3'],
+    ...textStyles.body,
+  },
+  ingredientSearchRow: {
+    minHeight: sizes['control-height-sm'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    gap: spacing['space-2'],
+  },
+  ingredientRow: {
+    minHeight: sizes['control-height'],
+    borderRadius: radii['radius-md'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing['space-3'],
+    gap: spacing['space-2'],
+  },
+  gramsInput: { width: 52, borderBottomWidth: 1, textAlign: 'right', ...textStyles.body },
   results: { borderRadius: radii['radius-lg'], paddingHorizontal: spacing['space-4'] },
   divider: { height: 1 },
   foodRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
