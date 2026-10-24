@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -86,6 +86,7 @@ function NutritionDiary({
   const week = React.useMemo(currentWeek, []);
   const [selectedDay, setSelectedDay] = React.useState(() => localDateId(new Date()));
   const [selectedMeal, setSelectedMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
+  const [editingMeal, setEditingMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
   const selected = week.find((day) => day.id === selectedDay) ?? week[0];
   const goal = useQuery({
     queryKey: ['nutrition', accountId ?? 'anonymous', 'goal'],
@@ -96,6 +97,10 @@ function NutritionDiary({
     queryFn: ({ signal }) => nutritionApi.day(selectedDay, signal),
   });
   const consumed = day.data ?? { calories: 0, protein: 0, carbohydrates: 0, fats: 0, items: [] };
+  const removeItem = useMutation({
+    mutationFn: (mealItemId: number) => nutritionApi.deleteMealItem(mealItemId),
+    onSuccess: () => void day.refetch(),
+  });
   const macroProgress = macros.map((macro) => {
     const goalValue = goal.data?.[macro.field];
     return {
@@ -260,14 +265,25 @@ function NutritionDiary({
                 <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
                   {meal.toUpperCase()}
                 </Text>
-                <Text style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}>
-                  {formatNumber(
-                    consumed.items
-                      .filter((item) => item.meal_type === mealTypeId(meal))
-                      .reduce((total, item) => total + item.calories, 0),
-                  )}{' '}
-                  KCAL
-                </Text>
+                <View style={styles.mealHeaderActions}>
+                  <Text style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}>
+                    {formatNumber(
+                      consumed.items
+                        .filter((item) => item.meal_type === mealTypeId(meal))
+                        .reduce((total, item) => total + item.calories, 0),
+                    )}{' '}
+                    KCAL
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${editingMeal === meal ? 'Finish editing' : 'Edit'} ${meal}`}
+                    onPress={() => setEditingMeal((current) => (current === meal ? null : meal))}
+                  >
+                    <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                      {editingMeal === meal ? 'Done' : 'Edit'}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
               <View style={[styles.mealCard, { backgroundColor: p['surface-200'] }]}>
                 {consumed.items
@@ -285,6 +301,17 @@ function NutritionDiary({
                       <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
                         {formatNumber(item.calories)} kcal
                       </Text>
+                      {editingMeal === meal ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Delete ${item.name}`}
+                          disabled={removeItem.isPending}
+                          onPress={() => removeItem.mutate(item.id)}
+                          style={styles.deleteItem}
+                        >
+                          <Feather name="trash-2" size={18} color={p.danger} />
+                        </Pressable>
+                      ) : null}
                     </View>
                   ))}
                 {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
@@ -403,12 +430,24 @@ const styles = StyleSheet.create({
   progressValue: { height: '100%', borderRadius: radii['radius-pill'] },
   mealGroup: { gap: spacing['space-2'] },
   mealHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mealHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
   mealCard: {
     borderRadius: radii['radius-lg'],
     padding: spacing['space-4'],
     gap: spacing['space-3'],
   },
-  loggedItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  loggedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing['space-2'],
+  },
+  deleteItem: {
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   itemCopy: { flex: 1, gap: spacing['space-1'] },
   mealAddButton: {
     minHeight: sizes['control-height-sm'],

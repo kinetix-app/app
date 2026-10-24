@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -20,11 +20,14 @@ export function AddFoodScreen({
   onSaved: () => void;
 }) {
   const p = usePalette();
+  const queryClient = useQueryClient();
   const [search, setSearch] = React.useState('');
   const [tab, setTab] = React.useState<'Food' | 'Recipe'>('Food');
+  const [showFoodEditor, setShowFoodEditor] = React.useState(false);
   const [showRecipeEditor, setShowRecipeEditor] = React.useState(false);
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [selected, setSelected] = React.useState<Food | null>(null);
+  const [foodToDelete, setFoodToDelete] = React.useState<Food | null>(null);
   const [amount, setAmount] = React.useState('200');
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -32,8 +35,10 @@ export function AddFoodScreen({
   }, [search]);
   const results = useQuery({
     queryKey: ['nutrition', 'foods', debouncedSearch],
-    enabled: Boolean(debouncedSearch),
-    queryFn: ({ signal }) => nutritionApi.searchFoods(debouncedSearch, signal),
+    queryFn: ({ signal }) =>
+      debouncedSearch
+        ? nutritionApi.searchFoods(debouncedSearch, signal)
+        : nutritionApi.foods(signal),
   });
   const save = useMutation({
     mutationFn: () => {
@@ -50,6 +55,14 @@ export function AddFoodScreen({
     onSuccess: () => {
       onSaved();
       onClose();
+    },
+  });
+  const removeFood = useMutation({
+    mutationFn: (foodId: number) => nutritionApi.deleteFood(foodId),
+    onSuccess: (_, foodId) => {
+      if (selected?.id === foodId) setSelected(null);
+      setFoodToDelete(null);
+      void queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods'] });
     },
   });
   return (
@@ -89,8 +102,19 @@ export function AddFoodScreen({
             </Pressable>
           ))}
         </View>
-        {tab === 'Food' ? (
+        {tab === 'Food' && showFoodEditor ? (
+          <FoodEditor onCreated={() => setShowFoodEditor(false)} />
+        ) : null}
+        {tab === 'Food' && !showFoodEditor ? (
           <>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setShowFoodEditor(true)}
+              style={[styles.newRecipe, { borderColor: p['brand-ink'] }]}
+            >
+              <Feather name="plus" size={20} color={p['brand-ink']} />
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>New food</Text>
+            </Pressable>
             <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
             <View
               style={[
@@ -123,7 +147,7 @@ export function AddFoodScreen({
             />
           )
         ) : null}
-        {tab === 'Food' ? (
+        {tab === 'Food' && !showFoodEditor ? (
           <>
             <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
               {results.data?.map((food, index) => (
@@ -131,46 +155,103 @@ export function AddFoodScreen({
                   {index > 0 ? (
                     <View style={[styles.divider, { backgroundColor: p.line }]} />
                   ) : null}
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Select ${food.name}`}
-                    accessibilityState={{ selected: selected?.id === food.id }}
-                    onPress={() => setSelected(food)}
-                    style={({ pressed }) => [
-                      styles.foodRow,
-                      {
-                        opacity: pressed ? 0.65 : 1,
-                      },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.foodIcon,
-                        {
-                          backgroundColor: p['surface-300'],
-                          borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
-                          borderWidth: 2,
-                        },
+                  <View style={styles.recipeRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${food.name}`}
+                      accessibilityState={{ selected: selected?.id === food.id }}
+                      onPress={() => setSelected(food)}
+                      style={({ pressed }) => [
+                        styles.recipeSelect,
+                        { opacity: pressed ? 0.65 : 1 },
                       ]}
                     >
-                      <Feather name="coffee" size={22} color={p['brand-ink']} />
-                    </View>
-                    <View style={styles.flex}>
-                      <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
-                      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                        Per 100 g
+                      <View
+                        style={[
+                          styles.foodIcon,
+                          {
+                            backgroundColor: p['surface-300'],
+                            borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
+                            borderWidth: 2,
+                          },
+                        ]}
+                      >
+                        <Feather name="coffee" size={22} color={p['brand-ink']} />
+                      </View>
+                      <View style={styles.flex}>
+                        <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
+                        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                          Per 100 g
+                        </Text>
+                      </View>
+                      <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                        {food.calories} kcal
                       </Text>
-                    </View>
-                    <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                      {food.calories} kcal
-                    </Text>
-                  </Pressable>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${food.name}`}
+                      onPress={() => {
+                        removeFood.reset();
+                        setFoodToDelete(food);
+                      }}
+                      style={styles.deleteRecipe}
+                    >
+                      <Feather name="trash-2" size={20} color={p.danger} />
+                    </Pressable>
+                  </View>
                 </React.Fragment>
               ))}
               {debouncedSearch && !results.isPending && !results.data?.length ? (
                 <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
               ) : null}
             </View>
+            <Modal
+              transparent
+              animationType="fade"
+              visible={Boolean(foodToDelete)}
+              onRequestClose={() => setFoodToDelete(null)}
+            >
+              <View style={[styles.modalBackdrop, { backgroundColor: p.scrim }]}>
+                <View
+                  accessibilityViewIsModal
+                  style={[styles.deleteConfirmation, { backgroundColor: p['surface-200'] }]}
+                >
+                  <Text
+                    accessibilityRole="header"
+                    style={[textStyles['title-md'], { color: p.ink }]}
+                  >
+                    {removeFood.isError ? 'Can’t delete food' : 'Delete food?'}
+                  </Text>
+                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                    {removeFood.isError
+                      ? `“${foodToDelete?.name}” is used in a recipe or diary and must be kept.`
+                      : `Delete “${foodToDelete?.name}”? This cannot be undone.`}
+                  </Text>
+                  <View style={styles.confirmationActions}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setFoodToDelete(null)}
+                      style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
+                    >
+                      <Text style={[textStyles.label, { color: p.ink }]}>
+                        {removeFood.isError ? 'Close' : 'Cancel'}
+                      </Text>
+                    </Pressable>
+                    {!removeFood.isError ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={removeFood.isPending}
+                        onPress={() => foodToDelete && removeFood.mutate(foodToDelete.id)}
+                        style={[styles.confirmButton, { backgroundColor: p.danger }]}
+                      >
+                        <Text style={[textStyles.label, { color: p['on-brand'] }]}>Delete</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+            </Modal>
             {selected ? (
               <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
                 <Text style={[textStyles['title-md'], { color: p.ink }]}>{selected.name}</Text>
@@ -249,11 +330,21 @@ function RecipePicker({
   onClose: () => void;
 }) {
   const p = usePalette();
+  const queryClient = useQueryClient();
   const [selected, setSelected] = React.useState<Recipe | null>(null);
+  const [recipeToDelete, setRecipeToDelete] = React.useState<Recipe | null>(null);
   const [servings, setServings] = React.useState('1');
   const recipes = useQuery({
     queryKey: ['nutrition', 'recipes'],
     queryFn: ({ signal }) => nutritionApi.recipes(signal),
+  });
+  const remove = useMutation({
+    mutationFn: (recipeId: number) => nutritionApi.deleteRecipe(recipeId),
+    onSuccess: (_, recipeId) => {
+      if (selected?.id === recipeId) setSelected(null);
+      setRecipeToDelete(null);
+      void queryClient.invalidateQueries({ queryKey: ['nutrition', 'recipes'] });
+    },
   });
   const save = useMutation({
     mutationFn: () => {
@@ -288,39 +379,120 @@ function RecipePicker({
         {recipes.data?.map((recipe, index) => (
           <React.Fragment key={recipe.id}>
             {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: selected?.id === recipe.id }}
-              accessibilityLabel={`Select ${recipe.name}`}
-              onPress={() => setSelected(recipe)}
-              style={({ pressed }) => [styles.foodRow, { opacity: pressed ? 0.65 : 1 }]}
-            >
-              <View
-                style={[
-                  styles.foodIcon,
-                  {
-                    backgroundColor: p['surface-300'],
-                    borderColor: selected?.id === recipe.id ? p['brand-ink'] : 'transparent',
-                    borderWidth: 2,
-                  },
-                ]}
+            <View style={styles.recipeRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: selected?.id === recipe.id }}
+                accessibilityLabel={`Select ${recipe.name}`}
+                onPress={() => setSelected(recipe)}
+                style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
               >
-                <Feather name="book-open" size={20} color={p['brand-ink']} />
-              </View>
-              <View style={styles.flex}>
-                <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
-                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per serving</Text>
-              </View>
-              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                {recipe.calories.toFixed(0)} kcal
-              </Text>
-            </Pressable>
+                <View
+                  style={[
+                    styles.foodIcon,
+                    {
+                      backgroundColor: p['surface-300'],
+                      borderColor: selected?.id === recipe.id ? p['brand-ink'] : 'transparent',
+                      borderWidth: 2,
+                    },
+                  ]}
+                >
+                  <Feather name="book-open" size={20} color={p['brand-ink']} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
+                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                    Per serving
+                  </Text>
+                </View>
+                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                  {recipe.calories.toFixed(0)} kcal
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${recipe.name}`}
+                accessibilityState={{ disabled: remove.isPending }}
+                disabled={remove.isPending}
+                onPress={() => {
+                  remove.reset();
+                  setRecipeToDelete(recipe);
+                }}
+                hitSlop={spacing['space-2']}
+                style={styles.deleteRecipe}
+              >
+                <Feather name="trash-2" size={20} color={p.danger} />
+              </Pressable>
+            </View>
           </React.Fragment>
         ))}
         {!recipes.isPending && !recipes.data?.length ? (
-          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes yet.</Text>
+          <View style={styles.emptyRecipes}>
+            <Feather name="book-open" size={22} color={p['ink-muted']} />
+            <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+              Create one to add its servings to any meal.
+            </Text>
+          </View>
         ) : null}
       </View>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={Boolean(recipeToDelete)}
+        onRequestClose={() => setRecipeToDelete(null)}
+      >
+        <View style={[styles.modalBackdrop, { backgroundColor: p.scrim }]}>
+          <View
+            accessibilityViewIsModal
+            style={[styles.deleteConfirmation, { backgroundColor: p['surface-200'] }]}
+          >
+            <View style={[styles.deleteIcon, { backgroundColor: p['surface-300'] }]}>
+              <Feather name="trash-2" size={24} color={p.danger} />
+            </View>
+            <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
+              {remove.isError ? 'Can’t delete recipe' : 'Delete recipe?'}
+            </Text>
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+              {remove.isError
+                ? `“${recipeToDelete?.name}” is already logged in your diary. Keep it to preserve your nutrition history.`
+                : `“${recipeToDelete?.name}” will be permanently removed.`}
+            </Text>
+            <View style={styles.confirmationActions}>
+              {remove.isError ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setRecipeToDelete(null)}
+                  style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
+                >
+                  <Text style={[textStyles.label, { color: p.ink }]}>Close</Text>
+                </Pressable>
+              ) : (
+                <>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setRecipeToDelete(null)}
+                    style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
+                  >
+                    <Text style={[textStyles.label, { color: p.ink }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={remove.isPending}
+                    onPress={() => recipeToDelete && remove.mutate(recipeToDelete.id)}
+                    style={[
+                      styles.confirmButton,
+                      { backgroundColor: p.danger, opacity: remove.isPending ? 0.55 : 1 },
+                    ]}
+                  >
+                    <Text style={[textStyles.label, { color: p['on-brand'] }]}>Delete</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
       <View
         style={[
@@ -351,6 +523,97 @@ function RecipePicker({
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
           {save.isPending ? 'Adding…' : `Add to ${meal}`}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function FoodEditor({ onCreated }: { onCreated: () => void }) {
+  const p = usePalette();
+  const queryClient = useQueryClient();
+  const [name, setName] = React.useState('');
+  const [values, setValues] = React.useState({
+    calories: '',
+    protein: '',
+    carbohydrates: '',
+    fats: '',
+  });
+  const save = useMutation({
+    mutationFn: () =>
+      nutritionApi.createFood({
+        name: name.trim(),
+        brand: null,
+        barcode: null,
+        calories: Number(values.calories),
+        protein: Number(values.protein),
+        carbohydrates: Number(values.carbohydrates),
+        fats: Number(values.fats),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods'] });
+      onCreated();
+    },
+  });
+  const valid = Boolean(name.trim()) && Object.values(values).every((value) => Number(value) >= 0);
+  const macroCalories =
+    Number(values.protein || 0) * 4 +
+    Number(values.carbohydrates || 0) * 4 +
+    Number(values.fats || 0) * 9;
+
+  return (
+    <View style={styles.recipeForm}>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>New food</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>Name</Text>
+      <TextInput
+        accessibilityLabel="Food name"
+        value={name}
+        onChangeText={setName}
+        placeholder="Greek yogurt"
+        placeholderTextColor={p['ink-muted']}
+        style={[
+          styles.textInput,
+          { backgroundColor: p['surface-300'], borderColor: p['line-strong'], color: p.ink },
+        ]}
+      />
+      {(['calories', 'protein', 'carbohydrates', 'fats'] as const).map((field) => (
+        <View key={field} style={styles.foodField}>
+          <Text style={[textStyles.label, { color: p.ink }]}>
+            {field === 'calories' ? 'Calories' : `${field[0].toUpperCase()}${field.slice(1)}`}
+          </Text>
+          <View
+            style={[
+              styles.inputRow,
+              { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+            ]}
+          >
+            <TextInput
+              accessibilityLabel={field}
+              keyboardType="decimal-pad"
+              value={values[field]}
+              onChangeText={(value) => setValues((current) => ({ ...current, [field]: value }))}
+              style={[styles.input, { color: p.ink }]}
+            />
+            <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
+              {field === 'calories' ? 'kcal' : 'g'}
+            </Text>
+          </View>
+        </View>
+      ))}
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        Macro estimate: {macroCalories.toFixed(0)} kcal per 100 g
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        disabled={!valid || save.isPending}
+        onPress={() => save.mutate()}
+        style={[
+          styles.add,
+          { backgroundColor: p.brand, opacity: !valid || save.isPending ? 0.55 : 1 },
+        ]}
+      >
+        <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+          {save.isPending ? 'Saving…' : 'Save food'}
         </Text>
       </Pressable>
     </View>
@@ -531,6 +794,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   recipeForm: { gap: spacing['space-3'] },
+  foodField: { gap: spacing['space-2'] },
   newRecipe: {
     minHeight: sizes['control-height-sm'],
     borderWidth: 1,
@@ -562,8 +826,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['space-3'],
     gap: spacing['space-2'],
   },
+  recipeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  recipeSelect: {
+    flex: 1,
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['space-3'],
+  },
+  deleteRecipe: {
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteConfirmation: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: radii['radius-xl'],
+    padding: spacing['space-5'],
+    gap: spacing['space-3'],
+  },
+  modalBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing['space-4'],
+  },
+  deleteIcon: {
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    borderRadius: radii['radius-pill'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmationActions: {
+    flexDirection: 'row',
+    gap: spacing['space-2'],
+    marginTop: spacing['space-1'],
+  },
+  confirmButton: {
+    flex: 1,
+    minHeight: sizes['control-height-sm'],
+    borderRadius: radii['radius-pill'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing['space-3'],
+  },
   gramsInput: { width: 52, borderBottomWidth: 1, textAlign: 'right', ...textStyles.body },
   results: { borderRadius: radii['radius-lg'], paddingHorizontal: spacing['space-4'] },
+  emptyRecipes: {
+    minHeight: 128,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing['space-2'],
+  },
   divider: { height: 1 },
   foodRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
   foodIcon: {

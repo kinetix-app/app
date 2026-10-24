@@ -33,6 +33,8 @@ export const foodSchema = z.object({
 });
 export const foodListSchema = z.array(foodSchema);
 export type Food = z.infer<typeof foodSchema>;
+export const foodInputSchema = foodSchema.omit({ id: true, user_id: true });
+export type FoodInput = z.infer<typeof foodInputSchema>;
 export const recipeSchema = z.object({
   id: z.number().int().positive(),
   user_id: z.number().int().positive(),
