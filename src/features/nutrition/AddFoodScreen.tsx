@@ -8,6 +8,10 @@ import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { nutritionApi } from './api';
 import type { Food, Recipe } from './schemas';
 
+const mealTypeFor = (meal: string) =>
+  ({ Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' })[meal] as
+    'breakfast' | 'lunch' | 'dinner' | 'snack';
+
 export function AddFoodScreen({
   meal,
   date,
@@ -45,9 +49,7 @@ export function AddFoodScreen({
       if (!selected) throw new Error('Select a food first.');
       return nutritionApi.addMealItem({
         date,
-        meal_type: (
-          { Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' } as const
-        )[meal as 'Breakfast'],
+        meal_type: mealTypeFor(meal),
         food_id: selected.id,
         quantity_grams: Math.round(Number(amount) * 100) / 100,
       });
@@ -351,9 +353,7 @@ function RecipePicker({
       if (!selected) throw new Error('Select a recipe first.');
       return nutritionApi.addRecipeMealItem({
         date,
-        meal_type: (
-          { Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' } as const
-        )[meal as 'Breakfast'],
+        meal_type: mealTypeFor(meal),
         recipe_id: selected.id,
         servings: Number(servings),
       });
