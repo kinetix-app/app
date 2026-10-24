@@ -19,15 +19,25 @@ const macros = [
 
 const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const;
 
-const week = [
-  { id: '2026-10-19', weekday: 'Mon', day: '19', hasEntries: true, isToday: false },
-  { id: '2026-10-20', weekday: 'Tue', day: '20', hasEntries: true, isToday: false },
-  { id: '2026-10-21', weekday: 'Wed', day: '21', hasEntries: true, isToday: false },
-  { id: '2026-10-22', weekday: 'Thu', day: '22', hasEntries: true, isToday: true },
-  { id: '2026-10-23', weekday: 'Fri', day: '23', hasEntries: false, isToday: false },
-  { id: '2026-10-24', weekday: 'Sat', day: '24', hasEntries: false, isToday: false },
-  { id: '2026-10-25', weekday: 'Sun', day: '25', hasEntries: false, isToday: false },
-] as const;
+const localDateId = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const currentWeek = () => {
+  const today = new Date();
+  const monday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - ((today.getDay() + 6) % 7),
+  );
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + index);
+    return {
+      id: localDateId(date),
+      weekday: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date),
+      day: String(date.getDate()),
+      isToday: localDateId(date) === localDateId(today),
+    };
+  });
+};
 
 export function NutritionDiaryScreen({
   accountId,
@@ -70,9 +80,10 @@ function NutritionDiary({
   onEditGoal?: () => void;
 }) {
   const p = usePalette();
-  const [selectedDay, setSelectedDay] = React.useState('2026-10-22');
+  const week = React.useMemo(currentWeek, []);
+  const [selectedDay, setSelectedDay] = React.useState(() => localDateId(new Date()));
   const [selectedMeal, setSelectedMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
-  const selected = week.find((day) => day.id === selectedDay) ?? week[3];
+  const selected = week.find((day) => day.id === selectedDay) ?? week[0];
   const goal = useQuery({
     queryKey: ['nutrition', accountId ?? 'anonymous', 'goal'],
     queryFn: ({ signal }) => nutritionApi.goal(signal),
@@ -96,6 +107,7 @@ function NutritionDiary({
     return (
       <AddFoodScreen
         meal={selectedMeal}
+        date={selectedDay}
         onClose={() => setSelectedMeal(null)}
         onSaved={() => void day.refetch()}
       />
@@ -162,12 +174,7 @@ function NutritionDiary({
                         {day.day}
                       </Text>
                     </View>
-                    <View
-                      style={[
-                        styles.dayMarker,
-                        { backgroundColor: day.hasEntries ? p['brand-ink'] : 'transparent' },
-                      ]}
-                    />
+                    <View style={[styles.dayMarker, { backgroundColor: 'transparent' }]} />
                   </Pressable>
                 );
               })}

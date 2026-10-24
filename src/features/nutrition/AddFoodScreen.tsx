@@ -10,10 +10,12 @@ import type { Food } from './schemas';
 
 export function AddFoodScreen({
   meal,
+  date,
   onClose,
   onSaved,
 }: {
   meal: string;
+  date: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -35,7 +37,7 @@ export function AddFoodScreen({
     mutationFn: () => {
       if (!selected) throw new Error('Select a food first.');
       return nutritionApi.addMealItem({
-        date: '2026-10-22',
+        date,
         meal_type: (
           { Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' } as const
         )[meal as 'Breakfast'],
