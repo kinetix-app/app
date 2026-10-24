@@ -6,7 +6,7 @@ These instructions apply to this React Native frontend repository. Read [README.
 
 Build the Android/iOS client for goals, nutrition, gym/running/cycling/walking tracking, live shared training, social feed, FriendsLeague, reusable meals/exercises/penalties, exercise-form analysis and AI coaching. Web is an optional extension, not a committed feature-parity target. Do not reintroduce professional trainer/services businesses, payments or sponsored leagues from abandoned concepts.
 
-Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeScript, a starter screen and public configuration tests. Authentication now includes development Basic sign-in and Clerk email OTP/Google/Apple OAuth with secure session storage and account API integration. Production provider configuration and native device validation remain outstanding. Inspect actual implementation before claiming a feature is complete.
+Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeScript, a starter screen and public configuration tests. Authentication now includes development Basic sign-in and Clerk email OTP/Google/Apple OAuth with secure session storage and account API integration. Production provider configuration and native device validation remain outstanding. The training workspace now supports routine create/read/edit, catalogue filtering/details and planned kg/repetition sets. TanStack Query and React Hook Form are integrated; standalone Kinetix light/dark design tokens live under `src/theme/`. Session start/recording remain separate work. Inspect actual implementation before claiming a feature is complete.
 
 ## Repository boundaries and sources of truth
 
@@ -34,6 +34,48 @@ Kinetix was initialized on 4 October 2026 with Expo SDK 57, Router, strict TypeS
 - Enable TypeScript `strict`, extend `expo/tsconfig.base`, and use `@/` for `src` once configured. Treat external input as `unknown`; validate critical boundaries. Avoid unchecked `any`, assertions that hide contract errors and broad lint suppressions.
 - Use functional components/Hooks. Use PascalCase component names/files, camelCase functions/hooks, lowercase feature directories, `.tsx` for JSX and `.ts` for logic. Route names follow Router semantics. Prefer named exports except framework-required defaults. Colocate meaningful `*.test.ts(x)` files outside routes.
 - Use Expo ESLint/Hooks rules and Prettier. Keep unrelated cleanup out of functional changes.
+
+## Design rules for every UI change
+
+These rules apply when creating, editing or reviewing screens and components. Read
+[src/theme/design-tokens.json](src/theme/design-tokens.json), including its token usage
+notes, and [src/theme/tokens.ts](src/theme/tokens.ts) before design work. For training
+flows, also read [docs/routines.md](docs/routines.md). Keep these instructions updated
+when the user approves a new convention; direct user instructions take precedence.
+
+### Design source and tokens
+
+- Management owns the design references and authoritative design system. Follow the supplied screen references for layout, hierarchy and interaction, with the user-approved refinements below. Keep the consumed token export in this repository; building the app must not require another checkout or a network font import.
+- Use `usePalette`, `spacing`, `radii`, `sizes` and `textStyles` from `src/theme/tokens.ts`. Reuse shared UI primitives. Prefer existing semantic tokens over literal colors, arbitrary spacing, radii or typography. Introduce a new token only for a demonstrated design need and document its intended use.
+- Support light and dark themes. Use `surface-100` for screens, `surface-200` for cards/sheets and `surface-300` for fields and neutral chips. Use `ink` for primary text, `ink-muted` for supporting text and `line-strong` for control boundaries. Decorative `line` dividers must not be the sole control boundary.
+- Pair `brand` backgrounds with `on-brand`, and `brand-soft` backgrounds with `brand-ink`. Use `danger`, `success`, `warning` and `info` for their semantic states, with text or icons rather than color alone. Nutrition macro colors require written labels.
+- Use token typography for screen/section/card headings, body copy, labels and captions. Captions must not carry essential information. Limit hero headings/metrics to their intended hierarchy; use tabular numerals for comparable metrics. The design specifies Bricolage Grotesque/Figtree, but platform fallback remains intentional until font binaries are supplied and bundled.
+- Follow the token spacing scale (4, 8, 12, 16, 20, 24, 32, 40, 48), radius scale (8, 12, 20, 28 and pill), minimum 44-unit touch targets and 52-unit regular controls. Respect safe areas, text scaling and keyboard visibility. Use theme-specific shadows: dark cards separate through surfaces, while dialogs/popovers use the pop elevation treatment.
+
+### Actions, dialogs and feedback
+
+- Use an accessible arrow icon button for back navigation, including routine, set editor and exercise details. Do not replace it with a full-width text Back button.
+- Keep visible action names short and simple: Add, Remove, Save, Cancel, Discard, Back, Done. Give icon-only or repeated actions explicit accessible labels identifying their target.
+- Add actions use the positive treatment (`brand-soft` / `brand-ink`). Removing an exercise and discarding a draft use danger styling. **Removing an individual set is neutral**: use the same `ink` and `surface-300` colors as the kg/reps fields, without a danger outline. Save retains the primary treatment; ordinary navigation/cancel actions are neutral.
+- Confirm discarding unsaved routine edits in a centered modal with a `scrim` backdrop. Keep editing and Discard are explicit choices. The confirmation must float above the screen, never render as inline content at the bottom. Hide underlying content from accessibility while the confirmation is active and support platform back/dismiss behavior.
+- Provide visible loading, empty, error and disabled/pending states. Keep entered form values after a failed save, show validation beside its field and prevent duplicate submissions.
+- Preserve accessible names/roles, selected/disabled state and keyboard interaction. Focus indicators use the focus token with a 2-unit ring and 2-unit offset where supported; control/focus boundaries should meet the design's 3:1 contrast requirement. Do not rely on color alone for errors, selection or completion.
+
+### Exercise catalogue and routine editing
+
+- Exercise catalogue screens use one bounded vertical list, with search and active filter badges in its scrollable header. A Filters button opens a centered, scrollable checkbox modal for multiple body parts. Save applies the draft selection; Cancel leaves current filters unchanged. Active badges wrap and tapping their close action removes that part immediately. Changing search/filter resets the list to the top. Keep taps usable while the keyboard is open.
+- Fetch the next exercise page automatically near the bottom, without a More button. Guard concurrent fetches, stop after a short page and retain existing results on page-fetch failure with an explicit Retry action.
+- Filter exercises with **body-part** multi-selection (match any selected part), showing All body parts when empty; do not substitute granular target-muscle filters. Load available body parts from the authenticated catalogue options endpoint independently of the current page/search. Combine the selected body part with debounced name search and reset pagination when either changes.
+- Routine editing has two views: the overview uses two columns with a large exercise image on the left and the exercise name plus quick set-count/kg/reps summary on the right. Tapping the name opens that slot’s focused set editor; returning retains draft values. The set editor contains no muscle/body-part text. Images open full exercise information on demand; catalogue titles may also open that information.
+- Exercise information uses **muted, looping autoplay video** with app-colored play/pause, replay, mute, progress and fullscreen controls. Show the image only when video is absent or unavailable. Keep media bounded and release playback resources when closing. Listing/overview thumbnails remain images.
+- Reorder exercises by dragging their cards, with a clear drag handle and accessible/keyboard alternatives. The moving card must stay **above every neighboring card in both directions**, including when dragging down. Raise the actual list cell's stacking layer on web, not only its inner card; preserve native elevation/stacking behavior. Release/cancel must clear the active layer and restore controls.
+- Reordering preserves stable exercise-slot IDs and unsaved set values. Keep kg/reps units explicit. Edit planned/default sets separately from completed workout results; keep routine templates separate from session start/history.
+
+### Design verification
+
+- Inspect the affected screen and interaction in the available runtime, including both themes and relevant keyboard/modal/drag/media states where feasible. For drag changes check both upward and downward movement; for details check video preference and image fallback.
+- Run checks appropriate to the change and report what was actually verified. Mocked tests and platform exports do not establish native device behavior. Rebuild development clients after native module changes and state any unavailable device checks.
+- These are required implementation conventions, not a claim that every existing screen already conforms. Keep changes scoped to the requested work and report material inconsistencies instead of silently copying them into new screens.
 
 ## State, navigation and API behavior
 
