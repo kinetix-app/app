@@ -19,6 +19,9 @@ const macros = [
 
 const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const;
 
+const mealTypeId = (meal: (typeof mealTypes)[number]) =>
+  meal === 'Snacks' ? 'snack' : meal.toLowerCase();
+
 const localDateId = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const currentWeek = () => {
@@ -253,14 +256,22 @@ function NutritionDiary({
 
           {mealTypes.map((meal) => (
             <View key={meal} style={styles.mealGroup}>
-              <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-                {meal.toUpperCase()}
-              </Text>
+              <View style={styles.mealHeading}>
+                <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
+                  {meal.toUpperCase()}
+                </Text>
+                <Text style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}>
+                  {formatNumber(
+                    consumed.items
+                      .filter((item) => item.meal_type === mealTypeId(meal))
+                      .reduce((total, item) => total + item.calories, 0),
+                  )}{' '}
+                  KCAL
+                </Text>
+              </View>
               <View style={[styles.mealCard, { backgroundColor: p['surface-200'] }]}>
                 {consumed.items
-                  .filter(
-                    (item) => item.meal_type === (meal === 'Snacks' ? 'snack' : meal.toLowerCase()),
-                  )
+                  .filter((item) => item.meal_type === mealTypeId(meal))
                   .map((item) => (
                     <View key={item.id} style={styles.loggedItem}>
                       <View style={styles.itemCopy}>
@@ -274,9 +285,7 @@ function NutritionDiary({
                       </Text>
                     </View>
                   ))}
-                {!consumed.items.some(
-                  (item) => item.meal_type === (meal === 'Snacks' ? 'snack' : meal.toLowerCase()),
-                ) ? (
+                {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
                   <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
                     No food logged yet
                   </Text>
@@ -391,6 +400,7 @@ const styles = StyleSheet.create({
   progressTrack: { height: 16, borderRadius: radii['radius-pill'], overflow: 'hidden' },
   progressValue: { height: '100%', borderRadius: radii['radius-pill'] },
   mealGroup: { gap: spacing['space-2'] },
+  mealHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   mealCard: {
     borderRadius: radii['radius-lg'],
     padding: spacing['space-4'],
