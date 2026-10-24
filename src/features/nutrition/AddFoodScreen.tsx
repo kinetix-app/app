@@ -626,7 +626,7 @@ function RecipeEditor({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = React.useState('');
   const [servings, setServings] = React.useState('1');
   const [search, setSearch] = React.useState('');
-  const [ingredients, setIngredients] = React.useState<Array<{ food: Food; grams: string }>>([]);
+  const [ingredients, setIngredients] = React.useState<{ food: Food; grams: string }[]>([]);
   const results = useQuery({
     queryKey: ['nutrition', 'foods', 'recipe', search.trim()],
     enabled: Boolean(search.trim()),

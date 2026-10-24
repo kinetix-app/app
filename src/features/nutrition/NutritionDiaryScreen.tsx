@@ -83,7 +83,7 @@ function NutritionDiary({
   onEditGoal?: () => void;
 }) {
   const p = usePalette();
-  const week = React.useMemo(currentWeek, []);
+  const week = React.useMemo(() => currentWeek(), []);
   const [selectedDay, setSelectedDay] = React.useState(() => localDateId(new Date()));
   const [selectedMeal, setSelectedMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
   const [editingMeal, setEditingMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
