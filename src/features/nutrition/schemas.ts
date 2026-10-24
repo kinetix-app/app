@@ -19,3 +19,17 @@ export const nutritionGoalInputSchema = z.object({
 });
 
 export type NutritionGoalInput = z.infer<typeof nutritionGoalInputSchema>;
+
+export const foodSchema = z.object({
+  id: z.number().int().positive(),
+  user_id: z.number().int().positive(),
+  name: z.string(),
+  brand: z.string().nullable(),
+  calories: z.coerce.number(),
+  protein: z.coerce.number(),
+  carbohydrates: z.coerce.number(),
+  fats: z.coerce.number(),
+  barcode: z.string().nullable(),
+});
+export const foodListSchema = z.array(foodSchema);
+export type Food = z.infer<typeof foodSchema>;

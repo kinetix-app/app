@@ -1,19 +1,28 @@
 import { Feather } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-
-const foods = [
-  { name: 'Grilled chicken breast', calories: '165 kcal' },
-  { name: 'Raw chicken breast', calories: '110 kcal' },
-] as const;
+import { nutritionApi } from './api';
+import type { Food } from './schemas';
 
 export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => void }) {
   const p = usePalette();
-  const [selected, setSelected] = React.useState<(typeof foods)[number]>(foods[0]);
+  const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
+  const [selected, setSelected] = React.useState<Food | null>(null);
   const [amount, setAmount] = React.useState('200');
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const results = useQuery({
+    queryKey: ['nutrition', 'foods', debouncedSearch],
+    enabled: Boolean(debouncedSearch),
+    queryFn: ({ signal }) => nutritionApi.searchFoods(debouncedSearch, signal),
+  });
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -43,7 +52,8 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
           <Feather name="search" size={20} color={p['ink-muted']} />
           <TextInput
             accessibilityLabel="Search food"
-            defaultValue="Chicken breast"
+            value={search}
+            onChangeText={setSearch}
             placeholder="Chicken, rice, yogurt…"
             placeholderTextColor={p['ink-muted']}
             style={[styles.input, { color: p.ink }]}
@@ -65,7 +75,7 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
           ))}
         </View>
         <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-          {foods.map((food, index) => (
+          {results.data?.map((food, index) => (
             <React.Fragment key={food.name}>
               {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
               <Pressable
@@ -81,27 +91,34 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
                   <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per 100 g</Text>
                 </View>
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>{food.calories}</Text>
+                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                  {food.calories} kcal
+                </Text>
               </Pressable>
             </React.Fragment>
           ))}
+          {debouncedSearch && !results.isPending && !results.data?.length ? (
+            <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
+          ) : null}
         </View>
-        <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
-          <Text style={[textStyles['title-md'], { color: p.ink }]}>{selected.name}</Text>
-          <View style={styles.macroRow}>
-            {[
-              ['31 g', 'Protein'],
-              ['0 g', 'Carbs'],
-              ['3.6 g', 'Fat'],
-            ].map(([value, label]) => (
-              <View key={label} style={styles.flex}>
-                <Text style={[textStyles['metric-md'], { color: p.ink }]}>{value}</Text>
-                <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{label}</Text>
-              </View>
-            ))}
+        {selected ? (
+          <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>{selected.name}</Text>
+            <View style={styles.macroRow}>
+              {[
+                [`${selected.protein} g`, 'Protein'],
+                [`${selected.carbohydrates} g`, 'Carbs'],
+                [`${selected.fats} g`, 'Fat'],
+              ].map(([value, label]) => (
+                <View key={label} style={styles.flex}>
+                  <Text style={[textStyles['metric-md'], { color: p.ink }]}>{value}</Text>
+                  <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per 100 g</Text>
           </View>
-          <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per 100 g</Text>
-        </View>
+        ) : null}
         <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
         <View
           style={[
@@ -118,7 +135,13 @@ export function AddFoodScreen({ meal, onClose }: { meal: string; onClose: () => 
           />
           <Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>
         </View>
-        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Total: 330 kcal</Text>
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          Total:{' '}
+          {selected && Number(amount)
+            ? ((selected.calories * Number(amount)) / 100).toFixed(0)
+            : '—'}{' '}
+          kcal
+        </Text>
         <View
           accessibilityRole="button"
           accessibilityState={{ disabled: true }}
