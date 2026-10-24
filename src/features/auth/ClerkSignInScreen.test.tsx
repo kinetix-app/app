@@ -43,7 +43,7 @@ jest.mock('@/services/authService', () => ({
   authService: { clear: jest.fn(), setTokenProvider: jest.fn() },
 }));
 const account = {
-  id: 'bf08d0a0-6ae6-4a7a-8d3f-8dbe890bd395',
+  id: 1,
   status: 'active' as const,
   created_at: '2026-10-14T12:00:00Z',
   profile: { display_name: 'Alice', timezone: null, updated_at: '2026-10-14T12:00:00Z' },

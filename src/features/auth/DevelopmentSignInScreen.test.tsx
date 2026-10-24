@@ -28,7 +28,7 @@ function submit() {
 
 test('sign-in waits for backend acceptance and logout clears credentials', async () => {
   jest.mocked(getAccount).mockResolvedValue({
-    id: 'bf08d0a0-6ae6-4a7a-8d3f-8dbe890bd395',
+    id: 1,
     status: 'active',
     created_at: '2026-10-14T12:00:00Z',
     profile: { display_name: 'Alice', timezone: null, updated_at: '2026-10-14T12:00:00Z' },
