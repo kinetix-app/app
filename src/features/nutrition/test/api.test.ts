@@ -1,7 +1,7 @@
 import { apiClient } from '@/services/apiClient';
 
-import { nutritionApi } from './api';
-import { nutritionGoalSchema } from './schemas';
+import { nutritionApi } from '../api';
+import { nutritionGoalSchema } from '../schemas';
 
 afterEach(() => {
   jest.restoreAllMocks();

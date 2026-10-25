@@ -15,7 +15,7 @@ import {
 import DraggableFlatList from './ExerciseDragList';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
-import { trainingApi } from './api';
+import { trainingApi } from '../api';
 import { ExerciseDragHandle } from './ExerciseDragHandle';
 import { ExerciseDetails } from './ExerciseDetails';
 import { ExercisePicker } from './ExercisePicker';
@@ -26,10 +26,10 @@ import {
   type RoutineInput,
   validWeight,
   type WeightUnit,
-} from './schemas';
-import { WorkoutExerciseCard } from './components/WorkoutEditor';
-import { SetFields } from './components/SetFields';
-import { displayWeight } from './sessionDraft';
+} from '../schemas';
+import { WorkoutExerciseCard } from './WorkoutEditor';
+import { SetFields } from './SetFields';
+import { displayWeight } from '../sessionDraft';
 import { Button, Failure, IconButton, ui } from './ui';
 
 type DraftSet = { reps: string; weight: string; unit: WeightUnit; canonicalWeight?: string };

@@ -5,9 +5,9 @@ import { FlatList, Image, Keyboard, Modal, Pressable, Text, TextInput, View } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, sizes, spacing, usePalette } from '@/theme/tokens';
 import { BodyPartFilter } from './BodyPartFilter';
-import { trainingApi } from './api';
+import { trainingApi } from '../api';
 import { ExerciseDetails } from './ExerciseDetails';
-import type { ExerciseSummary } from './schemas';
+import type { ExerciseSummary } from '../schemas';
 import { Button, Failure, Loading, ui } from './ui';
 
 export function ExercisePicker({

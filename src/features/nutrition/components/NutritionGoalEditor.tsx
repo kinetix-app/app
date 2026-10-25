@@ -4,11 +4,12 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
-import { nutritionApi } from './api';
-import type { NutritionGoalInput } from './schemas';
+import { nutritionApi } from '../api';
+import type { NutritionGoalInput } from '../schemas';
 
 type Macro = 'carbohydrates' | 'protein' | 'fats';
 type Percentages = Record<Macro, number>;
@@ -88,7 +89,7 @@ export function NutritionGoalEditor({
       onClose();
     },
   });
-  const parsedCalories = Number(calories.replace(',', '.'));
+  const parsedCalories = Number(calories.replace(',', '..'));
   const valid =
     Number.isFinite(parsedCalories) &&
     parsedCalories > 0 &&
@@ -120,20 +121,11 @@ export function NutritionGoalEditor({
     );
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back to nutrition"
-            onPress={onClose}
-            style={[styles.iconButton, { backgroundColor: p['surface-300'] }]}
-          >
-            <Feather name="arrow-left" size={24} color={p.ink} />
-          </Pressable>
-          <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-            Nutrition goal
-          </Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={[screenContentStyle, styles.content]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <ScreenHeader title="Nutrition goal" />
         <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
           <Text style={[textStyles['title-md'], { color: p.ink }]}>Daily calories</Text>
           <TextInput
@@ -215,16 +207,8 @@ export function NutritionGoalEditor({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: spacing['space-4'] },
+  screen: { flex: 1 },
   content: { gap: spacing['space-5'], paddingBottom: spacing['space-10'] },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
-  iconButton: {
-    width: sizes['tap-min'],
-    height: sizes['tap-min'],
-    borderRadius: radii['radius-pill'],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   card: { borderRadius: radii['radius-lg'], padding: spacing['space-4'], gap: spacing['space-3'] },
   input: {
     minHeight: sizes['control-height'],

@@ -3,10 +3,10 @@ import { Text, View } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, useSession } from '../components/SessionProvider';
-import { Button } from '../ui';
+import { Button } from '../components/ui';
 import { sessionStorage } from '../sessionStorage';
 import { trainingApi } from '../api';
-import { exampleRoutine, exampleExercise } from '../fixtures';
+import { exampleRoutine, exampleExercise } from './fixtures';
 import { createSessionDraft, draftSnapshot } from '../sessionDraft';
 jest.mock(
   '@react-native-async-storage/async-storage',

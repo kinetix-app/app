@@ -11,6 +11,7 @@ appId: cat.udl.kinetix
 - extendedWaitUntil:
     visible: Start workout
     timeout: 20000
+- tapOn: Workout
 - tapOn: Start workout
 - tapOn: Add exercise
 - tapOn: Search exercises

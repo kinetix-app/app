@@ -5,7 +5,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import type { WeightUnit } from '../schemas';
-import { Button, Failure, IconButton, Loading, ui } from '../ui';
+import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export function WorkoutHistory({ accountId, onClose }: { accountId: number; onClose: () => void }) {
   const p = usePalette();

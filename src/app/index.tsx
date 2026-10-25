@@ -1,1 +1,1 @@
-export { AuthenticationScreen as default } from '@/features/auth/AuthenticationScreen';
+export { AuthenticationScreen as default } from '@/features/auth/components/AuthenticationScreen';

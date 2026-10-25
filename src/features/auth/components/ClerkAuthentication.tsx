@@ -9,7 +9,11 @@ import { getClerkPublishableKey } from '@/config/environment';
 import { authStyles } from './authStyles';
 import { ClerkSignInScreen } from './ClerkSignInScreen';
 
-export default function ClerkAuthentication() {
+export default function ClerkAuthentication({
+  initialTab = 'home',
+}: {
+  initialTab?: 'home' | 'nutrition';
+}) {
   const publishableKey = getClerkPublishableKey();
   if (!publishableKey) {
     return (
@@ -22,7 +26,7 @@ export default function ClerkAuthentication() {
   }
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkSignInScreen />
+      <ClerkSignInScreen initialTab={initialTab} />
     </ClerkProvider>
   );
 }

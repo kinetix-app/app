@@ -8,6 +8,6 @@ Do not run against an existing personal installation or clear its data. Use a cl
 MAESTRO_KINETIX_E2E_EMAIL="$KINETIX_E2E_EMAIL" MAESTRO_KINETIX_E2E_PASSWORD="$KINETIX_E2E_PASSWORD" maestro test .maestro/workout.yaml
 ```
 
-The native flow checks sign-in, blank start, lb/repetition keyboard input, minimize/resume, Finish and history navigation. Independent API assertions and failure/retry/account-isolation evidence live in the browser suite. A browser run, bundle export or native flow file alone does not prove Android/iOS acceptance.
+The native flow signs in to Home, selects Workout, and checks blank start, kg/repetition keyboard input, minimize/resume, Finish and history navigation. Independent API assertions and failure/retry/account-isolation evidence live in the browser suite. A browser run, bundle export or native flow file alone does not prove Android/iOS acceptance.
 
 Maestro CLI imports shell variables with the `MAESTRO_` prefix; see [Maestro parameters and constants](https://docs.maestro.dev/maestro-flows/flow-control-and-logic/parameters-and-constants).

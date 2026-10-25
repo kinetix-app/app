@@ -1,9 +1,25 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { TrainingWorkspace } from './TrainingWorkspace';
-import { trainingApi } from './api';
+import { TrainingWorkspace as Workspace } from '../components/TrainingWorkspace';
+import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
+import { SessionProvider } from '../components/SessionProvider';
+import { SessionHost } from '../components/SessionHost';
+
+import { trainingApi } from '../api';
 import { exampleExercise, exampleRoutine } from './fixtures';
+
+function TrainingWorkspace(props: { accountId: number; onSignOut: () => void }) {
+  return (
+    <PrivateQueryProvider key={props.accountId}>
+      <SessionProvider {...props}>
+        <SessionHost>
+          <Workspace accountId={props.accountId} />
+        </SessionHost>
+      </SessionProvider>
+    </PrivateQueryProvider>
+  );
+}
 
 jest.mock(
   '@react-native-async-storage/async-storage',
@@ -52,7 +68,7 @@ jest.mock('expo-network', () => ({
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: jest.requireActual('react-native').View,
 }));
-jest.mock('./api', () => ({
+jest.mock('../api', () => ({
   trainingApi: {
     complete: jest.fn(),
     draft: jest.fn(),

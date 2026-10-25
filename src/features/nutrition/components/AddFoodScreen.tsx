@@ -5,8 +5,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { nutritionApi } from './api';
-import type { Food, Recipe } from './schemas';
+import { nutritionApi } from '../api';
+import type { Food, Recipe } from '../schemas';
 
 const mealTypeFor = (meal: string) =>
   ({ Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' })[meal] as

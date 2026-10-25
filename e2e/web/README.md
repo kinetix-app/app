@@ -33,3 +33,12 @@ pnpm exec playwright test --config e2e/web/playwright.config.ts
 The suite uses one worker and disables traces, screenshots and video to avoid recording sign-in credentials or private workout payloads. Runtime artifacts belong under ignored `.codex/artifacts/e2e`. Tests fail if either identity is missing or both identities are the same. The backend fixture refuses a non-test environment/database, inserts one synthetic catalogue record and does not delete data.
 
 Browser verification establishes browser/API behavior only. Android/iOS acceptance requires an installed development build, a connected device/emulator and Maestro. Bundle exports and browser checks do not establish native behavior or Clerk readiness.
+
+## Home navigation regression
+
+`home.spec.ts` covers the default nutrition-goal setup, failed save/retry, the shared
+bottom bar, existing food-entry navigation, unsaved routine edits across tabs, workout
+recording, reload/resume, completed history and theme switching. It needs the primary
+private test identity and the same isolated API/catalogue setup. Run it alone with
+`pnpm exec playwright test --config e2e/web/playwright.config.ts home.spec.ts`.
+The complete workout suite still requires both distinct identities.

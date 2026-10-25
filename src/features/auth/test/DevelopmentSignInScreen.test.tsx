@@ -5,7 +5,7 @@ import { getAccount } from '@/features/accounts/api';
 import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
 
-import { DevelopmentSignInScreen } from './DevelopmentSignInScreen';
+import { DevelopmentSignInScreen } from '../components/DevelopmentSignInScreen';
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: jest.requireActual('react-native').View,
@@ -15,12 +15,12 @@ jest.mock('@/config/environment', () => ({
   getAuthMode: () => 'basic',
 }));
 jest.mock('@/features/accounts/api', () => ({ getAccount: jest.fn() }));
-jest.mock('@/features/training/TrainingWorkspace', () => ({
-  TrainingWorkspace: ({ accountId, onSignOut }: { accountId: number; onSignOut: () => void }) => {
+jest.mock('@/features/home', () => ({
+  HomeScreen: ({ accountId, onSignOut }: { accountId: number; onSignOut: () => void }) => {
     const { Text, Pressable, View } = jest.requireActual('react-native');
     return (
       <View>
-        <Text>Training for account {accountId}</Text>
+        <Text>Home for account {accountId}</Text>
         <Pressable onPress={onSignOut}>
           <Text>Sign out</Text>
         </Pressable>
@@ -48,13 +48,13 @@ test('sign-in waits for backend acceptance and logout clears credentials', async
   });
   render(<DevelopmentSignInScreen />);
   submit();
-  await screen.findByText('Training for account 1');
+  await screen.findByText('Home for account 1');
   expect(await authService.getAuthorizationHeader()).toBe(
     'Basic YWxpY2VAZXhhbXBsZS50ZXN0OmxvY2FsLXBhc3N3b3Jk',
   );
   fireEvent.press(screen.getByText('Sign out'));
   expect(await authService.getAuthorizationHeader()).toBeUndefined();
-  expect(screen.queryByText('Training for account 1')).toBeNull();
+  expect(screen.queryByText('Home for account 1')).toBeNull();
 });
 
 test('wrong credentials leave the account signed out and discard the header', async () => {
@@ -65,7 +65,7 @@ test('wrong credentials leave the account signed out and discard the header', as
     'The email or password was not accepted. Use an account configured on the backend.',
   );
   expect(await authService.getAuthorizationHeader()).toBeUndefined();
-  expect(screen.queryByText('Training for account 1')).toBeNull();
+  expect(screen.queryByText('Home for account 1')).toBeNull();
 });
 
 test('leaving a pending sign-in aborts its API call and clears credentials', async () => {

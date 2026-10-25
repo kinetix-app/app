@@ -1,12 +1,13 @@
 import { Feather } from '@expo/vector-icons';
-import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
-import { nutritionApi } from './api';
+import { nutritionApi } from '../api';
 import { AddFoodScreen } from './AddFoodScreen';
 
 const macros = [
@@ -47,38 +48,7 @@ export function NutritionDiaryScreen({
   onBack,
   onEditGoal,
 }: {
-  accountId?: number;
-  onBack?: () => void;
-  onEditGoal?: () => void;
-}) {
-  const [client] = React.useState(
-    () =>
-      new QueryClient({
-        defaultOptions: { queries: { retry: 1, staleTime: 30000, gcTime: 0 } },
-      }),
-  );
-
-  React.useEffect(
-    () => () => {
-      void client.cancelQueries();
-      client.clear();
-    },
-    [client],
-  );
-
-  return (
-    <QueryClientProvider client={client}>
-      <NutritionDiary accountId={accountId} onBack={onBack} onEditGoal={onEditGoal} />
-    </QueryClientProvider>
-  );
-}
-
-function NutritionDiary({
-  accountId,
-  onBack,
-  onEditGoal,
-}: {
-  accountId?: number;
+  accountId: number;
   onBack?: () => void;
   onEditGoal?: () => void;
 }) {
@@ -89,11 +59,11 @@ function NutritionDiary({
   const [editingMeal, setEditingMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
   const selected = week.find((day) => day.id === selectedDay) ?? week[0];
   const goal = useQuery({
-    queryKey: ['nutrition', accountId ?? 'anonymous', 'goal'],
+    queryKey: ['nutrition', accountId, 'goal'],
     queryFn: ({ signal }) => nutritionApi.goal(signal),
   });
   const day = useQuery({
-    queryKey: ['nutrition', accountId ?? 'anonymous', 'day', selectedDay],
+    queryKey: ['nutrition', accountId, 'day', selectedDay],
     queryFn: ({ signal }) => nutritionApi.day(selectedDay, signal),
   });
   const consumed = day.data ?? { calories: 0, protein: 0, carbohydrates: 0, fats: 0, items: [] };
@@ -125,28 +95,29 @@ function NutritionDiary({
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            {onBack ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Back to routines"
-                onPress={onBack}
-                style={({ pressed }) => [
-                  styles.backButton,
-                  { backgroundColor: p['surface-300'], opacity: pressed ? 0.55 : 1 },
-                ]}
-              >
-                <Feather name="arrow-left" size={24} color={p.ink} />
-              </Pressable>
-            ) : null}
-            <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-              Nutrition
-            </Text>
+        <View style={[screenContentStyle, styles.content]}>
+          <ScreenHeader
+            title="Nutrition"
+            leading={
+              onBack ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to home"
+                  onPress={onBack}
+                  style={({ pressed }) => [
+                    styles.backButton,
+                    { backgroundColor: p['surface-300'], opacity: pressed ? 0.55 : 1 },
+                  ]}
+                >
+                  <Feather name="arrow-left" size={24} color={p.ink} />
+                </Pressable>
+              ) : undefined
+            }
+          >
             <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
               {selected.isToday ? 'Today' : `${selected.weekday}, Oct ${selected.day}`}
             </Text>
-          </View>
+          </ScreenHeader>
 
           <View accessibilityRole="tablist" accessibilityLabel="Week of October 19">
             <View style={styles.weekStrip}>
@@ -336,16 +307,6 @@ function NutritionDiary({
           ))}
         </View>
       </ScrollView>
-
-      <View style={[styles.tabBar, { backgroundColor: p['surface-200'], borderColor: p.line }]}>
-        <Tab icon="home" label="Home" color={p['ink-muted']} />
-        <Tab icon="activity" label="Workout" color={p['ink-muted']} />
-        <View style={[styles.addTab, { backgroundColor: p.brand }]}>
-          <Feather name="plus" size={36} color={p['on-brand']} />
-        </View>
-        <Tab icon="coffee" label="Nutrition" color={p['brand-ink']} active />
-        <Tab icon="bar-chart-2" label="Progress" color={p['ink-muted']} />
-      </View>
     </SafeAreaView>
   );
 }
@@ -354,44 +315,12 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
 }
 
-function Tab({
-  icon,
-  label,
-  color,
-  active = false,
-}: {
-  icon: React.ComponentProps<typeof Feather>['name'];
-  label: string;
-  color: string;
-  active?: boolean;
-}) {
-  return (
-    <View accessibilityState={{ selected: active }} style={styles.tab}>
-      <View style={active ? styles.activeTabIcon : undefined}>
-        <Feather name={icon} size={24} color={color} />
-      </View>
-      <Text style={[textStyles.label, { color }]}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   content: {
-    width: '100%',
-    maxWidth: 640,
-    alignSelf: 'center',
-    paddingHorizontal: spacing['space-4'],
-    paddingTop: spacing['space-8'],
     paddingBottom: spacing['space-6'],
     gap: spacing['space-6'],
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing['space-3'],
   },
   backButton: {
     width: sizes['tap-min'],
@@ -458,29 +387,4 @@ const styles = StyleSheet.create({
     gap: spacing['space-2'],
   },
   tabular: { fontVariant: ['tabular-nums'] },
-  tabBar: {
-    minHeight: sizes['tab-bar-height'],
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-around',
-    paddingTop: spacing['space-2'],
-    paddingHorizontal: spacing['space-1'],
-  },
-  tab: { flex: 1, alignItems: 'center', gap: spacing['space-1'], minWidth: 0 },
-  activeTabIcon: {
-    minWidth: sizes['control-height'],
-    height: 36,
-    borderRadius: radii['radius-pill'],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addTab: {
-    width: 72,
-    height: 72,
-    marginTop: -spacing['space-5'],
-    borderRadius: radii['radius-pill'],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 });

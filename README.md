@@ -234,3 +234,9 @@ configuration as placeholders. Drafts resume after sign-in, including
 on another device. Explicit logout clears local unsent changes and retains the server draft.
 See [workout lifecycle, units and retry behavior](docs/workouts.md). Finish omits unticked sets and can optionally update the source routine with the recorded results. Rebuild native development clients
 for AsyncStorage. Sprint 2 measurement formats remain outside this increment.
+
+## Home navigation and feature folders
+
+The authenticated [Home shell](docs/home.md) opens nutrition-goal setup by default.
+Its shared bottom bar connects Workout, blank workout start (+), and Nutrition.
+Feature components live in `components/`; tests and fixtures live in `test/`.

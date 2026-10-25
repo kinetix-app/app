@@ -3,21 +3,21 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { ExerciseSummary } from '../schemas';
-import { ui } from '../ui';
+import { ui } from './ui';
 
 export function WorkoutTimer({
   startedAt,
   endedAt,
   compact = false,
-  onPrimary = false,
+  onOverlay = false,
 }: {
   startedAt: string;
   endedAt?: string;
   compact?: boolean;
-  onPrimary?: boolean;
+  onOverlay?: boolean;
 }) {
   const p = usePalette();
-  const foreground = onPrimary ? p['on-brand'] : p['brand-ink'];
+  const foreground = onOverlay ? p['overlay-ink'] : p['brand-ink'];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);

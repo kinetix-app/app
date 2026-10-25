@@ -9,13 +9,13 @@ export function IconButton({
   label,
   onPress,
   disabled = false,
-  onPrimary = false,
+  onOverlay = false,
 }: {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  onPrimary?: boolean;
+  onOverlay?: boolean;
 }) {
   const p = usePalette();
   return (
@@ -31,11 +31,11 @@ export function IconButton({
         borderRadius: radii['radius-pill'],
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: onPrimary ? p['on-brand'] : p['surface-300'],
+        backgroundColor: onOverlay ? p.brand : p['surface-300'],
         opacity: disabled || pressed ? 0.55 : 1,
       })}
     >
-      <Feather name={icon} size={24} color={onPrimary ? p.brand : p.ink} />
+      <Feather name={icon} size={24} color={onOverlay ? p['on-brand'] : p.ink} />
     </Pressable>
   );
 }

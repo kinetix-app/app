@@ -17,7 +17,7 @@ import { ActionButton } from '@/components/ActionButton';
 import { BrandHeader } from '@/components/BrandHeader';
 import { IconTextField } from '@/components/IconTextField';
 import { getAccount, type Account } from '@/features/accounts/api';
-import { TrainingWorkspace } from '@/features/training/TrainingWorkspace';
+import { HomeScreen } from '@/features/home';
 import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
 import { colors } from '@/theme/colors';
@@ -27,7 +27,7 @@ import { authStyles as styles } from './authStyles';
 WebBrowser.maybeCompleteAuthSession();
 
 /** Private state is mounted per Clerk session and discarded on expiry/account change. */
-function ConnectedAccount() {
+function ConnectedAccount({ initialTab }: { initialTab: 'home' | 'nutrition' }) {
   const { getToken } = useAuth();
   const { signOut } = useClerk();
   const [account, setAccount] = useState<Account | null>(null);
@@ -77,7 +77,8 @@ function ConnectedAccount() {
 
   if (account)
     return (
-      <TrainingWorkspace
+      <HomeScreen
+        initialTab={initialTab}
         accountId={account.id}
         onSignOut={() => {
           void logout();
@@ -363,9 +364,9 @@ function SignInForm() {
   );
 }
 
-export function ClerkSignInScreen() {
+export function ClerkSignInScreen({ initialTab = 'home' }: { initialTab?: 'home' | 'nutrition' }) {
   const { isLoaded, isSignedIn, sessionId } = useAuth();
-  if (isLoaded && isSignedIn) return <ConnectedAccount key={sessionId} />;
+  if (isLoaded && isSignedIn) return <ConnectedAccount initialTab={initialTab} key={sessionId} />;
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView

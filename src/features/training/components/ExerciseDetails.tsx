@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePalette } from '@/theme/tokens';
-import { trainingApi } from './api';
+import { trainingApi } from '../api';
 import { ExerciseMedia } from './ExerciseMedia';
-import type { ExerciseSummary } from './schemas';
+import type { ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export function ExerciseDetails({

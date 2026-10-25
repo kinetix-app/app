@@ -5,7 +5,7 @@ import {
   freezeSession,
   sessionDraftSchema,
 } from '../sessionDraft';
-import { exampleRoutine } from '../fixtures';
+import { exampleRoutine } from './fixtures';
 
 jest.mock('expo-crypto', () => ({
   randomUUID: jest.fn(() => '3e17c183-38a9-4b5c-b953-7ae49433af17'),

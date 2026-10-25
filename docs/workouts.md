@@ -80,4 +80,4 @@ and native-device gaps are reported with delivery; mocked tests do not establish
 execution, production Clerk providers or concurrent multi-device editing.
 
 After the final outstanding set saves successfully, the next unfinished exercise expands automatically, skipping completed exercises and wrapping to earlier cards when needed.
-A failed save or an untick keeps the current exercise open. When no unfinished sets remain, the exercise collapses. The floating ongoing-workout panel uses primary brand colors for visibility.
+A failed save or an untick keeps the current exercise open. When no unfinished sets remain, the exercise collapses. The floating ongoing-workout panel uses a translucent black surface in both themes, a primary brand border, light text/timer, and a primary resume action. Its opacity affects only the background, keeping the controls and text readable.

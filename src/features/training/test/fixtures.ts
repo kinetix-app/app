@@ -1,5 +1,5 @@
 // Synthetic contract fixtures for feature tests; no personal records.
-import type { Exercise, Routine } from './schemas';
+import type { Exercise, Routine } from '../schemas';
 export const exampleExercise: Exercise = {
   id: 1,
   name: 'Bench press',

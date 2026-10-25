@@ -30,8 +30,12 @@ async function signIn(page: Page, identity = user) {
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await me).status()).toBe(200);
   await expect(
-    page.getByRole('button', { name: /^(New routine|Minimize workout|Resume workout)$/ }).first(),
+    page.getByRole('button', { name: /^(Start workout|Minimize workout|Resume workout)$/ }).first(),
   ).toBeVisible();
+  if (!(await page.getByRole('button', { name: 'Minimize workout', exact: true }).isVisible())) {
+    await page.getByRole('tab', { name: 'Workout', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible();
+  }
 }
 
 test.beforeAll(() => {
@@ -138,12 +142,6 @@ test('blank workout persists locally, resumes and retries the identical frozen F
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
   await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
-  await page
-    .getByRole('button', {
-      name: 'Edit sets for Acceptance press',
-      exact: true,
-    })
-    .click();
   await expect(page.getByLabel('Exercise 1 set 1 kg', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Exercise 1 set 1 reps', { exact: true })).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Display weight in lb', exact: true })).toHaveCount(
@@ -214,7 +212,7 @@ test('blank workout persists locally, resumes and retries the identical frozen F
   expect(workout.exercises[0].sets[0].weight_kg).toBe('100.000000');
   await page.getByRole('button', { name: 'History', exact: true }).click();
   await page.getByRole('button', { name: `View workout ${workout.id}`, exact: true }).click();
-  await expect(page.getByText('Acceptance press', { exact: true })).toBeVisible();
+  await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
 });
 
 test('routine start snapshots repeated slots and two finishes retain distinct IDs', async ({

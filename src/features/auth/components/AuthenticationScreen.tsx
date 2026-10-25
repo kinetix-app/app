@@ -8,22 +8,26 @@ const ClerkAuthentication = lazy(() => import('./ClerkAuthentication'));
 // Keep the development credential form behind Metro's compile-time development guard.
 const DevelopmentSignInScreen = __DEV__
   ? lazy(async () => {
-      const screen = await import('@/features/auth/DevelopmentSignInScreen');
+      const screen = await import('@/features/auth/components/DevelopmentSignInScreen');
       return { default: screen.DevelopmentSignInScreen };
     })
   : null;
 
-export function AuthenticationScreen() {
+export function AuthenticationScreen({
+  initialTab = 'home',
+}: {
+  initialTab?: 'home' | 'nutrition';
+}) {
   if (__DEV__ && getAuthMode() === 'basic' && DevelopmentSignInScreen) {
     return (
       <Suspense fallback={<ActivityIndicator accessibilityLabel="Loading sign-in" />}>
-        <DevelopmentSignInScreen />
+        <DevelopmentSignInScreen initialTab={initialTab} />
       </Suspense>
     );
   }
   return (
     <Suspense fallback={<ActivityIndicator accessibilityLabel="Loading authentication" />}>
-      <ClerkAuthentication />
+      <ClerkAuthentication initialTab={initialTab} />
     </Suspense>
   );
 }

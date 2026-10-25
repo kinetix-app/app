@@ -16,14 +16,18 @@ import { BrandHeader } from '@/components/BrandHeader';
 import { IconTextField } from '@/components/IconTextField';
 import { getApiBaseUrl } from '@/config/environment';
 import { getAccount, type Account } from '@/features/accounts/api';
-import { TrainingWorkspace } from '@/features/training/TrainingWorkspace';
+import { HomeScreen } from '@/features/home';
 import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
 import { colors } from '@/theme/colors';
 
 import { authStyles as styles } from './authStyles';
 
-export function DevelopmentSignInScreen() {
+export function DevelopmentSignInScreen({
+  initialTab = 'home',
+}: {
+  initialTab?: 'home' | 'nutrition';
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -99,7 +103,8 @@ export function DevelopmentSignInScreen() {
     setError('');
   }
 
-  if (account) return <TrainingWorkspace accountId={account.id} onSignOut={signOut} />;
+  if (account)
+    return <HomeScreen initialTab={initialTab} accountId={account.id} onSignOut={signOut} />;
 
   return (
     <SafeAreaView style={styles.screen}>

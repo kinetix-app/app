@@ -163,6 +163,16 @@
         "usage": "Barra de grasas. Misma regla que macro-protein."
       },
       {
+        "name": "surface-overlay",
+        "value": "#000000cc",
+        "usage": "Translucent black surface for the floating ongoing-workout panel in both themes. Pair with overlay-ink and a brand border."
+      },
+      {
+        "name": "overlay-ink",
+        "value": "#f4f7f1",
+        "usage": "Text and timer icons on surface-overlay in both themes. Resume actions retain brand/on-brand colors."
+      },
+      {
         "name": "scrim",
         "value": {
           "dark": "#000000b3",

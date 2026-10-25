@@ -5,7 +5,7 @@ import { radii, spacing, sizes, usePalette } from '@/theme/tokens';
 import type { ActualSet } from '../sessionDraft';
 import { displayWeight } from '../sessionDraft';
 import { validWeight, type WeightUnit } from '../schemas';
-import { Button, ui } from '../ui';
+import { Button, ui } from './ui';
 
 export function SetFields({
   set,

@@ -1,7 +1,7 @@
 import { apiClient } from '@/services/apiClient';
-import { trainingApi } from './api';
+import { trainingApi } from '../api';
 import { exampleExercise, exampleRoutine } from './fixtures';
-import { routineInputSchema, routineSchema, exercisePageSchema, exerciseSchema } from './schemas';
+import { routineInputSchema, routineSchema, exercisePageSchema, exerciseSchema } from '../schemas';
 
 jest.mock('@/config/environment', () => ({
   getApiBaseUrl: () => 'https://api.example',

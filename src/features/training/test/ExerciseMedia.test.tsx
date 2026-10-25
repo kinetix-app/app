@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useEvent } from 'expo';
 import { useVideoPlayer } from 'expo-video';
-import { ExerciseMedia } from './ExerciseMedia';
+import { ExerciseMedia } from '../components/ExerciseMedia';
 
 jest.mock('expo', () => ({ useEvent: jest.fn() }));
 jest.mock('expo-video', () => ({

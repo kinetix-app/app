@@ -1,7 +1,7 @@
 import { createApiClient } from '@/services/apiClient';
 
-import { getAccount, parseAccount, updateProfile } from './api';
-import { accountSchema } from './schemas';
+import { getAccount, parseAccount, updateProfile } from '../api';
+import { accountSchema } from '../schemas';
 
 const account = {
   id: 1,
