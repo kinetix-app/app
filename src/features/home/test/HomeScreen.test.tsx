@@ -129,11 +129,11 @@ test('returning incomplete users must save their profile and explicitly select a
   jest.mocked(setObjective).mockResolvedValue({ objective: 'maintain_weight' });
   render(<HomeScreen accountId={1} initialAccount={incompleteAccount} onSignOut={jest.fn()} />);
   await screen.findByText('Your profile');
+  expect(screen.queryByText('Sign out')).toBeNull();
   expect(screen.queryByLabelText('Main navigation')).toBeNull();
   fireEvent.changeText(screen.getByLabelText('Name'), 'Alice');
   fireEvent.press(screen.getByText('Continue'));
   fireEvent.changeText(screen.getByLabelText('Age (years)'), '25');
-  fireEvent.press(screen.getByText('Continue'));
   fireEvent.changeText(screen.getByLabelText('Height (cm)'), '170');
   fireEvent.changeText(screen.getByLabelText('Weight'), '70');
   fireEvent.press(screen.getByText('Continue'));
@@ -143,6 +143,7 @@ test('returning incomplete users must save their profile and explicitly select a
   fireEvent.press(screen.getByText('Continue'));
   fireEvent.press(screen.getByText('Save profile'));
   await screen.findByText("What's your goal?");
+  expect(screen.queryByText('Sign out')).toBeNull();
   expect(await screen.findAllByRole('radio')).toHaveLength(4);
   expect(
     screen.getByRole('button', { name: 'Save objective' }).props.accessibilityState.disabled,

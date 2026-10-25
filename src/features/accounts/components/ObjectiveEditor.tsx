@@ -22,12 +22,10 @@ export function ObjectiveEditor({
   accountId,
   onSaved,
   onCancel,
-  onSignOut,
 }: {
   accountId: number;
   onSaved: (account: Account) => void;
   onCancel?: () => void;
-  onSignOut?: () => void;
 }) {
   const p = usePalette();
   const cache = useQueryClient();
@@ -142,14 +140,6 @@ export function ObjectiveEditor({
         />
         {onCancel ? (
           <SetupButton title="Cancel" secondary disabled={mutation.isPending} onPress={onCancel} />
-        ) : null}
-        {onSignOut ? (
-          <SetupButton
-            title="Sign out"
-            secondary
-            disabled={mutation.isPending}
-            onPress={onSignOut}
-          />
         ) : null}
       </ScrollView>
     </SafeAreaView>

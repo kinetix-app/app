@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ProfilePictureEditor } from '../components/ProfilePictureEditor';
+import { ProfilePictureEditor, type ProfilePictureDraft } from '../components/ProfilePictureEditor';
 import { removeProfilePicture, uploadProfilePicture } from '../api';
 import { completeAccount } from './fixtures';
 
@@ -11,7 +11,7 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
 }));
 jest.mock('../api', () => ({ uploadProfilePicture: jest.fn(), removeProfilePicture: jest.fn() }));
-const onChanged = jest.fn();
+const onDraftChange = jest.fn();
 const onBusy = jest.fn();
 const asset = {
   uri: 'file:///photo.jpg',
@@ -22,13 +22,14 @@ const asset = {
 };
 function show() {
   function Wrapper() {
-    const [account, setAccount] = useState(completeAccount);
+    const [draft, setDraft] = useState<ProfilePictureDraft>({ kind: 'keep' });
     return (
       <ProfilePictureEditor
-        account={account}
-        onChanged={(value) => {
-          onChanged(value);
-          setAccount(value);
+        account={completeAccount}
+        draft={draft}
+        onDraftChange={(value) => {
+          onDraftChange(value);
+          setDraft(value);
         }}
         onBusy={onBusy}
       />
@@ -50,24 +51,17 @@ beforeEach(() => {
     .mockResolvedValue({ canceled: false, assets: [asset] });
 });
 
-test('selection previews, failed upload retains it and retry only updates after success', async () => {
-  jest
-    .mocked(uploadProfilePicture)
-    .mockRejectedValueOnce(new Error('offline'))
-    .mockResolvedValueOnce(completeAccount);
+test('selection previews and removal stay local without any upload controls or writes', async () => {
   show();
-  fireEvent.press(screen.getByText('Choose picture'));
-  await screen.findByText('Upload picture');
+  fireEvent.press(screen.getByLabelText('Choose picture'));
+  await screen.findByText('Picture ready · saved when you confirm');
   expect(screen.getByLabelText('Profile picture').props.source.uri).toBe(asset.uri);
-  fireEvent.press(screen.getByText('Upload picture'));
-  await screen.findByText(
-    'Could not upload your picture. Your selection is kept. Try again or skip it.',
-  );
-  expect(onChanged).not.toHaveBeenCalled();
-  expect(screen.getByLabelText('Profile picture').props.source.uri).toBe(asset.uri);
-  fireEvent.press(screen.getByText('Upload picture'));
-  await waitFor(() => expect(onChanged).toHaveBeenCalledWith(completeAccount));
-  expect(uploadProfilePicture).toHaveBeenCalledWith(expect.any(FormData));
+  expect(screen.queryByText('Upload picture')).toBeNull();
+  expect(uploadProfilePicture).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByLabelText('Remove picture'));
+  expect(screen.queryByLabelText('Profile picture')).toBeNull();
+  expect(removeProfilePicture).not.toHaveBeenCalled();
+  expect(onDraftChange).toHaveBeenLastCalledWith({ kind: 'remove' });
 });
 
 test('permission denial, cancellation and oversized files never upload', async () => {
@@ -75,20 +69,20 @@ test('permission denial, cancellation and oversized files never upload', async (
     .mocked(ImagePicker.requestMediaLibraryPermissionsAsync)
     .mockResolvedValueOnce({ granted: false } as ImagePicker.MediaLibraryPermissionResponse);
   show();
-  fireEvent.press(screen.getByText('Choose picture'));
+  fireEvent.press(screen.getByLabelText('Choose picture'));
   await screen.findByText(
     'Photo access is needed to choose a picture. Allow access in Settings, then try again.',
   );
   jest
     .mocked(ImagePicker.launchImageLibraryAsync)
     .mockResolvedValueOnce({ canceled: true, assets: null });
-  fireEvent.press(screen.getByText('Choose picture'));
+  fireEvent.press(screen.getByLabelText('Choose picture'));
   await waitFor(() => expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalledTimes(1));
-  await screen.findByText('Choose picture');
+  await screen.findByLabelText('Choose picture');
   jest
     .mocked(ImagePicker.launchImageLibraryAsync)
     .mockResolvedValueOnce({ canceled: false, assets: [{ ...asset, fileSize: 6000000 }] });
-  fireEvent.press(screen.getByText('Choose picture'));
+  fireEvent.press(screen.getByLabelText('Choose picture'));
   await screen.findByText('Choose a picture smaller than 5 MB.');
   expect(uploadProfilePicture).not.toHaveBeenCalled();
   expect(removeProfilePicture).not.toHaveBeenCalled();

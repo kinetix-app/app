@@ -1,35 +1,44 @@
 import React, { useRef, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { ApiError } from '@/services/apiClient';
-import { textStyles, usePalette } from '@/theme/tokens';
-import { removeProfilePicture, uploadProfilePicture } from '../api';
+import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { Account } from '../schemas';
 import { ProfileAvatar } from './ProfileAvatar';
-import { SetupButton } from './SetupUI';
 
+export type ProfilePictureDraft =
+  { kind: 'keep' } | { kind: 'remove' } | { kind: 'select'; asset: ImagePicker.ImagePickerAsset };
 export function ProfilePictureEditor({
   account,
-  onChanged,
+  draft,
+  onDraftChange,
   onBusy,
+  disabled = false,
 }: {
   account: Account;
-  onChanged: (account: Account) => void;
+  draft: ProfilePictureDraft;
+  onDraftChange: (draft: ProfilePictureDraft) => void;
   onBusy: (busy: boolean) => void;
+  disabled?: boolean;
 }) {
   const p = usePalette();
-  const [selection, setSelection] = useState<ImagePicker.ImagePickerAsset>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const busy = useRef(false);
-  const selectedRef = useRef<ImagePicker.ImagePickerAsset | undefined>(undefined);
+  const selection = draft.kind === 'select' ? draft.asset : undefined;
+  const visibleAccount =
+    draft.kind === 'remove'
+      ? { ...account, profile: { ...account.profile, picture_url: null } }
+      : account;
+  const hasPicture = selection || visibleAccount.profile.picture_url;
+  const locked = pending || disabled;
   function setBusy(value: boolean) {
     busy.current = value;
     setPending(value);
     onBusy(value);
   }
   async function choose() {
-    if (busy.current) return;
+    if (busy.current || disabled) return;
     setBusy(true);
     setError('');
     try {
@@ -60,108 +69,82 @@ export function ProfilePictureEditor({
         setError('Choose a JPEG, PNG or WebP picture.');
         return;
       }
-      setSelection(asset);
-      selectedRef.current = asset;
+      onDraftChange({ kind: 'select', asset });
     } catch {
       setError('Could not open your photos. Try again.');
     } finally {
       setBusy(false);
     }
   }
-  async function upload() {
-    const asset = selectedRef.current;
-    if (!asset || busy.current) return;
-    setBusy(true);
-    setError('');
-    try {
-      const form = new FormData();
-      if (Platform.OS === 'web' && asset.file)
-        form.append('file', asset.file, asset.fileName ?? 'profile.jpg');
-      else
-        form.append('file', {
-          uri: asset.uri,
-          name: asset.fileName ?? 'profile.jpg',
-          type: asset.mimeType ?? 'image/jpeg',
-        } as unknown as Blob);
-      const result = await uploadProfilePicture(form);
-      onChanged(result);
-      setSelection(undefined);
-      selectedRef.current = undefined;
-    } catch (failure) {
-      setError(
-        failure instanceof ApiError && failure.status === 413
-          ? 'Choose a picture smaller than 5 MB.'
-          : 'Could not upload your picture. Your selection is kept. Try again or skip it.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function remove() {
-    if (busy.current) return;
-    setBusy(true);
-    setError('');
-    try {
-      onChanged(await removeProfilePicture());
-      setSelection(undefined);
-      selectedRef.current = undefined;
-    } catch {
-      setError('Could not remove your picture. Try again.');
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
-    <View style={{ gap: 12 }}>
-      <ProfileAvatar account={account} preview={selection?.uri} />
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
-        Add a photo to make your profile yours. Optional · JPEG, PNG or WebP · up to 5 MB
-      </Text>
-      <SetupButton
-        title={
-          pending
-            ? 'Working…'
-            : selection || account.profile.picture_url
-              ? 'Replace picture'
-              : 'Choose picture'
-        }
-        secondary
-        disabled={pending}
-        onPress={() => {
-          void choose();
+    <View style={{ gap: spacing['space-3'], alignItems: 'center' }}>
+      <View
+        style={{
+          position: 'relative',
+          paddingHorizontal: spacing['space-6'],
+          paddingBottom: spacing['space-2'],
         }}
-      />
-      {selection ? (
-        <>
-          <SetupButton
-            title="Upload picture"
-            disabled={pending}
+      >
+        <ProfileAvatar account={visibleAccount} preview={selection?.uri} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={hasPicture ? 'Replace picture' : 'Choose picture'}
+          accessibilityState={{ disabled: locked }}
+          disabled={locked}
+          onPress={() => {
+            void choose();
+          }}
+          style={[
+            styles.icon,
+            { right: 0, backgroundColor: p['brand-soft'], borderColor: p['line-strong'] },
+          ]}
+        >
+          <Feather name="edit-2" size={20} color={p['brand-ink']} />
+        </Pressable>
+        {hasPicture ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Remove picture"
+            accessibilityHint="Remove this picture when you confirm your profile."
+            accessibilityState={{ disabled: locked }}
+            disabled={locked}
             onPress={() => {
-              void upload();
-            }}
-          />
-          <SetupButton
-            title="Skip selected picture"
-            secondary
-            disabled={pending}
-            onPress={() => {
-              setSelection(undefined);
-              selectedRef.current = undefined;
+              onDraftChange({ kind: 'remove' });
               setError('');
             }}
-          />
-        </>
-      ) : null}
-      {account.profile.picture_url ? (
-        <SetupButton
-          title="Remove picture"
-          secondary
-          disabled={pending}
-          onPress={() => {
-            void remove();
-          }}
-        />
-      ) : null}
+            style={[
+              styles.icon,
+              { left: 0, backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+            ]}
+          >
+            <Feather name="trash-2" size={20} color={p.danger} />
+          </Pressable>
+        ) : null}
+      </View>
+      {pending ? (
+        <View style={{ flexDirection: 'row', gap: spacing['space-2'], alignItems: 'center' }}>
+          <ActivityIndicator color={p.brand} />
+          <Text accessibilityLiveRegion="polite" style={[textStyles.label, { color: p.ink }]}>
+            Opening photos…
+          </Text>
+        </View>
+      ) : (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[textStyles.label, { color: p['ink-muted'] }]}
+        >
+          {selection
+            ? 'Picture ready · saved when you confirm'
+            : draft.kind === 'remove'
+              ? 'No picture · removal saved when you confirm'
+              : account.profile.picture_url
+                ? 'Current profile picture'
+                : 'No picture · optional'}
+        </Text>
+      )}
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
+        JPEG, PNG or WebP · up to 5 MB
+      </Text>
       {error ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
           {error}
@@ -170,3 +153,15 @@ export function ProfilePictureEditor({
     </View>
   );
 }
+const styles = StyleSheet.create({
+  icon: {
+    position: 'absolute',
+    bottom: 0,
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    borderRadius: radii['radius-pill'],
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

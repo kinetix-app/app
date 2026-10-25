@@ -52,7 +52,6 @@ function HomeNavigation({
                     onAccount(next);
                     setHomePanel('overview');
                   }}
-                  onPhotoSaved={onAccount}
                   onCancel={() => setHomePanel('overview')}
                 />
               ) : homePanel === 'objective' ? (
@@ -166,9 +165,9 @@ function AccountGate({
   const account = query.data;
   if (account.onboarding.required)
     return !account.onboarding.profile_complete ? (
-      <ProfileEditor account={account} onSaved={saved} onSignOut={onSignOut} />
+      <ProfileEditor account={account} onSaved={saved} />
     ) : (
-      <ObjectiveEditor accountId={accountId} onSaved={saved} onSignOut={onSignOut} />
+      <ObjectiveEditor accountId={accountId} onSaved={saved} />
     );
   return (
     <SessionProvider accountId={accountId} onSignOut={onSignOut}>

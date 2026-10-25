@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { apiClient } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { updateProfile } from '../api';
+import { removeProfilePicture, uploadProfilePicture, updateProfile } from '../api';
 import type { Account } from '../schemas';
 import {
   canonicalWeight,
@@ -23,7 +23,7 @@ import {
   type ProfileFormValues,
 } from '../profileForm';
 import { SetupButton, setupStyles as s } from './SetupUI';
-import { ProfilePictureEditor } from './ProfilePictureEditor';
+import { ProfilePictureEditor, type ProfilePictureDraft } from './ProfilePictureEditor';
 import { ProfileAvatar } from './ProfileAvatar';
 
 const fields = [
@@ -36,14 +36,10 @@ export function ProfileEditor({
   account,
   onSaved,
   onCancel,
-  onSignOut,
-  onPhotoSaved,
 }: {
   account: Account;
   onSaved: (account: Account) => void;
   onCancel?: () => void;
-  onSignOut?: () => void;
-  onPhotoSaved?: (account: Account) => void;
 }) {
   const p = usePalette();
   const defaults = profileDefaults(account);
@@ -59,12 +55,14 @@ export function ProfileEditor({
   const unit = useWatch({ control, name: 'weight_unit' });
   const [pending, setPending] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoDraft, setPhotoDraft] = useState<ProfilePictureDraft>({ kind: 'keep' });
+  const appliedPhoto = useRef<ProfilePictureDraft | undefined>(undefined);
   const [photoAccount, setPhotoAccount] = useState(account);
   const [step, setStep] = useState(0);
-  const steps = ['About you', 'Your age', 'Your measurements', 'Ready to go?'];
+  const steps = ['About you', 'Personal information', 'Confirmation'];
   const disabled = pending || photoBusy;
   const currentFields =
-    step === 0 ? ['display_name'] : step === 1 ? ['age'] : ['weight_unit', 'weight', 'height_cm'];
+    step === 0 ? ['display_name'] : ['age', 'weight_unit', 'weight', 'height_cm'];
   function advance() {
     clearErrors();
     const parsed = profileFormSchema.safeParse(getValues());
@@ -95,6 +93,22 @@ export function ProfileEditor({
       setPending(true);
       setFailure('');
       try {
+        if (appliedPhoto.current !== photoDraft) {
+          if (photoDraft.kind === 'select') {
+            const asset = photoDraft.asset;
+            const form = new FormData();
+            if (Platform.OS === 'web' && asset.file)
+              form.append('file', asset.file, asset.fileName ?? 'profile.jpg');
+            else
+              form.append('file', {
+                uri: asset.uri,
+                name: asset.fileName ?? 'profile.jpg',
+                type: asset.mimeType ?? 'image/jpeg',
+              } as unknown as Blob);
+            setPhotoAccount(await uploadProfilePicture(form));
+          } else if (photoDraft.kind === 'remove') setPhotoAccount(await removeProfilePicture());
+          appliedPhoto.current = photoDraft;
+        }
         const result = await updateProfile(apiClient, {
           display_name: value.display_name,
           age: Number(value.age),
@@ -107,7 +121,9 @@ export function ProfileEditor({
         });
         onSaved(result);
       } catch {
-        setFailure('Could not save your profile. Your entries are kept. Try again.');
+        setFailure(
+          'Could not save your profile. Your details and picture choice are kept. Try again.',
+        );
       } finally {
         busy.current = false;
         setPending(false);
@@ -146,12 +162,12 @@ export function ProfileEditor({
               accessibilityLiveRegion="polite"
               style={[textStyles.label, { color: p['ink-muted'] }]}
             >
-              Step {step + 1} of 4 · {steps[step]}
+              Step {step + 1} of 3 · {steps[step]}
             </Text>
             <View
               accessibilityRole="progressbar"
               accessibilityLabel="Profile setup progress"
-              accessibilityValue={{ min: 1, max: 4, now: step + 1 }}
+              accessibilityValue={{ min: 1, max: 3, now: step + 1 }}
               style={wizard.progress}
             >
               {steps.map((label, index) => (
@@ -173,8 +189,7 @@ export function ProfileEditor({
               {
                 [
                   'Start with your name and an optional profile picture.',
-                  'Add your age in years to complete your profile.',
-                  'Choose your preferred weight unit, then add your measurements.',
+                  'Add your age, choose your weight unit and enter your measurements.',
                   'Take a moment to check your details before saving.',
                 ][step]
               }
@@ -184,11 +199,13 @@ export function ProfileEditor({
             <View style={step === 0 ? undefined : { display: 'none' }}>
               <ProfilePictureEditor
                 account={photoAccount}
-                onChanged={setPhotoAccount}
+                draft={photoDraft}
+                onDraftChange={setPhotoDraft}
+                disabled={pending}
                 onBusy={setPhotoBusy}
               />
             </View>
-            {step === 2 ? (
+            {step === 1 ? (
               <>
                 <Text style={[textStyles.label, { color: p.ink }]}>Weight unit</Text>
                 <Controller
@@ -252,13 +269,7 @@ export function ProfileEditor({
             ) : null}
             {fields
               .filter(([name]) =>
-                step === 0
-                  ? name === 'display_name'
-                  : step === 1
-                    ? name === 'age'
-                    : step === 2
-                      ? name === 'weight' || name === 'height_cm'
-                      : false,
+                step === 0 ? name === 'display_name' : step === 1 ? name !== 'display_name' : false,
               )
               .map(([name, label]) => (
                 <View key={name} style={{ gap: 8 }}>
@@ -297,9 +308,16 @@ export function ProfileEditor({
                   ) : null}
                 </View>
               ))}
-            {step === 3 ? (
+            {step === 2 ? (
               <>
-                <ProfileAvatar account={photoAccount} />
+                <ProfileAvatar
+                  account={
+                    photoDraft.kind === 'remove'
+                      ? { ...photoAccount, profile: { ...photoAccount.profile, picture_url: null } }
+                      : photoAccount
+                  }
+                  preview={photoDraft.kind === 'select' ? photoDraft.asset.uri : undefined}
+                />
                 {[
                   ['Name', getValues('display_name')],
                   ['Age', `${getValues('age')} years`],
@@ -320,10 +338,10 @@ export function ProfileEditor({
             </Text>
           ) : null}
           <SetupButton
-            title={pending ? 'Saving…' : step === 3 ? 'Save profile' : 'Continue'}
+            title={pending ? 'Saving…' : step === 2 ? 'Save profile' : 'Continue'}
             disabled={disabled}
             onPress={() => {
-              if (step === 3) void save();
+              if (step === 2) void save();
               else advance();
             }}
           />
@@ -333,13 +351,9 @@ export function ProfileEditor({
               secondary
               disabled={disabled}
               onPress={() => {
-                if (photoAccount !== account) onPhotoSaved?.(photoAccount);
                 onCancel();
               }}
             />
-          ) : null}
-          {onSignOut ? (
-            <SetupButton title="Sign out" secondary disabled={disabled} onPress={onSignOut} />
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
