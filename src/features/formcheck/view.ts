@@ -3,7 +3,13 @@ import { genericReasons, unknownReason, type NotAssessableReason } from './reaso
 import type { FormAnalysis } from './schemas';
 
 export type RepView = { index: number; ok: boolean; label: string };
-export type IssueView = { id: string; title: string; explanation: string; reps: number[] };
+export type IssueView = {
+  id: string;
+  label: string;
+  title: string;
+  explanation: string;
+  reps: number[];
+};
 export type AnalysisView =
   | {
       kind: 'assessed';
@@ -42,6 +48,7 @@ export function buildAnalysisView(profile: FormCheckProfile, analysis: FormAnaly
       const text = check?.title[reps.length === 1 ? 'one' : 'other'] ?? 'Form issue on rep {reps}';
       return {
         id,
+        label: check?.label ?? 'Form',
         title: text.replace('{reps}', listReps(reps)),
         explanation: check?.explanation ?? '',
         reps,
