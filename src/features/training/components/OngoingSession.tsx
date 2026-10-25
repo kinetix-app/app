@@ -12,6 +12,7 @@ import { Button, IconButton, ui } from './ui';
 import { SetFields } from './SetFields';
 import { WorkoutExerciseCard, WorkoutTimer } from './WorkoutEditor';
 import { useSession } from './SessionProvider';
+import { FormCheckFlow, profileForExercise, useOptionalFormCheck } from '@/features/formcheck';
 
 export function OngoingSession() {
   const session = useSession();
@@ -24,6 +25,12 @@ export function OngoingSession() {
   const [selected, setSelected] = useState<string | null>(null);
   const [details, setDetails] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  const formCheck = useOptionalFormCheck();
+  const [checking, setChecking] = useState<{
+    exerciseName: string;
+    setId: string;
+    setNumber: number;
+  } | null>(null);
   const pullStart = useRef<number | null>(null);
   const minimize = () => change((value) => ({ ...value, minimized: true }));
   useEffect(() => {
@@ -101,16 +108,27 @@ export function OngoingSession() {
                 }))
               }
             />
-            {i === slot.sets.findIndex((value) => !value.saved) ? (
-              <Button
-                title={`Record set ${i + 1}`}
-                icon="camera"
-                accessibilityLabel={`Record set ${i + 1} (coming soon)`}
-                onPress={() => {}}
-                tone="positive"
-                disabled
-              />
-            ) : null}
+            {formCheck && profileForExercise(slot.exercise.name)
+              ? (() => {
+                  const recorded = formCheck.entryFor(set.id);
+                  if (!recorded && i !== slot.sets.findIndex((value) => !value.saved)) return null;
+                  return (
+                    <Button
+                      title={recorded ? `Review set ${i + 1}` : `Record set ${i + 1}`}
+                      icon={recorded ? 'eye' : 'camera'}
+                      onPress={() =>
+                        setChecking({
+                          exerciseName: slot.exercise.name,
+                          setId: set.id,
+                          setNumber: i + 1,
+                        })
+                      }
+                      tone="positive"
+                      disabled={session.pending}
+                    />
+                  );
+                })()
+              : null}
           </React.Fragment>
         ))}
         <Button
@@ -334,6 +352,15 @@ export function OngoingSession() {
             setPicker(false);
             void addExercise(exercise);
           }}
+        />
+      ) : null}
+      {checking && profileForExercise(checking.exerciseName) ? (
+        <FormCheckFlow
+          exerciseName={checking.exerciseName}
+          profile={profileForExercise(checking.exerciseName)!}
+          setId={checking.setId}
+          setNumber={checking.setNumber}
+          onClose={() => setChecking(null)}
         />
       ) : null}
       {details !== null ? (
