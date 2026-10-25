@@ -2,7 +2,7 @@
 
 The Android and iOS client for a university fitness project. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.
 
-**Current status:** the routine workspace supports catalogue browsing with clickable body parts and name search, named routine creation/editing with an image-and-summary overview and focused set editor, planned kg/repetition sets and themed autoplay exercise videos with image fallback. [Routine workflow and implementation plan](docs/routines.md) documents the API increment. The Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth must be configured with a local credential allowlist; the Clerk SDK implements email OTP, Google/Apple OAuth, secure native session storage, restoration and logout. Production dashboard setup and native/provider verification remain required.
+**Current status:** the routine workspace supports catalogue browsing with clickable body parts and name search, named routine creation/editing with expandable image-and-summary exercise cards with inline set editing, planned kg/repetition sets and themed autoplay exercise videos with image fallback. [Routine workflow and implementation plan](docs/routines.md) documents the API increment. The Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth must be configured with a local credential allowlist; the Clerk SDK implements email OTP, Google/Apple OAuth, secure native session storage, restoration and logout. Production dashboard setup and native/provider verification remain required.
 
 Android and iOS are the delivery targets. Web-compatible code and browser previews are useful, but complete web support is not currently committed.
 
@@ -208,7 +208,8 @@ The full scope and research rationale live in management. Until verified cross-r
 After verified Basic or Clerk sign-in, the account opens its private routine workspace.
 Create a routine, choose catalogue exercises, add planned kg/repetition sets and save.
 Reopen it to edit its name, selection, order and default sets. Reorder exercise cards using their drag handles; click a name to edit its sets or a thumbnail for exercise details. Failed saves retain input;
-Cancel asks before discarding a dirty form. Session start/completion remain separate work.
+Cancel asks before discarding a dirty form. Routine and workout editing share the exercise cards,
+inline expanded editor and numbered set fields; session ticks persist actual results separately.
 The backend must include the planned-set extension documented in [the routine contract](docs/routines.md).
 
 `src/theme/design-tokens.json` is the standalone export of the supplied Kinetix design
@@ -223,3 +224,19 @@ Server queries use identity/filters in their keys, native focus/connectivity int
 and abort signals. Leaving the account cancels queries and clears its private cache/forms.
 Mutations are not automatically retried. This increment adds `expo-network`; rebuild native
 development clients after installing locked dependencies.
+
+## Workout recording and server drafts
+
+Start a blank workout or start a saved routine from its editor, record kg/lb and repetitions,
+minimize/resume, and save each result with its tick. Start creates a server draft; Finish
+atomically moves saved results into completed history. Start actions are disabled while a workout is ongoing. Newly added exercises use the latest saved
+configuration as placeholders. Drafts resume after sign-in, including
+on another device. Explicit logout clears local unsent changes and retains the server draft.
+See [workout lifecycle, units and retry behavior](docs/workouts.md). Finish omits unticked sets and can optionally update the source routine with the recorded results. Rebuild native development clients
+for AsyncStorage. Sprint 2 measurement formats remain outside this increment.
+
+## Home navigation and feature folders
+
+The authenticated [Home shell](docs/home.md) opens nutrition-goal setup by default.
+Its shared bottom bar connects Workout, blank workout start (+), and Nutrition.
+Feature components live in `components/`; tests and fixtures live in `test/`.

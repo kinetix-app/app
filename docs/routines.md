@@ -140,3 +140,13 @@ tests passed, as did type/lint checks and Android/iOS/web exports. Browser verif
 at 390 × 844 automatically loaded all 44 synthetic exercises across three pages, applied
 BACK + CHEST together, then removed BACK through its badge. Native device behavior
 remains unverified. The design rules in AGENTS.md reflect the modal/badge interaction.
+
+## Shared workout editor (25 October 2026)
+
+Routine and live workout editing share `WorkoutExerciseCard` and `SetFields`.
+Exercise names expand/collapse sets inside the card; images open exercise information.
+Compact names leave space for the upper-right drag handle. Template authoring retains
+form validation and Save; only workout sets have database-confirmation ticks, which
+can be toggled back to draft. Weight fields display kg without unit selectors until an
+account preference is available. See [workouts.md](workouts.md) for the timer,
+floating resume panel, discard and completion lifecycle.

@@ -1,0 +1,35 @@
+appId: cat.udl.kinetix
+---
+# Use only an isolated, run-owned emulator and development build pointing at the test API.
+# Credentials come from private process environment; never record/share this login flow.
+- launchApp
+- tapOn: Email
+- inputText: ${MAESTRO_KINETIX_E2E_EMAIL}
+- tapOn: Password
+- inputText: ${MAESTRO_KINETIX_E2E_PASSWORD}
+- tapOn: Sign in
+- extendedWaitUntil:
+    visible: Start workout
+    timeout: 20000
+- tapOn: Workout
+- tapOn: Start workout
+- tapOn: Add exercise
+- tapOn: Search exercises
+- inputText: Acceptance press
+- tapOn: Add Acceptance press
+- tapOn: Exercise 1 set 1 kg
+- inputText: '100'
+- tapOn: Exercise 1 set 1 reps
+- inputText: '8'
+- hideKeyboard
+- tapOn: Save exercise 1 set 1
+- tapOn: Minimize workout
+- assertVisible: History
+- tapOn: Resume workout
+- assertVisible: Edit sets for Acceptance press
+- tapOn: Finish
+- extendedWaitUntil:
+    visible: History
+    timeout: 20000
+- tapOn: History
+- assertVisible: Workout history
