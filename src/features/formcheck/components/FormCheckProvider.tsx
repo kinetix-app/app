@@ -14,6 +14,10 @@ type Controller = {
   remove: (setId: string) => Promise<void>;
 };
 const FormCheckContext = createContext<Controller | null>(null);
+/** Null when no provider is mounted, so screens can hide the feature instead of failing. */
+export function useOptionalFormCheck() {
+  return useContext(FormCheckContext);
+}
 export function useFormCheck() {
   const value = useContext(FormCheckContext);
   if (!value) throw new Error('Form check provider missing.');
