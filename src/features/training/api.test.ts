@@ -37,7 +37,7 @@ test('filter is encoded and omission requests all accessible exercises', async (
   get.mockRestore();
 });
 
-test.each(['-1', 'NaN', 'Infinity', '', '1.001', '1000000'])(
+test.each(['-1', 'NaN', 'Infinity', '', '1.0000001', '1000000'])(
   'rejects invalid planned kg input %s',
   (weight_kg) => {
     expect(() =>
@@ -85,4 +85,37 @@ test('encodes multiple body parts as repeated parameters, deduplicated', async (
     '/api/v1/exercises?limit=20&offset=0&body_part=BACK&body_part=CHEST',
   );
   get.mockRestore();
+});
+
+test('canonical weight validation accepts pound values within kg bounds and rejects excessive measurements', () => {
+  expect(
+    routineInputSchema.safeParse({
+      name: 'Push',
+      exercises: [
+        { exercise_id: 1, sets: [{ reps: 8, weight: { value: '2000000', unit: 'lb' } }] },
+      ],
+    }).success,
+  ).toBe(true);
+  expect(
+    routineInputSchema.safeParse({
+      name: 'Push',
+      exercises: [
+        { exercise_id: 1, sets: [{ reps: 8, weight: { value: '3000000', unit: 'lb' } }] },
+      ],
+    }).success,
+  ).toBe(false);
+});
+
+test('rejects ambiguous planned weight inputs instead of stripping one measurement', () => {
+  expect(
+    routineInputSchema.safeParse({
+      name: 'Push',
+      exercises: [
+        {
+          exercise_id: 1,
+          sets: [{ reps: 8, weight_kg: '45.359237', weight: { value: '100', unit: 'lb' } }],
+        },
+      ],
+    }).success,
+  ).toBe(false);
 });

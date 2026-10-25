@@ -1,8 +1,24 @@
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { TrainingWorkspace } from './TrainingWorkspace';
 import { trainingApi } from './api';
 import { exampleExercise, exampleRoutine } from './fixtures';
+
+jest.mock(
+  '@react-native-async-storage/async-storage',
+  () => ({
+    getItem: jest.fn(async () => null),
+    setItem: jest.fn(async () => {}),
+    removeItem: jest.fn(async () => {}),
+  }),
+  { virtual: true },
+);
+
+jest.mock('expo-crypto', () => {
+  let sequence = 0;
+  return { randomUUID: () => `3e17c183-38a9-4b5c-b953-${String(++sequence).padStart(12, '0')}` };
+});
 
 jest.mock('react-native-draggable-flatlist', () => {
   const { FlatList } = jest.requireActual('react-native');
@@ -15,7 +31,12 @@ jest.mock('react-native-draggable-flatlist', () => {
       <FlatList
         {...props}
         renderItem={({ item, index }: { item: unknown; index: number }) =>
-          renderItem({ item, getIndex: () => index, drag: jest.fn(), isActive: false })
+          renderItem({
+            item,
+            getIndex: () => index,
+            drag: jest.fn(),
+            isActive: false,
+          })
         }
       />
     ),
@@ -33,20 +54,46 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('./api', () => ({
   trainingApi: {
+    complete: jest.fn(),
+    draft: jest.fn(),
+    saveDraft: jest.fn(),
+    finishDraft: jest.fn(),
+    discardDraft: jest.fn(),
+    sessions: jest.fn(),
+    session: jest.fn(),
     routines: jest.fn(),
     routine: jest.fn(),
     exercises: jest.fn(),
     exercise: jest.fn(),
+    lastConfiguration: jest.fn(),
     bodyParts: jest.fn(),
     save: jest.fn(),
   },
 }));
 
+function collapseExercise() {
+  const expanded = screen
+    .getAllByLabelText(/^Edit sets for /)
+    .find((button) => button.props.accessibilityState.expanded);
+  if (!expanded) throw new Error('No exercise is expanded.');
+  fireEvent.press(expanded);
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
-  jest
-    .mocked(trainingApi.routines)
-    .mockResolvedValue({ items: [{ id: 10, name: 'Push' }], limit: 20, offset: 0 });
+  jest.mocked(trainingApi.draft).mockResolvedValue(null);
+  jest.mocked(trainingApi.saveDraft).mockImplementation(async (id, snapshot) => ({
+    ...snapshot,
+    client_session_id: id,
+    state: 'draft',
+  }));
+  jest.mocked(trainingApi.discardDraft).mockResolvedValue();
+  jest.mocked(trainingApi.lastConfiguration).mockResolvedValue({ exercise_id: 1, sets: [] });
+  jest.mocked(trainingApi.routines).mockResolvedValue({
+    items: [{ id: 10, name: 'Push' }],
+    limit: 20,
+    offset: 0,
+  });
   jest.mocked(trainingApi.routine).mockResolvedValue(exampleRoutine);
   jest
     .mocked(trainingApi.exercises)
@@ -71,7 +118,7 @@ test('loads and edits saved defaults, retains input on failure, then saves with 
   expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('80.00');
   expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('8');
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '82.50');
-  fireEvent.press(screen.getByText('Done'));
+  collapseExercise();
   await screen.findByText('8 reps · 82.5 kg');
   fireEvent.press(screen.getByText('Save'));
   await screen.findByRole('alert');
@@ -106,16 +153,19 @@ test('creates a routine by selecting exercises, filtering body-parts and adding 
   fireEvent.press(screen.getByLabelText('Add set to exercise 1'));
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '80.001');
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '8');
-  fireEvent.press(screen.getByText('Done'));
+  fireEvent.press(screen.getByText('Save'));
   await screen.findByText('Enter nonnegative kg, up to two decimals.');
   expect(trainingApi.save).not.toHaveBeenCalled();
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '80');
-  fireEvent.press(screen.getByText('Done'));
+  collapseExercise();
   await screen.findByLabelText('Routine name');
   fireEvent.press(screen.getByText('Save'));
   await screen.findByText('Routine saved.');
   expect(trainingApi.save).toHaveBeenCalledWith(
-    { name: 'New push', exercises: [{ exercise_id: 1, sets: [{ reps: 8, weight_kg: '80' }] }] },
+    {
+      name: 'New push',
+      exercises: [{ exercise_id: 1, sets: [{ reps: 8, weight_kg: '80' }] }],
+    },
     undefined,
   );
 });
@@ -150,7 +200,11 @@ test('unmount cancels pending private reads and ignores late results', async () 
   view.unmount();
   expect(signal?.aborted).toBe(true);
   await act(async () => {
-    finish({ items: [{ id: 10, name: 'Late private routine' }], limit: 20, offset: 0 });
+    finish({
+      items: [{ id: 10, name: 'Late private routine' }],
+      limit: 20,
+      offset: 0,
+    });
   });
 });
 
@@ -202,23 +256,32 @@ test('drag completion preserves stable slot identities and edited sets in the sa
     exercise: { ...exampleExercise, id: 2, name: 'Row' },
     default_sets: [],
   };
-  jest
-    .mocked(trainingApi.routine)
-    .mockResolvedValue({ ...exampleRoutine, exercises: [...exampleRoutine.exercises, second] });
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [...exampleRoutine.exercises, second],
+  });
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
   fireEvent.press(await screen.findByLabelText('Edit Push'));
-  fireEvent.press(await screen.findByLabelText('Edit sets for Bench press'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
   fireEvent.changeText(await screen.findByLabelText('Exercise 1 set 1 kg'), '82.50');
   expect(screen.queryByText('CHEST')).toBeNull();
-  fireEvent.press(screen.getByText('Done'));
+  collapseExercise();
   await screen.findByLabelText('Routine name');
   expect(screen.queryByText('↑ Up')).toBeNull();
   expect(screen.getByLabelText('Reorder Bench press')).toBeTruthy();
-  fireEvent(screen.getByTestId('routine-exercises'), 'dragEnd', { from: 0, to: 1 });
+  fireEvent(screen.getByTestId('routine-exercises'), 'dragEnd', {
+    from: 0,
+    to: 1,
+  });
   fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
   expect(screen.getByLabelText('Exercise 2 set 1 kg').props.value).toBe('82.50');
-  fireEvent.press(screen.getByLabelText('Back to routine'));
-  fireEvent.press(screen.getByText('Save'));
+  collapseExercise();
+  fireEvent.press(await screen.findByText('Save'));
   await waitFor(() =>
     expect(trainingApi.save).toHaveBeenCalledWith(
       {
@@ -290,12 +353,22 @@ test('overview summarises varied sets and set editor retains changes across back
   expect(screen.queryByText('PECTORALIS')).toBeNull();
   expect(screen.queryByText('CHEST')).toBeNull();
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 2 kg'), '65');
-  fireEvent.press(screen.getByLabelText('Back to routine'));
+  collapseExercise();
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded,
+    ).toBe(false),
+  );
   expect(screen.getByText('8–12 reps · 40–65 kg')).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
   expect(screen.getByLabelText('Exercise 1 set 2 kg').props.value).toBe('65');
   fireEvent.press(screen.getByLabelText('Remove set 2 from exercise 1'));
-  fireEvent.press(screen.getByText('Done'));
+  collapseExercise();
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded,
+    ).toBe(false),
+  );
   await screen.findByText('1 set');
   fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
   fireEvent.press(screen.getByLabelText('Remove Bench press'));
@@ -369,7 +442,11 @@ test('end of list automatically fetches once while pending and stops after a sho
   fireEvent(screen.getByTestId('exercise-catalogue'), 'endReached');
   expect(trainingApi.exercises).toHaveBeenCalledTimes(2);
   await act(async () => {
-    finish({ items: [{ ...exampleExercise, id: 3, name: 'Squat' }], limit: 2, offset: 2 });
+    finish({
+      items: [{ ...exampleExercise, id: 3, name: 'Squat' }],
+      limit: 2,
+      offset: 2,
+    });
   });
   await screen.findByLabelText('Add Squat');
   fireEvent(screen.getByTestId('exercise-catalogue'), 'endReached');
@@ -398,4 +475,514 @@ test('failed automatic page fetch retains results and waits for explicit retry',
   jest.mocked(trainingApi.exercises).mockResolvedValue({ items: [], limit: 1, offset: 1 });
   fireEvent.press(screen.getByText('Retry'));
   await waitFor(() => expect(screen.queryByText('Retry')).toBeNull());
+});
+
+test('routine start snapshots guidance with empty actual results, minimize resumes original values and finish retries the same body', async () => {
+  jest
+    .mocked(trainingApi.finishDraft)
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce({} as Awaited<ReturnType<typeof trainingApi.finishDraft>>);
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  fireEvent.press(await screen.findByText('Start routine'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('');
+  expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('');
+  expect(trainingApi.complete).not.toHaveBeenCalled();
+  expect(trainingApi.save).not.toHaveBeenCalled();
+  expect(screen.queryByLabelText('Display weight in lb')).toBeNull();
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '100.00');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '8');
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('100.00');
+  collapseExercise();
+  fireEvent.press(screen.getByLabelText('Minimize workout'));
+  await screen.findByLabelText('Resume workout');
+  expect(
+    screen.getByRole('button', { name: 'Start workout' }).props.accessibilityState.disabled,
+  ).toBe(true);
+  fireEvent.press(screen.getByLabelText('Resume workout'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('100.00');
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 1'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByText('Finish'));
+  expect(screen.getByText('Update the routine?')).toBeTruthy();
+  expect(trainingApi.finishDraft).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Keep routine'));
+  await screen.findByText('Retry Finish');
+  const body = jest.mocked(trainingApi.finishDraft).mock.calls[0].slice(0, 2);
+  expect(
+    jest.mocked(trainingApi.saveDraft).mock.calls.at(-1)?.[1].exercises[0].sets[0],
+  ).toMatchObject({ reps: 8, weight: { value: '100.00', unit: 'kg' }, completed: true });
+  fireEvent.press(screen.getByText('Retry Finish'));
+  await screen.findByText('Start workout');
+  expect(jest.mocked(trainingApi.finishDraft).mock.calls[1].slice(0, 2)).toEqual(body);
+});
+
+test('routine save preserves canonical precision while unit toggles create no writes', async () => {
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [
+      {
+        ...exampleRoutine.exercises[0],
+        default_sets: [
+          {
+            ...exampleRoutine.exercises[0].default_sets[0],
+            weight_kg: '45.359237',
+            weight: { value: '45.36', unit: 'kg' },
+          },
+        ],
+      },
+    ],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('45.36');
+  expect(screen.queryByLabelText('Display weight in lb')).toBeNull();
+  expect(trainingApi.save).not.toHaveBeenCalled();
+  collapseExercise();
+  fireEvent.press(await screen.findByText('Save'));
+  await waitFor(() =>
+    expect(trainingApi.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exercises: [{ id: 20, exercise_id: 1, sets: [{ reps: 8, weight_kg: '45.359237' }] }],
+      }),
+      10,
+    ),
+  );
+});
+
+test('dirty routine must save before local start and a failed save retains the form', async () => {
+  jest
+    .mocked(trainingApi.save)
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce(exampleRoutine);
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  fireEvent.changeText(await screen.findByLabelText('Routine name'), 'Changed');
+  fireEvent.press(screen.getByText('Start routine'));
+  await screen.findByRole('alert');
+  expect(screen.getByLabelText('Routine name').props.value).toBe('Changed');
+  expect(screen.queryByText('Finish')).toBeNull();
+  fireEvent.press(screen.getByText('Start routine'));
+  await screen.findByText('Finish');
+  expect(trainingApi.save).toHaveBeenCalledTimes(2);
+  expect(trainingApi.complete).not.toHaveBeenCalled();
+});
+
+test('resuming a minimized workout preserves unsaved routine edits beneath the workout', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByText('Start workout'));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Minimize workout' }).props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Minimize workout'));
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  fireEvent.changeText(await screen.findByLabelText('Routine name'), 'Private unsaved name');
+  expect(
+    screen.getByRole('button', { name: 'Start routine' }).props.accessibilityState.disabled,
+  ).toBe(true);
+  fireEvent.press(screen.getByLabelText('Resume workout'));
+  await screen.findByText('Finish');
+  fireEvent.press(screen.getByLabelText('Minimize workout'));
+  expect((await screen.findByLabelText('Routine name')).props.value).toBe('Private unsaved name');
+  expect(trainingApi.save).not.toHaveBeenCalled();
+});
+
+test('saved routine cards expose Edit and Start and direct start refreshes cached guidance with empty results', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  expect(await screen.findByRole('button', { name: 'Edit Push' })).toBeTruthy();
+  expect(screen.getByText('Edit')).toBeTruthy();
+  expect(screen.getByText('Start')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Edit Push'));
+  await screen.findByLabelText('Routine name');
+  fireEvent.press(screen.getByLabelText('Back to routines'));
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [
+      {
+        ...exampleRoutine.exercises[0],
+        exercise: { ...exampleExercise, name: 'Updated bench' },
+      },
+    ],
+  });
+  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Updated bench').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Updated bench'));
+  expect(trainingApi.routine).toHaveBeenCalledTimes(2);
+  expect(trainingApi.routine).toHaveBeenLastCalledWith(10, expect.anything());
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('');
+  expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('');
+  expect(trainingApi.save).not.toHaveBeenCalled();
+  expect(trainingApi.complete).not.toHaveBeenCalled();
+});
+
+test('routine direct start guards concurrent taps and retries failed reads without entering a workout', async () => {
+  let fail: (error: Error) => void = () => {};
+  jest.mocked(trainingApi.routine).mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Start Push'));
+  fireEvent.press(screen.getByLabelText('Start Push'));
+  expect(screen.getByText('Starting…')).toBeTruthy();
+  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(true);
+  expect(screen.getByLabelText('Edit Push').props.accessibilityState.disabled).toBe(false);
+  expect(trainingApi.routine).toHaveBeenCalledTimes(1);
+  await act(async () => fail(new Error('offline')));
+  await screen.findByRole('alert');
+  expect(screen.queryByText('Finish')).toBeNull();
+  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(false);
+  fireEvent.press(screen.getByText('Retry'));
+  await screen.findByLabelText('Edit sets for Bench press');
+  expect(trainingApi.routine).toHaveBeenCalledTimes(2);
+});
+
+test('all starts remain disabled while an ongoing workout can only resume through its panel', async () => {
+  jest.mocked(trainingApi.routines).mockResolvedValue({
+    items: [
+      { id: 10, name: 'Push' },
+      { id: 11, name: 'Other routine' },
+    ],
+    limit: 20,
+    offset: 0,
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '85');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '9');
+  collapseExercise();
+  fireEvent.press(screen.getByLabelText('Minimize workout'));
+  jest.mocked(trainingApi.routine).mockRejectedValue(new Error('offline'));
+  expect(
+    (await screen.findByLabelText('Start Other routine')).props.accessibilityState.disabled,
+  ).toBe(true);
+  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(true);
+  expect(
+    screen.getByRole('button', { name: 'Start workout' }).props.accessibilityState.disabled,
+  ).toBe(true);
+  fireEvent.press(screen.getByLabelText('Resume workout'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('85');
+  expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('9');
+  expect(trainingApi.routine).toHaveBeenCalledTimes(1);
+});
+
+test('pending routine start is cancelled on account change and cannot create a late private workout', async () => {
+  let finish: (value: typeof exampleRoutine) => void = () => {};
+  jest.mocked(trainingApi.routine).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const view = render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Start Push'));
+  const signal = jest.mocked(trainingApi.routine).mock.calls[0][1];
+  view.rerender(<TrainingWorkspace accountId={2} onSignOut={jest.fn()} />);
+  expect(signal?.aborted).toBe(true);
+  await act(async () => finish(exampleRoutine));
+  await screen.findByLabelText('Start Push');
+  expect(screen.queryByText('Finish')).toBeNull();
+  expect(screen.queryByLabelText('Resume workout')).toBeNull();
+});
+
+test('routine start waits for draft restoration and stays disabled after a storage failure', async () => {
+  let fail: (error: Error) => void = () => {};
+  jest.mocked(AsyncStorage.getItem).mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  const start = await screen.findByLabelText('Start Push');
+  expect(start.props.accessibilityState.disabled).toBe(true);
+  fireEvent.press(start);
+  expect(trainingApi.routine).not.toHaveBeenCalled();
+  await act(async () => fail(new Error('storage unavailable')));
+  await screen.findByText('Retry storage');
+  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(true);
+  expect(screen.getByLabelText('Edit Push').props.accessibilityState.disabled).toBe(false);
+  fireEvent.press(screen.getByText('Retry storage'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(false),
+  );
+});
+
+test('inline cards toggle without hiding the routine and the floating workout supports pull, discard confirmation and resume', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  const expand = await screen.findByLabelText('Edit sets for Bench press');
+  fireEvent.press(expand);
+  expect(screen.getByLabelText('Routine name')).toBeTruthy();
+  expect(screen.getByLabelText('Exercise 1 set 1 kg')).toBeTruthy();
+  expect(screen.queryByLabelText('Display weight in lb')).toBeNull();
+  fireEvent.press(expand);
+  expect(screen.queryByLabelText('Exercise 1 set 1 kg')).toBeNull();
+  fireEvent.press(screen.getByText('Start routine'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Minimize workout').props.accessibilityState.disabled).toBe(false),
+  );
+  expect(screen.queryByText(/^Started /)).toBeNull();
+  fireEvent(screen.getByTestId('workout-pull-handle'), 'responderGrant', {
+    nativeEvent: { pageY: 10 },
+  });
+  fireEvent(screen.getByTestId('workout-pull-handle'), 'responderRelease', {
+    nativeEvent: { pageY: 100 },
+  });
+  expect(screen.getByLabelText('Resume workout')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Ongoing workout options'));
+  expect(screen.getByText('Discard this workout?')).toBeTruthy();
+  fireEvent.press(screen.getByText('Cancel'));
+  fireEvent.press(screen.getByLabelText('Resume workout'));
+  expect(screen.getByLabelText('Minimize workout')).toBeTruthy();
+});
+
+test('new session exercises load last recorded sets as placeholders while actual values remain empty', async () => {
+  jest.mocked(trainingApi.lastConfiguration).mockResolvedValue({
+    exercise_id: 1,
+    sets: [
+      exampleRoutine.exercises[0].sets[0],
+      { ...exampleRoutine.exercises[0].sets[0], set_number: 2, weight_kg: '60.000000', reps: 6 },
+    ],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByText('Start workout'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Minimize workout').props.accessibilityState.disabled).toBe(false),
+  );
+  fireEvent.press(screen.getByText('Add exercise'));
+  fireEvent.press(await screen.findByLabelText('Add Bench press'));
+  const weight = await screen.findByLabelText('Exercise 1 set 1 kg');
+  expect(weight.props.value).toBe('');
+  expect(weight.props.placeholder).toBe('90.00');
+  expect(screen.getByLabelText('Exercise 1 set 1 reps').props.placeholder).toBe('12');
+  expect(screen.getByLabelText('Exercise 1 set 2 kg').props.placeholder).toBe('60.00');
+  expect(screen.getByLabelText('Exercise 1 set 2 reps').props.value).toBe('');
+  expect(trainingApi.lastConfiguration).toHaveBeenCalledWith(1, expect.anything());
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 1'));
+  await screen.findByLabelText('Unsave exercise 1 set 1');
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('90.00');
+  expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('12');
+  expect(
+    jest.mocked(trainingApi.saveDraft).mock.calls.at(-1)?.[1].exercises[0].sets[0],
+  ).toMatchObject({
+    completed: true,
+    reps: 12,
+    weight: { value: '90.00', unit: 'kg' },
+  });
+});
+test('routine update prompt can cancel or finish with only saved sets and a frozen update choice', async () => {
+  jest
+    .mocked(trainingApi.finishDraft)
+    .mockResolvedValueOnce({} as Awaited<ReturnType<typeof trainingApi.finishDraft>>);
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '75');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '7');
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 1'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  await screen.findByLabelText('Unsave exercise 1 set 1');
+  fireEvent.press(screen.getByLabelText('Add set to exercise 1'));
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 2 kg'), 'not valid');
+  fireEvent.press(screen.getByText('Finish'));
+  await screen.findByText('Update the routine?');
+  fireEvent.press(screen.getByText('Cancel'));
+  expect(trainingApi.finishDraft).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Exercise 1 set 2 kg').props.value).toBe('not valid');
+  fireEvent.press(screen.getByText('Finish'));
+  fireEvent.press(await screen.findByText('Update routine'));
+  await waitFor(() =>
+    expect(trainingApi.finishDraft).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.anything(),
+      true,
+    ),
+  );
+  expect(jest.mocked(trainingApi.saveDraft).mock.calls.at(-1)?.[1].exercises[0].sets).toHaveLength(
+    1,
+  );
+  expect(trainingApi.save).not.toHaveBeenCalled();
+});
+
+test('saving the final outstanding set advances only after success; all completed cards collapse', async () => {
+  const first = exampleRoutine.exercises[0];
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [
+      { ...first, sets: [first.sets[0], { ...first.sets[0], set_number: 2 }] },
+      {
+        ...first,
+        id: 21,
+        exercise_order: 2,
+        exercise: { ...exampleExercise, id: 2, name: 'Squat' },
+      },
+    ],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  expect(screen.queryByText('Done')).toBeNull();
+  for (let number = 1; number <= 2; number++) {
+    fireEvent.changeText(screen.getByLabelText(`Exercise 1 set ${number} kg`), '80');
+    fireEvent.changeText(screen.getByLabelText(`Exercise 1 set ${number} reps`), '8');
+  }
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 1'));
+  await screen.findByLabelText('Unsave exercise 1 set 1');
+  expect(screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded).toBe(
+    true,
+  );
+  jest.mocked(trainingApi.saveDraft).mockRejectedValueOnce(new Error('offline'));
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 2'));
+  await screen.findByText(
+    'Could not save the workout. Your changes are retained. Retry the tick or Sync workout.',
+  );
+  expect(screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded).toBe(
+    true,
+  );
+  expect(screen.getByLabelText('Edit sets for Squat').props.accessibilityState.expanded).toBe(
+    false,
+  );
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 2'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Edit sets for Squat').props.accessibilityState.expanded).toBe(
+      true,
+    ),
+  );
+  expect(screen.queryByLabelText('Exercise 1 set 1 kg')).toBeNull();
+  expect(screen.getByLabelText('Exercise 2 set 1 kg').props.value).toBe('');
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  fireEvent.press(screen.getByLabelText('Unsave exercise 1 set 2'));
+  await screen.findByLabelText('Save exercise 1 set 2');
+  expect(screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded).toBe(
+    true,
+  );
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 2'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Edit sets for Squat').props.accessibilityState.expanded).toBe(
+      true,
+    ),
+  );
+  fireEvent.changeText(screen.getByLabelText('Exercise 2 set 1 kg'), '90');
+  fireEvent.changeText(screen.getByLabelText('Exercise 2 set 1 reps'), '6');
+  fireEvent.press(screen.getByLabelText('Save exercise 2 set 1'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Edit sets for Squat').props.accessibilityState.expanded).toBe(
+      false,
+    ),
+  );
+  expect(screen.queryByLabelText('Exercise 2 set 1 kg')).toBeNull();
+});
+
+test('completion skips finished exercises, wraps to earlier unfinished cards and collapses the last one', async () => {
+  const first = exampleRoutine.exercises[0];
+  const names = ['Bench press', 'Squat', 'Row', 'Lunge'];
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: names.map((name, index) => ({
+      ...first,
+      id: 20 + index,
+      exercise_order: index + 1,
+      exercise: { ...exampleExercise, id: index + 1, name },
+    })),
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
+    ).toBe(false),
+  );
+  // Complete the third card out of order; the fourth becomes active.
+  fireEvent.press(screen.getByLabelText('Edit sets for Row'));
+  fireEvent.press(screen.getByLabelText('Save exercise 3 set 1'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Edit sets for Lunge').props.accessibilityState.expanded).toBe(
+      true,
+    ),
+  );
+  // Finishing the second skips the already completed third card.
+  fireEvent.press(screen.getByLabelText('Edit sets for Squat'));
+  fireEvent.press(screen.getByLabelText('Save exercise 2 set 1'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Edit sets for Lunge').props.accessibilityState.expanded).toBe(
+      true,
+    ),
+  );
+  // Completing the final card wraps around to the unfinished first card.
+  fireEvent.press(screen.getByLabelText('Save exercise 4 set 1'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded,
+    ).toBe(true),
+  );
+  fireEvent.press(screen.getByLabelText('Save exercise 1 set 1'));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.expanded,
+    ).toBe(false),
+  );
+  expect(
+    screen
+      .getAllByLabelText(/^Edit sets for /)
+      .every((button) => !button.props.accessibilityState.expanded),
+  ).toBe(true);
 });

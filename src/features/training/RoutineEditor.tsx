@@ -6,10 +6,7 @@ import {
   BackHandler,
   KeyboardAvoidingView,
   Platform,
-  Image,
   Modal,
-  ScrollView,
-  Pressable,
   Keyboard,
   Text,
   TextInput,
@@ -17,7 +14,7 @@ import {
 } from 'react-native';
 import DraggableFlatList from './ExerciseDragList';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from './api';
 import { ExerciseDragHandle } from './ExerciseDragHandle';
 import { ExerciseDetails } from './ExerciseDetails';
@@ -27,11 +24,20 @@ import {
   type ExerciseSummary,
   type Routine,
   type RoutineInput,
+  validWeight,
+  type WeightUnit,
 } from './schemas';
+import { WorkoutExerciseCard } from './components/WorkoutEditor';
+import { SetFields } from './components/SetFields';
+import { displayWeight } from './sessionDraft';
 import { Button, Failure, IconButton, ui } from './ui';
 
-type DraftSet = { reps: string; weight: string };
-type DraftExercise = { slotId?: number; exercise: ExerciseSummary; sets: DraftSet[] };
+type DraftSet = { reps: string; weight: string; unit: WeightUnit; canonicalWeight?: string };
+type DraftExercise = {
+  slotId?: number;
+  exercise: ExerciseSummary;
+  sets: DraftSet[];
+};
 type Draft = { name: string; exercises: DraftExercise[] };
 
 function SetSummary({ control, index }: { control: Control<Draft>; index: number }) {
@@ -39,7 +45,11 @@ function SetSummary({ control, index }: { control: Control<Draft>; index: number
   const sets = useWatch({ control, name: `exercises.${index}.sets` }) ?? [];
   const range = (key: 'reps' | 'weight') => {
     const values = sets
-      .map((set) => (set[key].trim() ? Number(set[key]) : NaN))
+      .map((set) =>
+        set[key].trim()
+          ? Number(key === 'weight' ? displayWeight(set.weight, set.unit, 'kg') : set.reps)
+          : NaN,
+      )
       .filter(Number.isFinite);
     if (!values.length) return '—';
     const low = Math.min(...values),
@@ -68,100 +78,63 @@ function Sets({
   disabled: boolean;
 }) {
   const p = usePalette();
+  const unit: WeightUnit = 'kg';
   const { fields, append, remove } = useFieldArray({ control, name: `exercises.${index}.sets` });
   return (
     <View style={ui.gap}>
-      <Text style={{ color: p['ink-muted'] }}>PLANNED SETS · KG / REPS</Text>
+      <Text style={{ color: p['ink-muted'] }}>PLANNED SETS · WEIGHT / REPS</Text>
       {fields.map((set, i) => (
-        <View key={set.id} style={ui.gap}>
-          <View style={ui.row}>
-            <Text style={{ color: p.ink }}>{i + 1}</Text>
-            <Controller
-              control={control}
-              name={`exercises.${index}.sets.${i}.weight`}
-              rules={{
-                validate: (v) =>
-                  (/^\d+(\.\d{1,2})?$/.test(v) && Number(v) <= 999999.99) ||
-                  'Enter nonnegative kg, up to two decimals.',
-              }}
-              render={({ field, fieldState }) => (
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    accessibilityLabel={`Exercise ${index + 1} set ${i + 1} kg`}
-                    keyboardType="decimal-pad"
-                    editable={!disabled}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    onBlur={field.onBlur}
-                    placeholder="kg"
-                    placeholderTextColor={p['ink-muted']}
-                    style={[
-                      ui.field,
-                      {
-                        color: p.ink,
-                        borderColor: p['line-strong'],
-                        backgroundColor: p['surface-300'],
-                      },
-                    ]}
-                  />
-                  {fieldState.error ? (
-                    <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                      {fieldState.error.message}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
-            />
-            <Controller
-              control={control}
-              name={`exercises.${index}.sets.${i}.reps`}
-              rules={{
-                validate: (v) =>
-                  (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 2147483647) ||
-                  'Enter positive whole repetitions.',
-              }}
-              render={({ field, fieldState }) => (
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    accessibilityLabel={`Exercise ${index + 1} set ${i + 1} reps`}
-                    keyboardType="number-pad"
-                    editable={!disabled}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    onBlur={field.onBlur}
-                    placeholder="reps"
-                    placeholderTextColor={p['ink-muted']}
-                    style={[
-                      ui.field,
-                      {
-                        color: p.ink,
-                        borderColor: p['line-strong'],
-                        backgroundColor: p['surface-300'],
-                      },
-                    ]}
-                  />
-                  {fieldState.error ? (
-                    <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                      {fieldState.error.message}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
-            />
-            <Button
-              title="−"
-              accessibilityLabel={`Remove set ${i + 1} from exercise ${index + 1}`}
-              onPress={() => remove(i)}
-              secondary
-              disabled={disabled}
-            />
-          </View>
-        </View>
+        <Controller
+          key={set.id}
+          control={control}
+          name={`exercises.${index}.sets.${i}`}
+          rules={{
+            validate: (value) =>
+              (validWeight(value.weight, value.unit, 2) &&
+                /^\d+$/.test(value.reps) &&
+                Number(value.reps) >= 1 &&
+                Number(value.reps) <= 2147483647) ||
+              'Enter nonnegative kg, up to two decimals.',
+          }}
+          render={({ field, fieldState }) => (
+            <View style={ui.gap}>
+              <SetFields
+                set={{
+                  id: set.id,
+                  value: field.value.weight,
+                  unit: field.value.unit,
+                  reps: field.value.reps,
+                }}
+                unit={unit}
+                decimals={2}
+                number={i + 1}
+                label={`Exercise ${index + 1} set ${i + 1}`}
+                disabled={disabled}
+                onChange={(next) =>
+                  field.onChange({
+                    weight: next.value,
+                    unit: next.unit,
+                    reps: next.reps,
+                    ...(next.value === field.value.weight && next.unit === field.value.unit
+                      ? { canonicalWeight: field.value.canonicalWeight }
+                      : {}),
+                  })
+                }
+                onRemove={() => remove(i)}
+              />
+              {fieldState.error ? (
+                <Text accessibilityRole="alert" style={{ color: p.danger }}>
+                  {fieldState.error.message}
+                </Text>
+              ) : null}
+            </View>
+          )}
+        />
       ))}
       <Button
         title="+ Add set"
         accessibilityLabel={`Add set to exercise ${index + 1}`}
-        onPress={() => append({ reps: '', weight: '' })}
+        onPress={() => append({ reps: '', weight: '', unit })}
         tone="positive"
         disabled={disabled || fields.length >= 100}
       />
@@ -173,11 +146,15 @@ export function RoutineEditor({
   accountId,
   routine,
   onSaved,
+  onStart,
+  canStart = true,
   onClose,
 }: {
   accountId: number;
   routine?: Routine;
   onSaved: (value: Routine) => void;
+  onStart?: (value: Routine) => void;
+  canStart?: boolean;
   onClose: () => void;
 }) {
   const p = usePalette();
@@ -187,13 +164,14 @@ export function RoutineEditor({
   const [detailId, setDetailId] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const alive = useRef(true);
+  const startAfterSave = useRef(false);
   useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
     };
   }, []);
-  const { control, handleSubmit, formState, setError, getValues, trigger } = useForm<Draft>({
+  const { control, handleSubmit, formState, setError, getValues } = useForm<Draft>({
     defaultValues: {
       name: routine?.name ?? '',
       exercises:
@@ -202,20 +180,26 @@ export function RoutineEditor({
           exercise: slot.exercise,
           sets: slot.default_sets.map((set) => ({
             reps: set.reps === null ? '' : String(set.reps),
-            weight: set.weight_kg ?? '',
+            weight: set.weight_kg === null ? '' : Number(set.weight_kg).toFixed(2),
+            unit: 'kg' as const,
+            canonicalWeight: set.weight_kg ?? undefined,
           })),
         })) ?? [],
     },
   });
-  const { fields, append, remove, move } = useFieldArray({ control, name: 'exercises' });
-  const editingIndex = fields.findIndex((slot) => slot.id === editingSlot);
-  const editingExercise = fields[editingIndex];
+  const { fields, append, remove, move } = useFieldArray({
+    control,
+    name: 'exercises',
+  });
   const isDirty = formState.isDirty;
   const save = useMutation({
     mutationFn: (input: RoutineInput) => trainingApi.save(input, routine?.id),
     retry: false,
     onSuccess: (result) => {
-      if (alive.current) onSaved(result);
+      if (alive.current) {
+        if (startAfterSave.current && onStart) onStart(result);
+        else onSaved(result);
+      }
     },
   });
   function close() {
@@ -238,7 +222,14 @@ export function RoutineEditor({
       exercises: values.exercises.map((slot) => ({
         ...(slot.slotId === undefined ? {} : { id: slot.slotId }),
         exercise_id: slot.exercise.id,
-        sets: slot.sets.map((set) => ({ reps: Number(set.reps), weight_kg: set.weight })),
+        sets: slot.sets.map((set) => ({
+          reps: Number(set.reps),
+          ...(set.canonicalWeight !== undefined
+            ? { weight_kg: set.canonicalWeight }
+            : set.unit === 'kg'
+              ? { weight_kg: set.weight }
+              : { weight: { value: set.weight, unit: set.unit } }),
+        })),
       })),
     });
     if (!parsed.success) {
@@ -247,7 +238,9 @@ export function RoutineEditor({
       );
       if (issue && typeof issue.path[1] === 'number')
         setEditingSlot(fields[issue.path[1]]?.id ?? null);
-      setError('root', { message: parsed.error.issues[0]?.message ?? 'Check the routine fields.' });
+      setError('root', {
+        message: parsed.error.issues[0]?.message ?? 'Check the routine fields.',
+      });
       return;
     }
     save.mutate(parsed.data);
@@ -257,8 +250,9 @@ export function RoutineEditor({
     <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
       <KeyboardAvoidingView
         style={ui.screen}
-        accessibilityElementsHidden={discard || editingSlot !== null}
-        importantForAccessibility={discard || editingSlot !== null ? 'no-hide-descendants' : 'auto'}
+        aria-hidden={discard}
+        accessibilityElementsHidden={discard}
+        importantForAccessibility={discard ? 'no-hide-descendants' : 'auto'}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <DraggableFlatList
@@ -296,7 +290,10 @@ export function RoutineEditor({
                 name="name"
                 rules={{
                   validate: (value) => value.trim().length > 0 || 'Enter a routine name.',
-                  maxLength: { value: 150, message: 'Use at most 150 characters.' },
+                  maxLength: {
+                    value: 150,
+                    message: 'Use at most 150 characters.',
+                  },
                 }}
                 render={({ field, fieldState }) => (
                   <>
@@ -336,75 +333,39 @@ export function RoutineEditor({
             const index = getIndex();
             if (index === undefined) return null;
             return (
-              <View
-                style={[
-                  ui.card,
-                  {
-                    backgroundColor: isActive ? p['surface-300'] : p['surface-200'],
-                    borderWidth: 1,
-                    borderColor: isActive ? p.brand : p['surface-200'],
-                  },
-                ]}
-              >
-                <View style={[ui.row, { alignItems: 'stretch' }]}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Details for ${slot.exercise.name}`}
-                    onPress={() => setDetailId(slot.exercise.id)}
-                    disabled={disabled}
-                    style={{
-                      width: '38%',
-                      minHeight: 132,
-                      borderRadius: radii['radius-md'],
-                      backgroundColor: p['surface-300'],
-                      overflow: 'hidden',
+              <WorkoutExerciseCard
+                exercise={slot.exercise}
+                active={isActive}
+                disabled={disabled}
+                onSets={() => setEditingSlot(editingSlot === slot.id ? null : slot.id)}
+                expanded={editingSlot === slot.id}
+                onDetails={() => setDetailId(slot.exercise.id)}
+                summary={<SetSummary control={control} index={index} />}
+                dragHandle={
+                  <ExerciseDragHandle
+                    id={`reorder-handle-${slot.id}`}
+                    label={`Reorder ${slot.exercise.name}`}
+                    disabled={save.isPending}
+                    onDrag={drag}
+                    onMove={(delta) => {
+                      if (disabled) return;
+                      const target = index + delta;
+                      if (target >= 0 && target < fields.length) move(index, target);
                     }}
-                  >
-                    {slot.exercise.image_url ? (
-                      <Image
-                        source={{ uri: slot.exercise.image_url }}
-                        accessibilityLabel={slot.exercise.name}
-                        resizeMode="contain"
-                        style={{ width: '100%', height: 132 }}
-                      />
-                    ) : (
-                      <View style={{ flex: 1, justifyContent: 'center', padding: 12 }}>
-                        <Text style={{ color: p['ink-muted'] }}>No image</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                  <View style={{ flex: 1, gap: spacing['space-2'] }}>
-                    <View style={[ui.row, { alignItems: 'flex-start' }]}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit sets for ${slot.exercise.name}`}
-                        onPress={() => setEditingSlot(slot.id)}
-                        disabled={disabled}
-                        style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
-                      >
-                        <Text style={[textStyles['title-md'], { color: p.ink }]}>
-                          {slot.exercise.name}
-                        </Text>
-                      </Pressable>
-                      <ExerciseDragHandle
-                        id={`reorder-handle-${slot.id}`}
-                        label={`Reorder ${slot.exercise.name}`}
-                        disabled={save.isPending}
-                        onDrag={drag}
-                        onMove={(delta) => {
-                          if (disabled) return;
-                          const target = index + delta;
-                          if (target >= 0 && target < fields.length) move(index, target);
-                        }}
-                      />
-                    </View>
-                    <SetSummary control={control} index={index} />
-                    <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                      Tap name to edit sets
-                    </Text>
-                  </View>
-                </View>
-              </View>
+                  />
+                }
+              >
+                <Sets key={slot.id} control={control} index={index} disabled={save.isPending} />
+                <Button
+                  title="Remove"
+                  accessibilityLabel={`Remove ${slot.exercise.name}`}
+                  tone="danger"
+                  onPress={() => {
+                    remove(index);
+                    setEditingSlot(null);
+                  }}
+                />
+              </WorkoutExerciseCard>
             );
           }}
           ListFooterComponent={
@@ -424,88 +385,29 @@ export function RoutineEditor({
               <Button
                 title={save.isPending ? 'Saving…' : 'Save'}
                 onPress={() => {
+                  startAfterSave.current = false;
                   void submit();
                 }}
                 disabled={disabled}
               />
+              {onStart ? (
+                <Button
+                  title="Start routine"
+                  disabled={disabled || !canStart}
+                  onPress={() => {
+                    if (routine && !isDirty) {
+                      onStart(routine);
+                      return;
+                    }
+                    startAfterSave.current = true;
+                    void submit();
+                  }}
+                />
+              ) : null}
             </View>
           }
         />
       </KeyboardAvoidingView>
-      {editingExercise ? (
-        <Modal onRequestClose={() => setEditingSlot(null)} animationType="slide">
-          <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
-            <KeyboardAvoidingView
-              style={ui.screen}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
-              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={ui.content}>
-                <View style={ui.row}>
-                  <IconButton
-                    icon="arrow-left"
-                    label="Back to routine"
-                    onPress={() => setEditingSlot(null)}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-                      EXERCISE {editingIndex + 1} OF {fields.length}
-                    </Text>
-                    <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                      {editingExercise.exercise.name}
-                    </Text>
-                  </View>
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Details for ${editingExercise.exercise.name}`}
-                  onPress={() => setDetailId(editingExercise.exercise.id)}
-                >
-                  {editingExercise.exercise.image_url ? (
-                    <Image
-                      source={{ uri: editingExercise.exercise.image_url }}
-                      style={{ width: '100%', height: 180, borderRadius: radii['radius-lg'] }}
-                      resizeMode="contain"
-                    />
-                  ) : null}
-                  <Text
-                    style={[
-                      textStyles.label,
-                      { color: p['brand-ink'], paddingVertical: spacing['space-3'] },
-                    ]}
-                  >
-                    View exercise
-                  </Text>
-                </Pressable>
-                <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
-                  <Sets
-                    key={editingExercise.id}
-                    control={control}
-                    index={editingIndex}
-                    disabled={save.isPending}
-                  />
-                </View>
-                <Button
-                  title="Done"
-                  onPress={() => {
-                    void trigger(`exercises.${editingIndex}.sets`).then((valid) => {
-                      if (valid) setEditingSlot(null);
-                    });
-                  }}
-                />
-                <Button
-                  title="Remove"
-                  accessibilityLabel={`Remove ${editingExercise.exercise.name}`}
-                  tone="danger"
-                  onPress={() => {
-                    remove(editingIndex);
-                    setEditingSlot(null);
-                  }}
-                />
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </SafeAreaView>
-        </Modal>
-      ) : null}
       {picker ? (
         <ExercisePicker
           accountId={accountId}
@@ -545,7 +447,14 @@ export function RoutineEditor({
         >
           <View
             accessibilityViewIsModal
-            style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
+            style={[
+              ui.card,
+              {
+                backgroundColor: p['surface-200'],
+                width: '100%',
+                maxWidth: 420,
+              },
+            ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
               Discard your unsaved changes?

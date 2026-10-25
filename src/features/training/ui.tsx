@@ -9,11 +9,13 @@ export function IconButton({
   label,
   onPress,
   disabled = false,
+  onPrimary = false,
 }: {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  onPrimary?: boolean;
 }) {
   const p = usePalette();
   return (
@@ -29,11 +31,11 @@ export function IconButton({
         borderRadius: radii['radius-pill'],
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: p['surface-300'],
+        backgroundColor: onPrimary ? p['on-brand'] : p['surface-300'],
         opacity: disabled || pressed ? 0.55 : 1,
       })}
     >
-      <Feather name={icon} size={24} color={p.ink} />
+      <Feather name={icon} size={24} color={onPrimary ? p.brand : p.ink} />
     </Pressable>
   );
 }
@@ -45,6 +47,7 @@ export function Button({
   secondary = false,
   accessibilityLabel,
   tone,
+  icon,
 }: {
   title: string;
   onPress: () => void;
@@ -52,6 +55,7 @@ export function Button({
   secondary?: boolean;
   accessibilityLabel?: string;
   tone?: 'positive' | 'danger';
+  icon?: React.ComponentProps<typeof Feather>['name'];
 }) {
   const p = usePalette();
   const background =
@@ -78,6 +82,8 @@ export function Button({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => ({
+        flexDirection: 'row',
+        gap: spacing['space-2'],
         minHeight: sizes['control-height'],
         paddingHorizontal: spacing['space-5'],
         paddingVertical: spacing['space-3'],
@@ -90,6 +96,7 @@ export function Button({
         opacity: disabled || pressed ? 0.55 : 1,
       })}
     >
+      {icon ? <Feather name={icon} size={18} color={foreground} /> : null}
       <Text style={{ color: foreground, fontSize: 14, fontWeight: '700' }}>{title}</Text>
     </Pressable>
   );

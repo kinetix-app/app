@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { AppState, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   QueryClient,
@@ -13,19 +13,55 @@ import {
 import { useNetworkState } from 'expo-network';
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { usePalette } from '@/theme/tokens';
+import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from './api';
+import { SessionProvider, useSession } from './components/SessionProvider';
+import { WorkoutTimer } from './components/WorkoutEditor';
+import { OngoingSession } from './components/OngoingSession';
+import { WorkoutHistory } from './components/WorkoutHistory';
 import { RoutineEditor } from './RoutineEditor';
 import type { Routine } from './schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
-function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () => void }) {
+function Workspace({ accountId }: { accountId: number }) {
   const p = usePalette();
+  const session = useSession();
+  const [history, setHistory] = useState(false);
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState('');
   const [search, setSearch] = useState('');
+  const [starting, setStarting] = useState<number | null>(null);
+  const [startFailure, setStartFailure] = useState<{ id: number; error: unknown } | null>(null);
+  const startPending = useRef(false);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  async function startRoutine(id: number) {
+    if (!session.ready || session.draft || startPending.current || session.storageError) return;
+    setStartFailure(null);
+    startPending.current = true;
+    setStarting(id);
+    try {
+      const routine = await cache.fetchQuery({
+        queryKey: ['training', accountId, 'routine', id, 'kg'],
+        queryFn: ({ signal }) => trainingApi.routine(id, signal),
+        staleTime: 0,
+        retry: false,
+      });
+      if (alive.current) session.start(routine);
+    } catch (error) {
+      if (alive.current) setStartFailure({ id, error });
+    } finally {
+      startPending.current = false;
+      if (alive.current) setStarting(null);
+    }
+  }
   useEffect(() => {
     const timer = setTimeout(() => setName(search.trim()), 300);
     return () => clearTimeout(timer);
@@ -38,16 +74,19 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
       page.items.length === page.limit ? page.offset + page.limit : undefined,
   });
   const detail = useQuery({
-    queryKey: ['training', accountId, 'routine', editing],
+    queryKey: ['training', accountId, 'routine', editing, 'kg'],
     enabled: typeof editing === 'number',
     queryFn: ({ signal }) => trainingApi.routine(typeof editing === 'number' ? editing : 0, signal),
   });
   function onSaved(result: Routine) {
-    cache.setQueryData(['training', accountId, 'routine', result.id], result);
-    void cache.invalidateQueries({ queryKey: ['training', accountId, 'routines'] });
+    cache.setQueryData(['training', accountId, 'routine', result.id, 'kg'], result);
+    void cache.invalidateQueries({
+      queryKey: ['training', accountId, 'routines'],
+    });
     setEditing(null);
     setSaved(true);
   }
+  if (history) return <WorkoutHistory accountId={accountId} onClose={() => setHistory(false)} />;
   if (editing === 'new' || (typeof editing === 'number' && detail.data)) {
     return (
       <RoutineEditor
@@ -55,6 +94,11 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
         accountId={accountId}
         routine={editing === 'new' ? undefined : detail.data}
         onSaved={onSaved}
+        canStart={session.ready && !session.storageError && !session.draft}
+        onStart={(result) => {
+          onSaved(result);
+          session.start(result);
+        }}
         onClose={() => setEditing(null)}
       />
     );
@@ -71,9 +115,21 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
               <Text accessibilityRole="header" style={[ui.title, { flex: 1, color: p.ink }]}>
                 Routines
               </Text>
-              <Button title="Sign out" onPress={onSignOut} secondary />
+              <Button
+                title="Sign out"
+                onPress={() => {
+                  void session.signOut();
+                }}
+                secondary
+              />
             </View>
 
+            <Button
+              title="Start workout"
+              onPress={() => session.start()}
+              disabled={!session.ready || session.storageError || Boolean(session.draft)}
+            />
+            <Button title="History" onPress={() => setHistory(true)} secondary />
             <TextInput
               accessibilityLabel="Search routines"
               placeholder="Search by name"
@@ -84,7 +140,11 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
               onSubmitEditing={() => setName(search.trim())}
               style={[
                 ui.field,
-                { color: p.ink, borderColor: p['line-strong'], backgroundColor: p['surface-300'] },
+                {
+                  color: p.ink,
+                  borderColor: p['line-strong'],
+                  backgroundColor: p['surface-300'],
+                },
               ]}
             />
             <Button
@@ -141,21 +201,61 @@ function Workspace({ accountId, onSignOut }: { accountId: number; onSignOut: () 
           ) : null
         }
         renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Edit ${item.name}`}
-            onPress={() => {
-              setSaved(false);
-              setEditing(item.id);
-            }}
-            style={[ui.card, ui.row, { backgroundColor: p['surface-200'], marginBottom: 8 }]}
+          <View
+            style={[
+              ui.card,
+              { backgroundColor: p['surface-200'], marginBottom: spacing['space-2'] },
+            ]}
           >
-            <View style={{ padding: 12, borderRadius: 12, backgroundColor: p['surface-300'] }}>
-              <Feather name="activity" size={24} color={p['brand-ink']} />
+            <View style={ui.row}>
+              <View
+                style={{
+                  padding: spacing['space-3'],
+                  borderRadius: radii['radius-md'],
+                  backgroundColor: p['surface-300'],
+                }}
+              >
+                <Feather name="activity" size={24} color={p['brand-ink']} />
+              </View>
+              <Text style={[textStyles['title-md'], { flex: 1, color: p.ink }]}>{item.name}</Text>
             </View>
-            <Text style={[ui.heading, { flex: 1, color: p.ink }]}>{item.name}</Text>
-            <Feather name="chevron-right" size={24} color={p['ink-muted']} />
-          </Pressable>
+            <View style={[ui.row, { flexWrap: 'wrap' }]}>
+              <View style={{ flexGrow: 1, flexBasis: 100 }}>
+                <Button
+                  title="Edit"
+                  accessibilityLabel={`Edit ${item.name}`}
+                  secondary
+                  onPress={() => {
+                    setSaved(false);
+                    setEditing(item.id);
+                  }}
+                />
+              </View>
+              <View style={{ flexGrow: 1, flexBasis: 100 }}>
+                <Button
+                  title={starting === item.id ? 'Starting…' : 'Start'}
+                  accessibilityLabel={`Start ${item.name}`}
+                  disabled={
+                    !session.ready ||
+                    session.storageError ||
+                    Boolean(session.draft) ||
+                    starting !== null
+                  }
+                  onPress={() => {
+                    void startRoutine(item.id);
+                  }}
+                />
+              </View>
+            </View>
+            {startFailure?.id === item.id ? (
+              <Failure
+                error={startFailure.error}
+                retry={() => {
+                  void startRoutine(item.id);
+                }}
+              />
+            ) : null}
+          </View>
         )}
         refreshing={list.isRefetching && !list.isFetchingNextPage}
         onRefresh={() => {
@@ -208,8 +308,193 @@ function PrivateWorkspace(props: { accountId: number; onSignOut: () => void }) {
   return (
     <QueryClientProvider client={client}>
       <StatusBar style="auto" />
-      <Workspace {...props} />
+      <SessionProvider accountId={props.accountId} onSignOut={props.onSignOut}>
+        <SessionHost>
+          <Workspace accountId={props.accountId} />
+        </SessionHost>
+      </SessionProvider>
     </QueryClientProvider>
+  );
+}
+
+function SessionHost({ children }: React.PropsWithChildren) {
+  const session = useSession();
+  const p = usePalette();
+  const [discard, setDiscard] = useState(false);
+  return (
+    <View style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
+      <View
+        style={[ui.screen, { paddingBottom: session.draft?.minimized ? 112 : 0 }]}
+        aria-hidden={discard || Boolean(session.draft && !session.draft.minimized)}
+        accessibilityElementsHidden={discard || Boolean(session.draft && !session.draft.minimized)}
+        importantForAccessibility={
+          discard || (session.draft && !session.draft.minimized) ? 'no-hide-descendants' : 'auto'
+        }
+      >
+        {children}
+        {!session.ready ? (
+          session.storageError ? (
+            <View style={ui.content}>
+              <Text accessibilityRole="alert" style={{ color: p.danger }}>
+                {session.error}
+              </Text>
+              <Button
+                title="Retry storage"
+                onPress={() => {
+                  void session.retryStorage();
+                }}
+                secondary
+              />
+              <Button
+                title="Discard stored workout"
+                onPress={() => setDiscard(true)}
+                tone="danger"
+              />
+            </View>
+          ) : (
+            <Loading />
+          )
+        ) : null}
+        {session.ready && session.storageError && !session.draft ? (
+          <View style={ui.content}>
+            <Text accessibilityRole="alert" style={{ color: p.danger }}>
+              {session.error}
+            </Text>
+            <Button
+              title="Retry storage"
+              onPress={() => {
+                void session.retryStorage();
+              }}
+              secondary
+            />
+          </View>
+        ) : null}
+      </View>
+      {session.draft?.minimized && !discard ? (
+        <SafeAreaView
+          pointerEvents="box-none"
+          edges={['bottom']}
+          style={{
+            position: 'absolute',
+            bottom: spacing['space-4'],
+            left: spacing['space-4'],
+            right: spacing['space-4'],
+            maxWidth: 640,
+            alignSelf: 'center',
+            zIndex: 10,
+          }}
+        >
+          <View
+            testID="ongoing-workout-card"
+            style={[
+              ui.card,
+              {
+                padding: spacing['space-3'],
+                borderWidth: 1,
+                borderColor: p.brand,
+                backgroundColor: p.brand,
+                elevation: 8,
+                boxShadow: `0px 4px 16px ${p.scrim}`,
+              },
+            ]}
+          >
+            <View style={ui.row}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Ongoing workout options"
+                accessibilityHint="Opens the discard workout confirmation"
+                disabled={session.pending}
+                onPress={() => setDiscard(true)}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  justifyContent: 'center',
+                  gap: spacing['space-1'],
+                }}
+              >
+                <Text numberOfLines={1} style={{ color: p['on-brand'] }}>
+                  Workout ongoing
+                </Text>
+                <WorkoutTimer
+                  compact
+                  onPrimary
+                  startedAt={session.draft.startedAt}
+                  endedAt={session.draft.frozen?.ended_at}
+                />
+              </Pressable>
+              <IconButton
+                icon="play"
+                onPrimary
+                label="Resume workout"
+                disabled={session.pending}
+                onPress={() => session.change((value) => ({ ...value, minimized: false }))}
+              />
+            </View>
+            {session.error ? (
+              <Text accessibilityRole="alert" style={{ color: p['on-brand'] }}>
+                {session.error}
+              </Text>
+            ) : null}
+            {session.storageError ? (
+              <Button
+                title="Retry storage"
+                onPress={() => {
+                  void session.retryStorage();
+                }}
+                secondary
+              />
+            ) : null}
+          </View>
+        </SafeAreaView>
+      ) : null}
+      <Modal
+        visible={Boolean(session.draft && !session.draft.minimized)}
+        animationType="slide"
+        onRequestClose={() => session.change((value) => ({ ...value, minimized: true }))}
+      >
+        {session.draft ? <OngoingSession /> : null}
+      </Modal>
+      <Modal
+        visible={discard}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDiscard(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+            backgroundColor: p.scrim,
+          }}
+        >
+          <View
+            accessibilityViewIsModal
+            style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
+          >
+            <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
+              {session.draft ? 'Discard this workout?' : 'Discard stored workout?'}
+            </Text>
+            <Text style={{ color: p['ink-muted'] }}>
+              {session.draft?.frozen
+                ? 'Finish delivery is pending. Resume the workout to retry Finish.'
+                : 'The workout draft and its saved results will be removed.'}
+            </Text>
+            <Button title="Cancel" secondary onPress={() => setDiscard(false)} />
+            <Button
+              title="Discard"
+              disabled={session.pending || Boolean(session.draft?.frozen)}
+              tone="danger"
+              onPress={() => {
+                setDiscard(false);
+                void session.discard();
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
