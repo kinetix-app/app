@@ -1,5 +1,7 @@
 # Kinetix — frontend
 
+The authenticated [onboarding flow](docs/onboarding.md) requires a complete profile and selected objective; manual nutrition targets remain optional.
+
 The Android and iOS client for a university fitness project. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.
 
 **Current status:** the routine workspace supports catalogue browsing with clickable body parts and name search, named routine creation/editing with expandable image-and-summary exercise cards with inline set editing, planned kg/repetition sets and themed autoplay exercise videos with image fallback. [Routine workflow and implementation plan](docs/routines.md) documents the API increment. The Expo foundation includes typed API requests, Zod response schemas, an auth header service and a development email/password sign-in form. The form verifies access through the backend account endpoint. Backend development Basic Auth must be configured with a local credential allowlist; the Clerk SDK implements email OTP, Google/Apple OAuth, secure native session storage, restoration and logout. Production dashboard setup and native/provider verification remain required.
@@ -237,6 +239,7 @@ for AsyncStorage. Sprint 2 measurement formats remain outside this increment.
 
 ## Home navigation and feature folders
 
-The authenticated [Home shell](docs/home.md) opens nutrition-goal setup by default.
+The authenticated [Home shell](docs/home.md) shows profile and objective information after setup.
+Nutrition-goal editing is optional and available from Home and Nutrition.
 Its shared bottom bar connects Workout, blank workout start (+), and Nutrition.
 Feature components live in `components/`; tests and fixtures live in `test/`.

@@ -1,4 +1,4 @@
-import { apiClient } from '@/services/apiClient';
+import { ApiError, apiClient } from '@/services/apiClient';
 
 import { nutritionApi } from '../api';
 import { nutritionGoalSchema } from '../schemas';
@@ -9,6 +9,7 @@ afterEach(() => {
 
 test('loads the authenticated users nutrition goal', async () => {
   const get = jest.spyOn(apiClient, 'get').mockResolvedValue({
+    objective: null,
     id: 1,
     user_id: 1,
     calories: '9999.00',
@@ -30,6 +31,7 @@ test('loads the authenticated users nutrition goal', async () => {
 test('accepts decimal values serialized by the API as strings', () => {
   expect(
     nutritionGoalSchema.parse({
+      objective: null,
       id: 1,
       user_id: 1,
       calories: '9999.00',
@@ -38,4 +40,12 @@ test('accepts decimal values serialized by the API as strings', () => {
       fats: '350.00',
     }),
   ).toMatchObject({ calories: 9999, protein: 500, carbohydrates: 1200, fats: 350 });
+});
+
+test('only a missing target maps to null, while real service failures remain failures', async () => {
+  const get = jest.spyOn(apiClient, 'get');
+  get.mockRejectedValueOnce(new ApiError(404, 'Not found'));
+  await expect(nutritionApi.goal()).resolves.toBeNull();
+  get.mockRejectedValueOnce(new ApiError(503, 'Unavailable'));
+  await expect(nutritionApi.goal()).rejects.toMatchObject({ status: 503 });
 });

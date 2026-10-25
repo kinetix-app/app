@@ -1,4 +1,4 @@
-import { apiClient } from '@/services/apiClient';
+import { ApiError, apiClient } from '@/services/apiClient';
 
 import {
   foodListSchema,
@@ -21,8 +21,17 @@ import {
 } from './schemas';
 
 export const nutritionApi = {
-  goal: (signal?: AbortSignal) =>
-    apiClient.get('/api/v1/nutrition-goals/me', { schema: nutritionGoalSchema, signal }),
+  goal: async (signal?: AbortSignal) => {
+    try {
+      return await apiClient.get('/api/v1/nutrition-goals/me', {
+        schema: nutritionGoalSchema,
+        signal,
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  },
   createGoal: (input: NutritionGoalInput) =>
     apiClient.post('/api/v1/nutrition-goals', nutritionGoalInputSchema.parse(input), {
       schema: nutritionGoalSchema,

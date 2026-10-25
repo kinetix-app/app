@@ -1,9 +1,10 @@
+import { completeAccount, incompleteAccount } from '@/features/accounts/test/fixtures';
+import { getAccount, getObjective, updateProfile, setObjective } from '@/features/accounts/api';
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { HomeScreen } from '../components/HomeScreen';
 import { nutritionApi } from '@/features/nutrition/api';
 import { trainingApi } from '@/features/training/api';
-import { ApiError } from '@/services/apiClient';
 
 jest.mock(
   '@react-native-async-storage/async-storage',
@@ -29,6 +30,12 @@ jest.mock('expo-network', () => ({
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: jest.requireActual('react-native').View,
 }));
+jest.mock('@/features/accounts/api', () => ({
+  getAccount: jest.fn(),
+  getObjective: jest.fn(),
+  updateProfile: jest.fn(),
+  setObjective: jest.fn(),
+}));
 jest.mock('@/features/nutrition/api', () => ({
   nutritionApi: {
     goal: jest.fn(),
@@ -41,10 +48,20 @@ jest.mock('@/features/nutrition/api', () => ({
 jest.mock('@/features/training/api', () => ({
   trainingApi: { draft: jest.fn(), routines: jest.fn(), saveDraft: jest.fn() },
 }));
-const goal = { id: 1, user_id: 1, calories: 2100, protein: 105, carbohydrates: 262.5, fats: 70 };
+const goal = {
+  objective: 'build_muscle' as const,
+  id: 1,
+  user_id: 1,
+  calories: 2100,
+  protein: 105,
+  carbohydrates: 262.5,
+  fats: 70,
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(getAccount).mockResolvedValue(completeAccount);
+  jest.mocked(getObjective).mockResolvedValue({ objective: 'build_muscle' });
   jest.mocked(nutritionApi.goal).mockResolvedValue(goal);
   jest.mocked(nutritionApi.updateGoal).mockImplementation(async (input) => ({ ...goal, ...input }));
   jest.mocked(nutritionApi.createGoal).mockImplementation(async (input) => ({ ...goal, ...input }));
@@ -66,29 +83,17 @@ beforeEach(() => {
   jest.mocked(trainingApi.routines).mockResolvedValue({ items: [], limit: 20, offset: 0 });
 });
 
-test('home defaults to goal setup, saves into the shared diary cache and keeps one bottom bar', async () => {
+test('home shows profile and an optional nutrition entry while keeping one bottom bar', async () => {
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
-  await screen.findByLabelText('Daily calorie goal');
+  await screen.findByText('Alice');
   expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
   expect(trainingApi.routines).not.toHaveBeenCalled();
-  fireEvent.changeText(screen.getByLabelText('Daily calorie goal'), '2400');
-  fireEvent.press(screen.getByText('Save goal'));
-  await screen.findByText('Nutrition', { exact: true });
-  await waitFor(() =>
-    expect(nutritionApi.updateGoal).toHaveBeenCalledWith({
-      calories: 2400,
-      carbohydrates: 300,
-      protein: 120,
-      fats: 80,
-    }),
-  );
+  expect(screen.getByText('Edit profile')).toBeTruthy();
+  expect(screen.getByText('Change objective')).toBeTruthy();
+  expect(screen.getByText('Edit nutrition goal')).toBeTruthy();
   expect(screen.getAllByLabelText('Main navigation')).toHaveLength(1);
-  expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
-    true,
-  );
-  expect(screen.getByLabelText('Add food to Breakfast')).toBeTruthy();
-  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
-  expect(screen.getByLabelText('Daily calorie goal').props.value).toBe('2400');
+  fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
+  await screen.findByLabelText('Add food to Breakfast');
 });
 
 test('plus starts the existing workout editor and a minimized draft survives navigation without duplicate starts', async () => {
@@ -113,37 +118,53 @@ test('plus starts the existing workout editor and a minimized draft survives nav
   expect(trainingApi.draft).toHaveBeenCalledTimes(1);
 });
 
-test('a missing goal can be created, and a failed save retains input for retry', async () => {
-  jest.mocked(nutritionApi.goal).mockRejectedValue(new ApiError(404));
-  jest
-    .mocked(nutritionApi.createGoal)
-    .mockRejectedValueOnce(new Error('offline'))
-    .mockResolvedValueOnce(goal);
+test('returning incomplete users must save their profile and explicitly select an objective, without a nutrition target', async () => {
+  jest.mocked(getAccount).mockResolvedValue(incompleteAccount);
+  jest.mocked(getObjective).mockResolvedValue({ objective: null });
+  const profileSaved = {
+    ...completeAccount,
+    onboarding: { profile_complete: true, objective_selected: false, required: true },
+  };
+  jest.mocked(updateProfile).mockResolvedValue(profileSaved);
+  jest.mocked(setObjective).mockResolvedValue({ objective: 'maintain_weight' });
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
-  await screen.findByLabelText('Daily calorie goal');
-  fireEvent.changeText(screen.getByLabelText('Daily calorie goal'), '2300');
-  fireEvent.press(screen.getByText('Save goal'));
-  await screen.findByText('Could not save your goal. Try again.');
-  expect(screen.getByLabelText('Daily calorie goal').props.value).toBe('2300');
-  fireEvent.press(screen.getByText('Save goal'));
-  await waitFor(() =>
-    expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
-      true,
-    ),
-  );
-  expect(nutritionApi.createGoal).toHaveBeenCalledTimes(2);
+  await screen.findByText('Your profile');
+  expect(screen.queryByLabelText('Main navigation')).toBeNull();
+  for (const [label, value] of [
+    ['Name', 'Alice'],
+    ['Age (years)', '25'],
+    ['Height (cm)', '170'],
+    ['Weight', '70'],
+  ])
+    fireEvent.changeText(screen.getByLabelText(label), value);
+  fireEvent.press(screen.getByText('Save profile'));
+  await screen.findByText('Choose kg or lb.');
+  expect(updateProfile).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('radio', { name: 'kg' }));
+  fireEvent.press(screen.getByText('Save profile'));
+  await screen.findByText("What's your goal?");
+  expect(screen.getAllByRole('radio')).toHaveLength(4);
+  expect(
+    screen.getByRole('button', { name: 'Save objective' }).props.accessibilityState.disabled,
+  ).toBe(true);
+  fireEvent.press(screen.getByRole('radio', { name: 'Maintain weight' }));
+  jest.mocked(getAccount).mockResolvedValue(completeAccount);
+  fireEvent.press(screen.getByText('Save objective'));
+  await screen.findByLabelText('Main navigation');
+  expect(setObjective).toHaveBeenCalledWith('maintain_weight');
+  expect(nutritionApi.goal).not.toHaveBeenCalled();
 });
 
 test('account switches reset navigation/forms and cancel all private feature queries', async () => {
   jest.mocked(trainingApi.routines).mockImplementationOnce(() => new Promise(() => {}));
   const view = render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
-  await screen.findByLabelText('Daily calorie goal');
-  fireEvent.changeText(screen.getByLabelText('Daily calorie goal'), '9999');
+  await screen.findByText('Alice');
   fireEvent.press(screen.getByRole('tab', { name: 'Workout' }));
   await waitFor(() => expect(trainingApi.routines).toHaveBeenCalledTimes(1));
   const signal = jest.mocked(trainingApi.routines).mock.calls[0][1];
+  jest.mocked(getAccount).mockResolvedValue({ ...completeAccount, id: 2 });
   await act(async () => view.rerender(<HomeScreen accountId={2} onSignOut={jest.fn()} />));
-  await waitFor(() => expect(screen.getByLabelText('Daily calorie goal').props.value).toBe('2100'));
+  await screen.findByText('Alice');
   expect(signal?.aborted).toBe(true);
   expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
   expect(screen.queryByText('Routines')).toBeNull();

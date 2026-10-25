@@ -104,7 +104,14 @@ export function DevelopmentSignInScreen({
   }
 
   if (account)
-    return <HomeScreen initialTab={initialTab} accountId={account.id} onSignOut={signOut} />;
+    return (
+      <HomeScreen
+        initialTab={initialTab}
+        accountId={account.id}
+        initialAccount={account}
+        onSignOut={signOut}
+      />
+    );
 
   return (
     <SafeAreaView style={styles.screen}>

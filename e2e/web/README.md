@@ -34,9 +34,19 @@ The suite uses one worker and disables traces, screenshots and video to avoid re
 
 Browser verification establishes browser/API behavior only. Android/iOS acceptance requires an installed development build, a connected device/emulator and Maestro. Bundle exports and browser checks do not establish native behavior or Clerk readiness.
 
+## Onboarding acceptance
+
+`onboarding.spec.ts` requires two distinct synthetic identities in a fresh run-owned
+`_test` database. It verifies invalid sign-in, incomplete returning users, explicit
+unit selection, profile failure/retry, all four objectives, food logging without a
+target, optional target skip/edit/reopen, retained objective context, reload, sign-out
+and account isolation. Run it before `home.spec.ts`; the latter reuses the completed
+primary profile and the synthetic catalogue described above. This is Basic/browser
+acceptance, not real Clerk registration or native acceptance.
+
 ## Home navigation regression
 
-`home.spec.ts` covers the default nutrition-goal setup, failed save/retry, the shared
+`home.spec.ts` covers Home profile/objective navigation and optional nutrition-goal editing, failed save/retry, the shared
 bottom bar, existing food-entry navigation, unsaved routine edits across tabs, workout
 recording, reload/resume, completed history and theme switching. It needs the primary
 private test identity and the same isolated API/catalogue setup. Run it alone with

@@ -1,3 +1,4 @@
+import { completeAccount } from '@/features/accounts/test/fixtures';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -40,12 +41,7 @@ function submit() {
 }
 
 test('sign-in waits for backend acceptance and logout clears credentials', async () => {
-  jest.mocked(getAccount).mockResolvedValue({
-    id: 1,
-    status: 'active',
-    created_at: '2026-10-14T12:00:00Z',
-    profile: { display_name: 'Alice', timezone: null, updated_at: '2026-10-14T12:00:00Z' },
-  });
+  jest.mocked(getAccount).mockResolvedValue(completeAccount);
   render(<DevelopmentSignInScreen />);
   submit();
   await screen.findByText('Home for account 1');

@@ -77,7 +77,10 @@ export function NutritionDiaryScreen({
       ...macro,
       value: consumed[macro.field],
       goalValue,
-      progress: goalValue ? Math.min((consumed[macro.field] / goalValue) * 100, 100) : 0,
+      progress:
+        goalValue !== undefined && goalValue > 0
+          ? Math.min((consumed[macro.field] / goalValue) * 100, 100)
+          : 0,
     };
   });
 
@@ -193,9 +196,13 @@ export function NutritionDiaryScreen({
                   accessibilityLabel={`${macro.label}: ${macro.value} of ${macro.goalValue ?? 'unknown'} grams`}
                   accessibilityRole="progressbar"
                   accessibilityValue={
-                    macro.goalValue === undefined
+                    macro.goalValue === undefined || macro.goalValue === 0
                       ? undefined
-                      : { min: 0, max: macro.goalValue, now: macro.value }
+                      : {
+                          min: 0,
+                          max: macro.goalValue,
+                          now: Math.min(macro.value, macro.goalValue),
+                        }
                   }
                   style={[styles.progressTrack, { backgroundColor: p['surface-300'] }]}
                 >
@@ -211,6 +218,11 @@ export function NutritionDiaryScreen({
                 </View>
               </View>
             ))}
+            {goal.data === null ? (
+              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                No nutrition target yet. You can keep recording food and set one later.
+              </Text>
+            ) : null}
             {goal.isError ? (
               <View style={styles.goalError}>
                 <Text

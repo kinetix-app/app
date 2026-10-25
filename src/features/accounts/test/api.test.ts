@@ -3,16 +3,7 @@ import { createApiClient } from '@/services/apiClient';
 import { getAccount, parseAccount, updateProfile } from '../api';
 import { accountSchema } from '../schemas';
 
-const account = {
-  id: 1,
-  status: 'active',
-  created_at: '2026-10-14T12:00:00Z',
-  profile: {
-    display_name: null,
-    timezone: null,
-    updated_at: '2026-10-14T12:00:00Z',
-  },
-};
+import { incompleteAccount as account } from './fixtures';
 
 test('accepts the private backend account contract', () => {
   expect(parseAccount(account)).toEqual(account);
@@ -35,7 +26,7 @@ test('uses the authenticated endpoints and preserves explicit clearing versus om
   const patch = jest.spyOn(client, 'patch').mockResolvedValue(account);
   await getAccount(client);
   await updateProfile(client, { display_name: null });
-  expect(get).toHaveBeenCalledWith('/api/v1/me', { schema: accountSchema, signal: undefined });
+  expect(get).toHaveBeenCalledWith('/api/v1/auth/me', { schema: accountSchema, signal: undefined });
   expect(patch).toHaveBeenCalledWith(
     '/api/v1/me/profile',
     { display_name: null },

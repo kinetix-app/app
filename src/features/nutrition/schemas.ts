@@ -1,6 +1,9 @@
 import { z } from 'zod/v4';
 
+import { objectiveSchema } from '@/features/accounts/schemas';
+
 export const nutritionGoalSchema = z.object({
+  objective: objectiveSchema.nullable(),
   id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   user_id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   calories: z.coerce.number().nonnegative(),

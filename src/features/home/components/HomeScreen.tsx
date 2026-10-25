@@ -1,13 +1,30 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
 import { NutritionDiaryScreen, NutritionGoalEditor } from '@/features/nutrition';
 import { SessionHost, SessionProvider, TrainingWorkspace, useSession } from '@/features/training';
-import { usePalette } from '@/theme/tokens';
+import { getAccount, type Account } from '@/features/accounts/api';
+import { ProfileEditor, ObjectiveEditor, ProfileOverview, SetupButton } from '@/features/accounts';
+import { spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
 
-function HomeNavigation({ accountId, initialTab }: { accountId: number; initialTab: HomeTab }) {
+function HomeNavigation({
+  account,
+  initialTab,
+  onSignOut,
+  onAccount,
+}: {
+  account: Account;
+  initialTab: HomeTab;
+  onSignOut: () => void;
+  onAccount: (account: Account) => void;
+}) {
+  const accountId = account.id;
+  const [homePanel, setHomePanel] = useState<'overview' | 'profile' | 'objective' | 'nutrition'>(
+    'overview',
+  );
   const p = usePalette();
   const session = useSession();
   const [tab, setTab] = useState<HomeTab>(initialTab);
@@ -28,11 +45,51 @@ function HomeNavigation({ accountId, initialTab }: { accountId: number; initialT
             importantForAccessibility={tab !== item ? 'no-hide-descendants' : 'auto'}
           >
             {item === 'home' ? (
-              <NutritionGoalEditor accountId={accountId} onClose={() => select('nutrition')} />
+              homePanel === 'profile' ? (
+                <ProfileEditor
+                  account={account}
+                  onSaved={(next) => {
+                    onAccount(next);
+                    setHomePanel('overview');
+                  }}
+                  onCancel={() => setHomePanel('overview')}
+                />
+              ) : homePanel === 'objective' ? (
+                <ObjectiveEditor
+                  accountId={accountId}
+                  onSaved={(next) => {
+                    onAccount(next);
+                    setHomePanel('overview');
+                  }}
+                  onCancel={() => setHomePanel('overview')}
+                />
+              ) : homePanel === 'nutrition' ? (
+                <NutritionGoalEditor
+                  accountId={accountId}
+                  onClose={() => {
+                    setHomePanel('overview');
+                    select('nutrition');
+                  }}
+                />
+              ) : (
+                <ProfileOverview
+                  account={account}
+                  onEditProfile={() => setHomePanel('profile')}
+                  onEditObjective={() => setHomePanel('objective')}
+                  onEditNutrition={() => setHomePanel('nutrition')}
+                  onSignOut={onSignOut}
+                />
+              )
             ) : item === 'workout' ? (
               <TrainingWorkspace accountId={accountId} showStartAction={false} />
             ) : (
-              <NutritionDiaryScreen accountId={accountId} onEditGoal={() => select('home')} />
+              <NutritionDiaryScreen
+                accountId={accountId}
+                onEditGoal={() => {
+                  setHomePanel('nutrition');
+                  select('home');
+                }}
+              />
             )}
           </View>
         ))}
@@ -47,21 +104,84 @@ function HomeNavigation({ accountId, initialTab }: { accountId: number; initialT
   );
 }
 
-function PrivateHome({
+function AccountGate({
   accountId,
   onSignOut,
   initialTab,
+  initialAccount,
 }: {
   accountId: number;
   onSignOut: () => void;
   initialTab: HomeTab;
+  initialAccount?: Account;
+}) {
+  const p = usePalette();
+  const cache = useQueryClient();
+  const query = useQuery({
+    queryKey: ['accounts', accountId, 'me'],
+    queryFn: ({ signal }) => getAccount(undefined, signal),
+    initialData: initialAccount,
+  });
+  function saved(account: Account) {
+    cache.setQueryData(['accounts', accountId, 'me'], account);
+  }
+  if (!query.data)
+    return (
+      <View
+        style={{
+          flex: 1,
+          padding: spacing['space-6'],
+          gap: spacing['space-4'],
+          justifyContent: 'center',
+          backgroundColor: p['surface-100'],
+        }}
+      >
+        {query.isPending ? (
+          <ActivityIndicator accessibilityLabel="Loading account setup" color={p.brand} />
+        ) : (
+          <>
+            <Text accessibilityRole="alert" style={{ color: p.danger }}>
+              Could not load your account setup.
+            </Text>
+            <SetupButton
+              title="Retry"
+              onPress={() => {
+                void query.refetch();
+              }}
+            />
+          </>
+        )}
+        <SetupButton title="Sign out" secondary onPress={onSignOut} />
+      </View>
+    );
+  const account = query.data;
+  if (account.onboarding.required)
+    return !account.onboarding.profile_complete ? (
+      <ProfileEditor account={account} onSaved={saved} onSignOut={onSignOut} />
+    ) : (
+      <ObjectiveEditor accountId={accountId} onSaved={saved} onSignOut={onSignOut} />
+    );
+  return (
+    <SessionProvider accountId={accountId} onSignOut={onSignOut}>
+      <HomeNavigation
+        account={account}
+        initialTab={initialTab}
+        onSignOut={onSignOut}
+        onAccount={saved}
+      />
+    </SessionProvider>
+  );
+}
+function PrivateHome(props: {
+  accountId: number;
+  onSignOut: () => void;
+  initialTab: HomeTab;
+  initialAccount?: Account;
 }) {
   return (
     <PrivateQueryProvider>
       <StatusBar style="auto" />
-      <SessionProvider accountId={accountId} onSignOut={onSignOut}>
-        <HomeNavigation accountId={accountId} initialTab={initialTab} />
-      </SessionProvider>
+      <AccountGate {...props} />
     </PrivateQueryProvider>
   );
 }
@@ -71,10 +191,12 @@ export function HomeScreen({
   accountId,
   onSignOut,
   initialTab = 'home',
+  initialAccount,
 }: {
   accountId: number;
   onSignOut: () => void;
   initialTab?: HomeTab;
+  initialAccount?: Account;
 }) {
   return (
     <PrivateHome
@@ -82,6 +204,7 @@ export function HomeScreen({
       accountId={accountId}
       onSignOut={onSignOut}
       initialTab={initialTab}
+      initialAccount={initialAccount}
     />
   );
 }

@@ -80,6 +80,7 @@ function ConnectedAccount({ initialTab }: { initialTab: 'home' | 'nutrition' }) 
       <HomeScreen
         initialTab={initialTab}
         accountId={account.id}
+        initialAccount={account}
         onSignOut={() => {
           void logout();
         }}

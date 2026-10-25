@@ -1,6 +1,14 @@
 import { apiClient, type ApiClient } from '@/services/apiClient';
 
-import { accountSchema, profilePatchSchema, type Account, type ProfilePatch } from './schemas';
+import {
+  objectiveResponseSchema,
+  objectiveSchema,
+  type Objective,
+  accountSchema,
+  profilePatchSchema,
+  type Account,
+  type ProfilePatch,
+} from './schemas';
 
 export type { Account, ProfilePatch } from './schemas';
 
@@ -9,7 +17,7 @@ export function parseAccount(value: unknown) {
 }
 
 export function getAccount(client: ApiClient = apiClient, signal?: AbortSignal): Promise<Account> {
-  return client.get('/api/v1/me', { schema: accountSchema, signal });
+  return client.get('/api/v1/auth/me', { schema: accountSchema, signal });
 }
 
 export function updateProfile(
@@ -21,4 +29,15 @@ export function updateProfile(
     schema: accountSchema,
     signal,
   });
+}
+
+export function getObjective(signal?: AbortSignal) {
+  return apiClient.get('/api/v1/me/objective', { schema: objectiveResponseSchema, signal });
+}
+export function setObjective(objective: Objective) {
+  return apiClient.put(
+    '/api/v1/me/objective',
+    { objective: objectiveSchema.parse(objective) },
+    { schema: objectiveResponseSchema },
+  );
 }
