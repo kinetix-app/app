@@ -14,6 +14,8 @@ import { useNetworkState } from 'expo-network';
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { NutritionDiaryScreen } from '@/features/nutrition/NutritionDiaryScreen';
+import { NutritionGoalEditor } from '@/features/nutrition/NutritionGoalEditor';
 import { trainingApi } from './api';
 import { SessionProvider, useSession } from './components/SessionProvider';
 import { WorkoutTimer } from './components/WorkoutEditor';
@@ -29,6 +31,9 @@ function Workspace({ accountId }: { accountId: number }) {
   const [history, setHistory] = useState(false);
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
+  const [showNutrition, setShowNutrition] = useState(false);
+  const [showNutritionGoal, setShowNutritionGoal] = useState(false);
+  const [returnToNutrition, setReturnToNutrition] = useState(false);
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState('');
   const [search, setSearch] = useState('');
@@ -87,6 +92,33 @@ function Workspace({ accountId }: { accountId: number }) {
     setSaved(true);
   }
   if (history) return <WorkoutHistory accountId={accountId} onClose={() => setHistory(false)} />;
+  if (showNutrition) {
+    return (
+      <NutritionDiaryScreen
+        accountId={accountId}
+        onBack={() => setShowNutrition(false)}
+        onEditGoal={() => {
+          setReturnToNutrition(true);
+          setShowNutrition(false);
+          setShowNutritionGoal(true);
+        }}
+      />
+    );
+  }
+  if (showNutritionGoal) {
+    return (
+      <NutritionGoalEditor
+        accountId={accountId}
+        onClose={() => {
+          setShowNutritionGoal(false);
+          if (returnToNutrition) {
+            setReturnToNutrition(false);
+            setShowNutrition(true);
+          }
+        }}
+      />
+    );
+  }
   if (editing === 'new' || (typeof editing === 'number' && detail.data)) {
     return (
       <RoutineEditor
@@ -153,6 +185,19 @@ function Workspace({ accountId }: { accountId: number }) {
               onPress={() => {
                 setSaved(false);
                 setEditing('new');
+              }}
+            />
+            <Button
+              title="Temp button for nutrition section"
+              secondary
+              onPress={() => setShowNutrition(true)}
+            />
+            <Button
+              title="Temp button for nutrition goal"
+              secondary
+              onPress={() => {
+                setReturnToNutrition(false);
+                setShowNutritionGoal(true);
               }}
             />
             {saved ? (
