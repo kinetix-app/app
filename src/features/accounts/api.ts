@@ -41,3 +41,13 @@ export function setObjective(objective: Objective) {
     { schema: objectiveResponseSchema },
   );
 }
+
+export function uploadProfilePicture(form: FormData) {
+  return apiClient.postMultipart('/api/v1/me/profile/picture', form, { schema: accountSchema });
+}
+export function removeProfilePicture() {
+  return apiClient.delete('/api/v1/me/profile/picture', { schema: accountSchema });
+}
+export function getProfilePicture(signal?: AbortSignal) {
+  return apiClient.getBlob('/api/v1/me/profile/picture', { signal });
+}

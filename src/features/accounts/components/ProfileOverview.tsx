@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { textStyles, usePalette } from '@/theme/tokens';
+import { ProfileAvatar } from './ProfileAvatar';
 import { getObjective } from '../api';
 import type { Account } from '../schemas';
 import { objectiveOptions } from './ObjectiveEditor';
@@ -36,13 +37,7 @@ export function ProfileOverview({
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader title="Home" />
         <View style={[s.card, { backgroundColor: p['surface-200'] }]}>
-          {account.profile.picture_url ? (
-            <Image
-              accessibilityLabel="Profile picture"
-              source={{ uri: account.profile.picture_url }}
-              style={{ width: 72, height: 72, borderRadius: 36 }}
-            />
-          ) : null}
+          <ProfileAvatar account={account} />
           <Text style={[textStyles['title-lg'], { color: p.ink }]}>
             {account.profile.display_name}
           </Text>

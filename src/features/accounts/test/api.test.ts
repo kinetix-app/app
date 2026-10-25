@@ -33,3 +33,18 @@ test('uses the authenticated endpoints and preserves explicit clearing versus om
     { schema: accountSchema, signal: undefined },
   );
 });
+
+test('accepts only the owned private photo path or legacy HTTPS references', () => {
+  expect(
+    parseAccount({
+      ...account,
+      profile: { ...account.profile, picture_url: '/api/v1/me/profile/picture' },
+    }).profile.picture_url,
+  ).toBe('/api/v1/me/profile/picture');
+  expect(() =>
+    parseAccount({
+      ...account,
+      profile: { ...account.profile, picture_url: '/api/v1/users/2/picture' },
+    }),
+  ).toThrow();
+});

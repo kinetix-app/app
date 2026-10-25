@@ -79,3 +79,28 @@ test('reports failed mutations once without retrying or exposing response conten
   );
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+
+test('multipart preserves FormData and lets fetch supply the boundary while retaining auth', async () => {
+  const auth = createAuthService('clerk');
+  auth.setToken('photo-token');
+  const client = createApiClient('https://api.example', auth);
+  const body = new FormData();
+  body.append('file', 'sample');
+  await client.postMultipart('/api/v1/me/profile/picture', body, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  expect(fetchMock.mock.calls[0][1].body).toBe(body);
+  expect(fetchMock.mock.calls[0][1].headers.has('Content-Type')).toBe(false);
+  expect(fetchMock.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer photo-token');
+});
+
+test('private image bytes use the authenticated client and caller cancellation', async () => {
+  const blob = new Blob(['image'], { type: 'image/jpeg' });
+  const auth = createAuthService('clerk');
+  auth.setToken('photo-token');
+  const client = createApiClient('https://api.example', auth);
+  fetchMock.mockResolvedValue({ ok: true, status: 200, blob: async () => blob });
+  expect(await client.getBlob('/api/v1/me/profile/picture')).toBe(blob);
+  expect(fetchMock.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer photo-token');
+  expect(fetchMock.mock.calls[0][1].headers.get('Accept')).toBe('image/jpeg');
+});

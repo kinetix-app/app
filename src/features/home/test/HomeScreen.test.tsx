@@ -130,17 +130,17 @@ test('returning incomplete users must save their profile and explicitly select a
   render(<HomeScreen accountId={1} initialAccount={incompleteAccount} onSignOut={jest.fn()} />);
   await screen.findByText('Your profile');
   expect(screen.queryByLabelText('Main navigation')).toBeNull();
-  for (const [label, value] of [
-    ['Name', 'Alice'],
-    ['Age (years)', '25'],
-    ['Height (cm)', '170'],
-    ['Weight', '70'],
-  ])
-    fireEvent.changeText(screen.getByLabelText(label), value);
-  fireEvent.press(screen.getByText('Save profile'));
+  fireEvent.changeText(screen.getByLabelText('Name'), 'Alice');
+  fireEvent.press(screen.getByText('Continue'));
+  fireEvent.changeText(screen.getByLabelText('Age (years)'), '25');
+  fireEvent.press(screen.getByText('Continue'));
+  fireEvent.changeText(screen.getByLabelText('Height (cm)'), '170');
+  fireEvent.changeText(screen.getByLabelText('Weight'), '70');
+  fireEvent.press(screen.getByText('Continue'));
   await screen.findByText('Choose kg or lb.');
   expect(updateProfile).not.toHaveBeenCalled();
   fireEvent.press(screen.getByRole('radio', { name: 'kg' }));
+  fireEvent.press(screen.getByText('Continue'));
   fireEvent.press(screen.getByText('Save profile'));
   await screen.findByText("What's your goal?");
   expect(await screen.findAllByRole('radio')).toHaveLength(4);

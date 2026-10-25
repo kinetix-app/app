@@ -38,20 +38,25 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await page.getByLabel('Password', { exact: true }).fill(password!);
   await page.getByRole('button', { name: /^Sign in/ }).click();
   await expect(page.getByRole('heading', { name: 'Your profile', exact: true })).toBeVisible();
-  for (const [label, value] of [
-    ['Name', 'Acceptance Alice'],
-    ['Age (years)', '30'],
-    ['Height (cm)', '170'],
-    ['Weight', '100'],
-  ])
-    await page.getByLabel(label, { exact: true }).fill(value);
-  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Acceptance Alice');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByLabel('Age (years)', { exact: true }).fill('30');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByLabel('Height (cm)', { exact: true }).fill('170');
+  await page.getByLabel('Weight', { exact: true }).fill('100');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByText('Choose kg or lb.')).toBeVisible();
   await page.getByRole('radio', { name: 'lb', exact: true }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page.getByLabel('Age (years)', { exact: true })).toHaveValue('30');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByText('Ready to go?', { exact: true })).toBeVisible();
   await page.route('**/api/v1/me/profile', (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Could not save your profile');
-  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100');
+  await expect(page.getByText('Ready to go?', { exact: true })).toBeVisible();
   await page.unroute('**/api/v1/me/profile');
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   await expect(page.getByRole('heading', { name: "What's your goal?", exact: true })).toBeVisible();
@@ -122,6 +127,8 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await signIn(page);
   await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100.000000');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.emulateMedia({ colorScheme: 'dark' });

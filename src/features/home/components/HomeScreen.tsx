@@ -52,6 +52,7 @@ function HomeNavigation({
                     onAccount(next);
                     setHomePanel('overview');
                   }}
+                  onPhotoSaved={onAccount}
                   onCancel={() => setHomePanel('overview')}
                 />
               ) : homePanel === 'objective' ? (

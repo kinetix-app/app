@@ -27,6 +27,7 @@ export function createApiClient(
     method: string,
     body?: unknown,
     options: RequestOptions<T> = {},
+    mode: 'json' | 'multipart' | 'blob' = 'json',
   ): Promise<T> {
     if (!baseUrl) throw new Error('Set EXPO_PUBLIC_API_URL before making API requests.');
     if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) {
@@ -34,11 +35,12 @@ export function createApiClient(
     }
     const { schema, ...requestOptions } = options;
     const headers = new Headers(requestOptions.headers);
-    headers.set('Accept', 'application/json');
+    headers.set('Accept', mode === 'blob' ? 'image/jpeg' : 'application/json');
     const authorization = await auth.getAuthorizationHeader();
     if (authorization) headers.set('Authorization', authorization);
     else headers.delete('Authorization');
-    if (body !== undefined) headers.set('Content-Type', 'application/json');
+    if (body !== undefined && mode === 'json') headers.set('Content-Type', 'application/json');
+    if (mode === 'multipart') headers.delete('Content-Type');
 
     const controller = new AbortController();
     const abort = () => controller.abort();
@@ -50,7 +52,12 @@ export function createApiClient(
         ...requestOptions,
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body:
+          body === undefined
+            ? undefined
+            : mode === 'multipart'
+              ? (body as FormData)
+              : JSON.stringify(body),
         signal: controller.signal,
         credentials: 'omit',
         redirect: 'error',
@@ -58,7 +65,12 @@ export function createApiClient(
       if (!response.ok) {
         throw new ApiError(response.status, response.headers?.get('WWW-Authenticate') ?? undefined);
       }
-      const data: unknown = response.status === 204 ? undefined : await response.json();
+      const data: unknown =
+        response.status === 204
+          ? undefined
+          : mode === 'blob'
+            ? await response.blob()
+            : await response.json();
       return schema ? schema.parse(data) : (data as T);
     } finally {
       clearTimeout(timeout);
@@ -67,6 +79,10 @@ export function createApiClient(
   }
 
   return {
+    postMultipart: <T = unknown>(path: string, body: FormData, options?: RequestOptions<T>) =>
+      request<T>(path, 'POST', body, options, 'multipart'),
+    getBlob: (path: string, options?: Omit<RequestOptions<Blob>, 'schema'>) =>
+      request<Blob>(path, 'GET', undefined, options, 'blob'),
     get: <T = unknown>(path: string, options?: RequestOptions<T>) =>
       request<T>(path, 'GET', undefined, options),
     post: <T = unknown>(path: string, body?: unknown, options?: RequestOptions<T>) =>

@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { pictureUrlSchema, weightUnitSchema, type Account } from './schemas';
+import { weightUnitSchema, type Account } from './schemas';
 
 const numericText = (max: number, places: number) =>
   z
@@ -19,7 +19,6 @@ export const profileFormSchema = z
     height_cm: numericText(300, 2),
     weight: numericText(2204.622621, 6),
     weight_unit: weightUnitSchema.nullable().refine((value) => value !== null, 'Choose kg or lb.'),
-    picture_url: z.union([z.literal(''), pictureUrlSchema]),
   })
   .refine(
     (value) =>
@@ -51,6 +50,5 @@ export function profileDefaults(account: Account): ProfileFormValues {
           ? (Number(p.weight_kg) / 0.45359237).toFixed(6)
           : p.weight_kg,
     weight_unit: p.weight_unit,
-    picture_url: p.picture_url ?? '',
   };
 }

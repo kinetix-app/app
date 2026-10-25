@@ -15,7 +15,7 @@ test.each([
 );
 
 test('profile requires an explicitly chosen weight unit and permits an empty picture', () => {
-  expect(profileFormSchema.safeParse({ ...values, picture_url: '' }).success).toBe(true);
+  expect(profileFormSchema.safeParse(values).success).toBe(true);
   expect(profileFormSchema.safeParse({ ...values, weight_unit: null }).success).toBe(false);
   expect(profileDefaults(incompleteAccount).weight_unit).toBeNull();
 });
@@ -30,7 +30,6 @@ test.each([
   { weight: '1000.000001', weight_unit: 'kg' },
   { weight: '0.000001', weight_unit: 'lb' },
   { weight: '1.1234567' },
-  { picture_url: 'http://example.test/image.png' },
 ])('rejects invalid profile input without throwing', (patch) => {
   expect(profileFormSchema.safeParse({ ...values, ...patch }).success).toBe(false);
 });

@@ -6,7 +6,11 @@ const decimal = (max: number, places: number) =>
     .regex(new RegExp(`^\\d+(?:\\.\\d{1,${places}})?$`))
     .refine((value) => Number(value) > 0 && Number(value) <= max);
 export const weightUnitSchema = z.enum(['kg', 'lb']);
-export const pictureUrlSchema = z.url({ protocol: /^https$/ }).max(2048);
+export const profilePicturePath = '/api/v1/me/profile/picture';
+export const pictureUrlSchema = z.union([
+  z.literal(profilePicturePath),
+  z.url({ protocol: /^https$/ }).max(2048),
+]);
 export const objectiveSchema = z.enum([
   'build_muscle',
   'lose_fat',

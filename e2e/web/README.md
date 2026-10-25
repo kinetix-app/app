@@ -52,3 +52,14 @@ recording, reload/resume, completed history and theme switching. It needs the pr
 private test identity and the same isolated API/catalogue setup. Run it alone with
 `pnpm exec playwright test --config e2e/web/playwright.config.ts home.spec.ts`.
 The complete workout suite still requires both distinct identities.
+
+## Profile picture acceptance
+
+After onboarding completes for the primary isolated identity, run
+`profile-picture.spec.ts` against the same API with configured Azurite storage and a
+separate test-owned private profile container. It exercises the actual image picker,
+multipart upload, authenticated image retrieval, failed-upload retry, replacement,
+profile save/reload and removal. A second identity and an anonymous request must not
+read the primary account's image. Only repository-owned app icons are used as sample
+uploads; no personal photo is required. Private storage ACL, content validation and
+failure/rollback cases also have backend integration coverage.
