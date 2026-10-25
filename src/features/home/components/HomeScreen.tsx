@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
@@ -122,6 +122,14 @@ function AccountGate({
     queryFn: ({ signal }) => getAccount(undefined, signal),
     initialData: initialAccount,
   });
+  useEffect(() => {
+    if (!initialAccount) return;
+    const queryKey = ['accounts', accountId, 'me'];
+    // initialData only seeds a new query. A fresh authenticated response must also
+    // replace an existing entry, including after session refresh or Fast Refresh.
+    void cache.cancelQueries({ queryKey, exact: true });
+    cache.setQueryData(queryKey, initialAccount);
+  }, [accountId, cache, initialAccount]);
   function saved(account: Account) {
     cache.setQueryData(['accounts', accountId, 'me'], account);
   }

@@ -127,7 +127,7 @@ test('returning incomplete users must save their profile and explicitly select a
   };
   jest.mocked(updateProfile).mockResolvedValue(profileSaved);
   jest.mocked(setObjective).mockResolvedValue({ objective: 'maintain_weight' });
-  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  render(<HomeScreen accountId={1} initialAccount={incompleteAccount} onSignOut={jest.fn()} />);
   await screen.findByText('Your profile');
   expect(screen.queryByLabelText('Main navigation')).toBeNull();
   for (const [label, value] of [
@@ -143,7 +143,7 @@ test('returning incomplete users must save their profile and explicitly select a
   fireEvent.press(screen.getByRole('radio', { name: 'kg' }));
   fireEvent.press(screen.getByText('Save profile'));
   await screen.findByText("What's your goal?");
-  expect(screen.getAllByRole('radio')).toHaveLength(4);
+  expect(await screen.findAllByRole('radio')).toHaveLength(4);
   expect(
     screen.getByRole('button', { name: 'Save objective' }).props.accessibilityState.disabled,
   ).toBe(true);
@@ -168,4 +168,42 @@ test('account switches reset navigation/forms and cancel all private feature que
   expect(signal?.aborted).toBe(true);
   expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
   expect(screen.queryByText('Routines')).toBeNull();
+});
+
+test('a new authenticated response replaces cached completion for the same account', async () => {
+  const onSignOut = jest.fn();
+  const view = render(
+    <HomeScreen accountId={1} initialAccount={completeAccount} onSignOut={onSignOut} />,
+  );
+  await screen.findByText('Alice');
+  // Session refresh or a fresh sign-in may return the same ID with incomplete setup.
+  jest.mocked(getAccount).mockResolvedValue(incompleteAccount);
+  view.rerender(
+    <HomeScreen accountId={1} initialAccount={incompleteAccount} onSignOut={onSignOut} />,
+  );
+  await screen.findByText('Your profile');
+  expect(screen.queryByLabelText('Main navigation')).toBeNull();
+  expect(screen.queryByText('Your plan')).toBeNull();
+});
+
+test('an older pending account read cannot overwrite a fresh incomplete sign-in response', async () => {
+  let finishRead: (account: typeof completeAccount) => void = () => {};
+  jest.mocked(getAccount).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishRead = resolve;
+      }),
+  );
+  const onSignOut = jest.fn();
+  const view = render(<HomeScreen accountId={1} onSignOut={onSignOut} />);
+  await waitFor(() => expect(getAccount).toHaveBeenCalledTimes(1));
+  view.rerender(
+    <HomeScreen accountId={1} initialAccount={incompleteAccount} onSignOut={onSignOut} />,
+  );
+  await screen.findByText('Your profile');
+  await act(async () => {
+    finishRead(completeAccount);
+  });
+  expect(screen.getByText('Your profile')).toBeTruthy();
+  expect(screen.queryByText('Your plan')).toBeNull();
 });
