@@ -36,11 +36,17 @@ function ConnectedAccount({ initialTab }: { initialTab: 'home' | 'nutrition' }) 
   const [attempt, setAttempt] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const request = useRef<AbortController | null>(null);
+  const tokenGetter = useRef(getToken);
+
+  // Expo returns a new wrapper each render. Keep tokens current without reconnecting.
+  useEffect(() => {
+    tokenGetter.current = getToken;
+  }, [getToken]);
 
   useEffect(() => {
     const controller = new AbortController();
     request.current = controller;
-    authService.setTokenProvider(getToken);
+    authService.setTokenProvider(() => tokenGetter.current());
     void getAccount(undefined, controller.signal)
       .then((result) => {
         if (!controller.signal.aborted) setAccount(result);
@@ -59,7 +65,7 @@ function ConnectedAccount({ initialTab }: { initialTab: 'home' | 'nutrition' }) 
       controller.abort();
       authService.clear();
     };
-  }, [getToken, attempt]);
+  }, [attempt]);
 
   async function logout() {
     if (leaving) return;

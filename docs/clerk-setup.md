@@ -14,6 +14,10 @@ Tracking: [ENV01 — app#7](https://github.com/kinetix-app/app/issues/7), [DEV02
 
 Clerk's token cache uses `expo-secure-store` on native platforms. The screen waits for session restoration, then supplies the ordinary `getToken()` to the shared API client, allowing SDK token renewal. `/api/v1/me` must return a valid account before the connected state appears. Account state is mounted per session; logout/account changes cancel outstanding account requests and remove the auth header. No private query cache is introduced. Clerk `signOut()` signs out this device. Previously issued backend JWTs can remain valid until expiration plus clock skew; immediate/all-device revocation is outside this increment.
 
+The initial Clerk account connection runs once per mounted session, or when the user
+chooses Retry connection. SDK token-getter changes update the provider used by later API
+requests without reloading the account or clearing authentication on each render.
+
 ## Development Basic setup
 
 In the backend's ignored `.env`:

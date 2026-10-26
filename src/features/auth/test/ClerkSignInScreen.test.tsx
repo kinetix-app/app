@@ -4,6 +4,7 @@ import React from 'react';
 
 import { getAccount, type Account } from '@/features/accounts/api';
 import { authService } from '@/services/authService';
+import { ApiError } from '@/services/apiClient';
 
 import { ClerkSignInScreen } from '../components/ClerkSignInScreen';
 
@@ -28,7 +29,11 @@ const mockSignUp = {
   finalize: jest.fn(),
 };
 jest.mock('@clerk/expo', () => ({
-  useAuth: () => mockAuth,
+  // The Expo SDK creates a fresh getToken wrapper on every render.
+  useAuth: () => {
+    const getToken = mockAuth.getToken;
+    return { ...mockAuth, getToken: () => getToken() };
+  },
   useClerk: () => ({ signOut: mockSignOut }),
   useSignIn: () => ({ signIn: mockSignIn }),
   useSignUp: () => ({ signUp: mockSignUp }),
@@ -61,7 +66,12 @@ const account: Account = completeAccount;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  Object.assign(mockAuth, { isLoaded: true, isSignedIn: false, sessionId: 'sess_one' });
+  Object.assign(mockAuth, {
+    isLoaded: true,
+    isSignedIn: false,
+    sessionId: 'sess_one',
+    getToken: mockGetToken,
+  });
   mockSignIn.status = 'complete';
   for (const fn of [
     mockSignIn.emailCode.sendCode,
@@ -170,7 +180,9 @@ test('restored sessions connect to the account API and logout clears private sta
   mockAuth.isSignedIn = true;
   render(<ClerkSignInScreen />);
   await screen.findByText('Home for account 1');
-  expect(authService.setTokenProvider).toHaveBeenCalledWith(mockGetToken);
+  expect(authService.setTokenProvider).toHaveBeenCalledTimes(1);
+  const provider = jest.mocked(authService.setTokenProvider).mock.calls[0][0];
+  await expect(provider()).resolves.toBe('session-token');
   const signal = jest.mocked(getAccount).mock.calls[0][1];
   fireEvent.press(screen.getByText('Sign out'));
   await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
@@ -201,4 +213,41 @@ test('switching sessions cancels old account requests and never shows their late
   });
   expect(oldSignal?.aborted).toBe(true);
   expect(screen.queryByText('Home for account 1')).toBeNull();
+});
+
+test('does not reload the account when the SDK token getter changes on render', async () => {
+  mockAuth.isSignedIn = true;
+  let responses = 0;
+  jest.mocked(getAccount).mockImplementation(() => {
+    // Bound the old infinite loop so the regression fails without hanging Jest.
+    responses += 1;
+    return responses <= 3 ? Promise.resolve({ ...account }) : new Promise(() => {});
+  });
+  const view = render(<ClerkSignInScreen />);
+  await screen.findByText('Home for account 1');
+  const signal = jest.mocked(getAccount).mock.calls[0][1];
+  const provider = jest.mocked(authService.setTokenProvider).mock.calls[0][0];
+  const renewedGetToken = jest.fn().mockResolvedValue('renewed-token');
+  mockAuth.getToken = renewedGetToken;
+  view.rerender(<ClerkSignInScreen />);
+  await act(async () => {
+    await expect(provider()).resolves.toBe('renewed-token');
+  });
+  expect(renewedGetToken).toHaveBeenCalledTimes(1);
+  expect(getAccount).toHaveBeenCalledTimes(1);
+  expect(authService.setTokenProvider).toHaveBeenCalledTimes(1);
+  expect(authService.clear).not.toHaveBeenCalled();
+  expect(signal?.aborted).toBe(false);
+});
+
+test('a failed account connection waits for explicit retry', async () => {
+  mockAuth.isSignedIn = true;
+  jest.mocked(getAccount).mockRejectedValueOnce(new ApiError(401));
+  const view = render(<ClerkSignInScreen />);
+  await screen.findByText('Your session was not accepted. Sign out and try again.');
+  view.rerender(<ClerkSignInScreen />);
+  expect(getAccount).toHaveBeenCalledTimes(1);
+  fireEvent.press(screen.getByText('Retry connection'));
+  await screen.findByText('Home for account 1');
+  expect(getAccount).toHaveBeenCalledTimes(2);
 });
