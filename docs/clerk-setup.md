@@ -14,9 +14,13 @@ Tracking: [ENV01 — app#7](https://github.com/kinetix-app/app/issues/7), [DEV02
 
 Clerk's token cache uses `expo-secure-store` on native platforms. The screen waits for session restoration, then supplies the ordinary `getToken()` to the shared API client, allowing SDK token renewal. `/api/v1/me` must return a valid account before the connected state appears. Account state is mounted per session; logout/account changes cancel outstanding account requests and remove the auth header. No private query cache is introduced. Clerk `signOut()` signs out this device. Previously issued backend JWTs can remain valid until expiration plus clock skew; immediate/all-device revocation is outside this increment.
 
-The initial Clerk account connection runs once per mounted session, or when the user
-chooses Retry connection. SDK token-getter changes update the provider used by later API
-requests without reloading the account or clearing authentication on each render.
+The email-code screen uses one sign-in-or-sign-up flow: Clerk sends a code without
+revealing whether an account exists, then transfers verified new email addresses into
+sign-up. After Clerk activates either session, `GET /api/v1/auth/me` resolves the Clerk
+identity to an existing local account or provisions one on first access. The initial
+account connection runs once per mounted session, or when the user chooses Retry
+connection. SDK token-getter changes update the provider used by later API requests
+without reloading the account or clearing authentication on each render.
 
 ## Development Basic setup
 
@@ -41,7 +45,7 @@ Use `http://localhost:8000` for an iOS simulator/browser, or a reachable LAN add
 
 Use the owner's existing application in the [Clerk Dashboard](https://dashboard.clerk.com/); create one only if none exists. Local development keys do not establish that a production instance or providers are ready.
 
-1. Under **User & authentication**, require email, enable email sign-up/sign-in with **verification codes**, and disable passwords and email verification links. Do not require extra name, username or phone fields for this minimal sign-up form.
+1. Under **User & authentication**, use **Open** access, require email, enable email sign-up/sign-in with **verification codes**, and disable passwords and email verification links. Do not require extra name, username or phone fields for this minimal sign-up form; `signUpIfMissing` is unavailable for invite-only or waitlist access.
 2. Enable **Google** and **Apple** social connections. For production, enter the providers' production OAuth credentials in Clerk. Google needs a web OAuth client for this browser flow. Apple needs its web Services ID, Team ID, Key ID and signing key plus the domain/return URL setup Clerk specifies. Use the exact provider callback URL shown by Clerk; it differs from the app callback. Provider secrets remain in Clerk.
 3. Enable Clerk's **Native API** and register Android package/namespace and iOS bundle identifier **`cat.udl.kinetix`**. Supply the actual signing certificate fingerprints and Apple Team ID/App ID prefix requested by the dashboard.
 4. Register **`kinetix://sso-callback`** as an allowed native/mobile redirect URL. `app.json` sets scheme `kinetix`; `src/app/sso-callback.tsx` returns to the authentication screen. The optional browser preview uses its actual origin plus `/sso-callback`, which must also be allowed when used.

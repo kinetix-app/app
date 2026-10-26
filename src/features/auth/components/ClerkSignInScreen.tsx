@@ -1,4 +1,11 @@
-import { useAuth, useClerk, useSignIn, useSignUp, useSSO } from '@clerk/expo';
+import {
+  isClerkAPIResponseError,
+  useAuth,
+  useClerk,
+  useSignIn,
+  useSignUp,
+  useSSO,
+} from '@clerk/expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -137,7 +144,6 @@ function SignInForm() {
   const { startSSOFlow } = useSSO();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [creating, setCreating] = useState(false);
   const [sent, setSent] = useState(false);
   const [cooldown, setCooldown] = useState(false);
   const [error, setError] = useState('');
@@ -171,21 +177,19 @@ function SignInForm() {
       return;
     }
     await perform(async () => {
-      if (creating) {
-        if (!sent) {
-          const result = await signUp.create({ emailAddress: email.trim() });
-          if (result.error) throw result.error;
-        }
-        const result = await signUp.verifications.sendEmailCode();
-        if (result.error) throw result.error;
-      } else {
-        const result = await signIn.emailCode.sendCode({ emailAddress: email.trim() });
+      if (!sent) {
+        const result = await signIn.create({
+          identifier: email.trim(),
+          signUpIfMissing: true,
+        });
         if (result.error) throw result.error;
       }
+      const result = await signIn.emailCode.sendCode();
+      if (result.error) throw result.error;
       setSent(true);
       setCode('');
       setCooldown(true);
-    }, 'Unable to send a code. Check your email, connection and sign-in or create-account choice, then try again.');
+    }, 'Unable to send a code. Check your email and connection, then try again.');
   }
 
   async function verifyCode() {
@@ -194,18 +198,29 @@ function SignInForm() {
       return;
     }
     await perform(async () => {
-      const result = creating
-        ? await signUp.verifications.verifyEmailCode({ code: code.trim() })
-        : await signIn.emailCode.verifyCode({ code: code.trim() });
-      if (result.error) throw result.error;
-      const flow = creating ? signUp : signIn;
-      if (flow.status !== 'complete') {
-        setError('Additional account verification is required. Contact support.');
+      const result = await signIn.emailCode.verifyCode({ code: code.trim() });
+      if (
+        result.error &&
+        isClerkAPIResponseError(result.error) &&
+        result.error.errors.some((item) => item.code === 'sign_up_if_missing_transfer')
+      ) {
+        const transferred = await signUp.create({ transfer: true });
+        if (transferred.error) throw transferred.error;
+        if (signUp.status !== 'complete') {
+          throw new Error('Additional account information is required to finish sign-up.');
+        }
+        const completed = await signUp.finalize();
+        if (completed.error) throw completed.error;
         return;
       }
-      const completed = await flow.finalize();
+
+      if (result.error) throw result.error;
+      if (signIn.status !== 'complete') {
+        throw new Error('Additional account verification is required.');
+      }
+      const completed = await signIn.finalize();
       if (completed.error) throw completed.error;
-    }, 'The code was not accepted or has expired. Try again or request a new code.');
+    }, 'The code was not accepted or sign-in could not finish. Try again or request a new code.');
   }
 
   async function social(strategy: 'oauth_google' | 'oauth_apple') {
@@ -229,7 +244,7 @@ function SignInForm() {
     <View style={styles.content}>
       <BrandHeader />
       <View style={styles.heading}>
-        <Text style={styles.title}>{creating ? 'Create your account' : 'Sign in to continue'}</Text>
+        <Text style={styles.title}>Enter your email to get started</Text>
         <Text style={styles.subtitle}>Your fitness journey starts here.</Text>
       </View>
       <Text style={styles.label}>Email</Text>
@@ -349,23 +364,6 @@ function SignInForm() {
           style={styles.socialButton}
         />
       </View>
-      {sent ? null : (
-        <Pressable
-          accessibilityRole="button"
-          disabled={pending}
-          onPress={() => {
-            setCreating(!creating);
-            setCode('');
-            setError('');
-          }}
-          style={styles.footer}
-        >
-          <Text style={styles.footerText}>
-            {creating ? 'Already have an account? ' : 'New here? '}
-            <Text style={styles.link}>{creating ? 'Sign in' : 'Create account'}</Text>
-          </Text>
-        </Pressable>
-      )}
       <Text style={styles.terms}>
         By continuing, you agree to our Terms of Service
         {'\n'}and Privacy Policy.

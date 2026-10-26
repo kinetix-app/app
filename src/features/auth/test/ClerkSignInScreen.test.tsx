@@ -19,6 +19,7 @@ const mockAuth = {
 };
 const mockSignIn = {
   status: 'complete',
+  create: jest.fn(),
   emailCode: { sendCode: jest.fn(), verifyCode: jest.fn() },
   finalize: jest.fn(),
 };
@@ -29,6 +30,18 @@ const mockSignUp = {
   finalize: jest.fn(),
 };
 jest.mock('@clerk/expo', () => ({
+  isClerkAPIResponseError: (error: unknown) =>
+    typeof error === 'object' &&
+    error !== null &&
+    'errors' in error &&
+    Array.isArray(error.errors) &&
+    error.errors.some(
+      (item: unknown) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'code' in item &&
+        item.code === 'sign_up_if_missing_transfer',
+    ),
   // The Expo SDK creates a fresh getToken wrapper on every render.
   useAuth: () => {
     const getToken = mockAuth.getToken;
@@ -74,6 +87,7 @@ beforeEach(() => {
   });
   mockSignIn.status = 'complete';
   for (const fn of [
+    mockSignIn.create,
     mockSignIn.emailCode.sendCode,
     mockSignIn.emailCode.verifyCode,
     mockSignIn.finalize,
@@ -83,6 +97,7 @@ beforeEach(() => {
     mockSignUp.finalize,
   ])
     fn.mockResolvedValue({ error: null });
+  mockSignUp.status = 'complete';
   mockSignOut.mockResolvedValue(undefined);
   jest.mocked(getAccount).mockResolvedValue(account);
 });
@@ -101,12 +116,14 @@ test('waits for SDK session restoration before showing sign-in or making account
   expect(getAccount).not.toHaveBeenCalled();
 });
 
-test('sends and verifies email OTP and finalizes the SDK session', async () => {
+test('starts the sign-in-or-sign-up flow with an email code and finalizes an existing account', async () => {
   render(<ClerkSignInScreen />);
   await requestCode();
-  expect(mockSignIn.emailCode.sendCode).toHaveBeenCalledWith({
-    emailAddress: 'alice@example.test',
+  expect(mockSignIn.create).toHaveBeenCalledWith({
+    identifier: 'alice@example.test',
+    signUpIfMissing: true,
   });
+  expect(mockSignIn.emailCode.sendCode).toHaveBeenCalledWith();
   fireEvent.changeText(screen.getByLabelText('Email verification code'), '123456');
   fireEvent.press(screen.getByText('Verify code'));
   await waitFor(() => expect(mockSignIn.finalize).toHaveBeenCalledTimes(1));
@@ -122,7 +139,7 @@ test('expired codes stay on the verification screen and can be resent after cool
     fireEvent.changeText(screen.getByLabelText('Email verification code'), '000000');
     fireEvent.press(screen.getByText('Verify code'));
     await screen.findByText(
-      'The code was not accepted or has expired. Try again or request a new code.',
+      'The code was not accepted or sign-in could not finish. Try again or request a new code.',
     );
     expect(mockSignIn.finalize).not.toHaveBeenCalled();
     await act(async () => {
@@ -135,15 +152,16 @@ test('expired codes stay on the verification screen and can be resent after cool
   }
 });
 
-test('new accounts use the SDK email sign-up and verification methods', async () => {
+test('new accounts transfer to sign-up after email verification', async () => {
+  mockSignIn.emailCode.verifyCode.mockResolvedValue({
+    error: { errors: [{ code: 'sign_up_if_missing_transfer' }] },
+  });
   render(<ClerkSignInScreen />);
-  fireEvent.press(screen.getByText('New here? Create account'));
   await requestCode();
   fireEvent.changeText(screen.getByLabelText('Email verification code'), '123456');
   fireEvent.press(screen.getByText('Verify code'));
   await waitFor(() => expect(mockSignUp.finalize).toHaveBeenCalledTimes(1));
-  expect(mockSignUp.create).toHaveBeenCalledWith({ emailAddress: 'alice@example.test' });
-  expect(mockSignIn.emailCode.sendCode).not.toHaveBeenCalled();
+  expect(mockSignUp.create).toHaveBeenCalledWith({ transfer: true });
 });
 
 test.each(['Google', 'Apple'])('activates the SDK session returned by %s', async (provider) => {
