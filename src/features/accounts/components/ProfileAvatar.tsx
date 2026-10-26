@@ -6,7 +6,22 @@ import { getProfilePicture } from '../api';
 import { profilePicturePath, type Account } from '../schemas';
 import { SetupButton } from './SetupUI';
 
-export function ProfileAvatar({ account, preview }: { account: Account; preview?: string }) {
+type ProfileAvatarProps = Readonly<{ account: Account; preview?: string }>;
+
+function getPictureUri(
+  preview: string | undefined,
+  isPrivatePicture: boolean,
+  decoded: { blob: Blob; uri?: string; failed?: boolean } | undefined,
+  picture: Blob | undefined,
+  publicUrl: string | null,
+) {
+  if (preview) return preview;
+  if (!isPrivatePicture) return publicUrl;
+  if (!decoded || decoded.blob !== picture) return undefined;
+  return decoded.uri;
+}
+
+export function ProfileAvatar({ account, preview }: ProfileAvatarProps) {
   const p = usePalette();
   const [decoded, setDecoded] = useState<{ blob: Blob; uri?: string; failed?: boolean }>();
   const privatePhoto = account.profile.picture_url === profilePicturePath && !preview;
@@ -31,14 +46,37 @@ export function ProfileAvatar({ account, preview }: { account: Account; preview?
       if (reader.readyState === FileReader.LOADING) reader.abort();
     };
   }, [photo.data, privatePhoto, account.id]);
-  const uri =
-    preview ||
-    (privatePhoto
-      ? decoded?.blob === photo.data
-        ? decoded?.uri
-        : undefined
-      : account.profile.picture_url);
+  const uri = getPictureUri(
+    preview,
+    privatePhoto,
+    decoded,
+    photo.data,
+    account.profile.picture_url,
+  );
   const failed = photo.isError || (decoded?.blob === photo.data && decoded?.failed);
+  let picture: React.ReactNode;
+  if (uri) {
+    picture = (
+      <Image
+        accessibilityLabel="Profile picture"
+        source={{ uri }}
+        style={{ width: '100%', height: '100%' }}
+      />
+    );
+  } else if (privatePhoto && (photo.isPending || (!failed && !uri))) {
+    picture = (
+      <ActivityIndicator accessibilityLabel="Loading profile picture" color={p['brand-ink']} />
+    );
+  } else {
+    picture = (
+      <Text
+        accessibilityLabel="No profile picture"
+        style={[textStyles['display-lg'], { color: p['brand-ink'] }]}
+      >
+        {account.profile.display_name?.slice(0, 1).toUpperCase() || '+'}
+      </Text>
+    );
+  }
   return (
     <View style={{ alignItems: 'center', gap: spacing['space-2'] }}>
       <View
@@ -52,22 +90,7 @@ export function ProfileAvatar({ account, preview }: { account: Account; preview?
           overflow: 'hidden',
         }}
       >
-        {uri ? (
-          <Image
-            accessibilityLabel="Profile picture"
-            source={{ uri }}
-            style={{ width: '100%', height: '100%' }}
-          />
-        ) : privatePhoto && (photo.isPending || (!failed && !uri)) ? (
-          <ActivityIndicator accessibilityLabel="Loading profile picture" color={p['brand-ink']} />
-        ) : (
-          <Text
-            accessibilityLabel="No profile picture"
-            style={[textStyles['display-lg'], { color: p['brand-ink'] }]}
-          >
-            {account.profile.display_name?.slice(0, 1).toUpperCase() || '+'}
-          </Text>
-        )}
+        {picture}
       </View>
       {privatePhoto && failed ? (
         <>

@@ -134,13 +134,12 @@ test('returning incomplete users must save their profile and explicitly select a
   fireEvent.changeText(screen.getByLabelText('Name'), 'Alice');
   fireEvent.press(screen.getByText('Continue'));
   fireEvent.changeText(screen.getByLabelText('Age (years)'), '25');
+  fireEvent.press(screen.getByRole('radio', { name: 'Metric' }));
   fireEvent.changeText(screen.getByLabelText('Height (cm)'), '170');
   fireEvent.changeText(screen.getByLabelText('Weight'), '70');
   fireEvent.press(screen.getByText('Continue'));
-  await screen.findByText('Choose kg or lb.');
+  await screen.findByText('Confirmation');
   expect(updateProfile).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByRole('radio', { name: 'kg' }));
-  fireEvent.press(screen.getByText('Continue'));
   fireEvent.press(screen.getByText('Save profile'));
   await screen.findByText("What's your goal?");
   expect(screen.queryByText('Sign out')).toBeNull();

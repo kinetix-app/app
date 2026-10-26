@@ -43,59 +43,77 @@ export function displayHeight(cm: string) {
   };
 }
 
-export const profileFormSchema = z
-  .object({
-    display_name: z.string().trim().min(1, 'Enter your name.').max(100),
-    age: z
-      .string()
-      .regex(/^\d+$/, 'Enter your age in years.')
-      .refine((value) => Number(value) >= 1 && Number(value) <= 120, 'Enter an age from 1 to 120.'),
-    height_cm: z.string(),
-    height_ft: z.string(),
-    height_in: z.string(),
-    weight: z.string(),
-    measurement_system: measurementSystemSchema.nullable(),
-  })
-  .superRefine((value, context) => {
-    const issue = (field: keyof typeof value, message: string) =>
-      context.addIssue({ code: 'custom', path: [field], message });
-    const system = value.measurement_system;
-    if (!system) {
-      issue('measurement_system', 'Choose Metric or Imperial.');
-      return;
-    }
-    if (!decimalInput.test(value.weight) || Number(value.weight) <= 0) {
-      issue('weight', 'Enter a positive weight with at most two decimals.');
-    } else if (
-      Number(canonicalWeight(value.weight, system)) > 1000 ||
-      Number(canonicalWeight(value.weight, system)) <= 0
-    ) {
+const profileFormShape = z.object({
+  display_name: z.string().trim().min(1, 'Enter your name.').max(100),
+  age: z
+    .string()
+    .regex(/^\d+$/, 'Enter your age in years.')
+    .refine((value) => Number(value) >= 1 && Number(value) <= 120, 'Enter an age from 1 to 120.'),
+  height_cm: z.string(),
+  height_ft: z.string(),
+  height_in: z.string(),
+  weight: z.string(),
+  measurement_system: measurementSystemSchema.nullable(),
+});
+export type ProfileFormValues = z.infer<typeof profileFormShape>;
+
+type AddProfileIssue = (field: keyof ProfileFormValues, message: string) => void;
+
+function validateWeight(
+  value: ProfileFormValues,
+  system: MeasurementSystem,
+  issue: AddProfileIssue,
+) {
+  if (!decimalInput.test(value.weight) || Number(value.weight) <= 0) {
+    issue('weight', 'Enter a positive weight with at most two decimals.');
+  } else {
+    const weightKg = Number(canonicalWeight(value.weight, system));
+    if (weightKg > 1000 || weightKg <= 0) {
       issue('weight', 'Weight must be greater than 0 and at most 1000 kg.');
     }
-    if (system === 'metric') {
-      if (
-        !decimalInput.test(value.height_cm) ||
-        Number(value.height_cm) <= 0 ||
-        Number(value.height_cm) > 300
-      )
-        issue(
-          'height_cm',
-          'Enter a height greater than 0 and at most 300 cm, with at most two decimals.',
-        );
-    } else {
-      const feetValid = /^\d+$/.test(value.height_ft) && Number(value.height_ft) <= 9;
-      const inchesValid = decimalInput.test(value.height_in) && Number(value.height_in) < 12;
-      if (!feetValid) issue('height_ft', 'Enter whole feet from 0 to 9.');
-      if (!inchesValid)
-        issue('height_in', 'Enter inches from 0 to less than 12, with at most two decimals.');
-      if (feetValid && inchesValid) {
-        const cm = Number(canonicalHeight(value, system));
-        if (cm <= 0 || cm > 300)
-          issue('height_in', 'Total height must be greater than 0 and at most 300 cm.');
-      }
-    }
-  });
-export type ProfileFormValues = z.infer<typeof profileFormSchema>;
+  }
+}
+
+function validateMetricHeight(value: ProfileFormValues, issue: AddProfileIssue) {
+  if (
+    !decimalInput.test(value.height_cm) ||
+    Number(value.height_cm) <= 0 ||
+    Number(value.height_cm) > 300
+  ) {
+    issue(
+      'height_cm',
+      'Enter a height greater than 0 and at most 300 cm, with at most two decimals.',
+    );
+  }
+}
+
+function validateImperialHeight(value: ProfileFormValues, issue: AddProfileIssue) {
+  const feetValid = /^\d+$/.test(value.height_ft) && Number(value.height_ft) <= 9;
+  const inchesValid = decimalInput.test(value.height_in) && Number(value.height_in) < 12;
+  if (!feetValid) issue('height_ft', 'Enter whole feet from 0 to 9.');
+  if (!inchesValid)
+    issue('height_in', 'Enter inches from 0 to less than 12, with at most two decimals.');
+  if (feetValid && inchesValid) {
+    const cm = Number(canonicalHeight(value, 'imperial'));
+    if (cm <= 0 || cm > 300)
+      issue('height_in', 'Total height must be greater than 0 and at most 300 cm.');
+  }
+}
+
+function validateProfileForm(value: ProfileFormValues, context: z.RefinementCtx) {
+  const issue: AddProfileIssue = (field, message) =>
+    context.addIssue({ code: 'custom', path: [field], message });
+  const system = value.measurement_system;
+  if (!system) {
+    issue('measurement_system', 'Choose Metric or Imperial.');
+    return;
+  }
+  validateWeight(value, system, issue);
+  if (system === 'metric') validateMetricHeight(value, issue);
+  else validateImperialHeight(value, issue);
+}
+
+export const profileFormSchema = profileFormShape.superRefine(validateProfileForm);
 
 export function profileDefaults(account: Account): ProfileFormValues {
   const p = account.profile;

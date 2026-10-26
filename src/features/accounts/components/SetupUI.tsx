@@ -2,17 +2,19 @@ import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
+type SetupButtonProps = Readonly<{
+  title: string;
+  onPress: () => void;
+  disabled?: boolean;
+  secondary?: boolean;
+}>;
+
 export function SetupButton({
   title,
   onPress,
   disabled = false,
   secondary = false,
-}: {
-  title: string;
-  onPress: () => void;
-  disabled?: boolean;
-  secondary?: boolean;
-}) {
+}: SetupButtonProps) {
   const p = usePalette();
   return (
     <Pressable

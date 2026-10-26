@@ -10,17 +10,14 @@ import { ProfileEditor, ObjectiveEditor, ProfileOverview, SetupButton } from '@/
 import { spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
 
-function HomeNavigation({
-  account,
-  initialTab,
-  onSignOut,
-  onAccount,
-}: {
+type HomeNavigationProps = Readonly<{
   account: Account;
   initialTab: HomeTab;
   onSignOut: () => void;
   onAccount: (account: Account) => void;
-}) {
+}>;
+
+function HomeNavigation({ account, initialTab, onSignOut, onAccount }: HomeNavigationProps) {
   const accountId = account.id;
   const [homePanel, setHomePanel] = useState<'overview' | 'profile' | 'objective' | 'nutrition'>(
     'overview',
@@ -33,6 +30,66 @@ function HomeNavigation({
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
+  function renderHomePanel() {
+    switch (homePanel) {
+      case 'profile':
+        return (
+          <ProfileEditor
+            account={account}
+            onSaved={(next) => {
+              onAccount(next);
+              setHomePanel('overview');
+            }}
+            onCancel={() => setHomePanel('overview')}
+          />
+        );
+      case 'objective':
+        return (
+          <ObjectiveEditor
+            accountId={accountId}
+            onSaved={(next) => {
+              onAccount(next);
+              setHomePanel('overview');
+            }}
+            onCancel={() => setHomePanel('overview')}
+          />
+        );
+      case 'nutrition':
+        return (
+          <NutritionGoalEditor
+            accountId={accountId}
+            onClose={() => {
+              setHomePanel('overview');
+              select('nutrition');
+            }}
+          />
+        );
+      default:
+        return (
+          <ProfileOverview
+            account={account}
+            onEditProfile={() => setHomePanel('profile')}
+            onEditObjective={() => setHomePanel('objective')}
+            onEditNutrition={() => setHomePanel('nutrition')}
+            onSignOut={onSignOut}
+          />
+        );
+    }
+  }
+  function renderTabContent(item: HomeTab) {
+    if (item === 'home') return renderHomePanel();
+    if (item === 'workout')
+      return <TrainingWorkspace accountId={accountId} showStartAction={false} />;
+    return (
+      <NutritionDiaryScreen
+        accountId={accountId}
+        onEditGoal={() => {
+          setHomePanel('nutrition');
+          select('home');
+        }}
+      />
+    );
+  }
   return (
     <View style={{ flex: 1, backgroundColor: p['surface-100'] }}>
       <SessionHost>
@@ -44,53 +101,7 @@ function HomeNavigation({
             accessibilityElementsHidden={tab !== item}
             importantForAccessibility={tab !== item ? 'no-hide-descendants' : 'auto'}
           >
-            {item === 'home' ? (
-              homePanel === 'profile' ? (
-                <ProfileEditor
-                  account={account}
-                  onSaved={(next) => {
-                    onAccount(next);
-                    setHomePanel('overview');
-                  }}
-                  onCancel={() => setHomePanel('overview')}
-                />
-              ) : homePanel === 'objective' ? (
-                <ObjectiveEditor
-                  accountId={accountId}
-                  onSaved={(next) => {
-                    onAccount(next);
-                    setHomePanel('overview');
-                  }}
-                  onCancel={() => setHomePanel('overview')}
-                />
-              ) : homePanel === 'nutrition' ? (
-                <NutritionGoalEditor
-                  accountId={accountId}
-                  onClose={() => {
-                    setHomePanel('overview');
-                    select('nutrition');
-                  }}
-                />
-              ) : (
-                <ProfileOverview
-                  account={account}
-                  onEditProfile={() => setHomePanel('profile')}
-                  onEditObjective={() => setHomePanel('objective')}
-                  onEditNutrition={() => setHomePanel('nutrition')}
-                  onSignOut={onSignOut}
-                />
-              )
-            ) : item === 'workout' ? (
-              <TrainingWorkspace accountId={accountId} showStartAction={false} />
-            ) : (
-              <NutritionDiaryScreen
-                accountId={accountId}
-                onEditGoal={() => {
-                  setHomePanel('nutrition');
-                  select('home');
-                }}
-              />
-            )}
+            {renderTabContent(item)}
           </View>
         ))}
       </SessionHost>
@@ -104,17 +115,14 @@ function HomeNavigation({
   );
 }
 
-function AccountGate({
-  accountId,
-  onSignOut,
-  initialTab,
-  initialAccount,
-}: {
+type AccountGateProps = Readonly<{
   accountId: number;
   onSignOut: () => void;
   initialTab: HomeTab;
   initialAccount?: Account;
-}) {
+}>;
+
+function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: AccountGateProps) {
   const p = usePalette();
   const cache = useQueryClient();
   const query = useQuery({
@@ -180,12 +188,14 @@ function AccountGate({
     </SessionProvider>
   );
 }
-function PrivateHome(props: {
+type PrivateHomeProps = Readonly<{
   accountId: number;
   onSignOut: () => void;
   initialTab: HomeTab;
   initialAccount?: Account;
-}) {
+}>;
+
+function PrivateHome(props: PrivateHomeProps) {
   return (
     <PrivateQueryProvider>
       <StatusBar style="auto" />
@@ -195,17 +205,19 @@ function PrivateHome(props: {
 }
 
 /** Account changes discard every private query, form and navigation state. */
+type HomeScreenProps = Readonly<{
+  accountId: number;
+  onSignOut: () => void;
+  initialTab?: HomeTab;
+  initialAccount?: Account;
+}>;
+
 export function HomeScreen({
   accountId,
   onSignOut,
   initialTab = 'home',
   initialAccount,
-}: {
-  accountId: number;
-  onSignOut: () => void;
-  initialTab?: HomeTab;
-  initialAccount?: Account;
-}) {
+}: HomeScreenProps) {
   return (
     <PrivateHome
       key={accountId}

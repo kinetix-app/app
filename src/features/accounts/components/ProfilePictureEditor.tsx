@@ -8,19 +8,28 @@ import { ProfileAvatar } from './ProfileAvatar';
 
 export type ProfilePictureDraft =
   { kind: 'keep' } | { kind: 'remove' } | { kind: 'select'; asset: ImagePicker.ImagePickerAsset };
+type ProfilePictureEditorProps = Readonly<{
+  account: Account;
+  draft: ProfilePictureDraft;
+  onDraftChange: (draft: ProfilePictureDraft) => void;
+  onBusy: (busy: boolean) => void;
+  disabled?: boolean;
+}>;
+
+function getPictureStatus(draft: ProfilePictureDraft, account: Account) {
+  if (draft.kind === 'select') return 'Picture ready · saved when you confirm';
+  if (draft.kind === 'remove') return 'No picture · removal saved when you confirm';
+  if (account.profile.picture_url) return 'Current profile picture';
+  return 'No picture · optional';
+}
+
 export function ProfilePictureEditor({
   account,
   draft,
   onDraftChange,
   onBusy,
   disabled = false,
-}: {
-  account: Account;
-  draft: ProfilePictureDraft;
-  onDraftChange: (draft: ProfilePictureDraft) => void;
-  onBusy: (busy: boolean) => void;
-  disabled?: boolean;
-}) {
+}: ProfilePictureEditorProps) {
   const p = usePalette();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -133,13 +142,7 @@ export function ProfilePictureEditor({
           accessibilityLiveRegion="polite"
           style={[textStyles.label, { color: p['ink-muted'] }]}
         >
-          {selection
-            ? 'Picture ready · saved when you confirm'
-            : draft.kind === 'remove'
-              ? 'No picture · removal saved when you confirm'
-              : account.profile.picture_url
-                ? 'Current profile picture'
-                : 'No picture · optional'}
+          {getPictureStatus(draft, account)}
         </Text>
       )}
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>

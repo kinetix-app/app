@@ -10,19 +10,21 @@ import type { Account } from '../schemas';
 import { objectiveOptions } from './ObjectiveEditor';
 import { SetupButton, setupStyles as s } from './SetupUI';
 
+type ProfileOverviewProps = Readonly<{
+  account: Account;
+  onEditProfile: () => void;
+  onEditObjective: () => void;
+  onEditNutrition: () => void;
+  onSignOut: () => void;
+}>;
+
 export function ProfileOverview({
   account,
   onEditProfile,
   onEditObjective,
   onEditNutrition,
   onSignOut,
-}: {
-  account: Account;
-  onEditProfile: () => void;
-  onEditObjective: () => void;
-  onEditNutrition: () => void;
-  onSignOut: () => void;
-}) {
+}: ProfileOverviewProps) {
   const p = usePalette();
   const objective = useQuery({
     queryKey: ['accounts', account.id, 'objective'],

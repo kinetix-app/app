@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 const decimal = (max: number, places: number) =>
   z
     .string()
-    .regex(new RegExp(`^\\d+(?:\\.\\d{1,${places}})?$`))
+    .regex(new RegExp(String.raw`^\d+(?:\.\d{1,${places}})?$`))
     .refine((value) => Number(value) > 0 && Number(value) <= max);
 export const measurementSystemSchema = z.enum(['metric', 'imperial']);
 export const profilePicturePath = '/api/v1/me/profile/picture';
