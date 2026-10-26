@@ -42,7 +42,9 @@ export function ProfileOverview({
             {account.profile.display_name}
           </Text>
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            Weight unit: {account.profile.weight_unit} · Height: cm
+            {account.profile.measurement_system === 'imperial'
+              ? 'Imperial · lb, ft and in'
+              : 'Metric · kg and cm'}
           </Text>
           <SetupButton title="Edit profile" secondary onPress={onEditProfile} />
         </View>

@@ -5,7 +5,7 @@ const decimal = (max: number, places: number) =>
     .string()
     .regex(new RegExp(`^\\d+(?:\\.\\d{1,${places}})?$`))
     .refine((value) => Number(value) > 0 && Number(value) <= max);
-export const weightUnitSchema = z.enum(['kg', 'lb']);
+export const measurementSystemSchema = z.enum(['metric', 'imperial']);
 export const profilePicturePath = '/api/v1/me/profile/picture';
 export const pictureUrlSchema = z.union([
   z.literal(profilePicturePath),
@@ -35,7 +35,7 @@ export const accountSchema = z.object({
     age: z.number().int().min(1).max(120).nullable(),
     height_cm: decimal(300, 2).nullable(),
     weight_kg: decimal(1000, 6).nullable(),
-    weight_unit: weightUnitSchema.nullable(),
+    measurement_system: measurementSystemSchema.nullable(),
     picture_url: pictureUrlSchema.nullable(),
     updated_at: z.iso.datetime({ offset: true }),
   }),
@@ -48,7 +48,7 @@ export const profilePatchSchema = z
     age: z.number().int().min(1).max(120).nullable().optional(),
     height_cm: decimal(300, 2).nullable().optional(),
     weight_kg: decimal(1000, 6).nullable().optional(),
-    weight_unit: weightUnitSchema.nullable().optional(),
+    measurement_system: measurementSystemSchema.nullable().optional(),
     picture_url: pictureUrlSchema.nullable().optional(),
   })
   .strict();

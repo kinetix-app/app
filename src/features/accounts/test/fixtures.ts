@@ -10,7 +10,7 @@ export const completeAccount: Account = {
     age: 25,
     height_cm: '170.00',
     weight_kg: '70.000000',
-    weight_unit: 'kg',
+    measurement_system: 'metric',
     picture_url: null,
     updated_at: '2026-10-14T12:00:00Z',
   },
@@ -24,6 +24,6 @@ export const incompleteAccount: Account = {
     age: null,
     height_cm: null,
     weight_kg: null,
-    weight_unit: null,
+    measurement_system: null,
   },
 };

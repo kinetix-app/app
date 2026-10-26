@@ -42,16 +42,17 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await page.getByLabel('Name', { exact: true }).fill('Acceptance Alice');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByLabel('Age (years)', { exact: true }).fill('30');
-  await page.getByLabel('Height (cm)', { exact: true }).fill('170');
-  await page.getByLabel('Weight', { exact: true }).fill('100');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByText('Choose kg or lb.')).toBeVisible();
-  await page.getByRole('radio', { name: 'lb', exact: true }).click();
+  await expect(page.getByText('Choose Metric or Imperial.')).toBeVisible();
+  await page.getByRole('radio', { name: 'Imperial', exact: true }).click();
+  await page.getByLabel('Height (feet)', { exact: true }).fill('5');
+  await page.getByLabel('Height (inches)', { exact: true }).fill('7.25');
+  await page.getByLabel('Weight', { exact: true }).fill('100');
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Acceptance Alice');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByLabel('Age (years)', { exact: true })).toHaveValue('30');
-  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100');
+  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100.00');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByText('Confirmation', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
@@ -72,6 +73,8 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   const saved = await (await get('/auth/me')).json();
   expect(saved.id).toBe(initial.id);
   expect(saved.profile.weight_kg).toBe('45.359237');
+  expect(saved.profile.height_cm).toBe('170.82');
+  expect(saved.profile.measurement_system).toBe('imperial');
   expect(saved.profile.picture_url).toBeNull();
   expect(saved.onboarding.required).toBe(false);
   expect((await get('/nutrition-goals/me')).status).toBe(404);
@@ -132,7 +135,32 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100.000000');
+  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100.00');
+  await expect(page.getByLabel('Height (feet)', { exact: true })).toHaveValue('5');
+  await expect(page.getByLabel('Height (inches)', { exact: true })).toHaveValue('7.25');
+  await page.screenshot({ path: '.codex/artifacts/previews/profile-imperial.png' });
+  await page.getByRole('radio', { name: 'Metric', exact: true }).click();
+  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('45.36');
+  await expect(page.getByLabel('Height (cm)', { exact: true })).toHaveValue('170.82');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.screenshot({ path: '.codex/artifacts/previews/profile-metric-dark.png' });
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByText('45.36 kg', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  const converted = await (await get('/auth/me')).json();
+  expect(converted.profile).toMatchObject({
+    height_cm: '170.82',
+    weight_kg: '45.359237',
+    measurement_system: 'metric',
+  });
+  await page.reload();
+  await signIn(page);
+  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('45.36');
+  await expect(page.getByLabel('Height (cm)', { exact: true })).toHaveValue('170.82');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.screenshot({ path: '.codex/artifacts/previews/onboarding-home-dark.png' });

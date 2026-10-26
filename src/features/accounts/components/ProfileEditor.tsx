@@ -17,7 +17,10 @@ import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { removeProfilePicture, uploadProfilePicture, updateProfile } from '../api';
 import type { Account } from '../schemas';
 import {
-  canonicalWeight,
+  savedWeight,
+  savedHeight,
+  displayHeight,
+  displayWeight,
   profileDefaults,
   profileFormSchema,
   type ProfileFormValues,
@@ -30,6 +33,8 @@ const fields = [
   ['display_name', 'Name'],
   ['age', 'Age (years)'],
   ['height_cm', 'Height (cm)'],
+  ['height_ft', 'Height (feet)'],
+  ['height_in', 'Height (inches)'],
   ['weight', 'Weight'],
 ] as const;
 export function ProfileEditor({
@@ -52,7 +57,7 @@ export function ProfileEditor({
     setValue,
     formState: { errors },
   } = useForm<ProfileFormValues>({ defaultValues: defaults });
-  const unit = useWatch({ control, name: 'weight_unit' });
+  const unit = useWatch({ control, name: 'measurement_system' });
   const [pending, setPending] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoDraft, setPhotoDraft] = useState<ProfilePictureDraft>({ kind: 'keep' });
@@ -62,7 +67,9 @@ export function ProfileEditor({
   const steps = ['About you', 'Personal information', 'Confirmation'];
   const disabled = pending || photoBusy;
   const currentFields =
-    step === 0 ? ['display_name'] : ['age', 'weight_unit', 'weight', 'height_cm'];
+    step === 0
+      ? ['display_name']
+      : ['age', 'measurement_system', 'weight', 'height_cm', 'height_ft', 'height_in'];
   function advance() {
     clearErrors();
     const parsed = profileFormSchema.safeParse(getValues());
@@ -88,7 +95,7 @@ export function ProfileEditor({
         return;
       }
       const value = parsed.data;
-      if (!value.weight_unit) return;
+      if (!value.measurement_system) return;
       busy.current = true;
       setPending(true);
       setFailure('');
@@ -112,12 +119,9 @@ export function ProfileEditor({
         const result = await updateProfile(apiClient, {
           display_name: value.display_name,
           age: Number(value.age),
-          height_cm: value.height_cm,
-          weight_kg:
-            value.weight === defaults.weight && value.weight_unit === defaults.weight_unit
-              ? account.profile.weight_kg
-              : canonicalWeight(value.weight, value.weight_unit),
-          weight_unit: value.weight_unit,
+          height_cm: savedHeight(value, value.measurement_system, account.profile.height_cm),
+          weight_kg: savedWeight(value.weight, value.measurement_system, account.profile.weight_kg),
+          measurement_system: value.measurement_system,
         });
         onSaved(result);
       } catch {
@@ -189,7 +193,7 @@ export function ProfileEditor({
               {
                 [
                   'Start with your name and an optional profile picture.',
-                  'Add your age, choose your weight unit and enter your measurements.',
+                  'Add your age, choose your measurement system and enter your measurements.',
                   'Take a moment to check your details before saving.',
                 ][step]
               }
@@ -207,21 +211,21 @@ export function ProfileEditor({
             </View>
             {step === 1 ? (
               <>
-                <Text style={[textStyles.label, { color: p.ink }]}>Weight unit</Text>
+                <Text style={[textStyles.label, { color: p.ink }]}>Measurement system</Text>
                 <Controller
                   control={control}
-                  name="weight_unit"
+                  name="measurement_system"
                   render={({ field: { value, onChange } }) => (
                     <View
                       accessibilityRole="radiogroup"
-                      accessibilityLabel="Weight unit"
+                      accessibilityLabel="Measurement system"
                       style={{ flexDirection: 'row', gap: 12 }}
                     >
-                      {(['kg', 'lb'] as const).map((unit) => (
+                      {(['metric', 'imperial'] as const).map((unit) => (
                         <Pressable
                           key={unit}
                           accessibilityRole="radio"
-                          accessibilityLabel={unit}
+                          accessibilityLabel={unit === 'metric' ? 'Metric' : 'Imperial'}
                           accessibilityState={{
                             selected: value === unit,
                             checked: value === unit,
@@ -229,13 +233,31 @@ export function ProfileEditor({
                           }}
                           disabled={disabled}
                           onPress={() => {
-                            const weight = getValues('weight');
-                            if (value && value !== unit && /^\d+(?:\.\d{1,6})?$/.test(weight)) {
-                              const kg = canonicalWeight(weight, value);
-                              setValue(
-                                'weight',
-                                unit === 'kg' ? kg : (Number(kg) / 0.45359237).toFixed(6),
-                              );
+                            if (!value && account.profile.weight_kg !== null)
+                              setValue('weight', displayWeight(account.profile.weight_kg, unit));
+                            if (value && value !== unit) {
+                              const values = getValues();
+                              if (/^\d+(?:\.\d{1,2})?$/.test(values.weight))
+                                setValue(
+                                  'weight',
+                                  displayWeight(
+                                    savedWeight(values.weight, value, account.profile.weight_kg),
+                                    unit,
+                                  ),
+                                );
+                              const heightValid =
+                                value === 'metric'
+                                  ? /^\d+(?:\.\d{1,2})?$/.test(values.height_cm)
+                                  : /^\d+$/.test(values.height_ft) &&
+                                    /^\d+(?:\.\d{1,2})?$/.test(values.height_in);
+                              if (heightValid) {
+                                const height = displayHeight(
+                                  savedHeight(values, value, account.profile.height_cm),
+                                );
+                                setValue('height_cm', height.height_cm);
+                                setValue('height_ft', height.height_ft);
+                                setValue('height_in', height.height_in);
+                              }
                             }
                             onChange(unit);
                           }}
@@ -249,7 +271,7 @@ export function ProfileEditor({
                           ]}
                         >
                           <Text style={{ color: value === unit ? p['brand-ink'] : p.ink }}>
-                            {unit}
+                            {unit === 'metric' ? 'Metric' : 'Imperial'}
                             {value === unit ? ' ✓' : ''}
                           </Text>
                         </Pressable>
@@ -257,24 +279,36 @@ export function ProfileEditor({
                     </View>
                   )}
                 />
-                {errors.weight_unit ? (
+                {errors.measurement_system ? (
                   <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                    {errors.weight_unit.message}
+                    {errors.measurement_system.message}
                   </Text>
                 ) : null}
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  Switching units converts the entered weight. Height is in centimetres.
+                  Metric uses kg and cm. Imperial uses lb, feet and inches. Switching converts your
+                  measurements.
                 </Text>
               </>
             ) : null}
             {fields
               .filter(([name]) =>
-                step === 0 ? name === 'display_name' : step === 1 ? name !== 'display_name' : false,
+                step === 0
+                  ? name === 'display_name'
+                  : step === 1
+                    ? name === 'age' ||
+                      (unit !== null &&
+                        name !== 'display_name' &&
+                        (unit === 'metric'
+                          ? name !== 'height_ft' && name !== 'height_in'
+                          : name !== 'height_cm'))
+                    : false,
               )
               .map(([name, label]) => (
                 <View key={name} style={{ gap: 8 }}>
                   <Text style={[textStyles.label, { color: p.ink }]}>
-                    {name === 'weight' && unit ? `Weight (${unit})` : label}
+                    {name === 'weight' && unit
+                      ? `Weight (${unit === 'metric' ? 'kg' : 'lb'})`
+                      : label}
                   </Text>
                   <Controller
                     control={control}
@@ -284,7 +318,16 @@ export function ProfileEditor({
                         accessibilityLabel={label}
                         value={value}
                         onChangeText={onChange}
-                        onBlur={onBlur}
+                        onBlur={() => {
+                          if (
+                            name !== 'display_name' &&
+                            name !== 'age' &&
+                            name !== 'height_ft' &&
+                            /^\d+(?:\.\d{1,2})?$/.test(value)
+                          )
+                            onChange(Number(value).toFixed(2));
+                          onBlur();
+                        }}
                         editable={!disabled}
                         autoCapitalize={name === 'display_name' ? 'words' : 'none'}
                         autoCorrect={false}
@@ -321,8 +364,17 @@ export function ProfileEditor({
                 {[
                   ['Name', getValues('display_name')],
                   ['Age', `${getValues('age')} years`],
-                  ['Height', `${getValues('height_cm')} cm`],
-                  ['Weight', `${getValues('weight')} ${unit}`],
+                  ['System', unit === 'metric' ? 'Metric' : 'Imperial'],
+                  [
+                    'Height',
+                    unit === 'imperial'
+                      ? `${getValues('height_ft')} ft ${Number(getValues('height_in')).toFixed(2)} in`
+                      : `${Number(getValues('height_cm')).toFixed(2)} cm`,
+                  ],
+                  [
+                    'Weight',
+                    `${Number(getValues('weight')).toFixed(2)} ${unit === 'imperial' ? 'lb' : 'kg'}`,
+                  ],
                 ].map(([label, value]) => (
                   <View key={label} style={wizard.reviewRow}>
                     <Text style={[textStyles.body, { color: p['ink-muted'] }]}>{label}</Text>
