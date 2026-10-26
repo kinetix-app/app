@@ -9,7 +9,7 @@ async function signIn(page: Page) {
   await page.goto('/');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
-  const account = page.waitForResponse((response) => response.url().endsWith('/api/v1/me'));
+  const account = page.waitForResponse((response) => response.url().endsWith('/api/v1/auth/me'));
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await account).status()).toBe(200);
 }
@@ -30,9 +30,13 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
     'aria-selected',
     'true',
   );
+  await page.getByRole('button', { name: 'Edit nutrition goal', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Nutrition goal', exact: true })).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Main navigation' })).toHaveCount(1);
   await page.getByLabel('Daily calorie goal').fill('2400');
+  await page.getByLabel('Daily protein goal').fill('150');
+  await page.getByLabel('Daily carbohydrate goal').fill('250');
+  await page.getByLabel('Daily fat goal').fill('80');
   await page.route(/\/api\/v1\/nutrition-goals(?:\/me)?$/, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save goal', exact: true }).click();
   await expect(page.getByText('Could not save your goal. Try again.')).toBeVisible();
@@ -97,6 +101,7 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   await page.getByRole('button', { name: `View workout ${completed.id}`, exact: true }).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit nutrition goal', exact: true }).click();
   await expect(page.getByLabel('Daily calorie goal')).toHaveValue('2400');
   await page.getByRole('tab', { name: 'Nutrition', exact: true }).click();
   await page.getByRole('button', { name: 'Edit nutrition goal', exact: true }).click();

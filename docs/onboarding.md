@@ -1,0 +1,19 @@
+# Profile, objective and optional nutrition setup
+
+Authenticated Basic and Clerk access reads `GET /api/v1/auth/me`. The backend returns `onboarding.profile_complete`, `objective_selected` and `required`; `GET /api/v1/me` remains compatible. Returning accounts with incomplete profiles or no objective enter setup again. Client routing never substitutes for backend ownership checks.
+
+Complete three guided steps: name and optional photo, personal information (age and measurements), then confirmation. Back preserves your entries; each step validates its own inputs. The photo uses pencil and delete controls; selections and removals stay local until the final confirmation, with no separate photo-save action. Profile pictures are selected from your image library and uploaded as multipart files to private Azure Blob Storage. No pasted image URL is required. The profile requires an explicit Metric or Imperial choice. Metric displays kg and cm; Imperial displays lb, feet and inches. Measurements display two decimal places (feet and age are whole numbers). Switching systems converts the current entries. Height is always stored in cm with two decimal places and weight in canonical kg with six decimal places; conversions use exactly 2.54 cm per inch and 0.45359237 kg per lb. Reopening or switching without editing preserves stored precision. No system is silently selected. The four distinct objectives are Build muscle, Lose fat, Gain weight and Maintain weight. Profile and objective remain editable from Home.
+
+Saving the profile and objective completes onboarding. Nutrition setup is optional and available from Home or Nutrition. Enter kcal/day and protein, carbohydrate and fat grams/day, with up to two decimal places. There are no preselected calorie amounts or macro percentages. Saved grams reopen exactly, including zero macros. Targets are manual user choices rather than calculated suggestions. Each explicit save records its objective context; later objective changes retain the amounts and show their prior association until reviewed and saved again.
+
+A missing target shows an absent amount (`—`) and permits food logging and daily totals. Only the target API's 404 means absence; network/server failures remain retryable errors. Meals, body measurements, chosen targets and suggestions are separate data.
+
+Physical targets, milestones and weekly-session targets are not implemented by this flow. Scientific suggestions are tracked in [the high-priority Sprint 2 follow-up](https://github.com/kinetix-app/app/issues/74), under [Kinetix-010](https://github.com/kinetix-app/app/issues/13). Formula choice and additional-input requirements await that decision; no extra sensitive fields are inferred.
+
+## Profile photo storage and device setup
+
+Profile photos are optional. JPEG, PNG and WebP uploads are limited to 5 MiB; the backend validates actual image contents and strips metadata while normalizing the stored image to JPEG. Selection does not contact storage; the final confirmation sends the staged photo change. Upload failure preserves the previous saved photo and offers retry; removing a photo does not clear the other profile fields.
+
+The app sends multipart field `file` to `POST /api/v1/me/profile/picture` using its shared authenticated client. `GET` at the same path reads the signed-in account's private image; `DELETE` removes it. The app fetches the protected image with its authorization header and uses an in-memory preview, rather than putting session credentials in image URLs. Existing HTTPS image references remain compatible.
+
+Install locked dependencies and rebuild native development clients after adding `expo-image-picker`. The picker uses the image library; camera capture is outside this increment. Browser verification does not establish native picker permissions or gallery behavior.

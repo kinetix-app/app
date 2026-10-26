@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { nutritionApi } from '../api';
 import type { Food, Recipe } from '../schemas';
@@ -118,22 +119,13 @@ export function AddFoodScreen({
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>New food</Text>
             </Pressable>
             <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
-            <View
-              style={[
-                styles.inputRow,
-                { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-              ]}
-            >
-              <Feather name="search" size={20} color={p['ink-muted']} />
-              <TextInput
-                accessibilityLabel="Search food"
-                value={search}
-                onChangeText={setSearch}
-                placeholder="Chicken, rice, yogurt…"
-                placeholderTextColor={p['ink-muted']}
-                style={[styles.input, { color: p.ink }]}
-              />
-            </View>
+            <TextField
+              accessibilityLabel="Search food"
+              leading={<Feather name="search" size={20} color={p['ink-muted']} />}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Chicken, rice, yogurt…"
+            />
           </>
         ) : null}
         {tab === 'Recipe' ? (
@@ -275,21 +267,13 @@ export function AddFoodScreen({
               </View>
             ) : null}
             <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
-            <View
-              style={[
-                styles.inputRow,
-                { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-              ]}
-            >
-              <TextInput
-                accessibilityLabel="Food amount"
-                keyboardType="decimal-pad"
-                value={amount}
-                onChangeText={setAmount}
-                style={[styles.input, { color: p.ink }]}
-              />
-              <Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>
-            </View>
+            <TextField
+              accessibilityLabel="Food amount"
+              keyboardType="decimal-pad"
+              value={amount}
+              onChangeText={setAmount}
+              trailing={<Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>}
+            />
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
               Total:{' '}
               {selected && Number(amount)
@@ -494,20 +478,12 @@ function RecipePicker({
         </View>
       </Modal>
       <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
-      <View
-        style={[
-          styles.inputRow,
-          { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-        ]}
-      >
-        <TextInput
-          accessibilityLabel="Recipe servings to add"
-          keyboardType="decimal-pad"
-          value={servings}
-          onChangeText={setServings}
-          style={[styles.input, { color: p.ink }]}
-        />
-      </View>
+      <TextField
+        accessibilityLabel="Recipe servings to add"
+        keyboardType="decimal-pad"
+        value={servings}
+        onChangeText={setServings}
+      />
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: !selected || !validServings || save.isPending }}
@@ -565,39 +541,28 @@ function FoodEditor({ onCreated }: { onCreated: () => void }) {
     <View style={styles.recipeForm}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>New food</Text>
       <Text style={[textStyles.label, { color: p.ink }]}>Name</Text>
-      <TextInput
+      <TextField
         accessibilityLabel="Food name"
         value={name}
         onChangeText={setName}
         placeholder="Greek yogurt"
-        placeholderTextColor={p['ink-muted']}
-        style={[
-          styles.textInput,
-          { backgroundColor: p['surface-300'], borderColor: p['line-strong'], color: p.ink },
-        ]}
       />
       {(['calories', 'protein', 'carbohydrates', 'fats'] as const).map((field) => (
         <View key={field} style={styles.foodField}>
           <Text style={[textStyles.label, { color: p.ink }]}>
             {field === 'calories' ? 'Calories' : `${field[0].toUpperCase()}${field.slice(1)}`}
           </Text>
-          <View
-            style={[
-              styles.inputRow,
-              { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-            ]}
-          >
-            <TextInput
-              accessibilityLabel={field}
-              keyboardType="decimal-pad"
-              value={values[field]}
-              onChangeText={(value) => setValues((current) => ({ ...current, [field]: value }))}
-              style={[styles.input, { color: p.ink }]}
-            />
-            <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
-              {field === 'calories' ? 'kcal' : 'g'}
-            </Text>
-          </View>
+          <TextField
+            accessibilityLabel={field}
+            keyboardType="decimal-pad"
+            value={values[field]}
+            onChangeText={(value) => setValues((current) => ({ ...current, [field]: value }))}
+            trailing={
+              <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
+                {field === 'calories' ? 'kcal' : 'g'}
+              </Text>
+            }
+          />
         </View>
       ))}
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
@@ -658,45 +623,27 @@ function RecipeEditor({ onCreated }: { onCreated: () => void }) {
     <View style={styles.recipeForm}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>Create recipe</Text>
       <Text style={[textStyles.label, { color: p.ink }]}>Recipe name</Text>
-      <TextInput
+      <TextField
         accessibilityLabel="Recipe name"
         value={name}
         onChangeText={setName}
         placeholder="Chicken rice bowl"
-        placeholderTextColor={p['ink-muted']}
-        style={[
-          styles.textInput,
-          { backgroundColor: p['surface-300'], borderColor: p['line-strong'], color: p.ink },
-        ]}
       />
       <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
-      <TextInput
+      <TextField
         accessibilityLabel="Recipe servings"
         keyboardType="number-pad"
         value={servings}
         onChangeText={setServings}
-        style={[
-          styles.textInput,
-          { backgroundColor: p['surface-300'], borderColor: p['line-strong'], color: p.ink },
-        ]}
       />
       <Text style={[textStyles.label, { color: p.ink }]}>Add ingredients</Text>
-      <View
-        style={[
-          styles.inputRow,
-          { backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-        ]}
-      >
-        <Feather name="search" size={20} color={p['ink-muted']} />
-        <TextInput
-          accessibilityLabel="Search ingredient"
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search foods…"
-          placeholderTextColor={p['ink-muted']}
-          style={[styles.input, { color: p.ink }]}
-        />
-      </View>
+      <TextField
+        accessibilityLabel="Search ingredient"
+        leading={<Feather name="search" size={20} color={p['ink-muted']} />}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search foods…"
+      />
       {results.data?.map((food) => (
         <Pressable
           key={food.id}
@@ -718,7 +665,7 @@ function RecipeEditor({ onCreated }: { onCreated: () => void }) {
           style={[styles.ingredientRow, { backgroundColor: p['surface-200'] }]}
         >
           <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
-          <TextInput
+          <TextField
             accessibilityLabel={`${food.name} quantity`}
             keyboardType="decimal-pad"
             value={grams}
@@ -729,9 +676,10 @@ function RecipeEditor({ onCreated }: { onCreated: () => void }) {
                 ),
               )
             }
-            style={[styles.gramsInput, { color: p.ink, borderColor: p['line-strong'] }]}
+            containerStyle={{ width: 88 }}
+            inputStyle={{ textAlign: 'right' }}
+            trailing={<Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>g</Text>}
           />
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>g</Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Remove ${food.name}`}
@@ -776,16 +724,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  inputRow: {
-    minHeight: sizes['control-height'],
-    borderWidth: 1,
-    borderRadius: radii['radius-md'],
-    paddingHorizontal: spacing['space-3'],
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing['space-2'],
-  },
-  input: { flex: 1, ...textStyles.body },
   chips: { flexDirection: 'row', gap: spacing['space-2'] },
   chip: {
     minHeight: sizes['control-height-sm'],
@@ -803,13 +741,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing['space-2'],
-  },
-  textInput: {
-    minHeight: sizes['control-height'],
-    borderWidth: 1,
-    borderRadius: radii['radius-md'],
-    paddingHorizontal: spacing['space-3'],
-    ...textStyles.body,
   },
   ingredientSearchRow: {
     minHeight: sizes['control-height-sm'],
@@ -873,7 +804,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing['space-3'],
   },
-  gramsInput: { width: 52, borderBottomWidth: 1, textAlign: 'right', ...textStyles.body },
   results: { borderRadius: radii['radius-lg'], paddingHorizontal: spacing['space-4'] },
   emptyRecipes: {
     minHeight: 128,

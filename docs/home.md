@@ -1,9 +1,11 @@
 # Authenticated home and feature organization
 
 After either development Basic sign-in or Clerk account connection, `HomeScreen`
-owns the authenticated shell. The default Home tab opens nutrition-goal setup using
-the existing goal editor. Saving the editor opens the Nutrition diary. Nutrition-goal setup has no back arrow; use the bottom bar to navigate.
-The diary's Edit nutrition goal action returns to Home.
+owns the authenticated shell. The server-derived setup gate first requires a complete
+profile and selected objective. The default Home tab then shows profile and objective
+information with editing actions. Numerical nutrition targets are optional; the goal
+editor offers Set up later and saving opens the Nutrition diary. The diary's Edit
+nutrition goal action opens the editor within Home. See [onboarding](onboarding.md).
 
 The shared bottom bar uses the former nutrition bar's design and now has accessible,
 working controls. Workout opens routines, the shared routine/session editor and

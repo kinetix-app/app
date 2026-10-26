@@ -1,3 +1,4 @@
+import { completeAccount } from '@/features/accounts/test/fixtures';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -56,12 +57,7 @@ jest.mock('@/features/home', () => ({
 jest.mock('@/services/authService', () => ({
   authService: { clear: jest.fn(), setTokenProvider: jest.fn() },
 }));
-const account: Account = {
-  id: 1,
-  status: 'active' as const,
-  created_at: '2026-10-14T12:00:00Z',
-  profile: { display_name: 'Alice', timezone: null, updated_at: '2026-10-14T12:00:00Z' },
-};
+const account: Account = completeAccount;
 
 beforeEach(() => {
   jest.clearAllMocks();

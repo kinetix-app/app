@@ -139,11 +139,4 @@ export const ui = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
   gap: { gap: spacing['space-3'] },
   card: { borderRadius: radii['radius-lg'], padding: spacing['space-4'], gap: spacing['space-3'] },
-  field: {
-    borderWidth: 1,
-    borderRadius: radii['radius-md'],
-    minHeight: sizes['control-height'],
-    padding: spacing['space-3'],
-    ...textStyles.body,
-  },
 });
