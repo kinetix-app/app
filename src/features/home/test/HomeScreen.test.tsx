@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { HomeScreen } from '../components/HomeScreen';
 import { nutritionApi } from '@/features/nutrition/api';
 import { trainingApi } from '@/features/training/api';
+import { exampleExercise } from '@/features/training/test/fixtures';
 
 jest.mock(
   '@react-native-async-storage/async-storage',
@@ -15,15 +16,37 @@ jest.mock(
   }),
   { virtual: true },
 );
+jest.mock('expo-camera', () => ({
+  CameraView: jest.requireActual('react-native').View,
+  useCameraPermissions: () => [{ granted: false, canAskAgain: true }, jest.fn()],
+}));
 jest.mock('expo-crypto', () => ({ randomUUID: () => '3e17c183-38a9-4b5c-b953-000000000001' }));
 jest.mock('expo-video', () => ({
   useVideoPlayer: jest.fn(),
   VideoView: jest.requireActual('react-native').View,
 }));
-jest.mock('react-native-draggable-flatlist', () => ({
-  __esModule: true,
-  default: jest.requireActual('react-native').FlatList,
-}));
+jest.mock('react-native-draggable-flatlist', () => {
+  const { FlatList } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: ({
+      renderItem,
+      ...props
+    }: import('react-native-draggable-flatlist').DraggableFlatListProps<unknown>) => (
+      <FlatList
+        {...props}
+        renderItem={({ item, index }: { item: unknown; index: number }) =>
+          renderItem({
+            item,
+            getIndex: () => index,
+            drag: jest.fn(),
+            isActive: false,
+          })
+        }
+      />
+    ),
+  };
+});
 jest.mock('expo-network', () => ({
   useNetworkState: () => ({ isConnected: true, isInternetReachable: true }),
 }));
@@ -46,7 +69,7 @@ jest.mock('@/features/nutrition/api', () => ({
   },
 }));
 jest.mock('@/features/training/api', () => ({
-  trainingApi: { draft: jest.fn(), routines: jest.fn(), saveDraft: jest.fn() },
+  trainingApi: { draft: jest.fn(), routines: jest.fn(), saveDraft: jest.fn(), exercise: jest.fn() },
 }));
 const goal = {
   objective: 'build_muscle' as const,
@@ -206,4 +229,29 @@ test('an older pending account read cannot overwrite a fresh incomplete sign-in 
   });
   expect(screen.getByText('Your profile')).toBeTruthy();
   expect(screen.queryByText('Your plan')).toBeNull();
+});
+
+test('completed onboarding keeps form checking available in a resumed workout', async () => {
+  jest.mocked(trainingApi.exercise).mockResolvedValue({ ...exampleExercise, name: 'Back squat' });
+  jest.mocked(trainingApi.draft).mockResolvedValue({
+    client_session_id: '3e17c183-38a9-4b5c-b953-000000000002',
+    state: 'draft',
+    routine_id: null,
+    name: 'Form practice',
+    started_at: '2026-10-25T10:00:00Z',
+    exercises: [
+      {
+        client_id: 'slot-1',
+        exercise_id: 1,
+        sets: [{ client_id: 'set-1', completed: false, reps: null, weight: null }],
+      },
+    ],
+  });
+  render(<HomeScreen accountId={1} initialAccount={completeAccount} onSignOut={jest.fn()} />);
+  await screen.findByText('Alice');
+  fireEvent.press(await screen.findByLabelText('Resume workout'));
+  fireEvent.press(await screen.findByLabelText('Edit sets for Back squat'));
+  fireEvent.press(await screen.findByText('Record set 1'));
+  expect(await screen.findByText('Allow camera')).toBeTruthy();
+  expect(screen.getByText('Check your form')).toBeTruthy();
 });

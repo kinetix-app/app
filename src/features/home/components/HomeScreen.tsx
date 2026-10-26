@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
@@ -7,8 +7,24 @@ import { NutritionDiaryScreen, NutritionGoalEditor } from '@/features/nutrition'
 import { SessionHost, SessionProvider, TrainingWorkspace, useSession } from '@/features/training';
 import { getAccount, type Account } from '@/features/accounts/api';
 import { ProfileEditor, ObjectiveEditor, ProfileOverview, SetupButton } from '@/features/accounts';
+import { FormCheckProvider } from '@/features/formcheck';
 import { spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
+
+/** Keeps recordings only for sets that still exist in the ongoing workout. */
+function FormCheckHost({ accountId, children }: React.PropsWithChildren<{ accountId: number }>) {
+  const { draft, ready } = useSession();
+  const liveSetIds = useMemo(
+    () =>
+      ready ? new Set(draft?.exercises.flatMap((slot) => slot.sets.map((set) => set.id))) : null,
+    [draft, ready],
+  );
+  return (
+    <FormCheckProvider accountId={accountId} liveSetIds={liveSetIds}>
+      {children}
+    </FormCheckProvider>
+  );
+}
 
 type HomeNavigationProps = Readonly<{
   account: Account;
@@ -179,12 +195,14 @@ function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: Accou
     );
   return (
     <SessionProvider accountId={accountId} onSignOut={onSignOut}>
-      <HomeNavigation
-        account={account}
-        initialTab={initialTab}
-        onSignOut={onSignOut}
-        onAccount={saved}
-      />
+      <FormCheckHost accountId={accountId}>
+        <HomeNavigation
+          account={account}
+          initialTab={initialTab}
+          onSignOut={onSignOut}
+          onAccount={saved}
+        />
+      </FormCheckHost>
     </SessionProvider>
   );
 }

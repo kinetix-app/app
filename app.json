@@ -42,8 +42,17 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Kinetix to choose a profile picture from your photos.",
-          "cameraPermission": false,
+          "cameraPermission": "Kinetix uses the camera to record your sets so it can check your form. Videos stay on your phone.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Kinetix uses the camera to record your sets so it can check your form. Videos stay on your phone.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": false
         }
       ]
     ],
