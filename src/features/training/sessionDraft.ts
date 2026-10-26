@@ -24,7 +24,7 @@ const actualSetSchema = z.object({
 export const sessionDraftSchema = z.object({
   version: z.literal(1),
   accountId: entityId,
-  clientId: z.string().uuid(),
+  clientId: z.uuid(),
   startedAt: z.iso.datetime({ offset: true }),
   routineId: entityId.nullable(),
   name: z.string(),
@@ -101,7 +101,7 @@ export function freezeSession(
       sets: slot.sets
         .filter((set) => set.saved)
         .map((set) => ({
-          reps: /^\d+$/.test(set.reps) ? Number(set.reps) : NaN,
+          reps: /^\d+$/.test(set.reps) ? Number(set.reps) : Number.NaN,
           weight: { value: set.value, unit: set.unit },
         })),
     })),

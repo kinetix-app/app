@@ -40,16 +40,12 @@ type DraftExercise = {
 };
 type Draft = { name: string; exercises: DraftExercise[] };
 
-function SetSummary({ control, index }: { control: Control<Draft>; index: number }) {
+function SetSummary({ control, index }: Readonly<{ control: Control<Draft>; index: number }>) {
   const p = usePalette();
   const sets = useWatch({ control, name: `exercises.${index}.sets` }) ?? [];
   const range = (key: 'reps' | 'weight') => {
     const values = sets
-      .map((set) =>
-        set[key].trim()
-          ? Number(key === 'weight' ? displayWeight(set.weight, set.unit, 'kg') : set.reps)
-          : NaN,
-      )
+      .map((set) => (set[key].trim() ? Number(summaryValue(key, set)) : Number.NaN))
       .filter(Number.isFinite);
     if (!values.length) return '—';
     const low = Math.min(...values),
@@ -68,15 +64,20 @@ function SetSummary({ control, index }: { control: Control<Draft>; index: number
   );
 }
 
+function summaryValue(key: 'reps' | 'weight', set: DraftSet) {
+  if (key === 'weight') return displayWeight(set.weight, set.unit, 'kg');
+  return set.reps;
+}
+
 function Sets({
   control,
   index,
   disabled,
-}: {
+}: Readonly<{
   control: Control<Draft>;
   index: number;
   disabled: boolean;
-}) {
+}>) {
   const p = usePalette();
   const unit: WeightUnit = 'kg';
   const { fields, append, remove } = useFieldArray({ control, name: `exercises.${index}.sets` });
@@ -149,14 +150,14 @@ export function RoutineEditor({
   onStart,
   canStart = true,
   onClose,
-}: {
+}: Readonly<{
   accountId: number;
   routine?: Routine;
   onSaved: (value: Routine) => void;
   onStart?: (value: Routine) => void;
   canStart?: boolean;
   onClose: () => void;
-}) {
+}>) {
   const p = usePalette();
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
@@ -209,6 +210,7 @@ export function RoutineEditor({
   }
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!alive.current) return false;
       if (save.isPending) return true;
       if (isDirty) setDiscard(true);
       else onClose();
@@ -224,11 +226,7 @@ export function RoutineEditor({
         exercise_id: slot.exercise.id,
         sets: slot.sets.map((set) => ({
           reps: Number(set.reps),
-          ...(set.canonicalWeight !== undefined
-            ? { weight_kg: set.canonicalWeight }
-            : set.unit === 'kg'
-              ? { weight_kg: set.weight }
-              : { weight: { value: set.weight, unit: set.unit } }),
+          ...setWeightInput(set),
         })),
       })),
     });
@@ -459,4 +457,10 @@ export function RoutineEditor({
       </Modal>
     </SafeAreaView>
   );
+}
+
+function setWeightInput(set: DraftSet) {
+  if (set.canonicalWeight !== undefined) return { weight_kg: set.canonicalWeight };
+  if (set.unit === 'kg') return { weight_kg: set.weight };
+  return { weight: { value: set.weight, unit: set.unit } };
 }

@@ -22,13 +22,13 @@ export function RecordScreen({
   setNumber,
   onCancel,
   onFinish,
-}: {
+}: Readonly<{
   profile: FormCheckProfile;
   exerciseName: string;
   setNumber: number;
   onCancel: () => void;
   onFinish: (recording: Recording) => void;
-}) {
+}>) {
   const p = usePalette();
   const camera = useRef<CameraView>(null);
   const capture = useRef<Promise<{ uri: string } | undefined> | null>(null);

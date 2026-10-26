@@ -34,7 +34,7 @@ export function ResultScreen({
   onWatchVideo,
   onRecordAgain,
   onDone,
-}: {
+}: Readonly<{
   view: Assessed;
   exerciseName: string;
   setNumber: number;
@@ -43,7 +43,7 @@ export function ResultScreen({
   onWatchVideo: () => void;
   onRecordAgain: () => void;
   onDone: () => void;
-}) {
+}>) {
   const p = usePalette();
   return (
     <FormCheckScreen

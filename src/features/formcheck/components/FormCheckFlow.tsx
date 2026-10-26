@@ -24,13 +24,13 @@ export function FormCheckFlow({
   setId,
   setNumber,
   onClose,
-}: {
+}: Readonly<{
   exerciseName: string;
   profile: FormCheckProfile;
   setId: string;
   setNumber: number;
   onClose: () => void;
-}) {
+}>) {
   const { analyzer, entryFor, save } = useFormCheck();
   const entry = entryFor(setId);
   const [permission, requestPermission] = useCameraPermissions();
@@ -121,14 +121,10 @@ export function FormCheckFlow({
       <CannotAssessScreen {...shared} view={view} onLogByHand={onClose} />
     );
   }
-  const back =
-    step === 'result' || step === 'failed'
-      ? onClose
-      : step === 'video'
-        ? () => setStep('result')
-        : step === 'analyzing'
-          ? cancelAnalysis
-          : leaveRecording;
+  let back = leaveRecording;
+  if (step === 'result' || step === 'failed') back = onClose;
+  else if (step === 'video') back = () => setStep('result');
+  else if (step === 'analyzing') back = cancelAnalysis;
   return (
     <Modal visible animationType="slide" onRequestClose={back}>
       {content()}

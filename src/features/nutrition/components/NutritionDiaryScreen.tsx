@@ -47,11 +47,11 @@ export function NutritionDiaryScreen({
   accountId,
   onBack,
   onEditGoal,
-}: {
+}: Readonly<{
   accountId: number;
   onBack?: () => void;
   onEditGoal?: () => void;
-}) {
+}>) {
   const p = usePalette();
   const week = React.useMemo(() => currentWeek(), []);
   const [selectedDay, setSelectedDay] = React.useState(() => localDateId(new Date()));
@@ -277,7 +277,7 @@ export function NutritionDiaryScreen({
                         <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
                           {item.recipe_id
-                            ? `${item.servings} ${item.servings === 1 ? 'serving' : 'servings'}`
+                            ? servingLabel(item.servings)
                             : `${item.quantity_grams} g`}
                         </Text>
                       </View>
@@ -321,6 +321,11 @@ export function NutritionDiaryScreen({
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function servingLabel(servings: number | null | undefined) {
+  const unit = servings === 1 ? 'serving' : 'servings';
+  return `${servings} ${unit}`;
 }
 
 function formatNumber(value: number) {

@@ -24,7 +24,7 @@ export function ActionButton({
   disabled = false,
   accessibilityLabel,
   style,
-}: ActionButtonProps) {
+}: Readonly<ActionButtonProps>) {
   const primary = variant === 'primary';
   const iconElement = icon ? (
     <Ionicons name={icon} size={19} color={primary ? colors.onAccent : colors.textPrimary} />

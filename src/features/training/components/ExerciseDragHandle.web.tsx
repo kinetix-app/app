@@ -2,7 +2,7 @@ import React from 'react';
 import { usePalette } from '@/theme/tokens';
 import type { DragHandleProps } from './ExerciseDragHandle';
 
-export function ExerciseDragHandle({ id, label, disabled, onMove }: DragHandleProps) {
+export function ExerciseDragHandle({ id, label, disabled, onMove }: Readonly<DragHandleProps>) {
   const p = usePalette();
   return (
     <button

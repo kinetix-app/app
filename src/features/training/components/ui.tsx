@@ -10,13 +10,13 @@ export function IconButton({
   onPress,
   disabled = false,
   onOverlay = false,
-}: {
+}: Readonly<{
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
   disabled?: boolean;
   onOverlay?: boolean;
-}) {
+}>) {
   const p = usePalette();
   return (
     <Pressable
@@ -48,7 +48,7 @@ export function Button({
   accessibilityLabel,
   tone,
   icon,
-}: {
+}: Readonly<{
   title: string;
   onPress: () => void;
   disabled?: boolean;
@@ -56,24 +56,10 @@ export function Button({
   accessibilityLabel?: string;
   tone?: 'positive' | 'danger';
   icon?: React.ComponentProps<typeof Feather>['name'];
-}) {
+}>) {
   const p = usePalette();
-  const background =
-    tone === 'danger'
-      ? p['surface-300']
-      : tone === 'positive'
-        ? p['brand-soft']
-        : secondary
-          ? p['surface-300']
-          : p.brand;
-  const foreground =
-    tone === 'danger'
-      ? p.danger
-      : tone === 'positive'
-        ? p['brand-ink']
-        : secondary
-          ? p.ink
-          : p['on-brand'];
+  const background = buttonBackground(tone, secondary, p);
+  const foreground = buttonForeground(tone, secondary, p);
   return (
     <Pressable
       accessibilityRole="button"
@@ -101,16 +87,29 @@ export function Button({
     </Pressable>
   );
 }
-export function Failure({ error, retry }: { error: unknown; retry?: () => void }) {
+function buttonBackground(
+  tone: 'positive' | 'danger' | undefined,
+  secondary: boolean | undefined,
+  palette: ReturnType<typeof usePalette>,
+) {
+  if (tone === 'danger' || secondary) return palette['surface-300'];
+  if (tone === 'positive') return palette['brand-soft'];
+  return palette.brand;
+}
+
+function buttonForeground(
+  tone: 'positive' | 'danger' | undefined,
+  secondary: boolean | undefined,
+  palette: ReturnType<typeof usePalette>,
+) {
+  if (tone === 'danger') return palette.danger;
+  if (tone === 'positive') return palette['brand-ink'];
+  return secondary ? palette.ink : palette['on-brand'];
+}
+
+export function Failure({ error, retry }: Readonly<{ error: unknown; retry?: () => void }>) {
   const p = usePalette();
-  const text =
-    error instanceof ApiError && [401, 403].includes(error.status)
-      ? 'Your account cannot access this data. Sign out and sign in again.'
-      : error instanceof ApiError && error.status === 404
-        ? 'This routine or exercise is no longer available.'
-        : error instanceof ApiError && error.status === 422
-          ? 'Some fields or exercises are unavailable. Check your selection and try again.'
-          : 'Could not connect or read the response. Your changes are still here. Try again.';
+  const text = getFailureMessage(error);
   return (
     <View style={ui.gap}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -119,6 +118,17 @@ export function Failure({ error, retry }: { error: unknown; retry?: () => void }
       {retry ? <Button title="Retry" onPress={retry} secondary /> : null}
     </View>
   );
+}
+
+function getFailureMessage(error: unknown) {
+  if (!(error instanceof ApiError))
+    return 'Could not connect or read the response. Your changes are still here. Try again.';
+  if ([401, 403].includes(error.status))
+    return 'Your account cannot access this data. Sign out and sign in again.';
+  if (error.status === 404) return 'This routine or exercise is no longer available.';
+  if (error.status === 422)
+    return 'Some fields or exercises are unavailable. Check your selection and try again.';
+  return 'Could not connect or read the response. Your changes are still here. Try again.';
 }
 export function Loading() {
   const p = usePalette();

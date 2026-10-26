@@ -20,7 +20,7 @@ export function SetFields({
   onConfirm,
   saved = false,
   guidance,
-}: {
+}: Readonly<{
   set: ActualSet;
   unit: WeightUnit;
   label: string;
@@ -32,12 +32,10 @@ export function SetFields({
   guidance?: { reps: number | null; weightKg: string | null };
   onChange: (set: ActualSet) => void;
   onRemove: () => void;
-}) {
+}>) {
   const p = usePalette();
-  const weightValid = !set.value || validWeight(set.value, set.unit, decimals);
-  const validReps =
-    !set.reps ||
-    (/^\d+$/.test(set.reps) && Number(set.reps) >= 1 && Number(set.reps) <= 2147483647);
+  const weightValid = isValidWeight(set, decimals);
+  const validReps = isValidReps(set.reps);
   return (
     <View style={ui.gap}>
       <View
@@ -52,25 +50,13 @@ export function SetFields({
           },
         ]}
       >
-        {number ? (
-          <View style={{ width: onConfirm ? 44 : 20, alignItems: 'center' }}>
-            <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>{number}</Text>
-            {onConfirm ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={label.replace(
-                  /^Exercise (\d+) set (\d+)$/,
-                  'Remove set $2 from exercise $1',
-                )}
-                onPress={onRemove}
-                disabled={disabled}
-                style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Feather name="minus" size={16} color={p['ink-muted']} />
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
+        <SetPosition
+          number={number}
+          label={label}
+          disabled={disabled}
+          canRemove={Boolean(onConfirm)}
+          onRemove={onRemove}
+        />
         <View style={{ flex: 1 }}>
           <TextField
             accessibilityLabel={`${label} ${unit}`}
@@ -101,38 +87,13 @@ export function SetFields({
           />
           <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>reps</Text>
         </View>
-        {onConfirm ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${saved ? 'Unsave' : 'Save'} ${label.toLowerCase()}`}
-            accessibilityState={{ disabled, selected: saved }}
-            disabled={disabled}
-            onPress={onConfirm}
-            style={{
-              width: sizes['tap-min'],
-              height: sizes['tap-min'],
-              borderRadius: radii['radius-pill'],
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: saved ? p.brand : p['surface-300'],
-              borderWidth: 1,
-              borderColor: saved ? p.brand : p['line-strong'],
-            }}
-          >
-            <Feather name="check" size={24} color={saved ? p['on-brand'] : p['ink-muted']} />
-          </Pressable>
-        ) : (
-          <Button
-            title="−"
-            accessibilityLabel={label.replace(
-              /^Exercise (\d+) set (\d+)$/,
-              'Remove set $2 from exercise $1',
-            )}
-            secondary
-            disabled={disabled}
-            onPress={onRemove}
-          />
-        )}
+        <SetAction
+          onConfirm={onConfirm}
+          onRemove={onRemove}
+          disabled={disabled}
+          saved={saved}
+          label={label}
+        />
       </View>
       {!weightValid ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -145,5 +106,99 @@ export function SetFields({
         </Text>
       ) : null}
     </View>
+  );
+}
+
+function isValidWeight(set: ActualSet, decimals: number) {
+  return !set.value || validWeight(set.value, set.unit, decimals);
+}
+
+function isValidReps(reps: string) {
+  return !reps || (/^\d+$/.test(reps) && Number(reps) >= 1 && Number(reps) <= 2147483647);
+}
+
+function SetPosition({
+  number,
+  label,
+  disabled,
+  canRemove,
+  onRemove,
+}: Readonly<{
+  number?: number;
+  label: string;
+  disabled: boolean;
+  canRemove: boolean;
+  onRemove: () => void;
+}>) {
+  const p = usePalette();
+  if (!number) return null;
+  return (
+    <View style={{ width: canRemove ? 44 : 20, alignItems: 'center' }}>
+      <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>{number}</Text>
+      {canRemove ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={label.replace(
+            /^Exercise (\d+) set (\d+)$/,
+            'Remove set $2 from exercise $1',
+          )}
+          onPress={onRemove}
+          disabled={disabled}
+          style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Feather name="minus" size={16} color={p['ink-muted']} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function SetAction({
+  onConfirm,
+  onRemove,
+  disabled,
+  saved,
+  label,
+}: Readonly<{
+  onConfirm?: () => void;
+  onRemove: () => void;
+  disabled: boolean;
+  saved: boolean;
+  label: string;
+}>) {
+  const p = usePalette();
+  if (!onConfirm)
+    return (
+      <Button
+        title="−"
+        accessibilityLabel={label.replace(
+          /^Exercise (\d+) set (\d+)$/,
+          'Remove set $2 from exercise $1',
+        )}
+        secondary
+        disabled={disabled}
+        onPress={onRemove}
+      />
+    );
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${saved ? 'Unsave' : 'Save'} ${label.toLowerCase()}`}
+      accessibilityState={{ disabled, selected: saved }}
+      disabled={disabled}
+      onPress={onConfirm}
+      style={{
+        width: sizes['tap-min'],
+        height: sizes['tap-min'],
+        borderRadius: radii['radius-pill'],
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: saved ? p.brand : p['surface-300'],
+        borderWidth: 1,
+        borderColor: saved ? p.brand : p['line-strong'],
+      }}
+    >
+      <Feather name="check" size={24} color={saved ? p['on-brand'] : p['ink-muted']} />
+    </Pressable>
   );
 }

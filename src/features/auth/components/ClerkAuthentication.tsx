@@ -11,9 +11,9 @@ import { ClerkSignInScreen } from './ClerkSignInScreen';
 
 export default function ClerkAuthentication({
   initialTab = 'home',
-}: {
+}: Readonly<{
   initialTab?: 'home' | 'nutrition';
-}) {
+}>) {
   const publishableKey = getClerkPublishableKey();
   if (!publishableKey) {
     return (

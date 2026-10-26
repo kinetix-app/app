@@ -35,7 +35,7 @@ import { authStyles as styles } from './authStyles';
 WebBrowser.maybeCompleteAuthSession();
 
 /** Private state is mounted per Clerk session and discarded on expiry/account change. */
-function ConnectedAccount({ initialTab }: { initialTab: 'home' | 'nutrition' }) {
+function ConnectedAccount({ initialTab }: Readonly<{ initialTab: 'home' | 'nutrition' }>) {
   const { getToken } = useAuth();
   const { signOut } = useClerk();
   const [account, setAccount] = useState<Account | null>(null);
@@ -60,13 +60,7 @@ function ConnectedAccount({ initialTab }: { initialTab: 'home' | 'nutrition' }) 
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
-        setError(
-          cause instanceof ApiError && cause.status === 401
-            ? 'Your session was not accepted. Sign out and try again.'
-            : cause instanceof ApiError && cause.status === 403
-              ? 'Account access denied.'
-              : 'Unable to connect your account. Check your connection and try again.',
-        );
+        setError(getAccountError(cause));
       });
     return () => {
       controller.abort();
@@ -136,6 +130,13 @@ function ConnectedAccount({ initialTab }: { initialTab: 'home' | 'nutrition' }) 
       />
     </View>
   );
+}
+
+function getAccountError(cause: unknown) {
+  if (cause instanceof ApiError && cause.status === 401)
+    return 'Your session was not accepted. Sign out and try again.';
+  if (cause instanceof ApiError && cause.status === 403) return 'Account access denied.';
+  return 'Unable to connect your account. Check your connection and try again.';
 }
 
 function SignInForm() {
@@ -372,7 +373,9 @@ function SignInForm() {
   );
 }
 
-export function ClerkSignInScreen({ initialTab = 'home' }: { initialTab?: 'home' | 'nutrition' }) {
+export function ClerkSignInScreen({
+  initialTab = 'home',
+}: Readonly<{ initialTab?: 'home' | 'nutrition' }>) {
   const { isLoaded, isSignedIn, sessionId } = useAuth();
   if (isLoaded && isSignedIn) return <ConnectedAccount initialTab={initialTab} key={sessionId} />;
   return (

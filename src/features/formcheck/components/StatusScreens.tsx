@@ -4,7 +4,7 @@ import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import { FormCheckScreen } from './FormCheckScreen';
 
-export function AnalyzingScreen({ onCancel }: { onCancel: () => void }) {
+export function AnalyzingScreen({ onCancel }: Readonly<{ onCancel: () => void }>) {
   const p = usePalette();
   return (
     <FormCheckScreen
@@ -34,11 +34,11 @@ export function AnalysisFailedScreen({
   onRetry,
   onRecordAgain,
   onClose,
-}: {
+}: Readonly<{
   onRetry: () => void;
   onRecordAgain: () => void;
   onClose: () => void;
-}) {
+}>) {
   const p = usePalette();
   return (
     <FormCheckScreen

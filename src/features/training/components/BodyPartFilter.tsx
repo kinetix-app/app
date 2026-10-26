@@ -12,7 +12,7 @@ export function BodyPartFilter({
   retry,
   onApply,
   onClose,
-}: {
+}: Readonly<{
   selected: string[];
   options: string[];
   pending: boolean;
@@ -20,10 +20,10 @@ export function BodyPartFilter({
   retry: () => void;
   onApply: (parts: string[]) => void;
   onClose: () => void;
-}) {
+}>) {
   const p = usePalette();
   const [draft, setDraft] = useState(selected);
-  const available = [...new Set([...selected, ...options])].sort();
+  const available = [...new Set([...selected, ...options])].sort((a, b) => a.localeCompare(b));
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View
@@ -100,7 +100,7 @@ export function BodyPartFilter({
               <Button
                 title="Save"
                 accessibilityLabel="Save filters"
-                onPress={() => onApply([...draft].sort())}
+                onPress={() => onApply([...draft].sort((a, b) => a.localeCompare(b)))}
               />
             </View>
           </View>

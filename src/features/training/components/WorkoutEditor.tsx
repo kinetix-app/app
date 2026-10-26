@@ -10,12 +10,12 @@ export function WorkoutTimer({
   endedAt,
   compact = false,
   onOverlay = false,
-}: {
+}: Readonly<{
   startedAt: string;
   endedAt?: string;
   compact?: boolean;
   onOverlay?: boolean;
-}) {
+}>) {
   const p = usePalette();
   const foreground = onOverlay ? p['overlay-ink'] : p['brand-ink'];
   const [now, setNow] = useState(() => Date.now());
@@ -28,7 +28,7 @@ export function WorkoutTimer({
     Math.floor(((endedAt ? Date.parse(endedAt) : now) - Date.parse(startedAt)) / 1000),
   );
   const hours = Math.floor(seconds / 3600);
-  const time = `${hours ? `${hours}:` : ''}${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  const time = formatElapsedTime(hours, seconds);
   return (
     <View style={ui.row}>
       <Feather name="clock" size={18} color={foreground} />
@@ -43,6 +43,13 @@ export function WorkoutTimer({
       </Text>
     </View>
   );
+}
+
+function formatElapsedTime(hours: number, seconds: number) {
+  const hourPrefix = hours > 0 ? `${hours}:` : '';
+  const minutes = String(Math.floor(seconds / 60) % 60).padStart(2, '0');
+  const remainder = String(seconds % 60).padStart(2, '0');
+  return `${hourPrefix}${minutes}:${remainder}`;
 }
 
 /** Shared inline exercise editor. Name toggles sets; image opens catalogue information. */

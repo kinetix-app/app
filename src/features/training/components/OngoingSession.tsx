@@ -57,6 +57,35 @@ export function OngoingSession() {
       exercises: value.exercises.map((slot) => (slot.id === id ? edit(slot) : slot)),
     }));
   }
+  function updateSet(
+    slotId: string,
+    setId: string,
+    next: SessionDraft['exercises'][number]['sets'][number],
+  ) {
+    editSlot(slotId, (value) => ({
+      ...value,
+      sets: value.sets.map((old) => (old.id === setId ? { ...next, saved: false } : old)),
+    }));
+  }
+  function removeSet(slotId: string, setId: string) {
+    editSlot(slotId, (value) => ({
+      ...value,
+      sets: value.sets.filter((old) => old.id !== setId),
+    }));
+  }
+  async function confirmSet(slot: SessionDraft['exercises'][number], setId: string, index: number) {
+    if (!draft) return;
+    const set = slot.sets.find((value) => value.id === setId);
+    if (!set) return;
+    const completesExercise =
+      !set.saved && slot.sets.every((other) => other.id === setId || other.saved);
+    const saved = await session.saveSet(slot.id, setId);
+    if (!saved || !completesExercise) return;
+    const next = [...draft.exercises.slice(index + 1), ...draft.exercises.slice(0, index)].find(
+      (exercise) => exercise.sets.some((value) => !value.saved),
+    );
+    setSelected(next?.id ?? null);
+  }
   function renderSets(slot: SessionDraft['exercises'][number], index: number) {
     if (!draft) return null;
     return (
@@ -78,35 +107,11 @@ export function OngoingSession() {
               number={i + 1}
               guidance={slot.guidance[i]}
               saved={set.saved}
-              onConfirm={() => {
-                const completesExercise =
-                  !set.saved && slot.sets.every((other) => other.id === set.id || other.saved);
-                void session.saveSet(slot.id, set.id).then((saved) => {
-                  if (saved && completesExercise) {
-                    const next = [
-                      ...draft.exercises.slice(index + 1),
-                      ...draft.exercises.slice(0, index),
-                    ].find((exercise) => exercise.sets.some((set) => !set.saved));
-                    setSelected(next?.id ?? null);
-                  }
-                });
-              }}
+              onConfirm={() => void confirmSet(slot, set.id, index)}
               unit="kg"
               disabled={locked}
-              onChange={(next) =>
-                editSlot(slot.id, (value) => ({
-                  ...value,
-                  sets: value.sets.map((old) =>
-                    old.id === set.id ? { ...next, saved: false } : old,
-                  ),
-                }))
-              }
-              onRemove={() =>
-                editSlot(slot.id, (value) => ({
-                  ...value,
-                  sets: value.sets.filter((old) => old.id !== set.id),
-                }))
-              }
+              onChange={(next) => updateSet(slot.id, set.id, next)}
+              onRemove={() => removeSet(slot.id, set.id)}
             />
             {formCheck && profileForExercise(slot.exercise.name)
               ? (() => {
@@ -327,7 +332,7 @@ export function OngoingSession() {
                 disabled={locked || dragging || draft.exercises.length >= 500}
               />
               <Button
-                title={session.pending ? 'Working…' : draft.frozen ? 'Retry Finish' : 'Finish'}
+                title={finishButtonTitle(session.pending, Boolean(draft.frozen))}
                 onPress={() => {
                   if (!draft.frozen && draft.routineId !== null) setFinishPrompt(true);
                   else void session.finish();
@@ -462,4 +467,9 @@ export function OngoingSession() {
       </Modal>
     </SafeAreaView>
   );
+}
+
+function finishButtonTitle(pending: boolean, frozen: boolean) {
+  if (pending) return 'Working…';
+  return frozen ? 'Retry Finish' : 'Finish';
 }

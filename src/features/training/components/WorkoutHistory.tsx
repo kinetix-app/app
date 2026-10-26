@@ -4,10 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
-import type { WeightUnit } from '../schemas';
+import type { CompletedSession, WeightUnit } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
-export function WorkoutHistory({ accountId, onClose }: { accountId: number; onClose: () => void }) {
+export function WorkoutHistory({
+  accountId,
+  onClose,
+}: Readonly<{ accountId: number; onClose: () => void }>) {
   const p = usePalette();
   const unit: WeightUnit = 'kg';
   const [selected, setSelected] = useState<number | null>(null);
@@ -23,6 +26,18 @@ export function WorkoutHistory({ accountId, onClose }: { accountId: number; onCl
     enabled: selected !== null,
     queryFn: ({ signal }) => trainingApi.session(selected ?? 0, unit, signal),
   });
+  let detailContent = null;
+  if (detail.isPending) detailContent = <Loading />;
+  else if (detail.isError)
+    detailContent = <Failure error={detail.error} retry={() => void detail.refetch()} />;
+  else if (detail.data)
+    detailContent = <SessionDetails session={detail.data} unit={unit} palette={p} />;
+  let footer = null;
+  if (list.isFetchingNextPage) footer = <Loading />;
+  else if (list.isFetchNextPageError)
+    footer = (
+      <Failure error={list.error} retry={() => void list.fetchNextPage({ cancelRefetch: false })} />
+    );
   const back = () => (selected === null ? onClose() : setSelected(null));
   const header = (
     <View style={ui.gap}>
@@ -43,38 +58,7 @@ export function WorkoutHistory({ accountId, onClose }: { accountId: number; onCl
       <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
         <ScrollView contentContainerStyle={ui.content}>
           {header}
-          {detail.isPending ? (
-            <Loading />
-          ) : detail.isError ? (
-            <Failure
-              error={detail.error}
-              retry={() => {
-                void detail.refetch();
-              }}
-            />
-          ) : detail.data ? (
-            <View style={ui.gap}>
-              <Text style={{ color: p.ink }}>
-                Completed {new Date(detail.data.ended_at).toLocaleString()}
-              </Text>
-              <Text style={{ color: p['ink-muted'] }}>
-                Started {new Date(detail.data.started_at).toLocaleString()}
-              </Text>
-              {detail.data.exercises.map((slot) => (
-                <View key={slot.id} style={[ui.card, { backgroundColor: p['surface-200'] }]}>
-                  <Text style={[ui.heading, { color: p.ink }]}>
-                    {slot.exercise_order}. {slot.exercise.name}
-                  </Text>
-                  {slot.sets.map((set) => (
-                    <Text key={set.set_number} style={{ color: p.ink }}>
-                      Set {set.set_number}: {set.weight?.value ?? '—'} {set.weight?.unit ?? unit} ·{' '}
-                      {set.reps ?? '—'} reps
-                    </Text>
-                  ))}
-                </View>
-              ))}
-            </View>
-          ) : null}
+          {detailContent}
         </ScrollView>
       </SafeAreaView>
     );
@@ -121,19 +105,42 @@ export function WorkoutHistory({ accountId, onClose }: { accountId: number; onCl
           if (list.hasNextPage && !list.isFetching && !list.isFetchNextPageError)
             void list.fetchNextPage({ cancelRefetch: false });
         }}
-        ListFooterComponent={
-          list.isFetchingNextPage ? (
-            <Loading />
-          ) : list.isFetchNextPageError ? (
-            <Failure
-              error={list.error}
-              retry={() => {
-                void list.fetchNextPage({ cancelRefetch: false });
-              }}
-            />
-          ) : null
-        }
+        ListFooterComponent={footer}
       />
     </SafeAreaView>
+  );
+}
+
+function SessionDetails({
+  session,
+  unit,
+  palette,
+}: Readonly<{
+  session: CompletedSession;
+  unit: WeightUnit;
+  palette: ReturnType<typeof usePalette>;
+}>) {
+  return (
+    <View style={ui.gap}>
+      <Text style={{ color: palette.ink }}>
+        Completed {new Date(session.ended_at).toLocaleString()}
+      </Text>
+      <Text style={{ color: palette['ink-muted'] }}>
+        Started {new Date(session.started_at).toLocaleString()}
+      </Text>
+      {session.exercises.map((slot) => (
+        <View key={slot.id} style={[ui.card, { backgroundColor: palette['surface-200'] }]}>
+          <Text style={[ui.heading, { color: palette.ink }]}>
+            {slot.exercise_order}. {slot.exercise.name}
+          </Text>
+          {slot.sets.map((set) => (
+            <Text key={set.set_number} style={{ color: palette.ink }}>
+              Set {set.set_number}: {set.weight?.value ?? '—'} {set.weight?.unit ?? unit} ·{' '}
+              {set.reps ?? '—'} reps
+            </Text>
+          ))}
+        </View>
+      ))}
+    </View>
   );
 }

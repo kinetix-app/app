@@ -15,9 +15,9 @@ const DevelopmentSignInScreen = __DEV__
 
 export function AuthenticationScreen({
   initialTab = 'home',
-}: {
+}: Readonly<{
   initialTab?: 'home' | 'nutrition';
-}) {
+}>) {
   if (__DEV__ && getAuthMode() === 'basic' && DevelopmentSignInScreen) {
     return (
       <Suspense fallback={<ActivityIndicator accessibilityLabel="Loading sign-in" />}>

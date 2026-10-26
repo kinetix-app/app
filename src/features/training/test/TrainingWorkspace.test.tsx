@@ -335,7 +335,7 @@ test('body-part option failure permits browsing and retries from the filter moda
   await screen.findByRole('alert', {}, { timeout: 4000 });
   jest.mocked(trainingApi.bodyParts).mockResolvedValue({ items: ['CHEST'] });
   fireEvent.press(screen.getByText('Retry'));
-  await screen.findByRole('checkbox', { name: 'CHEST' });
+  expect(await screen.findByRole('checkbox', { name: 'CHEST' })).toBeTruthy();
 });
 
 test('overview summarises varied sets and set editor retains changes across back navigation', async () => {

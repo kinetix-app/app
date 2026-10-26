@@ -15,11 +15,11 @@ export function ExercisePicker({
   accountId,
   onSelect,
   onClose,
-}: {
+}: Readonly<{
   accountId: number;
   onSelect: (exercise: ExerciseSummary) => void;
   onClose: () => void;
-}) {
+}>) {
   const p = usePalette();
   const list = useRef<FlatList<ExerciseSummary>>(null);
   const [search, setSearch] = useState('');
@@ -45,6 +45,15 @@ export function ExercisePicker({
     getNextPageParam: (page) =>
       page.items.length === page.limit ? page.offset + page.limit : undefined,
   });
+  let listFooter = null;
+  if (query.isFetchingNextPage) listFooter = <Loading />;
+  else if (query.isFetchNextPageError)
+    listFooter = (
+      <Failure
+        error={query.error}
+        retry={() => void query.fetchNextPage({ cancelRefetch: false })}
+      />
+    );
   return (
     <Modal onRequestClose={onClose} animationType="slide">
       <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
@@ -166,18 +175,7 @@ export function ExercisePicker({
             if (query.hasNextPage && !query.isFetching && !query.isFetchNextPageError)
               void query.fetchNextPage({ cancelRefetch: false });
           }}
-          ListFooterComponent={
-            query.isFetchingNextPage ? (
-              <Loading />
-            ) : query.isFetchNextPageError ? (
-              <Failure
-                error={query.error}
-                retry={() => {
-                  void query.fetchNextPage({ cancelRefetch: false });
-                }}
-              />
-            ) : null
-          }
+          ListFooterComponent={listFooter}
         />
         {filterOpen ? (
           <BodyPartFilter

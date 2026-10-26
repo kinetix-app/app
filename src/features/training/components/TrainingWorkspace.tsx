@@ -10,16 +10,16 @@ import { trainingApi } from '../api';
 import { useSession } from './SessionProvider';
 import { WorkoutHistory } from './WorkoutHistory';
 import { RoutineEditor } from './RoutineEditor';
-import type { Routine } from '../schemas';
+import type { Routine, RoutineSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export function TrainingWorkspace({
   accountId,
   showStartAction = true,
-}: {
+}: Readonly<{
   accountId: number;
   showStartAction?: boolean;
-}) {
+}>) {
   const p = usePalette();
   const session = useSession();
   const [history, setHistory] = useState(false);
@@ -44,7 +44,7 @@ export function TrainingWorkspace({
     startPending.current = true;
     setStarting(id);
     try {
-      const routine = await cache.fetchQuery({
+      const routine = await cache.query({
         queryKey: ['training', accountId, 'routine', id, 'kg'],
         queryFn: ({ signal }) => trainingApi.routine(id, signal),
         staleTime: 0,
@@ -106,160 +106,216 @@ export function TrainingWorkspace({
         data={list.data?.pages.flatMap((page) => page.items) ?? []}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={
-          <View style={ui.gap}>
-            <ScreenHeader title="Routines">
-              <Button
-                title="Sign out"
-                onPress={() => {
-                  void session.signOut();
-                }}
-                secondary
-              />
-            </ScreenHeader>
-
-            {showStartAction ? (
-              <Button
-                title="Start workout"
-                onPress={() => session.start()}
-                disabled={!session.ready || session.storageError || Boolean(session.draft)}
-              />
-            ) : null}
-            <Button title="History" onPress={() => setHistory(true)} secondary />
-            <TextField
-              accessibilityLabel="Search routines"
-              placeholder="Search by name"
-              maxLength={150}
-              value={search}
-              onChangeText={setSearch}
-              onSubmitEditing={() => setName(search.trim())}
-            />
-            <Button
-              title="New routine"
-              tone="positive"
-              onPress={() => {
-                setSaved(false);
-                setEditing('new');
-              }}
-            />
-            {saved ? (
-              <Text accessibilityRole="alert" style={{ color: p.success }}>
-                Routine saved.
-              </Text>
-            ) : null}
-            {list.isPending || (typeof editing === 'number' && detail.isPending) ? (
-              <Loading />
-            ) : null}
-            {list.isError ? (
-              <Failure
-                error={list.error}
-                retry={() => {
-                  void list.refetch();
-                }}
-              />
-            ) : null}
-            {typeof editing === 'number' && detail.isError ? (
-              <View style={ui.gap}>
-                <Failure
-                  error={detail.error}
-                  retry={() => {
-                    void detail.refetch();
-                  }}
-                />
-                <IconButton
-                  icon="arrow-left"
-                  label="Back to routines"
-                  onPress={() => setEditing(null)}
-                />
-              </View>
-            ) : null}
-          </View>
+          <RoutineListHeader
+            showStartAction={showStartAction}
+            search={search}
+            onSearchChange={setSearch}
+            onSearchSubmit={() => setName(search.trim())}
+            onHistory={() => setHistory(true)}
+            onNewRoutine={() => {
+              setSaved(false);
+              setEditing('new');
+            }}
+            saved={saved}
+            listPending={list.isPending}
+            listError={list.isError ? list.error : null}
+            onRetryList={() => void list.refetch()}
+            editing={editing}
+            detailPending={detail.isPending}
+            detailError={detail.isError ? detail.error : null}
+            onRetryDetail={() => void detail.refetch()}
+            onBackToRoutines={() => setEditing(null)}
+          />
         }
         ListEmptyComponent={
-          !list.isPending && !list.isError ? (
-            <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
-              <Text style={[ui.heading, { color: p.ink }]}>Your next workout starts here.</Text>
-              <Text style={{ color: p['ink-muted'] }}>
-                {name
-                  ? 'No routines match this name.'
-                  : 'Create a routine, choose exercises and plan your sets.'}
-              </Text>
-            </View>
-          ) : null
+          <EmptyRoutineState visible={!list.isPending && !list.isError} name={name} />
         }
         renderItem={({ item }) => (
-          <View
-            style={[
-              ui.card,
-              { backgroundColor: p['surface-200'], marginBottom: spacing['space-2'] },
-            ]}
-          >
-            <View style={ui.row}>
-              <View
-                style={{
-                  padding: spacing['space-3'],
-                  borderRadius: radii['radius-md'],
-                  backgroundColor: p['surface-300'],
-                }}
-              >
-                <Feather name="activity" size={24} color={p['brand-ink']} />
-              </View>
-              <Text style={[textStyles['title-md'], { flex: 1, color: p.ink }]}>{item.name}</Text>
-            </View>
-            <View style={[ui.row, { flexWrap: 'wrap' }]}>
-              <View style={{ flexGrow: 1, flexBasis: 100 }}>
-                <Button
-                  title="Edit"
-                  accessibilityLabel={`Edit ${item.name}`}
-                  secondary
-                  onPress={() => {
-                    setSaved(false);
-                    setEditing(item.id);
-                  }}
-                />
-              </View>
-              <View style={{ flexGrow: 1, flexBasis: 100 }}>
-                <Button
-                  title={starting === item.id ? 'Starting…' : 'Start'}
-                  accessibilityLabel={`Start ${item.name}`}
-                  disabled={
-                    !session.ready ||
-                    session.storageError ||
-                    Boolean(session.draft) ||
-                    starting !== null
-                  }
-                  onPress={() => {
-                    void startRoutine(item.id);
-                  }}
-                />
-              </View>
-            </View>
-            {startFailure?.id === item.id ? (
-              <Failure
-                error={startFailure.error}
-                retry={() => {
-                  void startRoutine(item.id);
-                }}
-              />
-            ) : null}
-          </View>
+          <RoutineRow
+            item={item}
+            starting={starting === item.id}
+            canStart={session.ready && !session.storageError && !session.draft && starting === null}
+            failure={startFailure?.id === item.id ? startFailure.error : undefined}
+            onEdit={() => {
+              setSaved(false);
+              setEditing(item.id);
+            }}
+            onStart={() => void startRoutine(item.id)}
+            onRetry={() => void startRoutine(item.id)}
+          />
         )}
         refreshing={list.isRefetching && !list.isFetchingNextPage}
         onRefresh={() => {
           void list.refetch();
         }}
         ListFooterComponent={
-          list.hasNextPage ? (
-            <Button
-              title={list.isFetchingNextPage ? 'Loading…' : 'More'}
-              disabled={list.isFetchingNextPage}
-              onPress={() => {
-                void list.fetchNextPage();
-              }}
-              secondary
-            />
-          ) : null
+          <RoutineListFooter
+            visible={Boolean(list.hasNextPage)}
+            loading={list.isFetchingNextPage}
+            onMore={() => void list.fetchNextPage()}
+          />
         }
       />
     </SafeAreaView>
+  );
+}
+
+type RoutineListHeaderProps = Readonly<{
+  showStartAction: boolean;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onSearchSubmit: () => void;
+  onHistory: () => void;
+  onNewRoutine: () => void;
+  saved: boolean;
+  listPending: boolean;
+  listError: Error | null;
+  onRetryList: () => void;
+  editing: number | 'new' | null;
+  detailPending: boolean;
+  detailError: Error | null;
+  onRetryDetail: () => void;
+  onBackToRoutines: () => void;
+}>;
+
+function RoutineListHeader({
+  showStartAction,
+  search,
+  onSearchChange,
+  onSearchSubmit,
+  onHistory,
+  onNewRoutine,
+  saved,
+  listPending,
+  listError,
+  onRetryList,
+  editing,
+  detailPending,
+  detailError,
+  onRetryDetail,
+  onBackToRoutines,
+}: RoutineListHeaderProps) {
+  const p = usePalette();
+  const session = useSession();
+  const editingRoutine = typeof editing === 'number';
+  return (
+    <View style={ui.gap}>
+      <ScreenHeader title="Routines">
+        <Button title="Sign out" onPress={() => void session.signOut()} secondary />
+      </ScreenHeader>
+      {showStartAction ? (
+        <Button
+          title="Start workout"
+          onPress={() => session.start()}
+          disabled={!session.ready || session.storageError || Boolean(session.draft)}
+        />
+      ) : null}
+      <Button title="History" onPress={onHistory} secondary />
+      <TextField
+        accessibilityLabel="Search routines"
+        placeholder="Search by name"
+        maxLength={150}
+        value={search}
+        onChangeText={onSearchChange}
+        onSubmitEditing={onSearchSubmit}
+      />
+      <Button title="New routine" tone="positive" onPress={onNewRoutine} />
+      {saved ? (
+        <Text accessibilityRole="alert" style={{ color: p.success }}>
+          Routine saved.
+        </Text>
+      ) : null}
+      {listPending || (editingRoutine && detailPending) ? <Loading /> : null}
+      {listError ? <Failure error={listError} retry={onRetryList} /> : null}
+      {editingRoutine && detailError ? (
+        <View style={ui.gap}>
+          <Failure error={detailError} retry={onRetryDetail} />
+          <IconButton icon="arrow-left" label="Back to routines" onPress={onBackToRoutines} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function EmptyRoutineState({ visible, name }: Readonly<{ visible: boolean; name: string }>) {
+  const p = usePalette();
+  if (!visible) return null;
+  return (
+    <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
+      <Text style={[ui.heading, { color: p.ink }]}>Your next workout starts here.</Text>
+      <Text style={{ color: p['ink-muted'] }}>
+        {name
+          ? 'No routines match this name.'
+          : 'Create a routine, choose exercises and plan your sets.'}
+      </Text>
+    </View>
+  );
+}
+
+function RoutineRow({
+  item,
+  starting,
+  canStart,
+  failure,
+  onEdit,
+  onStart,
+  onRetry,
+}: Readonly<{
+  item: RoutineSummary;
+  starting: boolean;
+  canStart: boolean;
+  failure?: unknown;
+  onEdit: () => void;
+  onStart: () => void;
+  onRetry: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <View
+      style={[ui.card, { backgroundColor: p['surface-200'], marginBottom: spacing['space-2'] }]}
+    >
+      <View style={ui.row}>
+        <View
+          style={{
+            padding: spacing['space-3'],
+            borderRadius: radii['radius-md'],
+            backgroundColor: p['surface-300'],
+          }}
+        >
+          <Feather name="activity" size={24} color={p['brand-ink']} />
+        </View>
+        <Text style={[textStyles['title-md'], { flex: 1, color: p.ink }]}>{item.name}</Text>
+      </View>
+      <View style={[ui.row, { flexWrap: 'wrap' }]}>
+        <View style={{ flexGrow: 1, flexBasis: 100 }}>
+          <Button
+            title="Edit"
+            accessibilityLabel={`Edit ${item.name}`}
+            secondary
+            onPress={onEdit}
+          />
+        </View>
+        <View style={{ flexGrow: 1, flexBasis: 100 }}>
+          <Button
+            title={starting ? 'Starting…' : 'Start'}
+            accessibilityLabel={`Start ${item.name}`}
+            disabled={!canStart}
+            onPress={onStart}
+          />
+        </View>
+      </View>
+      {failure !== undefined ? <Failure error={failure} retry={onRetry} /> : null}
+    </View>
+  );
+}
+
+function RoutineListFooter({
+  visible,
+  loading,
+  onMore,
+}: Readonly<{ visible: boolean; loading: boolean; onMore: () => void }>) {
+  if (!visible) return null;
+  return (
+    <Button title={loading ? 'Loading…' : 'More'} disabled={loading} onPress={onMore} secondary />
   );
 }

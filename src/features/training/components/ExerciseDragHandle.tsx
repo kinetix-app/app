@@ -9,7 +9,13 @@ export type DragHandleProps = {
   onDrag: () => void;
   onMove: (delta: number) => void;
 };
-export function ExerciseDragHandle({ id, label, disabled, onDrag, onMove }: DragHandleProps) {
+export function ExerciseDragHandle({
+  id,
+  label,
+  disabled,
+  onDrag,
+  onMove,
+}: Readonly<DragHandleProps>) {
   const p = usePalette();
   return (
     <Pressable

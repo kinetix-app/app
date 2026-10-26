@@ -13,12 +13,12 @@ export function ExerciseDetails({
   exerciseId,
   onClose,
   onAdd,
-}: {
+}: Readonly<{
   accountId: number;
   exerciseId: number;
   onClose: () => void;
   onAdd?: (exercise: ExerciseSummary) => void;
-}) {
+}>) {
   const p = usePalette();
   const detail = useQuery({
     queryKey: ['training', accountId, 'exercise', exerciseId],
@@ -61,7 +61,7 @@ export function ExerciseDetails({
               <Text style={[ui.heading, { color: p.ink }]}>Instructions</Text>
               {detail.data.instructions?.length ? (
                 detail.data.instructions.map((text, i) => (
-                  <Text key={i} style={{ color: p.ink }}>
+                  <Text key={text} style={{ color: p.ink }}>
                     {i + 1}. {text}
                   </Text>
                 ))
