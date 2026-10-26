@@ -18,12 +18,12 @@ export function AddFoodScreen({
   date,
   onClose,
   onSaved,
-}: {
+}: Readonly<{
   meal: string;
   date: string;
   onClose: () => void;
   onSaved: () => void;
-}) {
+}>) {
   const p = usePalette();
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState('');
@@ -128,8 +128,8 @@ export function AddFoodScreen({
             />
           </>
         ) : null}
-        {tab === 'Recipe' ? (
-          showRecipeEditor ? (
+        {tab === 'Recipe' &&
+          (showRecipeEditor ? (
             <RecipeEditor onCreated={() => setShowRecipeEditor(false)} />
           ) : (
             <RecipePicker
@@ -139,166 +139,286 @@ export function AddFoodScreen({
               onSaved={onSaved}
               onClose={onClose}
             />
-          )
-        ) : null}
+          ))}
         {tab === 'Food' && !showFoodEditor ? (
-          <>
-            <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-              {results.data?.map((food, index) => (
-                <React.Fragment key={food.name}>
-                  {index > 0 ? (
-                    <View style={[styles.divider, { backgroundColor: p.line }]} />
-                  ) : null}
-                  <View style={styles.recipeRow}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Select ${food.name}`}
-                      accessibilityState={{ selected: selected?.id === food.id }}
-                      onPress={() => setSelected(food)}
-                      style={({ pressed }) => [
-                        styles.recipeSelect,
-                        { opacity: pressed ? 0.65 : 1 },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.foodIcon,
-                          {
-                            backgroundColor: p['surface-300'],
-                            borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
-                            borderWidth: 2,
-                          },
-                        ]}
-                      >
-                        <Feather name="coffee" size={22} color={p['brand-ink']} />
-                      </View>
-                      <View style={styles.flex}>
-                        <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
-                        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                          Per 100 g
-                        </Text>
-                      </View>
-                      <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                        {food.calories} kcal
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Delete ${food.name}`}
-                      onPress={() => {
-                        removeFood.reset();
-                        setFoodToDelete(food);
-                      }}
-                      style={styles.deleteRecipe}
-                    >
-                      <Feather name="trash-2" size={20} color={p.danger} />
-                    </Pressable>
-                  </View>
-                </React.Fragment>
-              ))}
-              {debouncedSearch && !results.isPending && !results.data?.length ? (
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
-              ) : null}
-            </View>
-            <Modal
-              transparent
-              animationType="fade"
-              visible={Boolean(foodToDelete)}
-              onRequestClose={() => setFoodToDelete(null)}
-            >
-              <View style={[styles.modalBackdrop, { backgroundColor: p.scrim }]}>
-                <View
-                  accessibilityViewIsModal
-                  style={[styles.deleteConfirmation, { backgroundColor: p['surface-200'] }]}
-                >
-                  <Text
-                    accessibilityRole="header"
-                    style={[textStyles['title-md'], { color: p.ink }]}
-                  >
-                    {removeFood.isError ? 'Can’t delete food' : 'Delete food?'}
-                  </Text>
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {removeFood.isError
-                      ? `“${foodToDelete?.name}” is used in a recipe or diary and must be kept.`
-                      : `Delete “${foodToDelete?.name}”? This cannot be undone.`}
-                  </Text>
-                  <View style={styles.confirmationActions}>
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => setFoodToDelete(null)}
-                      style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
-                    >
-                      <Text style={[textStyles.label, { color: p.ink }]}>
-                        {removeFood.isError ? 'Close' : 'Cancel'}
-                      </Text>
-                    </Pressable>
-                    {!removeFood.isError ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        disabled={removeFood.isPending}
-                        onPress={() => foodToDelete && removeFood.mutate(foodToDelete.id)}
-                        style={[styles.confirmButton, { backgroundColor: p.danger }]}
-                      >
-                        <Text style={[textStyles.label, { color: p['on-brand'] }]}>Delete</Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </View>
-              </View>
-            </Modal>
-            {selected ? (
-              <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
-                <Text style={[textStyles['title-md'], { color: p.ink }]}>{selected.name}</Text>
-                <View style={styles.macroRow}>
-                  {[
-                    [`${selected.protein} g`, 'Protein'],
-                    [`${selected.carbohydrates} g`, 'Carbs'],
-                    [`${selected.fats} g`, 'Fat'],
-                  ].map(([value, label]) => (
-                    <View key={label} style={styles.flex}>
-                      <Text style={[textStyles['metric-md'], { color: p.ink }]}>{value}</Text>
-                      <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
-                <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
-                  Values per 100 g
-                </Text>
-              </View>
-            ) : null}
-            <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
-            <TextField
-              accessibilityLabel="Food amount"
-              keyboardType="decimal-pad"
-              value={amount}
-              onChangeText={setAmount}
-              trailing={<Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>}
-            />
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              Total:{' '}
-              {selected && Number(amount)
-                ? ((selected.calories * Number(amount)) / 100).toFixed(0)
-                : '—'}{' '}
-              kcal
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !selected || save.isPending }}
-              disabled={!selected || save.isPending}
-              onPress={() => save.mutate()}
-              style={[
-                styles.add,
-                { backgroundColor: p.brand, opacity: !selected || save.isPending ? 0.55 : 1 },
-              ]}
-            >
-              <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-                {save.isPending ? 'Adding…' : `Add to ${meal}`}
-              </Text>
-            </Pressable>
-          </>
+          <FoodContent
+            meal={meal}
+            foods={results.data ?? []}
+            isPending={results.isPending}
+            search={debouncedSearch}
+            selected={selected}
+            onSelect={setSelected}
+            foodToDelete={foodToDelete}
+            onRequestDelete={(food) => {
+              removeFood.reset();
+              setFoodToDelete(food);
+            }}
+            onCancelDelete={() => setFoodToDelete(null)}
+            removeFoodError={removeFood.isError}
+            removeFoodPending={removeFood.isPending}
+            onConfirmDelete={() => {
+              if (foodToDelete) removeFood.mutate(foodToDelete.id);
+            }}
+            amount={amount}
+            onAmountChange={setAmount}
+            savePending={save.isPending}
+            onSave={() => save.mutate()}
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function FoodContent({
+  meal,
+  foods,
+  isPending,
+  search,
+  selected,
+  onSelect,
+  foodToDelete,
+  onRequestDelete,
+  onCancelDelete,
+  removeFoodError,
+  removeFoodPending,
+  onConfirmDelete,
+  amount,
+  onAmountChange,
+  savePending,
+  onSave,
+}: Readonly<{
+  meal: string;
+  foods: Food[];
+  isPending: boolean;
+  search: string;
+  selected: Food | null;
+  onSelect: (food: Food) => void;
+  foodToDelete: Food | null;
+  onRequestDelete: (food: Food) => void;
+  onCancelDelete: () => void;
+  removeFoodError: boolean;
+  removeFoodPending: boolean;
+  onConfirmDelete: () => void;
+  amount: string;
+  onAmountChange: (amount: string) => void;
+  savePending: boolean;
+  onSave: () => void;
+}>) {
+  return (
+    <>
+      <FoodResults
+        foods={foods}
+        isPending={isPending}
+        search={search}
+        selected={selected}
+        onSelect={onSelect}
+        onRequestDelete={onRequestDelete}
+      />
+      <DeleteFoodConfirmation
+        food={foodToDelete}
+        error={removeFoodError}
+        pending={removeFoodPending}
+        onCancel={onCancelDelete}
+        onConfirm={onConfirmDelete}
+      />
+      {selected ? <SelectedFoodPreview food={selected} /> : null}
+      <FoodAmount
+        meal={meal}
+        selected={selected}
+        amount={amount}
+        onAmountChange={onAmountChange}
+        savePending={savePending}
+        onSave={onSave}
+      />
+    </>
+  );
+}
+
+function FoodResults({
+  foods,
+  isPending,
+  search,
+  selected,
+  onSelect,
+  onRequestDelete,
+}: Readonly<{
+  foods: Food[];
+  isPending: boolean;
+  search: string;
+  selected: Food | null;
+  onSelect: (food: Food) => void;
+  onRequestDelete: (food: Food) => void;
+}>) {
+  const p = usePalette();
+  return (
+    <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
+      {foods.map((food, index) => (
+        <React.Fragment key={food.name}>
+          {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
+          <View style={styles.recipeRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${food.name}`}
+              accessibilityState={{ selected: selected?.id === food.id }}
+              onPress={() => onSelect(food)}
+              style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
+            >
+              <View
+                style={[
+                  styles.foodIcon,
+                  {
+                    backgroundColor: p['surface-300'],
+                    borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Feather name="coffee" size={22} color={p['brand-ink']} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per 100 g</Text>
+              </View>
+              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>{food.calories} kcal</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Delete ${food.name}`}
+              onPress={() => onRequestDelete(food)}
+              style={styles.deleteRecipe}
+            >
+              <Feather name="trash-2" size={20} color={p.danger} />
+            </Pressable>
+          </View>
+        </React.Fragment>
+      ))}
+      {search && !isPending && !foods.length ? (
+        <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function DeleteFoodConfirmation({
+  food,
+  error,
+  pending,
+  onCancel,
+  onConfirm,
+}: Readonly<{
+  food: Food | null;
+  error: boolean;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <Modal transparent animationType="fade" visible={Boolean(food)} onRequestClose={onCancel}>
+      <View style={[styles.modalBackdrop, { backgroundColor: p.scrim }]}>
+        <View
+          accessibilityViewIsModal
+          style={[styles.deleteConfirmation, { backgroundColor: p['surface-200'] }]}
+        >
+          <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
+            {error ? 'Can’t delete food' : 'Delete food?'}
+          </Text>
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+            {error
+              ? `“${food?.name}” is used in a recipe or diary and must be kept.`
+              : `Delete “${food?.name}”? This cannot be undone.`}
+          </Text>
+          <View style={styles.confirmationActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onCancel}
+              style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
+            >
+              <Text style={[textStyles.label, { color: p.ink }]}>{error ? 'Close' : 'Cancel'}</Text>
+            </Pressable>
+            {!error ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={pending}
+                onPress={onConfirm}
+                style={[styles.confirmButton, { backgroundColor: p.danger }]}
+              >
+                <Text style={[textStyles.label, { color: p['on-brand'] }]}>Delete</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function FoodAmount({
+  meal,
+  selected,
+  amount,
+  onAmountChange,
+  savePending,
+  onSave,
+}: Readonly<{
+  meal: string;
+  selected: Food | null;
+  amount: string;
+  onAmountChange: (amount: string) => void;
+  savePending: boolean;
+  onSave: () => void;
+}>) {
+  const p = usePalette();
+  const total =
+    selected && Number(amount) ? ((selected.calories * Number(amount)) / 100).toFixed(0) : '—';
+  const disabled = !selected || savePending;
+  return (
+    <>
+      <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
+      <TextField
+        accessibilityLabel="Food amount"
+        keyboardType="decimal-pad"
+        value={amount}
+        onChangeText={onAmountChange}
+        trailing={<Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>}
+      />
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Total: {total} kcal</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onSave}
+        style={[styles.add, { backgroundColor: p.brand, opacity: disabled ? 0.55 : 1 }]}
+      >
+        <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+          {savePending ? 'Adding…' : `Add to ${meal}`}
+        </Text>
+      </Pressable>
+    </>
+  );
+}
+
+function SelectedFoodPreview({ food }: Readonly<{ food: Food }>) {
+  const p = usePalette();
+  const macros = [
+    [`${food.protein} g`, 'Protein'],
+    [`${food.carbohydrates} g`, 'Carbs'],
+    [`${food.fats} g`, 'Fat'],
+  ];
+  return (
+    <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>{food.name}</Text>
+      <View style={styles.macroRow}>
+        {macros.map(([value, label]) => (
+          <View key={label} style={styles.flex}>
+            <Text style={[textStyles['metric-md'], { color: p.ink }]}>{value}</Text>
+            <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{label}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per 100 g</Text>
+    </View>
   );
 }
 
@@ -308,13 +428,13 @@ function RecipePicker({
   onNewRecipe,
   onSaved,
   onClose,
-}: {
+}: Readonly<{
   meal: string;
   date: string;
   onNewRecipe: () => void;
   onSaved: () => void;
   onClose: () => void;
-}) {
+}>) {
   const p = usePalette();
   const queryClient = useQueryClient();
   const [selected, setSelected] = React.useState<Recipe | null>(null);
@@ -505,7 +625,7 @@ function RecipePicker({
   );
 }
 
-function FoodEditor({ onCreated }: { onCreated: () => void }) {
+function FoodEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
   const p = usePalette();
   const queryClient = useQueryClient();
   const [name, setName] = React.useState('');
@@ -585,7 +705,7 @@ function FoodEditor({ onCreated }: { onCreated: () => void }) {
   );
 }
 
-function RecipeEditor({ onCreated }: { onCreated: () => void }) {
+function RecipeEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
   const p = usePalette();
   const queryClient = useQueryClient();
   const [name, setName] = React.useState('');

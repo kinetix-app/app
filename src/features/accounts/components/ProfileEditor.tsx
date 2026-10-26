@@ -356,7 +356,7 @@ export function ProfileEditor({ account, onSaved, onCancel }: ProfileEditorProps
       if (busy.current) return;
       clearErrors();
       const value = submittedProfileValues(raw, setError);
-      if (!value || !value.measurement_system) return;
+      if (!value?.measurement_system) return;
       busy.current = true;
       setPending(true);
       setFailure('');

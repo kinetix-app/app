@@ -11,12 +11,12 @@ export function BottomBar({
   onSelect,
   onStart,
   canStart,
-}: {
+}: Readonly<{
   tab: HomeTab;
   onSelect: (tab: HomeTab) => void;
   onStart: () => void;
   canStart: boolean;
-}) {
+}>) {
   const p = usePalette();
   const tabs = [
     { id: 'home', icon: 'home', label: 'Home' },
@@ -42,7 +42,7 @@ export function BottomBar({
                 onPress={onStart}
                 style={({ pressed }) => [
                   styles.add,
-                  { backgroundColor: p.brand, opacity: !canStart ? 0.45 : pressed ? 0.65 : 1 },
+                  { backgroundColor: p.brand, opacity: startOpacity(canStart, pressed) },
                 ]}
               >
                 <Feather name="plus" size={36} color={p['on-brand']} />
@@ -62,7 +62,7 @@ export function BottomBar({
               }}
               style={({ pressed }) => [
                 styles.tab,
-                { opacity: item.id === 'progress' ? 0.55 : pressed ? 0.65 : 1 },
+                { opacity: tabOpacity(item.id === 'progress', pressed) },
               ]}
             >
               <View style={[styles.icon, tab === item.id && { backgroundColor: p['brand-soft'] }]}>
@@ -87,6 +87,16 @@ export function BottomBar({
     </SafeAreaView>
   );
 }
+function tabOpacity(isUnavailable: boolean, pressed: boolean) {
+  if (isUnavailable) return 0.55;
+  return pressed ? 0.65 : 1;
+}
+
+function startOpacity(canStart: boolean, pressed: boolean) {
+  if (!canStart) return 0.45;
+  return pressed ? 0.65 : 1;
+}
+
 const styles = StyleSheet.create({
   bar: {
     minHeight: sizes['tab-bar-height'],

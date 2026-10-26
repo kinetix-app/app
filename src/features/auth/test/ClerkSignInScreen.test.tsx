@@ -191,7 +191,9 @@ test('provider failure shows a retryable error', async () => {
   mockSso.mockRejectedValue(new Error('network'));
   render(<ClerkSignInScreen />);
   fireEvent.press(screen.getByLabelText('Continue with Apple'));
-  await screen.findByText('Provider sign-in could not finish. Please try again.');
+  expect(
+    await screen.findByText('Provider sign-in could not finish. Please try again.'),
+  ).toBeTruthy();
 });
 
 test('restored sessions connect to the account API and logout clears private state', async () => {

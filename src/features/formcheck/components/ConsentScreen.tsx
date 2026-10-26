@@ -7,7 +7,7 @@ import { FormCheckScreen } from './FormCheckScreen';
 
 type IconName = React.ComponentProps<typeof Feather>['name'];
 
-function Point({ icon, title, text }: { icon: IconName; title: string; text: string }) {
+function Point({ icon, title, text }: Readonly<{ icon: IconName; title: string; text: string }>) {
   const p = usePalette();
   return (
     <View style={[ui.row, { alignItems: 'flex-start' }]}>
@@ -27,14 +27,14 @@ export function ConsentScreen({
   onAllow,
   onOpenSettings,
   onClose,
-}: {
+}: Readonly<{
   supportedNames: string[];
   /** The user refused the camera and the system will not ask again. */
   denied: boolean;
   onAllow: () => void;
   onOpenSettings: () => void;
   onClose: () => void;
-}) {
+}>) {
   const p = usePalette();
   return (
     <FormCheckScreen

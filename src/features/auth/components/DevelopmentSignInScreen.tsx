@@ -23,11 +23,25 @@ import { colors } from '@/theme/colors';
 
 import { authStyles as styles } from './authStyles';
 
+function signInErrorMessage(cause: unknown) {
+  if (!(cause instanceof ApiError)) {
+    return 'Unable to reach the API or read its response. Check the backend address and connection.';
+  }
+  if (cause.status === 401 && cause.authScheme?.toLowerCase().startsWith('bearer')) {
+    return 'The API is using Clerk. Set backend AUTH_MODE=basic for development sign-in.';
+  }
+  if (cause.status === 401) {
+    return 'The email or password was not accepted. Use an account configured on the backend.';
+  }
+  if (cause.status === 403) return 'Account access denied.';
+  return `The API returned an error (${cause.status}). Check the backend service.`;
+}
+
 export function DevelopmentSignInScreen({
   initialTab = 'home',
-}: {
+}: Readonly<{
   initialTab?: 'home' | 'nutrition';
-}) {
+}>) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -67,27 +81,7 @@ export function DevelopmentSignInScreen({
       }
     } catch (cause) {
       authService.clear();
-      if (!controller.signal.aborted) {
-        if (cause instanceof ApiError) {
-          if (cause.status === 401 && cause.authScheme?.toLowerCase().startsWith('bearer')) {
-            setError(
-              'The API is using Clerk. Set backend AUTH_MODE=basic for development sign-in.',
-            );
-          } else if (cause.status === 401) {
-            setError(
-              'The email or password was not accepted. Use an account configured on the backend.',
-            );
-          } else if (cause.status === 403) {
-            setError('Account access denied.');
-          } else {
-            setError(`The API returned an error (${cause.status}). Check the backend service.`);
-          }
-        } else {
-          setError(
-            'Unable to reach the API or read its response. Check the backend address and connection.',
-          );
-        }
-      }
+      if (!controller.signal.aborted) setError(signInErrorMessage(cause));
     } finally {
       if (!controller.signal.aborted) setPending(false);
       request.current = null;

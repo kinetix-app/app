@@ -9,7 +9,7 @@ import {
 import { useNetworkState } from 'expo-network';
 
 /** One private cache per signed-in account, shared by every feature. */
-export function PrivateQueryProvider({ children }: React.PropsWithChildren) {
+export function PrivateQueryProvider({ children }: Readonly<React.PropsWithChildren>) {
   const [client] = useState(
     () =>
       new QueryClient({

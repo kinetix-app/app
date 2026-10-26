@@ -7,19 +7,21 @@ import { IconButton, Loading } from './ui';
 
 const mediaStyle = { height: 240, width: '100%' as const, borderRadius: 20 };
 
-type Props = { name: string; videoUrl: string | null; imageUrl: string | null };
+type Props = Readonly<{ name: string; videoUrl: string | null; imageUrl: string | null }>;
 
 export function ExerciseMedia({ name, videoUrl, imageUrl }: Props) {
-  return videoUrl ? (
-    <ExerciseVideo key={videoUrl} name={name} url={videoUrl} imageUrl={imageUrl} />
-  ) : imageUrl ? (
-    <Image
-      source={{ uri: imageUrl }}
-      style={mediaStyle}
-      resizeMode="contain"
-      accessibilityLabel={name}
-    />
-  ) : null;
+  if (videoUrl)
+    return <ExerciseVideo key={videoUrl} name={name} url={videoUrl} imageUrl={imageUrl} />;
+  if (imageUrl)
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={mediaStyle}
+        resizeMode="contain"
+        accessibilityLabel={name}
+      />
+    );
+  return null;
 }
 
 // Expo Video exposes mutable native player properties rather than a mute method.
@@ -31,11 +33,11 @@ function ExerciseVideo({
   name,
   url,
   imageUrl,
-}: {
+}: Readonly<{
   name: string;
   url: string;
   imageUrl: string | null;
-}) {
+}>) {
   const p = usePalette();
   const view = useRef<VideoView>(null);
   const [muted, setMuted] = useState(true);

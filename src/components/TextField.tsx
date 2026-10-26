@@ -55,7 +55,7 @@ export function TextField({
         styles.container,
         {
           backgroundColor: p['surface-300'],
-          borderColor: invalid ? p.danger : isHighlighted ? p.focus : p['line-strong'],
+          borderColor: getBorderColor(invalid, isHighlighted, p),
         },
         editable === false && styles.disabled,
         containerStyle,
@@ -94,6 +94,15 @@ export function TextField({
       {trailing}
     </View>
   );
+}
+
+function getBorderColor(
+  invalid: boolean | undefined,
+  isHighlighted: boolean,
+  palette: ReturnType<typeof usePalette>,
+) {
+  if (invalid) return palette.danger;
+  return isHighlighted ? palette.focus : palette['line-strong'];
 }
 
 const styles = StyleSheet.create({

@@ -19,7 +19,7 @@ export function CannotAssessScreen({
   onWatchVideo,
   onRecordAgain,
   onLogByHand,
-}: {
+}: Readonly<{
   view: NotAssessable;
   exerciseName: string;
   setNumber: number;
@@ -28,7 +28,7 @@ export function CannotAssessScreen({
   onWatchVideo: () => void;
   onRecordAgain: () => void;
   onLogByHand: () => void;
-}) {
+}>) {
   const p = usePalette();
   return (
     <FormCheckScreen

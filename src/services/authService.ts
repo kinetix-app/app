@@ -30,7 +30,7 @@ export function createAuthService(mode: AuthMode) {
       if (mode !== 'basic') throw new Error('Basic credentials require Basic auth mode.');
       if (username.includes(':')) throw new Error('Basic auth usernames cannot contain a colon.');
       const bytes = new TextEncoder().encode(`${username}:${password}`);
-      const encoded = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
+      const encoded = btoa(Array.from(bytes, (byte) => String.fromCodePoint(byte)).join(''));
       clear();
       authorization = `Basic ${encoded}`;
     },

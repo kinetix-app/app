@@ -50,26 +50,28 @@ export const trainingApi = {
       signal,
     }),
 
-  routines: (offset: number, signal?: AbortSignal, name = '') =>
-    apiClient.get(
-      `/api/v1/routines?limit=20&offset=${offset}${name.trim() ? `&name=${encodeURIComponent(name.trim())}` : ''}`,
-      {
-        schema: routinePageSchema,
-        signal,
-      },
-    ),
+  routines: (offset: number, signal?: AbortSignal, name = '') => {
+    const trimmedName = name.trim();
+    const nameParam = trimmedName ? `&name=${encodeURIComponent(trimmedName)}` : '';
+    return apiClient.get(`/api/v1/routines?limit=20&offset=${offset}${nameParam}`, {
+      schema: routinePageSchema,
+      signal,
+    });
+  },
   routine: (id: number, signal?: AbortSignal, unit: WeightUnit = 'kg') =>
     apiClient.get(`/api/v1/routines/${id}?weight_unit=${unit}`, { schema: routineSchema, signal }),
-  exercises: (bodyParts: string[], offset: number, signal?: AbortSignal, name = '') =>
-    apiClient.get(
-      `/api/v1/exercises?limit=20&offset=${offset}${[
-        ...new Set(bodyParts.map((part) => part.trim()).filter(Boolean)),
-      ]
-        .sort()
-        .map((part) => `&body_part=${encodeURIComponent(part)}`)
-        .join('')}${name.trim() ? `&name=${encodeURIComponent(name.trim())}` : ''}`,
+  exercises: (bodyParts: string[], offset: number, signal?: AbortSignal, name = '') => {
+    const bodyPartParams = [...new Set(bodyParts.map((part) => part.trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b))
+      .map((part) => queryParameter('body_part', part))
+      .join('');
+    const trimmedName = name.trim();
+    const nameParam = trimmedName ? queryParameter('name', trimmedName) : '';
+    return apiClient.get(
+      `/api/v1/exercises?limit=20&offset=${offset}${bodyPartParams}${nameParam}`,
       { schema: exercisePageSchema, signal },
-    ),
+    );
+  },
   bodyParts: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/exercises/body-parts', {
       schema: bodyPartsSchema,
@@ -94,3 +96,7 @@ export const trainingApi = {
           schema: routineSchema,
         }),
 };
+
+function queryParameter(name: string, value: string) {
+  return `&${name}=${encodeURIComponent(value)}`;
+}

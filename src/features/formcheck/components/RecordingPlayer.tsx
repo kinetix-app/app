@@ -10,11 +10,11 @@ export function RecordingPlayer({
   uri,
   title,
   onBack,
-}: {
+}: Readonly<{
   uri: string;
   title: string;
   onBack: () => void;
-}) {
+}>) {
   const p = usePalette();
   const player = useVideoPlayer(uri, (value) => {
     value.loop = false;

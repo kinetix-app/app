@@ -4,6 +4,52 @@ import type { DraggableFlatListProps } from 'react-native-draggable-flatlist';
 import { usePalette } from '@/theme/tokens';
 
 const ActiveCell = createContext<number | null>(null);
+type DragState = {
+  rows: Map<number, HTMLDivElement>;
+  source: { current: number | null };
+  target: { current: number | null };
+  startY: { current: number };
+  originBox: { current: { top: number; bottom: number } };
+  setOffset: (offset: number) => void;
+  setOver: (index: number | null) => void;
+};
+
+function updateDrag(event: React.PointerEvent<HTMLDivElement>, index: number, state: DragState) {
+  if (state.source.current !== index) return;
+  setDragTarget(event, index, state);
+  scrollDraggedRow(event);
+}
+
+function setDragTarget(event: React.PointerEvent<HTMLDivElement>, index: number, state: DragState) {
+  state.setOffset(event.clientY - state.startY.current);
+  if (
+    event.clientY >= state.originBox.current.top &&
+    event.clientY <= state.originBox.current.bottom
+  ) {
+    state.target.current = index;
+    state.setOver(index);
+    return;
+  }
+  for (const [position, row] of state.rows) {
+    if (position === index) continue;
+    const box = row.getBoundingClientRect();
+    if (event.clientY >= box.top && event.clientY <= box.bottom) {
+      state.target.current = position;
+      state.setOver(position);
+      break;
+    }
+  }
+}
+
+function scrollDraggedRow(event: React.PointerEvent<HTMLDivElement>) {
+  let scroll = event.currentTarget.parentElement;
+  while (scroll && !['auto', 'scroll'].includes(getComputedStyle(scroll).overflowY))
+    scroll = scroll.parentElement;
+  if (!scroll) return;
+  const box = scroll.getBoundingClientRect();
+  if (event.clientY > box.bottom - 60) scroll.scrollTop += 18;
+  else if (event.clientY < box.top + 60) scroll.scrollTop -= 18;
+}
 
 // Raise the FlatList cell itself: an inner z-index cannot escape its cell's stacking context.
 function DragCell({
@@ -12,7 +58,7 @@ function DragCell({
   style,
   onLayout,
   onFocusCapture,
-}: CellRendererProps<unknown>) {
+}: Readonly<CellRendererProps<unknown>>) {
   const active = useContext(ActiveCell);
   return (
     <View
@@ -91,34 +137,17 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
               setActive(index);
               props.onDragBegin?.(index);
             }}
-            onPointerMove={(event) => {
-              if (source.current !== index) return;
-              setOffset(event.clientY - startY.current);
-              if (
-                event.clientY >= originBox.current.top &&
-                event.clientY <= originBox.current.bottom
-              ) {
-                target.current = index;
-                setOver(index);
-              } else
-                for (const [position, row] of rows.current) {
-                  if (position === index) continue;
-                  const box = row.getBoundingClientRect();
-                  if (event.clientY >= box.top && event.clientY <= box.bottom) {
-                    target.current = position;
-                    setOver(position);
-                    break;
-                  }
-                }
-              let scroll = event.currentTarget.parentElement;
-              while (scroll && !['auto', 'scroll'].includes(getComputedStyle(scroll).overflowY))
-                scroll = scroll.parentElement;
-              if (scroll) {
-                const box = scroll.getBoundingClientRect();
-                if (event.clientY > box.bottom - 60) scroll.scrollTop += 18;
-                else if (event.clientY < box.top + 60) scroll.scrollTop -= 18;
-              }
-            }}
+            onPointerMove={(event) =>
+              updateDrag(event, index, {
+                rows: rows.current,
+                source,
+                target,
+                startY,
+                originBox,
+                setOffset,
+                setOver,
+              })
+            }
             onPointerUp={(event) => {
               if (source.current !== index) return;
               finish();

@@ -113,7 +113,7 @@ function validateProfileForm(value: ProfileFormValues, context: z.RefinementCtx)
   else validateImperialHeight(value, issue);
 }
 
-export const profileFormSchema = profileFormShape.superRefine(validateProfileForm);
+export const profileFormSchema = profileFormShape.check(z.superRefine(validateProfileForm));
 
 export function profileDefaults(account: Account): ProfileFormValues {
   const p = account.profile;

@@ -24,7 +24,7 @@ export type AnalysisView =
 /** "4", "4 and 5", "1, 3 and 4". */
 export function listReps(reps: number[]): string {
   if (reps.length <= 1) return reps.join('');
-  return `${reps.slice(0, -1).join(', ')} and ${reps[reps.length - 1]}`;
+  return `${reps.slice(0, -1).join(', ')} and ${reps.at(-1)}`;
 }
 
 /** Turns stored ids into display text. Unknown ids degrade to generic text instead of failing. */

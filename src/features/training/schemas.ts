@@ -69,7 +69,7 @@ const decimalWeightSchema = z
   .regex(/^\d+(\.\d{1,6})?$/, 'Use decimal text with at most six decimals.');
 export function validWeight(value: string, unit: 'kg' | 'lb', decimals = 6) {
   return (
-    new RegExp(`^\\d+(\\.\\d{1,${decimals}})?$`).test(value) &&
+    new RegExp(String.raw`^\d+(\.\d{1,${decimals}})?$`).test(value) &&
     Number(value) * (unit === 'lb' ? 0.45359237 : 1) <= 999999.99
   );
 }
@@ -98,12 +98,13 @@ export const routineInputSchema = z.object({
 });
 export type ExerciseSummary = z.infer<typeof exerciseSummarySchema>;
 export type Exercise = z.infer<typeof exerciseSchema>;
+export type RoutineSummary = z.infer<typeof routineSummarySchema>;
 export type Routine = z.infer<typeof routineSchema>;
 export type RoutineInput = z.infer<typeof routineInputSchema>;
 
 export const completionInputSchema = z
   .object({
-    client_session_id: z.string().uuid(),
+    client_session_id: z.uuid(),
     routine_id: entityId.nullable().optional(),
     started_at: z.iso.datetime({ offset: true }),
     ended_at: z.iso.datetime({ offset: true }),
@@ -126,7 +127,7 @@ export const completionInputSchema = z
   .refine((v) => Date.parse(v.ended_at) >= Date.parse(v.started_at), 'End must follow start.');
 export const completedSessionSchema = z.object({
   id: entityId,
-  client_session_id: z.string().uuid().nullable(),
+  client_session_id: z.uuid().nullable(),
   routine_id: entityId.nullable(),
   activity_type: z.string(),
   state: z.literal('completed'),
@@ -157,12 +158,12 @@ export const draftSnapshotSchema = z.object({
   exercises: z
     .array(
       z.object({
-        client_id: z.string().uuid(),
+        client_id: z.uuid(),
         exercise_id: entityId,
         sets: z
           .array(
             z.object({
-              client_id: z.string().uuid(),
+              client_id: z.uuid(),
               reps: z.number().int().min(1).max(2147483647).nullable(),
               weight: weightInputSchema.nullable(),
               completed: z.boolean(),
@@ -174,7 +175,7 @@ export const draftSnapshotSchema = z.object({
     .max(500),
 });
 export const serverDraftSchema = draftSnapshotSchema.extend({
-  client_session_id: z.string().uuid(),
+  client_session_id: z.uuid(),
   state: z.literal('draft'),
 });
 export type DraftSnapshot = z.infer<typeof draftSnapshotSchema>;
