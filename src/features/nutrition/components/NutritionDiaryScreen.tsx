@@ -188,7 +188,7 @@ export function NutritionDiaryScreen({
                 <View style={styles.macroLabelRow}>
                   <Text style={[textStyles['title-md'], { color: p.ink }]}>{macro.label}</Text>
                   <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                    {macro.value} /{' '}
+                    {formatNumber(macro.value)} /{' '}
                     {macro.goalValue === undefined ? '—' : formatNumber(macro.goalValue)} g
                   </Text>
                 </View>
