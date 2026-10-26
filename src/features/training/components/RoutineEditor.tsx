@@ -9,11 +9,11 @@ import {
   Modal,
   Keyboard,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import DraggableFlatList from './ExerciseDragList';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TextField } from '@/components/TextField';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import { ExerciseDragHandle } from './ExerciseDragHandle';
@@ -297,20 +297,12 @@ export function RoutineEditor({
                 }}
                 render={({ field, fieldState }) => (
                   <>
-                    <TextInput
+                    <TextField
                       accessibilityLabel="Routine name"
                       value={field.value}
                       onChangeText={field.onChange}
                       onBlur={field.onBlur}
                       editable={!disabled}
-                      style={[
-                        ui.field,
-                        {
-                          backgroundColor: p['surface-300'],
-                          color: p.ink,
-                          borderColor: p['line-strong'],
-                        },
-                      ]}
                     />
                     {fieldState.error ? (
                       <Text accessibilityRole="alert" style={{ color: p.danger }}>

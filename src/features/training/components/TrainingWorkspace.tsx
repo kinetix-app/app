@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, Text, TextInput, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
+import { TextField } from '@/components/TextField';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import { useSession } from './SessionProvider';
@@ -124,22 +125,13 @@ export function TrainingWorkspace({
               />
             ) : null}
             <Button title="History" onPress={() => setHistory(true)} secondary />
-            <TextInput
+            <TextField
               accessibilityLabel="Search routines"
               placeholder="Search by name"
-              placeholderTextColor={p['ink-muted']}
               maxLength={150}
               value={search}
               onChangeText={setSearch}
               onSubmitEditing={() => setName(search.trim())}
-              style={[
-                ui.field,
-                {
-                  color: p.ink,
-                  borderColor: p['line-strong'],
-                  backgroundColor: p['surface-300'],
-                },
-              ]}
             />
             <Button
               title="New routine"

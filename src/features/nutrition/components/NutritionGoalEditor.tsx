@@ -8,12 +8,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
+import { TextField } from '@/components/TextField';
 import { getObjective } from '@/features/accounts/api';
 import type { Objective } from '@/features/accounts/schemas';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -160,21 +160,14 @@ export function NutritionGoalEditor({
                     control={form.control}
                     name={field}
                     render={({ field: input }) => (
-                      <TextInput
+                      <TextField
                         accessibilityLabel={label}
                         keyboardType="decimal-pad"
                         value={input.value}
                         editable={!mutation.isPending}
                         onChangeText={input.onChange}
                         onBlur={input.onBlur}
-                        style={[
-                          styles.input,
-                          {
-                            color: p.ink,
-                            borderColor: p['line-strong'],
-                            backgroundColor: p['surface-300'],
-                          },
-                        ]}
+                        inputStyle={textStyles['title-md']}
                       />
                     )}
                   />
@@ -215,12 +208,5 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { gap: spacing['space-5'], paddingBottom: spacing['space-10'] },
   card: { borderRadius: radii['radius-lg'], padding: spacing['space-4'], gap: spacing['space-3'] },
-  input: {
-    minHeight: sizes['control-height'],
-    borderWidth: 1,
-    borderRadius: radii['radius-md'],
-    paddingHorizontal: spacing['space-3'],
-    ...textStyles['title-md'],
-  },
   action: { minHeight: sizes['control-height'], alignItems: 'center', justifyContent: 'center' },
 });

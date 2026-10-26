@@ -1,4 +1,5 @@
 import { useAuth, useClerk, useSignIn, useSignUp, useSSO } from '@clerk/expo';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useRef, useState } from 'react';
@@ -15,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionButton } from '@/components/ActionButton';
 import { BrandHeader } from '@/components/BrandHeader';
-import { IconTextField } from '@/components/IconTextField';
+import { TextField } from '@/components/TextField';
 import { getAccount, type Account } from '@/features/accounts/api';
 import { HomeScreen } from '@/features/home';
 import { ApiError } from '@/services/apiClient';
@@ -226,8 +227,9 @@ function SignInForm() {
         <Text style={styles.subtitle}>Your fitness journey starts here.</Text>
       </View>
       <Text style={styles.label}>Email</Text>
-      <IconTextField
-        icon="mail-outline"
+      <TextField
+        theme="dark"
+        leading={<Ionicons name="mail-outline" size={20} color={colors.icon} />}
         accessibilityLabel="Email"
         placeholder="Enter your email"
         autoCapitalize="none"
@@ -241,8 +243,9 @@ function SignInForm() {
       {sent ? (
         <>
           <Text style={styles.label}>Enter the verification code from your email.</Text>
-          <IconTextField
-            icon="keypad-outline"
+          <TextField
+            theme="dark"
+            leading={<Ionicons name="keypad-outline" size={20} color={colors.icon} />}
             accessibilityLabel="Email verification code"
             placeholder="Verification code"
             autoComplete="one-time-code"

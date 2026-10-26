@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionButton } from '@/components/ActionButton';
 import { BrandHeader } from '@/components/BrandHeader';
-import { IconTextField } from '@/components/IconTextField';
+import { TextField } from '@/components/TextField';
 import { getApiBaseUrl } from '@/config/environment';
 import { getAccount, type Account } from '@/features/accounts/api';
 import { HomeScreen } from '@/features/home';
@@ -134,8 +134,9 @@ export function DevelopmentSignInScreen({
               <Text nativeID="email-label" style={styles.label}>
                 Email
               </Text>
-              <IconTextField
-                icon="mail-outline"
+              <TextField
+                theme="dark"
+                leading={<Ionicons name="mail-outline" size={20} color={colors.icon} />}
                 accessibilityLabel="Email"
                 accessibilityLabelledBy="email-label"
                 placeholder="Enter your email"
@@ -150,8 +151,9 @@ export function DevelopmentSignInScreen({
               <Text nativeID="password-label" style={styles.label}>
                 Password
               </Text>
-              <IconTextField
-                icon="lock-closed-outline"
+              <TextField
+                theme="dark"
+                leading={<Ionicons name="lock-closed-outline" size={20} color={colors.icon} />}
                 accessibilityLabel="Password"
                 accessibilityLabelledBy="password-label"
                 placeholder="Enter your password"

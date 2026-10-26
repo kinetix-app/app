@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { FlatList, Image, Keyboard, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Image, Keyboard, Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, usePalette } from '@/theme/tokens';
 import { BodyPartFilter } from './BodyPartFilter';
 import { trainingApi } from '../api';
@@ -65,23 +66,14 @@ export function ExercisePicker({
                   <Text style={[ui.title, { color: p.ink, flex: 1 }]}>Exercises</Text>
                   <Button title="Done" onPress={onClose} secondary />
                 </View>
-                <TextInput
+                <TextField
                   accessibilityLabel="Search exercises"
                   placeholder="Search by name"
-                  placeholderTextColor={p['ink-muted']}
                   maxLength={200}
                   value={search}
                   onChangeText={setSearch}
                   returnKeyType="search"
                   onSubmitEditing={() => setName(search.trim())}
-                  style={[
-                    ui.field,
-                    {
-                      color: p.ink,
-                      borderColor: p['line-strong'],
-                      backgroundColor: p['surface-300'],
-                    },
-                  ]}
                 />
                 <Button
                   title={bodyParts.length ? `Filters (${bodyParts.length})` : 'Filters'}

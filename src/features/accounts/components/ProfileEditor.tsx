@@ -5,13 +5,13 @@ import {
   Platform,
   ScrollView,
   Text,
-  TextInput,
   View,
   Pressable,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { TextField } from '@/components/TextField';
 import { apiClient } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { removeProfilePicture, uploadProfilePicture, updateProfile } from '../api';
@@ -314,7 +314,7 @@ export function ProfileEditor({
                     control={control}
                     name={name}
                     render={({ field: { value, onChange, onBlur } }) => (
-                      <TextInput
+                      <TextField
                         accessibilityLabel={label}
                         value={value}
                         onChangeText={onChange}
@@ -332,15 +332,8 @@ export function ProfileEditor({
                         autoCapitalize={name === 'display_name' ? 'words' : 'none'}
                         autoCorrect={false}
                         keyboardType={name === 'display_name' ? 'default' : 'decimal-pad'}
-                        style={[
-                          s.field,
-                          textStyles.body,
-                          {
-                            color: p.ink,
-                            backgroundColor: p['surface-300'],
-                            borderColor: errors[name] ? p.danger : p['line-strong'],
-                          },
-                        ]}
+                        invalid={Boolean(errors[name])}
+                        inputStyle={textStyles.body}
                       />
                     )}
                   />

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { TextField } from '@/components/TextField';
 import { radii, spacing, sizes, usePalette } from '@/theme/tokens';
 import type { ActualSet } from '../sessionDraft';
 import { displayWeight } from '../sessionDraft';
@@ -33,14 +34,6 @@ export function SetFields({
   onRemove: () => void;
 }) {
   const p = usePalette();
-  const fieldStyle = [
-    ui.field,
-    {
-      color: p.ink,
-      backgroundColor: p['surface-300'],
-      borderColor: p['line-strong'],
-    },
-  ];
   const weightValid = !set.value || validWeight(set.value, set.unit, decimals);
   const validReps =
     !set.reps ||
@@ -79,7 +72,7 @@ export function SetFields({
           </View>
         ) : null}
         <View style={{ flex: 1 }}>
-          <TextInput
+          <TextField
             accessibilityLabel={`${label} ${unit}`}
             keyboardType="decimal-pad"
             editable={!disabled}
@@ -90,22 +83,20 @@ export function SetFields({
                 ? Number(displayWeight(guidance.weightKg, 'kg', unit)).toFixed(2)
                 : unit
             }
-            placeholderTextColor={p['ink-muted']}
-            style={[...fieldStyle, { textAlign: 'center' }]}
+            inputStyle={{ textAlign: 'center' }}
             onChangeText={(value) => onChange({ ...set, value, unit })}
           />
           <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>{unit}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <TextInput
+          <TextField
             accessibilityLabel={`${label} reps`}
             keyboardType="number-pad"
             editable={!disabled}
             value={set.reps}
             maxLength={10}
             placeholder={guidance?.reps != null ? String(guidance.reps) : 'reps'}
-            placeholderTextColor={p['ink-muted']}
-            style={[...fieldStyle, { textAlign: 'center' }]}
+            inputStyle={{ textAlign: 'center' }}
             onChangeText={(reps) => onChange({ ...set, reps })}
           />
           <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>reps</Text>
