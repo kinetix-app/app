@@ -1002,3 +1002,57 @@ test('completion skips finished exercises, wraps to earlier unfinished cards and
       .every((button) => !button.props.accessibilityState.expanded),
   ).toBe(true);
 });
+
+test('routine validation blocks missing names and empty exercise lists before saving', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(screen.getByText('Save'));
+  expect(await screen.findByText('Enter a routine name.')).toBeTruthy();
+  fireEvent.changeText(screen.getByLabelText('Routine name'), 'Empty routine');
+  fireEvent.press(screen.getByText('Save'));
+  expect(await screen.findByText('Add at least one exercise.')).toBeTruthy();
+  expect(trainingApi.save).not.toHaveBeenCalled();
+});
+
+test('incomplete saved defaults display empty fields and require valid reps before saving', async () => {
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [
+      {
+        ...exampleRoutine.exercises[0],
+        default_sets: [
+          {
+            set_number: 1,
+            reps: null,
+            weight_kg: null,
+            duration_seconds: null,
+            distance_km: null,
+          },
+        ],
+      },
+    ],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  expect(await screen.findByText('— reps · — kg')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
+  expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('');
+  expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '0');
+  for (const reps of ['abc', '0', '2147483648']) {
+    fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), reps);
+    fireEvent.press(screen.getByText('Save'));
+    expect(await screen.findByText('Enter nonnegative kg, up to two decimals.')).toBeTruthy();
+    expect(trainingApi.save).not.toHaveBeenCalled();
+  }
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '8');
+  fireEvent.press(screen.getByText('Save'));
+  expect(await screen.findByText('Routine saved.')).toBeTruthy();
+  expect(trainingApi.save).toHaveBeenCalledWith(
+    {
+      name: 'Push',
+      exercises: [{ id: 20, exercise_id: 1, sets: [{ reps: 8, weight_kg: '0' }] }],
+    },
+    10,
+  );
+});
