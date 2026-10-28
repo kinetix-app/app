@@ -102,7 +102,7 @@ when the user approves a new convention; direct user instructions take precedenc
 
 ## Verification and documentation
 
-- Keep the workflow in `.github/workflows/ci.yml` aligned with the package scripts, `sonar-project.properties` and pinned Node/pnpm configuration. Preserve the stable `Frontend checks` job name used by branch protection. The advisory SonarCloud job consumes the uploaded LCOV report and the `SONAR_TOKEN` secret and is skipped for fork pull requests; it must not gate the required checks. Use commit-pinned actions and read-only permissions; do not suppress failed required checks or introduce filters that prevent them from reporting.
+- Keep the workflow in `.github/workflows/ci.yml` aligned with the package scripts, `sonar-project.properties` and pinned Node/pnpm configuration. Preserve the stable `Frontend checks` job name used by branch protection. The SonarCloud job consumes the uploaded LCOV report and the `SONAR_TOKEN` secret, enforces the project's configured quality gate with a 300-second timeout and is skipped for fork pull requests. Use commit-pinned actions and read-only permissions; do not suppress failed required checks or introduce filters that prevent them from reporting.
 
 - Inspect available scripts first. Once configured, run type/lint/format checks and targeted tests appropriate to the change. Use Jest/`jest-expo` and React Native Testing Library for meaningful behavior, not trivial scaffold assertions or large snapshots.
 - Check affected native flows, especially permissions/media/lifecycle. Bundling and mocked tests do not prove native compilation, device execution or backend integration.
