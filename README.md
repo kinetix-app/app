@@ -160,15 +160,17 @@ Use cache-clearing or dependency reinstallation only when the error justifies it
 [.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and on pushes to `master`, using Node from `.node-version` and pnpm from `package.json`. It has two jobs:
 
 - **Frontend checks:** checks out GitHub's merge commit on Ubuntu 24.04, restores the pnpm store, installs with `--frozen-lockfile`, then runs TypeScript, ESLint, Prettier, Jest with coverage, Expo Doctor and Android/iOS/web export. The job stops on failure and uploads the Jest LCOV report. Coverage appears in the test logs and has no percentage threshold yet.
-- **SonarCloud:** uploads the analysis and coverage report to SonarCloud. This check is advisory: it reports the quality gate without failing the build because `sonar.qualitygate.wait` is not set.
+- **SonarCloud:** uploads the analysis and coverage report to SonarCloud, then waits up to 300 seconds for the quality gate. Both pull-request and main-branch scans fail the job when the project's configured coverage or analysis requirements fail, or when the gate result cannot be obtained before the timeout. Quality gate thresholds are managed in SonarCloud; confirm that the assigned gate includes the required coverage and analysis conditions.
 
 The workflow uses commit-pinned actions, a read-only repository token and no persisted checkout credentials. A newer commit cancels the previous run for the same PR; each job has a timeout. No branch/path filters are used, so the required check can run for every PR.
 
-Once the workflow has run on GitHub, configure branch protection/rulesets to require **Frontend checks** and a teammate's review. Creating this workflow does not configure repository protection. Read the failed step's logs, reproduce its command from this repository root and push the fix; keep CI commands aligned with local development scripts.
+Once the workflow has run on GitHub, configure branch protection/rulesets to require **Frontend checks**, **SonarCloud** and a teammate's review. Creating this workflow does not configure repository protection. Read the failed step's logs, reproduce its command from this repository root and push the fix; keep CI commands aligned with local development scripts.
 
 This workflow verifies code, tests and bundling. Native compilation/device testing, API integration and release signing/distribution require their own verification. On 4 October 2026, actionlint validated the workflow and all run commands passed in a clean temporary checkout with the pinned toolchain. Its first GitHub-hosted run is still pending.
 
 ### SonarCloud setup
+
+The SonarCloud job writes a GitHub Actions summary even after a failed scan, identifying the repository, source branch, source commit, job result and UTC timestamp, with links to SonarCloud results and workflow logs. Each scan also supplies `sonar.links.ci` with the workflow run URL. The job result includes scanner/setup failures as well as quality gate failures; inspect the logs for the specific cause.
 
 CI-based analysis needs a SonarCloud project bound to the GitHub repository and a repository secret:
 
