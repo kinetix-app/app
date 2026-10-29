@@ -101,15 +101,15 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await page.getByRole('button', { name: 'Edit nutrition goal', exact: true }).click();
   for (const [label, value] of [
     ['Daily calorie goal', '2400.15'],
-    ['Daily protein goal', '150.12'],
-    ['Daily carbohydrate goal', '250.25'],
-    ['Daily fat goal', '0'],
+    ['Protein percentage', '30'],
+    ['Carbohydrate percentage', '70'],
+    ['Fat percentage', '0'],
   ])
     await page.getByLabel(label, { exact: true }).fill(value);
   await page.route(/\/api\/v1\/nutrition-goals(?:\/me)?$/, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save goal', exact: true }).click();
   await expect(page.getByText('Could not save your goal. Try again.')).toBeVisible();
-  await expect(page.getByLabel('Daily protein goal')).toHaveValue('150.12');
+  await expect(page.getByLabel('Protein percentage')).toHaveValue('30');
   await page.unroute(/\/api\/v1\/nutrition-goals(?:\/me)?$/);
   await page.getByRole('button', { name: 'Save goal', exact: true }).click();
   await expect(page.getByText('185 kcal', { exact: true }).first()).toBeVisible();
@@ -123,9 +123,9 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   const oldTarget = await (await get('/nutrition-goals/me')).json();
   expect(oldTarget.objective).toBe('build_muscle');
   await page.getByRole('button', { name: 'Edit nutrition goal', exact: true }).click();
-  await expect(page.getByLabel('Daily protein goal')).toHaveValue('150.12');
-  await expect(page.getByLabel('Daily fat goal')).toHaveValue('0');
-  await expect(page.getByText(/These saved amounts belong to Build muscle/)).toBeVisible();
+  await expect(page.getByLabel('Protein percentage')).toHaveValue('30.00');
+  await expect(page.getByLabel('Fat percentage')).toHaveValue('0.00');
+  await expect(page.getByText(/Saved for Build muscle/)).toBeVisible();
   await page.getByRole('button', { name: 'Save goal', exact: true }).click();
   await expect
     .poll(async () => (await (await get('/nutrition-goals/me')).json()).objective)

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
-import { Controller, useForm, type UseFormReturn } from 'react-hook-form';
+import { Controller, useForm, useWatch, type UseFormReturn } from 'react-hook-form';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,7 +19,15 @@ import type { Objective } from '@/features/accounts/schemas';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 import { nutritionApi } from '../api';
-import { nutritionGoalInputSchema, type NutritionGoal, type NutritionGoalInput } from '../schemas';
+import {
+  emptyPercentages,
+  hundredths,
+  macroSplitGoal,
+  percentagesFromGoal,
+  type MacroGoalValues,
+} from '../macroSplit';
+import { MacroSplitFields } from './MacroSplitFields';
+import { type NutritionGoal, type NutritionGoalInput } from '../schemas';
 
 const objectives: Record<Objective, string> = {
   build_muscle: 'Build muscle',
@@ -27,14 +35,8 @@ const objectives: Record<Objective, string> = {
   gain_weight: 'Gain weight',
   maintain_weight: 'Maintain weight',
 };
-const fields = [
-  ['calories', 'Daily calorie goal', 'kcal per day'],
-  ['protein', 'Daily protein goal', 'g per day'],
-  ['carbohydrates', 'Daily carbohydrate goal', 'g per day'],
-  ['fats', 'Daily fat goal', 'g per day'],
-] as const;
-type Values = Record<(typeof fields)[number][0], string>;
-const empty: Values = { calories: '', protein: '', carbohydrates: '', fats: '' };
+type Values = MacroGoalValues;
+const empty: Values = { calories: '', ...emptyPercentages };
 
 type NutritionGoalEditorProps = Readonly<{ accountId: number; onClose: () => void }>;
 type NutritionGoalEditorViewProps = Readonly<{
@@ -51,18 +53,10 @@ type NutritionGoalEditorViewProps = Readonly<{
   onSave: () => void;
 }>;
 
-function parseGoalValues(values: Values): NutritionGoalInput | undefined {
-  const amounts = Object.fromEntries(fields.map(([field]) => [field, Number(values[field])]));
-  const parsed = nutritionGoalInputSchema.safeParse(amounts);
-  const validText = fields.every(([field]) => /^\d+(?:\.\d{1,2})?$/.test(values[field]));
-  return validText && parsed.success ? parsed.data : undefined;
-}
-
 function savedGoalNote(savedGoal: NutritionGoal | null | undefined, current: Objective | null) {
   if (!savedGoal || savedGoal.objective === current) return undefined;
-  if (savedGoal.objective)
-    return `These saved amounts belong to ${objectives[savedGoal.objective]}.`;
-  return 'These saved amounts have no recorded objective.';
+  if (savedGoal.objective) return `Saved for ${objectives[savedGoal.objective]}.`;
+  return 'Saved without an objective.';
 }
 
 type NutritionGoalFormProps = Readonly<{
@@ -83,6 +77,16 @@ function NutritionGoalForm({
   onSave,
 }: NutritionGoalFormProps) {
   const p = usePalette();
+  const calories = useWatch({ control: form.control, name: 'calories' });
+  const percentages = useWatch({ control: form.control });
+  const validSplit = macroSplitGoal(calories, {
+    carbohydrates: percentages.carbohydrates ?? '',
+    protein: percentages.protein ?? '',
+    fats: percentages.fats ?? '',
+  });
+  const disabled = !currentObjective || saving || !validSplit;
+  const energy = hundredths(calories);
+  const invalidCalories = calories !== '' && (!energy || energy > 99999999);
   return (
     <>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>
@@ -91,35 +95,38 @@ function NutritionGoalForm({
           : 'Choose an objective first'}
       </Text>
       <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-        Choose your own daily targets for this objective. These are your chosen amounts. You can
-        change them later and record food without a target.
+        Set your daily calories and macro split.
       </Text>
       {note ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {note} Review them before saving for your current objective.
+          {note} Review before saving.
         </Text>
       ) : null}
-      {fields.map(([field, label, unit]) => (
-        <View key={field} style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-          <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
-          <Controller
-            control={form.control}
-            name={field}
-            render={({ field: input }) => (
-              <TextField
-                accessibilityLabel={label}
-                keyboardType="decimal-pad"
-                value={input.value}
-                editable={!saving}
-                onChangeText={input.onChange}
-                onBlur={input.onBlur}
-                inputStyle={textStyles['title-md']}
-              />
-            )}
-          />
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{unit}</Text>
-        </View>
-      ))}
+      <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
+        <Text style={[textStyles.label, { color: p.ink }]}>Daily calorie goal</Text>
+        <Controller
+          control={form.control}
+          name="calories"
+          render={({ field: input }) => (
+            <TextField
+              accessibilityLabel="Daily calorie goal"
+              keyboardType="decimal-pad"
+              value={input.value}
+              editable={!saving}
+              onChangeText={input.onChange}
+              onBlur={input.onBlur}
+              invalid={Boolean(invalidCalories)}
+            />
+          )}
+        />
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>kcal per day</Text>
+        {invalidCalories ? (
+          <Text style={[textStyles['body-sm'], { color: p.danger }]}>
+            Enter daily calories from 0.01 to 999999.99, with up to two decimals.
+          </Text>
+        ) : null}
+      </View>
+      <MacroSplitFields form={form} calories={calories} saving={saving} />
       {errorMessage ? (
         <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
           {errorMessage}
@@ -127,15 +134,15 @@ function NutritionGoalForm({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ disabled: !currentObjective || saving }}
-        disabled={!currentObjective || saving}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         onPress={onSave}
         style={[
           styles.action,
           {
             backgroundColor: p.brand,
             borderRadius: radii['radius-pill'],
-            opacity: !currentObjective || saving ? 0.55 : 1,
+            opacity: disabled ? 0.55 : 1,
           },
         ]}
       >
@@ -209,7 +216,11 @@ function NutritionGoalEditorView({
   );
 }
 
-export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorProps) {
+export function NutritionGoalEditor(props: NutritionGoalEditorProps) {
+  return <AccountNutritionGoalEditor key={props.accountId} {...props} />;
+}
+
+function AccountNutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorProps) {
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ['nutrition', accountId, 'goal'],
@@ -227,9 +238,7 @@ export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorP
     if (query.data && !hydrated.current) {
       form.reset({
         calories: String(query.data.calories),
-        protein: String(query.data.protein),
-        carbohydrates: String(query.data.carbohydrates),
-        fats: String(query.data.fats),
+        ...percentagesFromGoal(query.data),
       });
       hydrated.current = true;
     }
@@ -247,10 +256,10 @@ export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorP
   const current = objective.data?.objective;
   function save(values: Values) {
     if (busy.current || mutation.isPending || !current) return;
-    const input = parseGoalValues(values);
+    const input = macroSplitGoal(values.calories, values);
     if (!input) {
       setValidationError(
-        'Enter calories above zero and nonnegative grams, with up to two decimals.',
+        'Enter calories above zero and percentages totaling 100%, with up to two decimals.',
       );
       return;
     }

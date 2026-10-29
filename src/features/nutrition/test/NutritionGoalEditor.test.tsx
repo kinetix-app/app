@@ -8,6 +8,10 @@ import { NutritionGoalEditor } from '../components/NutritionGoalEditor';
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: jest.requireActual('react-native').View,
 }));
+jest.mock('@react-native-community/slider', () => {
+  const { View } = jest.requireActual('react-native');
+  return { __esModule: true, default: View };
+});
 jest.mock('@/features/accounts/api', () => ({ getObjective: jest.fn() }));
 jest.mock('../api', () => ({
   nutritionApi: { goal: jest.fn(), createGoal: jest.fn(), updateGoal: jest.fn() },
@@ -45,32 +49,141 @@ test('absent target starts blank, can be skipped, and never invents suggested am
   const onClose = editor();
   await screen.findByLabelText('Daily calorie goal');
   expect(screen.getByLabelText('Daily calorie goal').props.value).toBe('');
-  expect(screen.getByLabelText('Daily protein goal').props.value).toBe('');
+  expect(screen.getByLabelText('Protein percentage').props.value).toBe('');
   fireEvent.press(screen.getByText('Set up later'));
   expect(onClose).toHaveBeenCalledTimes(1);
   expect(nutritionApi.createGoal).not.toHaveBeenCalled();
 });
-test('reopens exact grams including zero; failed save retains values and permits explicit reassociation', async () => {
+test('percentage editing has no preset, rejects incomplete totals and creates rounded grams', async () => {
+  jest.mocked(nutritionApi.goal).mockResolvedValue(null);
+  jest.mocked(nutritionApi.createGoal).mockResolvedValue({
+    ...existing,
+    calories: 2000,
+    protein: 150,
+    carbohydrates: 200,
+    fats: 66.67,
+  });
+  const onClose = editor();
+  await screen.findByLabelText('Protein percentage');
+  expect(screen.getByLabelText('Protein percentage').props.value).toBe('');
+  expect(screen.getByRole('button', { name: 'Save goal' })).toBeDisabled();
+  fireEvent.changeText(screen.getByLabelText('Daily calorie goal'), '2000');
+  fireEvent.changeText(screen.getByLabelText('Carbohydrate percentage'), '40');
+  fireEvent.changeText(screen.getByLabelText('Protein percentage'), '30');
+  fireEvent.changeText(screen.getByLabelText('Fat percentage'), '29.99');
+  expect(screen.getByText('Total: 99.99%')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
+  expect(nutritionApi.createGoal).not.toHaveBeenCalled();
+  fireEvent.changeText(screen.getByLabelText('Fat percentage'), '30');
+  expect(screen.getByText('Carbohydrate: 200.00 g per day')).toBeTruthy();
+  expect(screen.getByText('Fat: 66.67 g per day')).toBeTruthy();
+  expect(screen.getByText('Total: 100.00%')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  expect(nutritionApi.createGoal).toHaveBeenCalledWith({
+    calories: 2000,
+    carbohydrates: 200,
+    protein: 150,
+    fats: 66.67,
+  });
+});
+
+test('legacy shares are not normalized and opening the editor never saves', async () => {
   jest.mocked(nutritionApi.goal).mockResolvedValue(existing);
+  const onClose = editor();
+  await waitFor(() => expect(screen.getByLabelText('Fat percentage').props.value).toBe('0.00'));
+  expect(screen.getByText(/Percentages must total 100% to save/)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Save goal' })).toBeDisabled();
+  expect(screen.queryByLabelText('Daily protein goal')).toBeNull();
+  expect(screen.queryByRole('radio', { name: 'Grams' })).toBeNull();
+  fireEvent.press(screen.getByText('Back'));
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(nutritionApi.updateGoal).not.toHaveBeenCalled();
+});
+
+test('failed percentage save retains the split, permits retry and prevents duplicate requests', async () => {
+  jest.mocked(nutritionApi.goal).mockResolvedValue({
+    ...existing,
+    calories: 2000,
+    carbohydrates: 200,
+    protein: 150,
+    fats: 66.67,
+  });
+  let reject: (reason: Error) => void = () => undefined;
   jest
     .mocked(nutritionApi.updateGoal)
-    .mockRejectedValueOnce(new Error('offline'))
-    .mockResolvedValueOnce({ ...existing, objective: 'build_muscle' });
+    .mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    )
+    .mockResolvedValueOnce(existing);
   const onClose = editor();
+  await waitFor(() => expect(screen.getByLabelText('Daily calorie goal').props.value).toBe('2000'));
+  fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
+  await waitFor(() => expect(nutritionApi.updateGoal).toHaveBeenCalledTimes(1));
   await waitFor(() =>
-    expect(screen.getByLabelText('Daily protein goal').props.value).toBe('150.12'),
+    expect(screen.getByLabelText('Protein percentage').props.editable).toBe(false),
   );
-  expect(screen.getByLabelText('Daily fat goal').props.value).toBe('0');
-  expect(screen.getByText(/These saved amounts belong to Gain weight/)).toBeTruthy();
-  fireEvent.press(screen.getByText('Save goal'));
+  reject(new Error('offline'));
   await screen.findByText('Could not save your goal. Try again.');
-  expect(screen.getByLabelText('Daily protein goal').props.value).toBe('150.12');
-  fireEvent.press(screen.getByText('Save goal'));
+  expect(screen.getByLabelText('Protein percentage').props.value).toBe('30.00');
+  fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-  expect(nutritionApi.updateGoal).toHaveBeenLastCalledWith({
-    calories: 2400.15,
-    protein: 150.12,
-    carbohydrates: 250.25,
-    fats: 0,
-  });
+});
+
+test('switching accounts resets private form drafts and editing mode', async () => {
+  jest.mocked(nutritionApi.goal).mockResolvedValueOnce(existing).mockResolvedValueOnce(null);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const view = (accountId: number) => (
+    <QueryClientProvider client={client}>
+      <NutritionGoalEditor accountId={accountId} onClose={jest.fn()} />
+    </QueryClientProvider>
+  );
+  const { rerender } = render(view(1));
+  await waitFor(() => expect(screen.getByLabelText('Protein percentage').props.value).not.toBe(''));
+  fireEvent.changeText(screen.getByLabelText('Protein percentage'), '90');
+  rerender(view(2));
+  await screen.findByLabelText('Protein percentage');
+  expect(screen.getByLabelText('Protein percentage').props.value).toBe('');
+  expect(screen.getByLabelText('Daily calorie goal').props.value).toBe('');
+  expect(nutritionApi.updateGoal).not.toHaveBeenCalled();
+});
+
+test('invalid calories stay unsavable and valid percentages preview grams', async () => {
+  jest.mocked(nutritionApi.goal).mockResolvedValue(null);
+  editor();
+  await screen.findByLabelText('Protein percentage');
+  fireEvent.changeText(screen.getByLabelText('Daily calorie goal'), '0');
+  for (const [label, value] of [
+    ['Carbohydrate percentage', '40'],
+    ['Protein percentage', '30'],
+    ['Fat percentage', '30'],
+  ]) {
+    fireEvent.changeText(screen.getByLabelText(label), value);
+  }
+  expect(screen.getByRole('button', { name: 'Save goal' })).toBeDisabled();
+  expect(screen.getByText(/Enter daily calories from/)).toBeTruthy();
+  fireEvent.changeText(screen.getByLabelText('Daily calorie goal'), '2000');
+  expect(screen.getByRole('button', { name: 'Save goal' })).toBeEnabled();
+  expect(screen.getByText('Protein: 150.00 g per day')).toBeTruthy();
+  expect(screen.getByText('Fat: 66.67 g per day')).toBeTruthy();
+  expect(nutritionApi.createGoal).not.toHaveBeenCalled();
+});
+
+test('range changes and manual input stay synchronized without redistributing other macros', async () => {
+  jest.mocked(nutritionApi.goal).mockResolvedValue(null);
+  editor();
+  await screen.findByLabelText('Protein percentage');
+  fireEvent(screen.getByLabelText('Protein range'), 'valueChange', 28.5);
+  expect(screen.getByLabelText('Protein percentage').props.value).toBe('28.50');
+  expect(screen.getByLabelText('Fat percentage').props.value).toBe('');
+  fireEvent.changeText(screen.getByLabelText('Protein percentage'), '31.25');
+  expect(screen.getByLabelText('Protein range').props.value).toBe(31.25);
+  fireEvent.changeText(screen.getByLabelText('Protein percentage'), '101');
+  expect(screen.getByLabelText('Protein range').props.value).toBe(100);
+  expect(screen.getByRole('button', { name: 'Save goal' })).toBeDisabled();
+  expect(nutritionApi.createGoal).not.toHaveBeenCalled();
 });

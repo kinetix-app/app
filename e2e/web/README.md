@@ -63,3 +63,15 @@ profile save/reload and removal. A second identity and an anonymous request must
 read the primary account's image. Only repository-owned app icons are used as sample
 uploads; no personal photo is required. Private storage ACL, content validation and
 failure/rollback cases also have backend integration coverage.
+
+## Percentage nutrition-goal acceptance
+
+`nutrition-goals.spec.ts` requires two distinct private synthetic identities and a fresh
+run-owned database with `APP_ENV=test` and `DATABASE_URL` ending in `_test`. It prepares
+only those test profiles, then signs in through the real form. Run it alone with
+`pnpm exec playwright test --config e2e/web/playwright.config.ts nutrition-goals.spec.ts`.
+It covers absent targets, percentage-only editing with synchronized sliders/manual inputs, invalid totals, rounded grams,
+failed save/retry, create/update, reopen/reload, zero macros, preservation of inconsistent
+legacy targets and two-account ownership. It uses the existing calorie/gram API; scientific
+suggestion integration belongs to [app#74](https://github.com/kinetix-app/app/issues/74).
+Browser evidence does not establish Android/iOS acceptance.
