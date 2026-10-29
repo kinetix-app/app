@@ -70,8 +70,8 @@ failure/rollback cases also have backend integration coverage.
 run-owned database with `APP_ENV=test` and `DATABASE_URL` ending in `_test`. It prepares
 only those test profiles, then signs in through the real form. Run it alone with
 `pnpm exec playwright test --config e2e/web/playwright.config.ts nutrition-goals.spec.ts`.
-It covers absent targets, percentage-only editing with synchronized sliders/manual inputs, invalid totals, rounded grams,
+It covers absent targets, compact percentage/gram editing with synchronized sliders/manual inputs and live equivalents, invalid totals, rounded grams,
 failed save/retry, create/update, reopen/reload, zero macros, preservation of inconsistent
-legacy targets and two-account ownership. It uses the existing calorie/gram API; scientific
+legacy targets, over-budget warnings/save blocking, one-screen layout at 390×844 and two-account ownership. It uses the existing calorie/gram API; scientific
 suggestion integration belongs to [app#74](https://github.com/kinetix-app/app/issues/74).
 Browser evidence does not establish Android/iOS acceptance.

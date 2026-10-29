@@ -2,14 +2,21 @@ import React from 'react';
 import { sizes, usePalette } from '@/theme/tokens';
 import type { MacroRangeProps } from './MacroRange';
 
-export function MacroRange({ label, value, disabled, onChange, onBlur }: MacroRangeProps) {
+export function MacroRange({
+  label,
+  value,
+  maximum = 100,
+  disabled,
+  onChange,
+  onBlur,
+}: MacroRangeProps) {
   const p = usePalette();
   return (
     <input
       type="range"
       aria-label={label}
       min={0}
-      max={100}
+      max={maximum}
       step={0.01}
       value={value}
       disabled={disabled}

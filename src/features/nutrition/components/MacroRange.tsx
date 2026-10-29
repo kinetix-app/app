@@ -5,18 +5,26 @@ import { sizes, usePalette } from '@/theme/tokens';
 export type MacroRangeProps = Readonly<{
   label: string;
   value: number;
+  maximum?: number;
   disabled: boolean;
   onChange: (value: number) => void;
   onBlur: () => void;
 }>;
 
-export function MacroRange({ label, value, disabled, onChange, onBlur }: MacroRangeProps) {
+export function MacroRange({
+  label,
+  value,
+  maximum = 100,
+  disabled,
+  onChange,
+  onBlur,
+}: MacroRangeProps) {
   const p = usePalette();
   return (
     <Slider
       accessibilityLabel={label}
       minimumValue={0}
-      maximumValue={100}
+      maximumValue={maximum}
       step={0.01}
       value={value}
       onValueChange={onChange}

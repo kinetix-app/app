@@ -112,7 +112,7 @@ test('manual percentage targets persist, retain legacy values and isolate two au
 
   await page.getByLabel('Daily calorie goal').fill('2000');
   await split(page, '40', '30', '29.99');
-  await expect(page.getByText('Total: 99.99%')).toBeVisible();
+  await expect(page.getByText('1999.80 kcal · 99.99%')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save goal', exact: true })).toBeDisabled();
   expect((await request('/nutrition-goals/me')).status).toBe(404);
   await page.getByLabel('Fat percentage').fill('30');
@@ -133,12 +133,39 @@ test('manual percentage targets persist, retain legacy values and isolate two au
   await expect(page.getByLabel('Fat percentage')).toHaveValue(dragged.toFixed(2));
   await page.getByLabel('Fat percentage').fill('30');
   await expect(range).toHaveValue('30');
-  await expect(page.getByText('Fat: 66.67 g per day')).toBeVisible();
+  const saveBounds = await page
+    .getByRole('button', { name: 'Save goal', exact: true })
+    .boundingBox();
+  const navigationBounds = await page
+    .getByRole('tablist', { name: 'Main navigation' })
+    .boundingBox();
+  if (!saveBounds || !navigationBounds) throw new Error('Editor and navigation must be visible');
+  expect(saveBounds.y).toBeGreaterThanOrEqual(0);
+  const headingBounds = await page
+    .getByRole('heading', { name: 'Nutrition goal', exact: true })
+    .boundingBox();
+  expect(headingBounds?.y).toBeGreaterThanOrEqual(0);
+  expect(saveBounds.y + saveBounds.height).toBeLessThanOrEqual(navigationBounds.y);
+  await page.getByLabel('Carbohydrate percentage').fill('60');
+  await expect(page.getByText('2400.00 kcal · 120.00%')).toBeVisible();
+  await expect(page.getByText('Out of budget · 400.00 kcal over 2000.00 kcal')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save goal', exact: true })).toBeDisabled();
+  await page.getByRole('radio', { name: 'Grams', exact: true }).click();
+  await expect(page.getByLabel('Carbohydrate grams')).toHaveValue('300.00');
+  await expect(page.getByText('60.00%', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save goal', exact: true })).toBeDisabled();
+  await page.getByLabel('Carbohydrate grams').fill('200');
+  await expect(page.getByText(/Out of budget/)).toHaveCount(0);
+  await page.getByRole('radio', { name: 'Percentages', exact: true }).click();
+  await expect(page.getByLabel('Carbohydrate percentage')).toHaveValue('40.00');
+  await expect(page.getByText('200.00 g', { exact: true })).toBeVisible();
+
+  await expect(page.getByText('66.67 g', { exact: true })).toBeVisible();
   const mutations = /\/api\/v1\/nutrition-goals(?:\/me)?$/;
   await page.route(mutations, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save goal', exact: true }).click();
   await expect(page.getByText('Could not save your goal. Try again.')).toBeVisible();
-  await expect(page.getByLabel('Protein percentage')).toHaveValue('30');
+  await expect(page.getByLabel('Protein percentage')).toHaveValue('30.00');
   await page.unroute(mutations);
   await page.getByRole('button', { name: 'Save goal', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Nutrition', exact: true })).toBeVisible();
@@ -151,7 +178,7 @@ test('manual percentage targets persist, retain legacy values and isolate two au
   await openEditor(page);
   await expect(page.getByLabel('Fat percentage')).toHaveValue('30.00');
   await expect(page.getByLabel('Protein percentage')).toHaveValue('30.00');
-  await expect(page.getByText('Total: 100.00%')).toBeVisible();
+  await expect(page.getByText('2000.00 kcal · 100.00%')).toBeVisible();
   await page.emulateMedia({ colorScheme: 'light' });
   await page.screenshot({
     path: '.codex/artifacts/previews/nutrition-percentages-light.png',
@@ -179,7 +206,21 @@ test('manual percentage targets persist, retain legacy values and isolate two au
   await expect(page.getByLabel('Fat percentage')).toHaveValue('0.00');
   await expect(page.getByRole('button', { name: 'Save goal', exact: true })).toBeDisabled();
   await expect(page.getByText(/Percentages must total 100% to save/)).toBeVisible();
+  await page.getByRole('radio', { name: 'Grams', exact: true }).click();
+  await expect(page.getByLabel('Protein grams')).toHaveValue('150.12');
+  await expect(page.getByRole('button', { name: 'Save goal', exact: true })).toBeEnabled();
+  await page.getByRole('radio', { name: 'Percentages', exact: true }).click();
+
   await expect(page.getByLabel('Protein percentage')).not.toHaveValue('');
+  await page.getByRole('radio', { name: 'Grams', exact: true }).click();
+  await page.getByRole('button', { name: 'Save goal', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Nutrition', exact: true })).toBeVisible();
+  await page.reload();
+  await signIn(page);
+  await openEditor(page);
+  await page.getByRole('radio', { name: 'Grams', exact: true }).click();
+  await expect(page.getByLabel('Protein grams')).toHaveValue('150.12');
+  await expect(page.getByLabel('Fat grams')).toHaveValue('0');
   const unchanged = await goal();
   expect(Number(unchanged.calories)).toBe(legacy.calories);
   expect(Number(unchanged.protein)).toBe(legacy.protein);
