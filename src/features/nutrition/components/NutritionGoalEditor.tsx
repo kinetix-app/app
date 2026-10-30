@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
-import { Controller, useForm, type UseFormReturn } from 'react-hook-form';
+import { Controller, useForm, useWatch, type UseFormReturn } from 'react-hook-form';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,7 +19,19 @@ import type { Objective } from '@/features/accounts/schemas';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 import { nutritionApi } from '../api';
-import { nutritionGoalInputSchema, type NutritionGoal, type NutritionGoalInput } from '../schemas';
+import {
+  emptyPercentages,
+  hundredths,
+  nutritionDraftGoal,
+  macroBudget,
+  percentageTotal,
+  convertMacroDraft,
+  type MacroMode,
+  percentagesFromGoal,
+  type MacroGoalValues,
+} from '../macroSplit';
+import { MacroSplitFields } from './MacroSplitFields';
+import { type NutritionGoal, type NutritionGoalInput } from '../schemas';
 
 const objectives: Record<Objective, string> = {
   build_muscle: 'Build muscle',
@@ -27,18 +39,14 @@ const objectives: Record<Objective, string> = {
   gain_weight: 'Gain weight',
   maintain_weight: 'Maintain weight',
 };
-const fields = [
-  ['calories', 'Daily calorie goal', 'kcal per day'],
-  ['protein', 'Daily protein goal', 'g per day'],
-  ['carbohydrates', 'Daily carbohydrate goal', 'g per day'],
-  ['fats', 'Daily fat goal', 'g per day'],
-] as const;
-type Values = Record<(typeof fields)[number][0], string>;
-const empty: Values = { calories: '', protein: '', carbohydrates: '', fats: '' };
+type Values = MacroGoalValues;
+const empty: Values = { calories: '', ...emptyPercentages };
 
 type NutritionGoalEditorProps = Readonly<{ accountId: number; onClose: () => void }>;
 type NutritionGoalEditorViewProps = Readonly<{
   form: UseFormReturn<Values>;
+  mode: MacroMode;
+  onModeChange: (mode: MacroMode) => void;
   loading: boolean;
   failed: boolean;
   currentObjective: Objective | null;
@@ -51,22 +59,16 @@ type NutritionGoalEditorViewProps = Readonly<{
   onSave: () => void;
 }>;
 
-function parseGoalValues(values: Values): NutritionGoalInput | undefined {
-  const amounts = Object.fromEntries(fields.map(([field]) => [field, Number(values[field])]));
-  const parsed = nutritionGoalInputSchema.safeParse(amounts);
-  const validText = fields.every(([field]) => /^\d+(?:\.\d{1,2})?$/.test(values[field]));
-  return validText && parsed.success ? parsed.data : undefined;
-}
-
 function savedGoalNote(savedGoal: NutritionGoal | null | undefined, current: Objective | null) {
   if (!savedGoal || savedGoal.objective === current) return undefined;
-  if (savedGoal.objective)
-    return `These saved amounts belong to ${objectives[savedGoal.objective]}.`;
-  return 'These saved amounts have no recorded objective.';
+  if (savedGoal.objective) return `Saved for ${objectives[savedGoal.objective]}.`;
+  return 'Saved without an objective.';
 }
 
 type NutritionGoalFormProps = Readonly<{
   form: UseFormReturn<Values>;
+  mode: MacroMode;
+  onModeChange: (mode: MacroMode) => void;
   currentObjective: Objective | null;
   note?: string;
   errorMessage: string;
@@ -76,6 +78,8 @@ type NutritionGoalFormProps = Readonly<{
 
 function NutritionGoalForm({
   form,
+  mode,
+  onModeChange,
   currentObjective,
   note,
   errorMessage,
@@ -83,43 +87,74 @@ function NutritionGoalForm({
   onSave,
 }: NutritionGoalFormProps) {
   const p = usePalette();
+  const calories = useWatch({ control: form.control, name: 'calories' });
+  const percentages = useWatch({ control: form.control });
+  const values: Values = {
+    calories,
+    carbohydrates: percentages.carbohydrates ?? '',
+    protein: percentages.protein ?? '',
+    fats: percentages.fats ?? '',
+  };
+  const budget = macroBudget(values, mode);
+  const validSplit = nutritionDraftGoal(values, mode);
+  const disabled =
+    !currentObjective ||
+    saving ||
+    !validSplit ||
+    budget?.overBudget ||
+    (mode === 'percentages' && percentageTotal(values) !== 100);
+  const energy = hundredths(calories);
+  const invalidCalories = calories !== '' && (!energy || energy > 99999999);
   return (
     <>
-      <Text style={[textStyles['title-md'], { color: p.ink }]}>
-        {currentObjective
-          ? `Your objective: ${objectives[currentObjective]}`
-          : 'Choose an objective first'}
-      </Text>
-      <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-        Choose your own daily targets for this objective. These are your chosen amounts. You can
-        change them later and record food without a target.
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        {currentObjective ? objectives[currentObjective] : 'Choose an objective first'}
       </Text>
       {note ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {note} Review them before saving for your current objective.
+          {note} Review before saving.
         </Text>
       ) : null}
-      {fields.map(([field, label, unit]) => (
-        <View key={field} style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-          <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
-          <Controller
-            control={form.control}
-            name={field}
-            render={({ field: input }) => (
-              <TextField
-                accessibilityLabel={label}
-                keyboardType="decimal-pad"
-                value={input.value}
-                editable={!saving}
-                onChangeText={input.onChange}
-                onBlur={input.onBlur}
-                inputStyle={textStyles['title-md']}
-              />
-            )}
-          />
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{unit}</Text>
+      <View style={[styles.calories, { backgroundColor: p['surface-200'] }]}>
+        <View style={styles.calorieCopy}>
+          <Text style={[textStyles.label, { color: p.ink }]}>Daily calories</Text>
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>kcal / day</Text>
         </View>
-      ))}
+        <Controller
+          control={form.control}
+          name="calories"
+          render={({ field: input }) => (
+            <TextField
+              accessibilityLabel="Daily calorie goal"
+              keyboardType="decimal-pad"
+              value={input.value}
+              editable={!saving}
+              onChangeText={input.onChange}
+              onBlur={input.onBlur}
+              invalid={Boolean(invalidCalories)}
+              containerStyle={styles.calorieInput}
+              inputStyle={styles.compactInput}
+            />
+          )}
+        />
+      </View>
+      {invalidCalories ? (
+        <Text style={[textStyles['body-sm'], { color: p.danger }]}>
+          Enter daily calories from 0.01 to 999999.99, with up to two decimals.
+        </Text>
+      ) : null}
+      <MacroSplitFields
+        form={form}
+        calories={calories}
+        mode={mode}
+        onModeChange={onModeChange}
+        saving={saving}
+      />
+      {mode === 'percentages' && budget && !budget.overBudget && percentageTotal(values) !== 100 ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          Percentages must total 100% to save.
+        </Text>
+      ) : null}
       {errorMessage ? (
         <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
           {errorMessage}
@@ -127,15 +162,15 @@ function NutritionGoalForm({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ disabled: !currentObjective || saving }}
-        disabled={!currentObjective || saving}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         onPress={onSave}
         style={[
           styles.action,
           {
             backgroundColor: p.brand,
             borderRadius: radii['radius-pill'],
-            opacity: !currentObjective || saving ? 0.55 : 1,
+            opacity: disabled ? 0.55 : 1,
           },
         ]}
       >
@@ -149,6 +184,8 @@ function NutritionGoalForm({
 
 function NutritionGoalEditorView({
   form,
+  mode,
+  onModeChange,
   loading,
   failed,
   currentObjective,
@@ -174,12 +211,13 @@ function NutritionGoalEditorView({
           contentContainerStyle={[screenContentStyle, styles.content]}
           keyboardShouldPersistTaps="handled"
         >
-          <ScreenHeader title="Nutrition goal" />
-          <Pressable accessibilityRole="button" onPress={onClose} style={styles.action}>
-            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-              {savedGoal ? 'Back' : 'Set up later'}
-            </Text>
-          </Pressable>
+          <ScreenHeader title="Nutrition goal">
+            <Pressable accessibilityRole="button" onPress={onClose} style={styles.action}>
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                {savedGoal ? 'Back' : 'Set up later'}
+              </Text>
+            </Pressable>
+          </ScreenHeader>
           {loading ? <Text style={[textStyles.body, { color: p.ink }]}>Loading goal…</Text> : null}
           {failed ? (
             <View style={styles.card}>
@@ -196,6 +234,8 @@ function NutritionGoalEditorView({
           {!loading && !failed ? (
             <NutritionGoalForm
               form={form}
+              mode={mode}
+              onModeChange={onModeChange}
               currentObjective={currentObjective}
               note={note}
               errorMessage={errorMessage}
@@ -209,7 +249,11 @@ function NutritionGoalEditorView({
   );
 }
 
-export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorProps) {
+export function NutritionGoalEditor(props: NutritionGoalEditorProps) {
+  return <AccountNutritionGoalEditor key={props.accountId} {...props} />;
+}
+
+function AccountNutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorProps) {
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ['nutrition', accountId, 'goal'],
@@ -222,15 +266,26 @@ export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorP
     retry: false,
   });
   const form = useForm<Values>({ defaultValues: empty });
+  const [mode, setMode] = React.useState<MacroMode>('percentages');
+  const drafts = React.useRef<Partial<Record<MacroMode, Values>>>({});
+  const dirty = form.formState.isDirty;
   const hydrated = React.useRef(false);
   React.useEffect(() => {
     if (query.data && !hydrated.current) {
-      form.reset({
+      const percentages = {
         calories: String(query.data.calories),
-        protein: String(query.data.protein),
-        carbohydrates: String(query.data.carbohydrates),
-        fats: String(query.data.fats),
-      });
+        ...percentagesFromGoal(query.data),
+      };
+      drafts.current = {
+        percentages,
+        grams: {
+          calories: String(query.data.calories),
+          carbohydrates: String(query.data.carbohydrates),
+          protein: String(query.data.protein),
+          fats: String(query.data.fats),
+        },
+      };
+      form.reset(percentages);
       hydrated.current = true;
     }
   }, [query.data, form]);
@@ -247,11 +302,14 @@ export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorP
   const current = objective.data?.objective;
   function save(values: Values) {
     if (busy.current || mutation.isPending || !current) return;
-    const input = parseGoalValues(values);
-    if (!input) {
-      setValidationError(
-        'Enter calories above zero and nonnegative grams, with up to two decimals.',
-      );
+    const input = nutritionDraftGoal(values, mode);
+    const budget = macroBudget(values, mode);
+    if (
+      !input ||
+      budget?.overBudget ||
+      (mode === 'percentages' && percentageTotal(values) !== 100)
+    ) {
+      setValidationError('Enter valid amounts within your calorie budget.');
       return;
     }
     setValidationError('');
@@ -265,6 +323,20 @@ export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorP
   return (
     <NutritionGoalEditorView
       form={form}
+      mode={mode}
+      onModeChange={(next) => {
+        if (next === mode || busy.current) return;
+        const values = form.getValues();
+        const previous = drafts.current[next];
+        drafts.current[mode] = { ...values };
+        const converted =
+          !dirty && previous
+            ? { ...previous, calories: values.calories }
+            : convertMacroDraft(values, mode);
+        form.reset(converted);
+        setValidationError('');
+        setMode(next);
+      }}
       loading={query.isPending || objective.isPending}
       failed={query.isError || objective.isError}
       currentObjective={current ?? null}
@@ -285,7 +357,32 @@ export function NutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorP
 }
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { gap: spacing['space-5'], paddingBottom: spacing['space-10'] },
+  content: {
+    gap: spacing['space-2'],
+    paddingTop: spacing['space-4'],
+    paddingBottom: spacing['space-4'],
+  },
   card: { borderRadius: radii['radius-lg'], padding: spacing['space-4'], gap: spacing['space-3'] },
-  action: { minHeight: sizes['control-height'], alignItems: 'center', justifyContent: 'center' },
+  calories: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing['space-3'],
+    borderRadius: radii['radius-md'],
+    gap: spacing['space-3'],
+  },
+  calorieCopy: { gap: spacing['space-1'], flexShrink: 1 },
+  calorieInput: { width: 144, minHeight: sizes['tap-min'] },
+  compactInput: {
+    minHeight: sizes['tap-min'] - 2,
+    paddingVertical: spacing['space-1'],
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
+  },
+  action: {
+    minHeight: sizes['tap-min'],
+    paddingHorizontal: spacing['space-2'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

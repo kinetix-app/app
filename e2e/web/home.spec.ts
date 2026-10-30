@@ -34,9 +34,9 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   await expect(page.getByRole('heading', { name: 'Nutrition goal', exact: true })).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Main navigation' })).toHaveCount(1);
   await page.getByLabel('Daily calorie goal').fill('2400');
-  await page.getByLabel('Daily protein goal').fill('150');
-  await page.getByLabel('Daily carbohydrate goal').fill('250');
-  await page.getByLabel('Daily fat goal').fill('80');
+  await page.getByLabel('Protein percentage').fill('25');
+  await page.getByLabel('Carbohydrate percentage').fill('50');
+  await page.getByLabel('Fat percentage').fill('25');
   await page.route(/\/api\/v1\/nutrition-goals(?:\/me)?$/, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save goal', exact: true }).click();
   await expect(page.getByText('Could not save your goal. Try again.')).toBeVisible();
