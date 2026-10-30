@@ -8,7 +8,6 @@ import {
 } from '@clerk/expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,8 +30,6 @@ import { authService } from '@/services/authService';
 import { colors } from '@/theme/colors';
 
 import { authStyles as styles } from './authStyles';
-
-WebBrowser.maybeCompleteAuthSession();
 
 /** Private state is mounted per Clerk session and discarded on expiry/account change. */
 function ConnectedAccount({ initialTab }: Readonly<{ initialTab: 'home' | 'nutrition' }>) {

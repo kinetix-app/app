@@ -48,7 +48,7 @@ Use the owner's existing application in the [Clerk Dashboard](https://dashboard.
 1. Under **User & authentication**, use **Open** access, require email, enable email sign-up/sign-in with **verification codes**, and disable passwords and email verification links. Do not require extra name, username or phone fields for this minimal sign-up form; `signUpIfMissing` is unavailable for invite-only or waitlist access.
 2. Enable **Google** and **Apple** social connections. For production, enter the providers' production OAuth credentials in Clerk. Google needs a web OAuth client for this browser flow. Apple needs its web Services ID, Team ID, Key ID and signing key plus the domain/return URL setup Clerk specifies. Use the exact provider callback URL shown by Clerk; it differs from the app callback. Provider secrets remain in Clerk.
 3. Enable Clerk's **Native API** and register Android package/namespace and iOS bundle identifier **`cat.udl.kinetix`**. Supply the actual signing certificate fingerprints and Apple Team ID/App ID prefix requested by the dashboard.
-4. Register **`kinetix://sso-callback`** as an allowed native/mobile redirect URL. `app.json` sets scheme `kinetix`; `src/app/sso-callback.tsx` returns to the authentication screen. The optional browser preview uses its actual origin plus `/sso-callback`, which must also be allowed when used.
+4. Register **`kinetix://sso-callback`** as an allowed native/mobile redirect URL. `app.json` sets scheme `kinetix`; `src/app/sso-callback.tsx` returns to the authentication screen on native platforms. The optional browser preview uses its actual origin plus `/sso-callback`, which must also be allowed when used.
 5. Match frontend and backend keys to the **same instance**. For a local Clerk pilot:
 
    ```dotenv
@@ -70,6 +70,36 @@ Use the owner's existing application in the [Clerk Dashboard](https://dashboard.
    Use Clerk's exact Frontend API origin for `CLERK_ISSUER`. Native tokens may omit `azp`; if present, the backend requires its exact value in `CLERK_AUTHORIZED_PARTIES`. Add browser origins for web testing. Use standard session tokens without a custom JWT template. Basic credentials are never accepted in Clerk mode.
 
 6. Rebuild native apps with `pnpm android` / `pnpm ios` after installing the SDK and its SecureStore/browser config plugins. A JavaScript reload cannot add native modules.
+
+## Expo web SSO callback
+
+For `pnpm web`, set `EXPO_PUBLIC_AUTH_MODE=clerk` and the matching Clerk publishable
+key. Allow the exact browser origin plus `/sso-callback` in Clerk. Keep the protocol,
+host and port consistent throughout the flow: `localhost` and `127.0.0.1` are different
+origins. Expo web authentication needs a secure browser context (HTTPS or localhost).
+
+Google/Apple open an authorization popup. The callback completes
+`WebBrowser.maybeCompleteAuthSession()` while its original path and query parameters
+are intact. Expo returns the result to the opening tab, closes the popup, and the
+opening tab activates the Clerk session. Do not redirect the web callback to `/`
+before completion or disable Expo's redirect validation. Native continues to use
+`kinetix://sso-callback` and the SDK's browser/deep-link flow.
+
+A direct callback visit, closed opener or failed handoff shows a recovery message
+and a link to sign-in without displaying provider diagnostics or callback parameters.
+For a failed popup, close it and retry in the original tab.
+
+The callback browser regression uses synthetic Expo session state and no provider
+credentials; it checks the actual callback message and popup closure, not Google/Apple
+account authentication. With a Clerk-enabled web server running, execute:
+
+```sh
+KINETIX_FRONTEND_URL=http://localhost:8081 pnpm exec playwright test --config e2e/web/playwright.config.ts sso-callback.spec.ts
+```
+
+Separately verify real Google/Apple success, cancellation/retry, account API access
+and session restoration after reload. Android acceptance requires an installed
+development build on an emulator/device; browser tests do not establish native success.
 
 ## Production configuration
 

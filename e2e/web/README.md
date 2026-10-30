@@ -75,3 +75,11 @@ failed save/retry, create/update, reopen/reload, zero macros, preservation of in
 legacy targets, over-budget warnings/save blocking, one-screen layout at 390×844 and two-account ownership. It uses the existing calorie/gram API; scientific
 suggestion integration belongs to [app#74](https://github.com/kinetix-app/app/issues/74).
 Browser evidence does not establish Android/iOS acceptance.
+
+## Clerk SSO callback regression
+
+Run `sso-callback.spec.ts` against a Clerk-enabled `pnpm web` development server.
+It uses synthetic Expo popup state to verify callback URL preservation, delivery to
+the original tab, popup closure and safe direct visits. It requires no backend test
+records or provider credentials. See [authentication setup](../../docs/clerk-setup.md#expo-web-sso-callback).
+This regression does not verify real Google/Apple sign-in or Android behavior.
