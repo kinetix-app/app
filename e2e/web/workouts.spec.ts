@@ -299,6 +299,7 @@ test('logout retains A server draft while B never inherits private draft or hist
   await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
   await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
   await signIn(page, other);
@@ -312,7 +313,8 @@ test('logout retains A server draft while B never inherits private draft or hist
   expect((await bHistory).status()).toBe(200);
   await expect(page.getByText('No completed workouts yet.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^View workout / })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
   await signIn(page);

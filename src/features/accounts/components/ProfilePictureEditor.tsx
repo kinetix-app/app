@@ -14,6 +14,7 @@ type ProfilePictureEditorProps = Readonly<{
   onDraftChange: (draft: ProfilePictureDraft) => void;
   onBusy: (busy: boolean) => void;
   disabled?: boolean;
+  compact?: boolean;
 }>;
 
 function getPictureStatus(draft: ProfilePictureDraft, account: Account) {
@@ -29,6 +30,7 @@ export function ProfilePictureEditor({
   onDraftChange,
   onBusy,
   disabled = false,
+  compact = false,
 }: ProfilePictureEditorProps) {
   const p = usePalette();
   const [pending, setPending] = useState(false);
@@ -94,7 +96,11 @@ export function ProfilePictureEditor({
           paddingBottom: spacing['space-2'],
         }}
       >
-        <ProfileAvatar account={visibleAccount} preview={selection?.uri} />
+        <ProfileAvatar
+          account={visibleAccount}
+          preview={selection?.uri}
+          size={compact ? 64 : 112}
+        />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={hasPicture ? 'Replace picture' : 'Choose picture'}
@@ -114,7 +120,11 @@ export function ProfilePictureEditor({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Remove picture"
-            accessibilityHint="Remove this picture when you confirm your profile."
+            accessibilityHint={
+              compact
+                ? 'Remove this picture when you save your profile.'
+                : 'Remove this picture when you confirm your profile.'
+            }
             accessibilityState={{ disabled: locked }}
             disabled={locked}
             onPress={() => {
@@ -142,12 +152,20 @@ export function ProfilePictureEditor({
           accessibilityLiveRegion="polite"
           style={[textStyles.label, { color: p['ink-muted'] }]}
         >
-          {getPictureStatus(draft, account)}
+          {compact
+            ? draft.kind === 'select'
+              ? 'New picture · Save to apply'
+              : draft.kind === 'remove'
+                ? 'Picture removed · Save to apply'
+                : 'Profile picture'
+            : getPictureStatus(draft, account)}
         </Text>
       )}
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
-        JPEG, PNG or WebP · up to 5 MB
-      </Text>
+      {!compact ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
+          JPEG, PNG or WebP · up to 5 MB
+        </Text>
+      ) : null}
       {error ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
           {error}

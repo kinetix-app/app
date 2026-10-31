@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FlatList, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import type { CompletedSession, WeightUnit } from '../schemas';
@@ -10,7 +11,9 @@ import { Button, Failure, IconButton, Loading, ui } from './ui';
 export function WorkoutHistory({
   accountId,
   onClose,
-}: Readonly<{ accountId: number; onClose: () => void }>) {
+  backLabel = 'Back to routines',
+  active = true,
+}: Readonly<{ accountId: number; onClose: () => void; backLabel?: string; active?: boolean }>) {
   const p = usePalette();
   const unit: WeightUnit = 'kg';
   const [selected, setSelected] = useState<number | null>(null);
@@ -39,12 +42,16 @@ export function WorkoutHistory({
       <Failure error={list.error} retry={() => void list.fetchNextPage({ cancelRefetch: false })} />
     );
   const back = () => (selected === null ? onClose() : setSelected(null));
+  useHardwareBack(() => {
+    back();
+    return true;
+  }, active);
   const header = (
     <View style={ui.gap}>
       <View style={ui.row}>
         <IconButton
           icon="arrow-left"
-          label={selected === null ? 'Back to routines' : 'Back to history'}
+          label={selected === null ? backLabel : 'Back to history'}
           onPress={back}
         />
         <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>

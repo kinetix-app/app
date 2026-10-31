@@ -18,7 +18,7 @@ Use `apiClient.get<ResponseType>(path)` and the other HTTP helpers for typed JSO
 
 [Frontend issue #7](https://github.com/kinetix-app/app/issues/7) tracks Clerk setup and release configuration. Both the Android package and iOS bundle identifier are **`cat.udl.kinetix`**; the app URL scheme is `kinetix`.
 
-See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and release verification. Development builds default to the Basic email/password form ([DEV02 #6](https://github.com/kinetix-app/app/issues/6)); release builds show the production Clerk methods. The SDK supports email OTP and Google/Apple through the system browser, with SecureStore session persistence. Release builds require a production Clerk key. Profile editing UI remains pending.
+See [Clerk setup and owner actions](docs/clerk-setup.md) for native registrations, Google/Apple credentials, public environment values, backend coordination and release verification. Development builds default to the Basic email/password form ([DEV02 #6](https://github.com/kinetix-app/app/issues/6)); release builds show the production Clerk methods. The SDK supports email OTP and Google/Apple through the system browser, with SecureStore session persistence. Release builds require a production Clerk key. Profile editing and picture management are available from the dedicated Profile tab.
 
 ## Where this repository fits
 
@@ -243,5 +243,5 @@ for AsyncStorage. Sprint 2 measurement formats remain outside this increment.
 
 The authenticated [Home shell](docs/home.md) shows profile and objective information after setup.
 Nutrition-goal editing is optional and available from Home and Nutrition.
-Its shared bottom bar connects Workout, blank workout start (+), and Nutrition.
+Its shared bottom bar connects Home, Workout, blank workout start (+), Nutrition and Profile. Profile groups account editing, sign-out, completed training history and a prepared Progress screen.
 Feature components live in `components/`; tests and fixtures live in `test/`.
