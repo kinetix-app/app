@@ -29,6 +29,7 @@ import { ApiError } from '@/services/apiClient';
 import { authService } from '@/services/authService';
 import { colors } from '@/theme/colors';
 
+import { AccountConnectionScreen } from './AccountConnectionScreen';
 import { authStyles as styles } from './authStyles';
 
 /** Private state is mounted per Clerk session and discarded on expiry/account change. */
@@ -93,39 +94,17 @@ function ConnectedAccount({ initialTab }: Readonly<{ initialTab: 'home' | 'nutri
     );
 
   return (
-    <View style={styles.content}>
-      <BrandHeader />
-      {!error ? (
-        <ActivityIndicator accessibilityLabel="Connecting your account" color={colors.accent} />
-      ) : null}
-      {error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {error}
-        </Text>
-      ) : null}
-      {error && !leaving ? (
-        <ActionButton
-          title="Retry connection"
-          icon="refresh"
-          onPress={() => {
-            setError('');
-            setAttempt((value) => value + 1);
-          }}
-          style={styles.primaryAction}
-        />
-      ) : null}
-      <ActionButton
-        title="Sign out"
-        variant="outline"
-        icon="log-out-outline"
-        iconPosition="start"
-        disabled={leaving}
-        onPress={() => {
-          void logout();
-        }}
-        style={error && !leaving ? styles.secondaryAction : styles.primaryAction}
-      />
-    </View>
+    <AccountConnectionScreen
+      error={error}
+      leaving={leaving}
+      onRetry={() => {
+        setError('');
+        setAttempt((value) => value + 1);
+      }}
+      onSignOut={() => {
+        void logout();
+      }}
+    />
   );
 }
 

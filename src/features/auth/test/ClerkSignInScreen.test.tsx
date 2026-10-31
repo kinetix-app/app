@@ -271,3 +271,37 @@ test('a failed account connection waits for explicit retry', async () => {
   await screen.findByText('Home for account 1');
   expect(getAccount).toHaveBeenCalledTimes(2);
 });
+
+test('pending connection explains its state and sign-out failure restores the recovery actions', async () => {
+  mockAuth.isSignedIn = true;
+  jest.mocked(getAccount).mockImplementationOnce(() => new Promise(() => {}));
+  let failSignOut!: (reason: Error) => void;
+  mockSignOut.mockImplementationOnce(
+    () =>
+      new Promise((_, reject) => {
+        failSignOut = reject;
+      }),
+  );
+  render(<ClerkSignInScreen />);
+  expect(screen.getByText('Connecting your account…')).toBeTruthy();
+  expect(screen.getByLabelText('Connecting your account')).toBeTruthy();
+
+  fireEvent.press(screen.getByText('Sign out'));
+  expect(screen.getByLabelText('Signing out')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Sign out' }).props.accessibilityState.disabled).toBe(
+    true,
+  );
+  expect(jest.mocked(getAccount).mock.calls[0][1]?.aborted).toBe(true);
+
+  await act(async () => {
+    failSignOut(new Error('network'));
+  });
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Sign-out could not finish. Check your connection and try again.',
+  );
+  expect(screen.queryByLabelText('Signing out')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Sign out' }).props.accessibilityState.disabled).toBe(
+    false,
+  );
+  expect(screen.getByRole('button', { name: 'Retry connection' })).toBeTruthy();
+});

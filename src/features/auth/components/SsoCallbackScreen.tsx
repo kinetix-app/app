@@ -1,10 +1,11 @@
 import { Redirect, Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform, StyleSheet } from 'react-native';
 
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+
+import { AuthStatusScreen } from './AuthStatusScreen';
 
 export function SsoCallbackScreen() {
   const palette = usePalette();
@@ -30,47 +31,49 @@ export function SsoCallbackScreen() {
 
   if (Platform.OS !== 'web') return <Redirect href="/" />;
 
+  const failed = status === 'failed';
+  const title = failed
+    ? 'Couldn’t finish sign-in'
+    : status === 'success'
+      ? 'Return to your original tab'
+      : 'Finishing sign-in…';
+
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: palette['surface-100'] }]}>
-      <View style={styles.content}>
-        {status === 'completing' ? (
-          <ActivityIndicator accessibilityLabel="Finishing sign-in" color={palette.brand} />
-        ) : null}
-        <Text style={[textStyles['title-md'], { color: palette.ink }]}>
-          {status === 'failed' ? 'Sign-in could not return to your tab' : 'Finishing sign-in'}
-        </Text>
-        <Text
-          accessibilityRole={status === 'failed' ? 'alert' : undefined}
-          style={[textStyles.body, { color: palette['ink-muted'] }]}
+    <AuthStatusScreen
+      title={title}
+      failed={failed}
+      loadingLabel={status === 'completing' ? 'Finishing sign-in' : undefined}
+      description={
+        failed
+          ? 'Close this window and retry in your original tab.'
+          : status === 'success'
+            ? 'This window will close automatically.'
+            : undefined
+      }
+    >
+      {failed ? (
+        <Link
+          href="/"
+          replace
+          style={[
+            styles.link,
+            textStyles.label,
+            { backgroundColor: palette.brand, color: palette['on-brand'] },
+          ]}
         >
-          {status === 'failed'
-            ? 'Close this window and try again in the original tab, or return to sign-in.'
-            : 'Return to your original tab. This window will close automatically.'}
-        </Text>
-        {status === 'failed' ? (
-          <Link
-            href="/"
-            replace
-            style={[
-              styles.link,
-              textStyles.body,
-              { backgroundColor: palette['surface-300'], color: palette.ink },
-            ]}
-          >
-            Return to sign-in
-          </Link>
-        ) : null}
-      </View>
-    </SafeAreaView>
+          Return to sign-in
+        </Link>
+      ) : null}
+    </AuthStatusScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: 'center', padding: spacing['space-6'] },
-  content: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: spacing['space-4'] },
   link: {
+    width: '100%',
     minHeight: sizes['control-height'],
-    padding: spacing['space-4'],
+    paddingVertical: spacing['space-4'],
+    paddingHorizontal: spacing['space-5'],
     borderRadius: radii['radius-md'],
     textAlign: 'center',
   },
