@@ -36,7 +36,7 @@ type Controller = {
   addExercise: (exercise: ExerciseSummary) => Promise<string | null>;
   discard: () => Promise<void>;
   retryStorage: () => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<boolean>;
 };
 const SessionContext = createContext<Controller | null>(null);
 export function useSession() {
@@ -420,7 +420,7 @@ export function SessionProvider({
     [storageError, accountId, persist, install, cache],
   );
   const signOut = useCallback(async () => {
-    if (closing.current) return;
+    if (closing.current) return false;
     closing.current = true;
     request.current?.abort();
     try {
@@ -428,10 +428,13 @@ export function SessionProvider({
       if (alive.current) {
         install(null);
         onSignOut();
+        return true;
       }
+      return false;
     } catch {
       closing.current = false;
       showStorageError();
+      return false;
     }
   }, [accountId, onSignOut, install, showStorageError]);
   const value = useMemo(

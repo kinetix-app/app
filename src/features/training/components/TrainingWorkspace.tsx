@@ -16,9 +16,11 @@ import { Button, Failure, IconButton, Loading, ui } from './ui';
 export function TrainingWorkspace({
   accountId,
   showStartAction = true,
+  onHistory,
 }: Readonly<{
   accountId: number;
   showStartAction?: boolean;
+  onHistory?: () => void;
 }>) {
   const p = usePalette();
   const session = useSession();
@@ -111,7 +113,7 @@ export function TrainingWorkspace({
             search={search}
             onSearchChange={setSearch}
             onSearchSubmit={() => setName(search.trim())}
-            onHistory={() => setHistory(true)}
+            onHistory={onHistory ?? (() => setHistory(true))}
             onNewRoutine={() => {
               setSaved(false);
               setEditing('new');
@@ -200,9 +202,7 @@ function RoutineListHeader({
   const editingRoutine = typeof editing === 'number';
   return (
     <View style={ui.gap}>
-      <ScreenHeader title="Routines">
-        <Button title="Sign out" onPress={() => void session.signOut()} secondary />
-      </ScreenHeader>
+      <ScreenHeader title="Routines" />
       {showStartAction ? (
         <Button
           title="Start workout"

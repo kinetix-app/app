@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHardwareBack } from '@/hooks/useHardwareBack';
+import { ProfileBack } from './ProfileBack';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { textStyles, usePalette } from '@/theme/tokens';
 import { getAccount, getObjective, setObjective } from '../api';
@@ -22,9 +24,15 @@ type ObjectiveEditorProps = Readonly<{
   accountId: number;
   onSaved: (account: Account) => void;
   onCancel?: () => void;
+  active?: boolean;
 }>;
 
-export function ObjectiveEditor({ accountId, onSaved, onCancel }: ObjectiveEditorProps) {
+export function ObjectiveEditor({
+  accountId,
+  onSaved,
+  onCancel,
+  active = true,
+}: ObjectiveEditorProps) {
   const p = usePalette();
   const cache = useQueryClient();
   const [selected, setSelected] = useState<Objective | null>(null);
@@ -43,6 +51,13 @@ export function ObjectiveEditor({ accountId, onSaved, onCancel }: ObjectiveEdito
     },
     onSuccess: (account) => onSaved(account),
   });
+  useHardwareBack(
+    () => {
+      if (!mutation.isPending) onCancel?.();
+      return true;
+    },
+    active && Boolean(onCancel),
+  );
   async function save() {
     if (busy.current || !choice) return;
     busy.current = true;
@@ -123,7 +138,12 @@ export function ObjectiveEditor({ accountId, onSaved, onCancel }: ObjectiveEdito
       style={[s.screen, { backgroundColor: p['surface-100'] }]}
     >
       <ScrollView contentContainerStyle={s.content}>
-        <ScreenHeader title="What's your goal?" />
+        <ScreenHeader
+          title="What's your goal?"
+          leading={
+            onCancel ? <ProfileBack onPress={onCancel} disabled={mutation.isPending} /> : undefined
+          }
+        />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
           Choose your objective. You can change it anytime. A numerical nutrition target is optional
           and can be set later.

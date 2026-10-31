@@ -19,12 +19,17 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
 }));
 beforeEach(() => jest.clearAllMocks());
-function show(account = completeAccount, onSaved = jest.fn(), onCancel?: () => void) {
+function show(
+  account = completeAccount,
+  onSaved = jest.fn(),
+  onCancel?: () => void,
+  mode: 'onboarding' | 'edit' = 'onboarding',
+) {
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <ProfileEditor account={account} onSaved={onSaved} onCancel={onCancel} />
+      <ProfileEditor account={account} onSaved={onSaved} onCancel={onCancel} mode={mode} />
     </QueryClientProvider>,
   );
   return onSaved;
@@ -230,4 +235,26 @@ test('cancel discards a selected picture without server mutations', async () => 
   expect(uploadProfilePicture).not.toHaveBeenCalled();
   expect(removeProfilePicture).not.toHaveBeenCalled();
   expect(updateProfile).not.toHaveBeenCalled();
+});
+
+test('editing presents all fields together and saves directly without onboarding steps', async () => {
+  jest.mocked(updateProfile).mockResolvedValue(completeAccount);
+  const onSaved = show(completeAccount, jest.fn(), jest.fn(), 'edit');
+  expect(screen.queryByText('Continue')).toBeNull();
+  expect(screen.queryByRole('progressbar')).toBeNull();
+  expect(screen.getByLabelText('Age (years)').props.value).toBe('25');
+  expect(screen.getByLabelText('Weight').props.value).toBe('70.00');
+  fireEvent.changeText(screen.getByLabelText('Name'), 'Updated name');
+  fireEvent.changeText(screen.getByLabelText('Age (years)'), '');
+  fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
+  await screen.findByText('Enter an age from 1 to 120.');
+  expect(updateProfile).not.toHaveBeenCalled();
+  fireEvent.changeText(screen.getByLabelText('Age (years)'), '26');
+  fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalledWith(completeAccount));
+  expect(jest.mocked(updateProfile).mock.calls[0][1]).toMatchObject({
+    display_name: 'Updated name',
+    age: 26,
+    weight_kg: '70.000000',
+  });
 });

@@ -59,7 +59,7 @@ After onboarding completes for the primary isolated identity, run
 `profile-picture.spec.ts` against the same API with configured Azurite storage and a
 separate test-owned private profile container. It exercises the actual image picker,
 multipart upload, authenticated image retrieval, failed-upload retry, replacement,
-profile save/reload and removal. A second identity and an anonymous request must not
+direct profile save/reload and removal. Existing-profile edits use one compact form; onboarding retains its guided steps. A second identity and an anonymous request must not
 read the primary account's image. Only repository-owned app icons are used as sample
 uploads; no personal photo is required. Private storage ACL, content validation and
 failure/rollback cases also have backend integration coverage.
@@ -83,3 +83,7 @@ It uses synthetic Expo popup state to verify callback URL preservation, delivery
 the original tab, popup closure and safe direct visits. It requires no backend test
 records or provider credentials. See [authentication setup](../../docs/clerk-setup.md#expo-web-sso-callback).
 This regression does not verify real Google/Apple sign-in or Android behavior.
+
+## Dedicated Profile acceptance
+
+`profile.spec.ts` requires two private synthetic identities and a run-owned `_test` database with `APP_ENV=test`. It prepares only those accounts and verifies compact Profile navigation, failed profile save/retry, form retention across tabs, persisted edits after reload, prepared Progress, history list/detail/back navigation, two-account isolation and workout logout/resume. `onboarding.spec.ts`, `home.spec.ts` and `profile-picture.spec.ts` exercise the related setup, nutrition and picture journeys using the Profile tab. Run onboarding first against a fresh database. Browser acceptance does not establish native or real Clerk provider acceptance.
