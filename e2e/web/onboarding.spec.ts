@@ -69,7 +69,9 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await expect(page.getByRole('button', { name: 'Save objective', exact: true })).toBeDisabled();
   await page.getByRole('radio', { name: 'Build muscle', exact: true }).click();
   await page.getByRole('button', { name: 'Save objective', exact: true }).click();
-  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   const saved = await (await get('/auth/me')).json();
   expect(saved.id).toBe(initial.id);
   expect(saved.profile.weight_kg).toBe('45.359237');
@@ -118,7 +120,9 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
     await page.getByRole('button', { name: 'Change objective', exact: true }).click();
     await page.getByRole('radio', { name: objective, exact: true }).click();
     await page.getByRole('button', { name: 'Save objective', exact: true }).click();
-    await expect(page.getByText(objective, { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(objective, { exact: true }).filter({ visible: true }),
+    ).toBeVisible();
   }
   const oldTarget = await (await get('/nutrition-goals/me')).json();
   expect(oldTarget.objective).toBe('build_muscle');
@@ -132,9 +136,11 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
     .toBe('maintain_weight');
   await page.reload();
   await signIn(page);
-  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100.00');
   await expect(page.getByLabel('Height (feet)', { exact: true })).toHaveValue('5');
   await expect(page.getByLabel('Height (inches)', { exact: true })).toHaveValue('7.25');
@@ -144,10 +150,10 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await expect(page.getByLabel('Height (cm)', { exact: true })).toHaveValue('170.82');
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.screenshot({ path: '.codex/artifacts/previews/profile-metric-dark.png' });
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByText('45.36 kg', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
-  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
   const converted = await (await get('/auth/me')).json();
   expect(converted.profile).toMatchObject({
@@ -157,16 +163,19 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   });
   await page.reload();
   await signIn(page);
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('45.36');
   await expect(page.getByLabel('Height (cm)', { exact: true })).toHaveValue('170.82');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.screenshot({ path: '.codex/artifacts/previews/onboarding-home-dark.png' });
-  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await page.emulateMedia({ colorScheme: 'light' });
   await page.screenshot({ path: '.codex/artifacts/previews/onboarding-home-light.png' });
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
   await signIn(page, true);

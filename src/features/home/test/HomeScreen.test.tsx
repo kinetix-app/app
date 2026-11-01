@@ -1,6 +1,8 @@
 import { completeAccount, incompleteAccount } from '@/features/accounts/test/fixtures';
 import { getAccount, getObjective, updateProfile, setObjective } from '@/features/accounts/api';
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BackHandler } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { HomeScreen } from '../components/HomeScreen';
 import { nutritionApi } from '@/features/nutrition/api';
@@ -69,7 +71,14 @@ jest.mock('@/features/nutrition/api', () => ({
   },
 }));
 jest.mock('@/features/training/api', () => ({
-  trainingApi: { draft: jest.fn(), routines: jest.fn(), saveDraft: jest.fn(), exercise: jest.fn() },
+  trainingApi: {
+    draft: jest.fn(),
+    routines: jest.fn(),
+    saveDraft: jest.fn(),
+    exercise: jest.fn(),
+    sessions: jest.fn(),
+    session: jest.fn(),
+  },
 }));
 const goal = {
   objective: 'build_muscle' as const,
@@ -111,7 +120,12 @@ test('home shows profile and an optional nutrition entry while keeping one botto
   await screen.findByText('Alice');
   expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
   expect(trainingApi.routines).not.toHaveBeenCalled();
-  expect(screen.getByText('Edit profile')).toBeTruthy();
+  expect(screen.getByText('View profile')).toBeTruthy();
+  expect(screen.queryByText('Edit profile')).toBeNull();
+  expect(screen.queryByText('Sign out')).toBeNull();
+  expect(
+    screen.getByRole('tab', { name: 'Profile' }).props.accessibilityState.disabled,
+  ).toBeUndefined();
   expect(screen.getByText('Change objective')).toBeTruthy();
   expect(screen.getByText('Edit nutrition goal')).toBeTruthy();
   expect(screen.getAllByLabelText('Main navigation')).toHaveLength(1);
@@ -254,4 +268,139 @@ test('completed onboarding keeps form checking available in a resumed workout', 
   fireEvent.press(await screen.findByText('Record set 1'));
   expect(await screen.findByText('Allow camera')).toBeTruthy();
   expect(screen.getByText('Check your form')).toBeTruthy();
+});
+
+test('Profile owns account actions and prepared progress, while Workout history opens Profile', async () => {
+  jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 20, offset: 0 });
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('Alice');
+  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  expect(screen.getByText('25 years · 170.00 cm · 70.00 kg')).toBeTruthy();
+  expect(screen.getByText('Edit profile')).toBeTruthy();
+  expect(screen.getByText('Sign out')).toBeTruthy();
+  fireEvent.press(screen.getByText('Progress'));
+  expect(screen.getByText('70.00 kg')).toBeTruthy();
+  expect(screen.getByText('Measurement recording is not available yet.')).toBeTruthy();
+  expect(screen.queryByText('Add measurement')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Back to profile'));
+  fireEvent.press(screen.getByText('Training history'));
+  await screen.findByText('No completed workouts yet.');
+  fireEvent.press(screen.getByLabelText('Back to profile'));
+  fireEvent.press(screen.getByRole('tab', { name: 'Workout' }));
+  await screen.findByText('Routines');
+  expect(screen.queryByText('Sign out')).toBeNull();
+  fireEvent.press(screen.getByText('History'));
+  expect(screen.getByRole('tab', { name: 'Profile' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.getByLabelText('Back to profile')).toBeTruthy();
+});
+
+test('profile form survives switching tabs and failed saves; saved account updates Home', async () => {
+  const updated = {
+    ...completeAccount,
+    profile: { ...completeAccount.profile, display_name: 'Alice updated' },
+  };
+  jest
+    .mocked(updateProfile)
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce(updated);
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByText('View profile'));
+  fireEvent.press(screen.getByText('Edit profile'));
+  fireEvent.changeText(screen.getByLabelText('Name'), 'Alice updated');
+  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  expect(screen.getByLabelText('Name').props.value).toBe('Alice updated');
+  fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
+  await screen.findByText(
+    'Could not save your profile. Your details and picture choice are kept. Try again.',
+  );
+  expect(screen.getByLabelText('Name').props.value).toBe('Alice updated');
+  fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
+  await screen.findByRole('button', { name: 'Edit profile' });
+  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+  expect(screen.getByText('Alice updated')).toBeTruthy();
+});
+
+test('nutrition goal closes to its origin without losing the Profile tab', async () => {
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('Alice');
+  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByText('Edit nutrition goal'));
+  fireEvent.press(await screen.findByText('Back'));
+  expect(screen.getByRole('tab', { name: 'Profile' }).props.accessibilityState.selected).toBe(true);
+  fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Edit nutrition goal' }));
+  fireEvent.press(await screen.findByText('Back'));
+  expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+});
+
+test('Profile sign-out waits for local cleanup, prevents duplicates and allows retry after failure', async () => {
+  const onSignOut = jest.fn();
+  let rejectClear: (error: Error) => void = () => {};
+  jest.mocked(AsyncStorage.removeItem).mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectClear = reject;
+      }),
+  );
+  render(<HomeScreen accountId={1} onSignOut={onSignOut} />);
+  await screen.findByText('Alice');
+  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByText('Sign out'));
+  await screen.findByText('Signing out…');
+  fireEvent.press(screen.getByText('Signing out…'));
+  await waitFor(() => expect(AsyncStorage.removeItem).toHaveBeenCalledTimes(1));
+  expect(onSignOut).not.toHaveBeenCalled();
+  await act(async () => rejectClear(new Error('storage unavailable')));
+  await screen.findByText('Could not sign out. Please try again.');
+  fireEvent.press(screen.getByText('Sign out'));
+  await waitFor(() => expect(onSignOut).toHaveBeenCalledTimes(1));
+  expect(AsyncStorage.removeItem).toHaveBeenLastCalledWith('kinetix.workout.v1.account.1');
+});
+
+test('account switch discards private Profile fields and panel state', async () => {
+  const view = render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByText('View profile'));
+  fireEvent.press(screen.getByText('Edit profile'));
+  fireEvent.changeText(screen.getByLabelText('Name'), 'Private unsaved name');
+  const bob = {
+    ...completeAccount,
+    id: 2,
+    profile: { ...completeAccount.profile, display_name: 'Bob' },
+  };
+  jest.mocked(getAccount).mockResolvedValue(bob);
+  view.rerender(<HomeScreen accountId={2} initialAccount={bob} onSignOut={jest.fn()} />);
+  await screen.findByText('Bob');
+  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  expect(screen.queryByText('Private unsaved name')).toBeNull();
+  expect(screen.queryByLabelText('Name')).toBeNull();
+  expect(screen.getByText('Edit profile')).toBeTruthy();
+});
+
+test('hardware back closes editing and ignores hidden Profile panels', async () => {
+  const callbacks = new Set<Parameters<typeof BackHandler.addEventListener>[1]>();
+  const listener = jest
+    .spyOn(BackHandler, 'addEventListener')
+    .mockImplementation((_event, callback) => {
+      callbacks.add(callback);
+      return {
+        remove: () => {
+          callbacks.delete(callback);
+        },
+      };
+    });
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByText('View profile'));
+  fireEvent.press(screen.getByText('Edit profile'));
+  fireEvent.changeText(screen.getByLabelText('Name'), 'Draft name');
+  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+  expect(callbacks.size).toBe(0);
+  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  await act(async () => {
+    [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
+  });
+  expect(screen.getByText('Edit profile')).toBeTruthy();
+  listener.mockRestore();
 });

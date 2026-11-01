@@ -203,6 +203,7 @@ test('shared editor and real server draft tick, retry, resume, discard and compl
     await page.mouse.up();
     await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
 
+    await page.getByRole('tab', { name: 'Profile', exact: true }).click();
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
     await signIn(page);
     await page.getByRole('button', { name: 'Resume workout', exact: true }).click();

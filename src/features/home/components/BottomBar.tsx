@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
-export type HomeTab = 'home' | 'workout' | 'nutrition';
+export type HomeTab = 'home' | 'workout' | 'nutrition' | 'profile';
 
 export function BottomBar({
   tab,
@@ -22,7 +22,7 @@ export function BottomBar({
     { id: 'home', icon: 'home', label: 'Home' },
     { id: 'workout', icon: 'activity', label: 'Workout' },
     { id: 'nutrition', icon: 'coffee', label: 'Nutrition' },
-    { id: 'progress', icon: 'bar-chart-2', label: 'Progress' },
+    { id: 'profile', icon: 'user', label: 'Profile' },
   ] as const;
   return (
     <SafeAreaView edges={['bottom']} style={{ backgroundColor: p['surface-200'] }}>
@@ -52,18 +52,9 @@ export function BottomBar({
               accessibilityRole="tab"
               aria-selected={tab === item.id}
               accessibilityLabel={item.label}
-              accessibilityHint={
-                item.id === 'progress' ? 'Progress is not available yet' : undefined
-              }
-              accessibilityState={{ selected: tab === item.id, disabled: item.id === 'progress' }}
-              disabled={item.id === 'progress'}
-              onPress={() => {
-                if (item.id !== 'progress') onSelect(item.id);
-              }}
-              style={({ pressed }) => [
-                styles.tab,
-                { opacity: tabOpacity(item.id === 'progress', pressed) },
-              ]}
+              accessibilityState={{ selected: tab === item.id }}
+              onPress={() => onSelect(item.id)}
+              style={({ pressed }) => [styles.tab, { opacity: pressed ? 0.65 : 1 }]}
             >
               <View style={[styles.icon, tab === item.id && { backgroundColor: p['brand-soft'] }]}>
                 <Feather
@@ -87,11 +78,6 @@ export function BottomBar({
     </SafeAreaView>
   );
 }
-function tabOpacity(isUnavailable: boolean, pressed: boolean) {
-  if (isUnavailable) return 0.55;
-  return pressed ? 0.65 : 1;
-}
-
 function startOpacity(canStart: boolean, pressed: boolean) {
   if (!canStart) return 0.45;
   return pressed ? 0.65 : 1;

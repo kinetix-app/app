@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { getObjective } from '@/features/accounts/api';
@@ -42,7 +43,11 @@ const objectives: Record<Objective, string> = {
 type Values = MacroGoalValues;
 const empty: Values = { calories: '', ...emptyPercentages };
 
-type NutritionGoalEditorProps = Readonly<{ accountId: number; onClose: () => void }>;
+type NutritionGoalEditorProps = Readonly<{
+  accountId: number;
+  onClose: () => void;
+  active?: boolean;
+}>;
 type NutritionGoalEditorViewProps = Readonly<{
   form: UseFormReturn<Values>;
   mode: MacroMode;
@@ -253,7 +258,11 @@ export function NutritionGoalEditor(props: NutritionGoalEditorProps) {
   return <AccountNutritionGoalEditor key={props.accountId} {...props} />;
 }
 
-function AccountNutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorProps) {
+function AccountNutritionGoalEditor({
+  accountId,
+  onClose,
+  active = true,
+}: NutritionGoalEditorProps) {
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ['nutrition', accountId, 'goal'],
@@ -299,6 +308,10 @@ function AccountNutritionGoalEditor({ accountId, onClose }: NutritionGoalEditorP
   });
   const busy = React.useRef(false);
   const [validationError, setValidationError] = React.useState('');
+  useHardwareBack(() => {
+    if (!mutation.isPending) onClose();
+    return true;
+  }, active);
   const current = objective.data?.objective;
   function save(values: Values) {
     if (busy.current || mutation.isPending || !current) return;

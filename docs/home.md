@@ -2,23 +2,22 @@
 
 After either development Basic sign-in or Clerk account connection, `HomeScreen`
 owns the authenticated shell. The server-derived setup gate first requires a complete
-profile and selected objective. The default Home tab then shows profile and objective
-information with editing actions. Numerical nutrition targets are optional; the goal
-editor offers Set up later and saving opens the Nutrition diary. The diary's Edit
-nutrition goal action opens the editor within Home. See [onboarding](onboarding.md).
+profile and selected objective. The default Home tab shows a read-only profile/objective summary with shortcuts into Profile, Workout and Nutrition. Profile owns account editing and sign-out. Numerical nutrition targets are optional; the goal
+editor offers Set up later and saving returns to its origin: Profile for a Profile entry, Nutrition for a diary or Home shortcut. The diary's Edit
+nutrition goal action opens the editor in the Profile tab; closing it returns to Nutrition. See [onboarding](onboarding.md).
 
 The shared bottom bar uses the former nutrition bar's design and now has accessible,
 working controls. Workout opens routines, the shared routine/session editor and
-completed history. The central + starts a blank workout through the existing session
+completed history through a shortcut into Profile. History details return to history, then to Profile. The central + starts a blank workout through the existing session
 controller; it is disabled during restoration, pending operations, storage failures
 or an existing workout. Nutrition retains diary, meal/food/recipe and goal operations.
-Progress remains disabled because that feature is not implemented.
+Profile replaces the previous disabled Progress tab. Its compact grouped rows open profile/picture editing, objective and nutrition-goal editing, training history and a prepared Progress screen. Progress shows the current saved profile weight and clearly marks weight history, measurement recording and strength trends as unavailable; it does not generate historical data.
 
 One account-scoped QueryClient serves all features. The workout provider remains
 mounted across tabs, so minimizing and switching tabs preserves the active workout.
 The resume panel sits above the bottom bar. Visited tabs retain their forms and scroll
 state; hidden tabs are excluded from accessibility. Account changes and logout unmount
-all private state and cancel/clear private queries. `/nutrition` uses the same sign-in
+all private state and cancel/clear private queries. Profile sign-out runs the session controller’s local cleanup before authentication logout; server drafts remain resumable. Hidden Profile panels do not consume Android back events. `/nutrition` uses the same sign-in
 and shell, initially selecting Nutrition; it does not render an unauthenticated diary.
 
 Feature screens, UI components, platform variants and local styles belong in
@@ -32,4 +31,6 @@ private Basic test credentials, against an isolated test database. Native accept
 requires Maestro and a run-owned development build/device. Browser results alone do
 not establish native gesture, keyboard or provider behavior.
 
-The three main screens share `ScreenHeader` and `screenContentStyle`, using the Nutrition title typography, theme ink color, 16-unit side padding and 32-unit top padding.
+The main screens share `ScreenHeader` and `screenContentStyle`, using the Nutrition title typography, theme ink color, 16-unit side padding and 32-unit top padding.
+
+Profile uses the shared tokens in both themes, compact grouped rows, concise copy and accessible touch targets. Home and Profile share the account/objective query cache; saved edits update both. The profile editor shows existing details in a compact single-page form with direct Save; the guided wizard is reserved for onboarding. Editors retain draft input across tab switches and failed saves. Required onboarding remains outside the tab shell.

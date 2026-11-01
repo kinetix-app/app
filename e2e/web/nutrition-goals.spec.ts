@@ -226,6 +226,7 @@ test('manual percentage targets persist, retain legacy values and isolate two au
   expect(Number(unchanged.protein)).toBe(legacy.protein);
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await signIn(page, true);
   await openEditor(page);

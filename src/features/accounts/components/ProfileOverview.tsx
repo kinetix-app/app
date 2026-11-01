@@ -3,27 +3,28 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { textStyles, usePalette } from '@/theme/tokens';
+import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { ProfileAvatar } from './ProfileAvatar';
 import { getObjective } from '../api';
 import type { Account } from '../schemas';
 import { objectiveOptions } from './ObjectiveEditor';
+import { ProfileRow } from './ProfileRows';
 import { SetupButton, setupStyles as s } from './SetupUI';
 
 type ProfileOverviewProps = Readonly<{
   account: Account;
-  onEditProfile: () => void;
+  onOpenProfile: () => void;
   onEditObjective: () => void;
   onEditNutrition: () => void;
-  onSignOut: () => void;
+  onWorkout: () => void;
 }>;
 
 export function ProfileOverview({
   account,
-  onEditProfile,
+  onOpenProfile,
   onEditObjective,
   onEditNutrition,
-  onSignOut,
+  onWorkout,
 }: ProfileOverviewProps) {
   const p = usePalette();
   const objective = useQuery({
@@ -39,16 +40,20 @@ export function ProfileOverview({
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader title="Home" />
         <View style={[s.card, { backgroundColor: p['surface-200'] }]}>
-          <ProfileAvatar account={account} />
-          <Text style={[textStyles['title-lg'], { color: p.ink }]}>
-            {account.profile.display_name}
-          </Text>
-          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            {account.profile.measurement_system === 'imperial'
-              ? 'Imperial · lb, ft and in'
-              : 'Metric · kg and cm'}
-          </Text>
-          <SetupButton title="Edit profile" secondary onPress={onEditProfile} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-4'] }}>
+            <ProfileAvatar account={account} size={64} />
+            <View style={{ flex: 1, gap: spacing['space-1'] }}>
+              <Text style={[textStyles['title-md'], { color: p.ink }]}>
+                {account.profile.display_name}
+              </Text>
+              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                {account.profile.measurement_system === 'imperial'
+                  ? 'Imperial · lb, ft and in'
+                  : 'Metric · kg and cm'}
+              </Text>
+            </View>
+          </View>
+          <ProfileRow title="View profile" icon="user" onPress={onOpenProfile} />
         </View>
         <View style={[s.card, { backgroundColor: p['surface-200'] }]}>
           <Text style={[textStyles['title-md'], { color: p.ink }]}>Your plan</Text>
@@ -69,13 +74,13 @@ export function ProfileOverview({
               />
             </>
           ) : null}
-          <SetupButton title="Change objective" secondary onPress={onEditObjective} />
-          <SetupButton title="Edit nutrition goal" onPress={onEditNutrition} />
+          <ProfileRow title="Change objective" icon="target" onPress={onEditObjective} />
+          <ProfileRow title="Edit nutrition goal" icon="pie-chart" onPress={onEditNutrition} />
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            Calories and macros are optional. You can record food without a nutrition goal.
+            Nutrition targets are optional.
           </Text>
         </View>
-        <SetupButton title="Sign out" secondary onPress={onSignOut} />
+        <ProfileRow title="Workout" icon="activity" onPress={onWorkout} />
       </ScrollView>
     </SafeAreaView>
   );

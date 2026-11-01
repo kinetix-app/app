@@ -6,7 +6,7 @@ import { getProfilePicture } from '../api';
 import { profilePicturePath, type Account } from '../schemas';
 import { SetupButton } from './SetupUI';
 
-type ProfileAvatarProps = Readonly<{ account: Account; preview?: string }>;
+type ProfileAvatarProps = Readonly<{ account: Account; preview?: string; size?: number }>;
 
 function getPictureUri(
   preview: string | undefined,
@@ -21,7 +21,7 @@ function getPictureUri(
   return decoded.uri;
 }
 
-export function ProfileAvatar({ account, preview }: ProfileAvatarProps) {
+export function ProfileAvatar({ account, preview, size = 112 }: ProfileAvatarProps) {
   const p = usePalette();
   const [decoded, setDecoded] = useState<{ blob: Blob; uri?: string; failed?: boolean }>();
   const privatePhoto = account.profile.picture_url === profilePicturePath && !preview;
@@ -71,7 +71,7 @@ export function ProfileAvatar({ account, preview }: ProfileAvatarProps) {
     picture = (
       <Text
         accessibilityLabel="No profile picture"
-        style={[textStyles['display-lg'], { color: p['brand-ink'] }]}
+        style={[textStyles[size < 112 ? 'metric-md' : 'display-lg'], { color: p['brand-ink'] }]}
       >
         {account.profile.display_name?.slice(0, 1).toUpperCase() || '+'}
       </Text>
@@ -81,8 +81,8 @@ export function ProfileAvatar({ account, preview }: ProfileAvatarProps) {
     <View style={{ alignItems: 'center', gap: spacing['space-2'] }}>
       <View
         style={{
-          width: 112,
-          height: 112,
+          width: size,
+          height: size,
           borderRadius: radii['radius-pill'],
           backgroundColor: p['brand-soft'],
           alignItems: 'center',

@@ -1,13 +1,28 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
 import { NutritionDiaryScreen, NutritionGoalEditor } from '@/features/nutrition';
-import { SessionHost, SessionProvider, TrainingWorkspace, useSession } from '@/features/training';
+import {
+  SessionHost,
+  SessionProvider,
+  TrainingWorkspace,
+  WorkoutHistory,
+  useSession,
+} from '@/features/training';
 import { getAccount, type Account } from '@/features/accounts/api';
-import { ProfileEditor, ObjectiveEditor, ProfileOverview, SetupButton } from '@/features/accounts';
+import {
+  ProfileEditor,
+  ObjectiveEditor,
+  ProfileOverview,
+  ProfileScreen,
+  ProgressScreen,
+  type ProfilePanel,
+  SetupButton,
+} from '@/features/accounts';
 import { FormCheckProvider } from '@/features/formcheck';
+import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
 
@@ -29,15 +44,16 @@ function FormCheckHost({ accountId, children }: React.PropsWithChildren<{ accoun
 type HomeNavigationProps = Readonly<{
   account: Account;
   initialTab: HomeTab;
-  onSignOut: () => void;
   onAccount: (account: Account) => void;
 }>;
 
-function HomeNavigation({ account, initialTab, onSignOut, onAccount }: HomeNavigationProps) {
+function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps) {
   const accountId = account.id;
-  const [homePanel, setHomePanel] = useState<'overview' | 'profile' | 'objective' | 'nutrition'>(
-    'overview',
-  );
+  const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
+  const [nutritionOrigin, setNutritionOrigin] = useState<'profile' | 'nutrition'>('profile');
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState('');
+  const loggingOut = useRef(false);
   const p = usePalette();
   const session = useSession();
   const [tab, setTab] = useState<HomeTab>(initialTab);
@@ -46,62 +62,129 @@ function HomeNavigation({ account, initialTab, onSignOut, onAccount }: HomeNavig
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
-  function renderHomePanel() {
-    switch (homePanel) {
+  function openProfile(panel: ProfilePanel) {
+    setProfilePanel(panel);
+    if (panel === 'nutrition') setNutritionOrigin('profile');
+    select('profile');
+  }
+  async function signOut() {
+    if (loggingOut.current) return;
+    loggingOut.current = true;
+    setSigningOut(true);
+    setSignOutError('');
+    try {
+      const success = await session.signOut();
+      if (!success) setSignOutError('Could not sign out. Please try again.');
+    } catch {
+      setSignOutError('Could not sign out. Please try again.');
+    } finally {
+      loggingOut.current = false;
+      setSigningOut(false);
+    }
+  }
+  const panelActive = tab === 'profile' && (!session.draft || session.draft.minimized);
+  function closeProfilePanel() {
+    setProfilePanel('overview');
+  }
+  useHardwareBack(
+    () => {
+      closeProfilePanel();
+      return true;
+    },
+    panelActive && profilePanel === 'progress',
+  );
+  function renderProfilePanel() {
+    switch (profilePanel) {
       case 'profile':
         return (
           <ProfileEditor
+            mode="edit"
             account={account}
+            active={panelActive}
             onSaved={(next) => {
               onAccount(next);
-              setHomePanel('overview');
+              setProfilePanel('overview');
             }}
-            onCancel={() => setHomePanel('overview')}
+            onCancel={() => setProfilePanel('overview')}
           />
         );
       case 'objective':
         return (
           <ObjectiveEditor
             accountId={accountId}
+            active={panelActive}
             onSaved={(next) => {
               onAccount(next);
-              setHomePanel('overview');
+              setProfilePanel('overview');
             }}
-            onCancel={() => setHomePanel('overview')}
+            onCancel={() => setProfilePanel('overview')}
           />
         );
       case 'nutrition':
         return (
           <NutritionGoalEditor
             accountId={accountId}
+            active={panelActive}
             onClose={() => {
-              setHomePanel('overview');
-              select('nutrition');
+              setProfilePanel('overview');
+              if (nutritionOrigin === 'nutrition') select('nutrition');
             }}
           />
         );
+      case 'history':
+        return (
+          <WorkoutHistory
+            accountId={accountId}
+            onClose={closeProfilePanel}
+            backLabel="Back to profile"
+            active={panelActive}
+          />
+        );
+      case 'progress':
+        return <ProgressScreen account={account} onClose={closeProfilePanel} />;
       default:
         return (
-          <ProfileOverview
+          <ProfileScreen
             account={account}
-            onEditProfile={() => setHomePanel('profile')}
-            onEditObjective={() => setHomePanel('objective')}
-            onEditNutrition={() => setHomePanel('nutrition')}
-            onSignOut={onSignOut}
+            onOpen={openProfile}
+            onSignOut={() => {
+              void signOut();
+            }}
+            signingOut={signingOut}
+            signOutError={signOutError}
           />
         );
     }
   }
   function renderTabContent(item: HomeTab) {
-    if (item === 'home') return renderHomePanel();
+    if (item === 'home')
+      return (
+        <ProfileOverview
+          account={account}
+          onOpenProfile={() => openProfile('overview')}
+          onEditObjective={() => openProfile('objective')}
+          onEditNutrition={() => {
+            openProfile('nutrition');
+            setNutritionOrigin('nutrition');
+          }}
+          onWorkout={() => select('workout')}
+        />
+      );
+    if (item === 'profile') return renderProfilePanel();
     if (item === 'workout')
-      return <TrainingWorkspace accountId={accountId} showStartAction={false} />;
+      return (
+        <TrainingWorkspace
+          accountId={accountId}
+          showStartAction={false}
+          onHistory={() => openProfile('history')}
+        />
+      );
     return (
       <NutritionDiaryScreen
         accountId={accountId}
         onEditGoal={() => {
-          setHomePanel('nutrition');
-          select('home');
+          openProfile('nutrition');
+          setNutritionOrigin('nutrition');
         }}
       />
     );
@@ -196,12 +279,7 @@ function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: Accou
   return (
     <SessionProvider accountId={accountId} onSignOut={onSignOut}>
       <FormCheckHost accountId={accountId}>
-        <HomeNavigation
-          account={account}
-          initialTab={initialTab}
-          onSignOut={onSignOut}
-          onAccount={saved}
-        />
+        <HomeNavigation account={account} initialTab={initialTab} onAccount={saved} />
       </FormCheckHost>
     </SessionProvider>
   );

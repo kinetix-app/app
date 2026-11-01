@@ -24,16 +24,11 @@ async function signIn(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill(email!);
   await page.getByLabel('Password', { exact: true }).fill(password!);
   await page.getByRole('button', { name: /^Sign in/ }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
 }
 
-async function review(page: Page) {
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByText('Confirmation', { exact: true })).toBeVisible();
-}
-
-test('profile photo writes happen only at confirmation and remain private across replacement/reload/removal', async ({
+test('profile photo writes happen only on Save and remain private across replacement/reload/removal', async ({
   page,
 }) => {
   test.setTimeout(120000);
@@ -47,10 +42,9 @@ test('profile photo writes happen only at confirmation and remain private across
   expect(photoWrites).toBe(0);
   expect((await fetch(`${api}${path}`, { headers: auth() })).status).toBe(404);
   await page.emulateMedia({ colorScheme: 'light' });
-  await page.screenshot({ path: '.codex/artifacts/previews/profile-wizard-light.png' });
+  await page.screenshot({ path: '.codex/artifacts/previews/profile-edit-light.png' });
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.screenshot({ path: '.codex/artifacts/previews/profile-wizard-dark.png' });
-  await review(page);
+  await page.screenshot({ path: '.codex/artifacts/previews/profile-edit-dark.png' });
   expect(photoWrites).toBe(0);
   const upload = page.waitForResponse(
     (response) => response.url().endsWith(path) && response.request().method() === 'POST',
@@ -60,7 +54,9 @@ test('profile photo writes happen only at confirmation and remain private across
   expect(uploaded.status()).toBe(200);
   expect(uploaded.request().headers()['content-type']).toContain('multipart/form-data; boundary=');
   expect((await uploaded.json()).profile.picture_url).toBe(path);
-  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   const first = await fetch(`${api}${path}`, { headers: auth() });
   expect(first.status).toBe(200);
   expect(first.headers.get('content-type')).toContain('image/jpeg');
@@ -68,10 +64,10 @@ test('profile photo writes happen only at confirmation and remain private across
   const firstBytes = Buffer.from(await first.arrayBuffer());
   expect((await fetch(`${api}${path}`)).status).toBe(401);
   expect((await fetch(`${api}${path}`, { headers: auth(true) })).status).toBe(404);
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   const writesBefore = photoWrites;
   await choose(page, 'android-icon-background.png', true);
-  await review(page);
   expect(photoWrites).toBe(writesBefore);
   await page.route(`**${path}`, async (route) => {
     if (route.request().method() === 'POST') await route.abort('failed');
@@ -87,7 +83,9 @@ test('profile photo writes happen only at confirmation and remain private across
   );
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   expect((await replacement).status()).toBe(200);
-  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   const replaced = await fetch(`${api}${path}`, { headers: auth() });
   expect(Buffer.from(await replaced.arrayBuffer())).not.toEqual(firstBytes);
   await page.reload();
@@ -95,13 +93,14 @@ test('profile photo writes happen only at confirmation and remain private across
   await expect(page.getByRole('img', { name: 'Profile picture', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Remove picture', exact: true }).click();
   expect((await fetch(`${api}${path}`, { headers: auth() })).status).toBe(200);
-  await review(page);
   const remove = page.waitForResponse(
     (response) => response.url().endsWith(path) && response.request().method() === 'DELETE',
   );
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   expect((await remove).status()).toBe(200);
-  await expect(page.getByText('Acceptance Alice', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   expect((await fetch(`${api}${path}`, { headers: auth() })).status).toBe(404);
   const account = await (await fetch(`${api}/api/v1/auth/me`, { headers: auth() })).json();
   expect(account.profile.picture_url).toBeNull();
