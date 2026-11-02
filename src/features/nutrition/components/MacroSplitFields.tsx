@@ -8,7 +8,8 @@ import {
   hundredths,
   macroFields,
   convertMacroDraft,
-  macroBudget,
+  rebalanceGrams,
+  rebalancePercentages,
   type MacroGoalValues,
   type MacroMode,
 } from '../macroSplit';
@@ -37,9 +38,29 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
       values[macro] !== '' &&
       (hundredths(values[macro]) === undefined || hundredths(values[macro])! > 99999999),
   );
-  const budget = macroBudget(values, mode);
   const equivalents = convertMacroDraft(values, mode);
   const energy = hundredths(calories);
+  const updateMacro = (macro: (typeof macroFields)[number][0], value: string) => {
+    if (mode === 'grams') {
+      const balanced = rebalanceGrams(values, macro, value);
+      if (!balanced) {
+        form.setValue(macro, value, { shouldDirty: true });
+        return;
+      }
+      const percentages = convertMacroDraft({ ...values, ...balanced }, 'grams');
+      const normalizedGrams = convertMacroDraft(percentages, 'percentages');
+      macroFields.forEach(([field]) =>
+        form.setValue(field, normalizedGrams[field], { shouldDirty: true }),
+      );
+      return;
+    }
+    const balanced = rebalancePercentages(values, macro, value);
+    if (!balanced) {
+      form.setValue(macro, value, { shouldDirty: true });
+      return;
+    }
+    macroFields.forEach(([field]) => form.setValue(field, balanced[field], { shouldDirty: true }));
+  };
   return (
     <>
       <View style={styles.sectionHeader}>
@@ -93,8 +114,14 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
                       accessibilityLabel={`${label} ${mode === 'grams' ? 'grams' : 'percentage'}`}
                       keyboardType="decimal-pad"
                       value={input.value}
-                      onChangeText={input.onChange}
-                      onBlur={input.onBlur}
+                      onChangeText={(value) =>
+                        mode === 'grams' ? input.onChange(value) : updateMacro(macro, value)
+                      }
+                      onBlur={() => {
+                        if (mode === 'grams' && input.value !== '') updateMacro(macro, input.value);
+                        input.onBlur();
+                      }}
+                      selectTextOnFocus
                       editable={!saving}
                       invalid={invalid}
                       containerStyle={styles.number}
@@ -122,7 +149,7 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
                         label={`${label} range`}
                         maximum={maximum}
                         value={Math.min(maximum, (hundredths(input.value) ?? 0) / 100)}
-                        onChange={(value) => input.onChange(value.toFixed(2))}
+                        onChange={(value) => updateMacro(macro, value.toFixed(2))}
                         onBlur={input.onBlur}
                         disabled={saving}
                       />
@@ -138,39 +165,11 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
           </View>
         ))}
       </View>
-      <View
-        accessibilityLiveRegion="polite"
-        style={[
-          styles.budget,
-          {
-            backgroundColor: budget?.overBudget ? p['surface-300'] : p['surface-200'],
-            borderColor: budget?.overBudget ? p.warning : p.line,
-          },
-        ]}
-      >
-        <View style={styles.row}>
-          <Text style={[textStyles.label, { color: p.ink }]}>Required calories</Text>
-          <Text style={[textStyles.label, { color: p.ink }]}>
-            {budget
-              ? `${budget.requiredCalories.toFixed(2)} kcal · ${budget.percentage.toFixed(2)}%`
-              : '—'}
-          </Text>
-        </View>
-        <Text
-          style={[
-            textStyles['body-sm'],
-            { color: invalidAmounts ? p.danger : budget?.overBudget ? p.warning : p['ink-muted'] },
-          ]}
-        >
-          {budget?.overBudget
-            ? `Out of budget · ${budget.difference.toFixed(2)} kcal over ${Number(calories.replace(',', '.')).toFixed(2)} kcal`
-            : budget
-              ? `${Math.max(0, -budget.difference).toFixed(2)} kcal remaining`
-              : invalidAmounts
-                ? 'Use nonnegative numbers with up to two decimals.'
-                : 'Enter calories and all three macros.'}
+      {invalidAmounts ? (
+        <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+          Use nonnegative numbers with up to two decimals.
         </Text>
-      </View>
+      ) : null}
     </>
   );
 }
@@ -209,10 +208,4 @@ const styles = StyleSheet.create({
   },
   range: { flex: 1 },
   equivalent: { minWidth: 80, textAlign: 'right', fontVariant: ['tabular-nums'] },
-  budget: {
-    padding: spacing['space-3'],
-    gap: spacing['space-1'],
-    borderWidth: 1,
-    borderRadius: radii['radius-md'],
-  },
 });
