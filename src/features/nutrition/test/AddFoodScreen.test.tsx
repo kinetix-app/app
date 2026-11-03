@@ -54,7 +54,7 @@ function open() {
   });
   render(
     <QueryClientProvider client={client}>
-      <AddFoodScreen meal="Lunch" date="2026-10-28" onSaved={onSaved} onClose={onClose} />
+      <AddFoodScreen accountId={1} meal="Lunch" date="2026-10-28" onSaved={onSaved} onClose={onClose} />
     </QueryClientProvider>,
   );
   return { onSaved, onClose };

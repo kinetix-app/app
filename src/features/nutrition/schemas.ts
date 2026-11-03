@@ -25,7 +25,7 @@ export type NutritionGoalInput = z.infer<typeof nutritionGoalInputSchema>;
 
 export const foodSchema = z.object({
   id: z.number().int().positive(),
-  user_id: z.number().int().positive(),
+  user_id: z.number().int().positive().nullable(),
   name: z.string(),
   brand: z.string().nullable(),
   calories: z.coerce.number(),
@@ -40,7 +40,7 @@ export const foodInputSchema = foodSchema.omit({ id: true, user_id: true });
 export type FoodInput = z.infer<typeof foodInputSchema>;
 export const recipeSchema = z.object({
   id: z.number().int().positive(),
-  user_id: z.number().int().positive(),
+  user_id: z.number().int().positive().nullable(),
   name: z.string(),
   servings: z.number().int().positive(),
   calories: z.coerce.number(),

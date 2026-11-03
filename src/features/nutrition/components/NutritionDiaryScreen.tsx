@@ -87,6 +87,7 @@ export function NutritionDiaryScreen({
   if (selectedMeal) {
     return (
       <AddFoodScreen
+        accountId={accountId}
         meal={selectedMeal}
         date={selectedDay}
         onClose={() => setSelectedMeal(null)}

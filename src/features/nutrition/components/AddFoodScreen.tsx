@@ -14,11 +14,13 @@ const mealTypeFor = (meal: string) =>
     'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export function AddFoodScreen({
+  accountId,
   meal,
   date,
   onClose,
   onSaved,
 }: Readonly<{
+  accountId: number;
   meal: string;
   date: string;
   onClose: () => void;
@@ -140,6 +142,7 @@ export function AddFoodScreen({
               onNewRecipe={() => setShowRecipeEditor(true)}
               onSaved={onSaved}
               onClose={onClose}
+              accountId={accountId}
             />
           </View>
         ) : null}
@@ -151,6 +154,7 @@ export function AddFoodScreen({
             search={debouncedSearch}
             selected={selected}
             onSelect={setSelected}
+            accountId={accountId}
             foodToDelete={foodToDelete}
             onRequestDelete={(food) => {
               removeFood.reset();
@@ -180,6 +184,7 @@ function FoodContent({
   search,
   selected,
   onSelect,
+  accountId,
   foodToDelete,
   onRequestDelete,
   onCancelDelete,
@@ -197,6 +202,7 @@ function FoodContent({
   search: string;
   selected: Food | null;
   onSelect: (food: Food) => void;
+  accountId: number;
   foodToDelete: Food | null;
   onRequestDelete: (food: Food) => void;
   onCancelDelete: () => void;
@@ -216,6 +222,7 @@ function FoodContent({
         search={search}
         selected={selected}
         onSelect={onSelect}
+        accountId={accountId}
         onRequestDelete={onRequestDelete}
       />
       <DeleteFoodConfirmation
@@ -244,6 +251,7 @@ function FoodResults({
   search,
   selected,
   onSelect,
+  accountId,
   onRequestDelete,
 }: Readonly<{
   foods: Food[];
@@ -251,14 +259,14 @@ function FoodResults({
   search: string;
   selected: Food | null;
   onSelect: (food: Food) => void;
+  accountId: number;
   onRequestDelete: (food: Food) => void;
 }>) {
   const p = usePalette();
   return (
     <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-      {foods.map((food, index) => (
+      {foods.map((food) => (
         <React.Fragment key={food.name}>
-          {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
           <View style={styles.recipeRow}>
             <Pressable
               accessibilityRole="button"
@@ -281,18 +289,32 @@ function FoodResults({
               </View>
               <View style={styles.flex}>
                 <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
-                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per 100 g</Text>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                  Per 100 g · {food.calories} kcal
+                </Text>
               </View>
-              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>{food.calories} kcal</Text>
             </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Delete ${food.name}`}
-              onPress={() => onRequestDelete(food)}
-              style={styles.deleteRecipe}
-            >
-              <Feather name="trash-2" size={20} color={p.danger} />
-            </Pressable>
+            <View style={styles.itemActions}>
+              {food.user_id === accountId ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${food.name}`}
+                  hitSlop={spacing['space-1']}
+                  style={styles.editItem}
+                >
+                  <Feather name="edit-2" size={19} color={p['brand-ink']} />
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${food.name}`}
+                onPress={() => onRequestDelete(food)}
+                hitSlop={spacing['space-1']}
+                style={styles.deleteRecipe}
+              >
+                <Feather name="trash-2" size={20} color={p.danger} />
+              </Pressable>
+            </View>
           </View>
         </React.Fragment>
       ))}
@@ -426,12 +448,14 @@ function SelectedFoodPreview({ food }: Readonly<{ food: Food }>) {
 }
 
 function RecipePicker({
+  accountId,
   meal,
   date,
   onNewRecipe,
   onSaved,
   onClose,
 }: Readonly<{
+  accountId: number;
   meal: string;
   date: string;
   onNewRecipe: () => void;
@@ -501,9 +525,8 @@ function RecipePicker({
         placeholder="Chicken rice, pasta…"
       />
       <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-        {recipes.data?.map((recipe, index) => (
+        {recipes.data?.map((recipe) => (
           <React.Fragment key={recipe.id}>
-            {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
             <View style={styles.recipeRow}>
               <Pressable
                 accessibilityRole="button"
@@ -527,27 +550,36 @@ function RecipePicker({
                 <View style={styles.flex}>
                   <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    Per serving
+                    Per serving · {recipe.calories.toFixed(0)} kcal
                   </Text>
                 </View>
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                  {recipe.calories.toFixed(0)} kcal
-                </Text>
               </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${recipe.name}`}
-                accessibilityState={{ disabled: remove.isPending }}
-                disabled={remove.isPending}
-                onPress={() => {
-                  remove.reset();
-                  setRecipeToDelete(recipe);
-                }}
-                hitSlop={spacing['space-2']}
-                style={styles.deleteRecipe}
-              >
-                <Feather name="trash-2" size={20} color={p.danger} />
-              </Pressable>
+              <View style={styles.itemActions}>
+                {recipe.user_id === accountId ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${recipe.name}`}
+                    hitSlop={spacing['space-1']}
+                    style={styles.editItem}
+                  >
+                    <Feather name="edit-2" size={19} color={p['brand-ink']} />
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${recipe.name}`}
+                  accessibilityState={{ disabled: remove.isPending }}
+                  disabled={remove.isPending}
+                  onPress={() => {
+                    remove.reset();
+                    setRecipeToDelete(recipe);
+                  }}
+                  hitSlop={spacing['space-2']}
+                  style={styles.deleteRecipe}
+                >
+                  <Feather name="trash-2" size={20} color={p.danger} />
+                </Pressable>
+              </View>
             </View>
           </React.Fragment>
         ))}
@@ -902,16 +934,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['space-3'],
     gap: spacing['space-2'],
   },
-  recipeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  recipeRow: { flexDirection: 'row', alignItems: 'center' },
   recipeSelect: {
     flex: 1,
+    minWidth: 0,
     minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing['space-3'],
   },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacing['space-3'],
+  },
   deleteRecipe: {
-    width: sizes['tap-min'],
+    width: 36,
+    height: sizes['tap-min'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editItem: {
+    width: 36,
     height: sizes['tap-min'],
     alignItems: 'center',
     justifyContent: 'center',
@@ -956,7 +1000,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing['space-2'],
   },
-  divider: { height: 1 },
   foodRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
   foodIcon: {
     width: 44,
