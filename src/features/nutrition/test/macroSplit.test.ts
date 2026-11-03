@@ -13,9 +13,9 @@ test('manual percentages produce documented gram equivalents with half-up roundi
   const amounts = nutritionDraftGoal(draft, 'percentages');
   expect(amounts).toEqual({ calories: 2000, carbohydrates: 200, protein: 150, fats: 66.67 });
   expect(percentagesFromGoal(amounts!)).toEqual({
-    carbohydrates: '40.00',
-    protein: '30.00',
-    fats: '30.00',
+    carbohydrates: '40',
+    protein: '30',
+    fats: '30',
   });
   expect(
     nutritionDraftGoal(
@@ -102,20 +102,20 @@ test('gram budgets tolerate conversion rounding but flag actual excess and show 
   });
   expect(convertMacroDraft(grams, 'grams')).toEqual({
     calories: '2000',
-    carbohydrates: '40.00',
-    protein: '30.00',
-    fats: '30.00',
+    carbohydrates: '40',
+    protein: '30',
+    fats: '30',
   });
 });
 
-test('legacy shares use the stated calorie budget, with absent equivalents for zero calories', () => {
+test('legacy shares are completed to a 100 percent integer split', () => {
   const legacy = { calories: 2000, carbohydrates: 100, protein: 100, fats: 0 };
   expect(percentagesFromGoal(legacy)).toEqual({
-    carbohydrates: '20.00',
-    protein: '20.00',
-    fats: '0.00',
+    carbohydrates: '20',
+    protein: '20',
+    fats: '60',
   });
-  expect(percentageTotal(percentagesFromGoal(legacy))).toBe(40);
+  expect(percentageTotal(percentagesFromGoal(legacy))).toBe(100);
   expect(legacy).toEqual({ calories: 2000, carbohydrates: 100, protein: 100, fats: 0 });
   expect(percentagesFromGoal({ ...legacy, calories: 0 })).toEqual({
     carbohydrates: '',

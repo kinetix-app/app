@@ -108,7 +108,7 @@ export function macroGrams(
   return Math.floor((energy * share + divisor / 2) / divisor) / 100;
 }
 
-/** Show each share of stated calories independently; never normalize legacy targets. */
+/** Convert stored grams into an integer split that always totals 100%. */
 export function percentagesFromGoal(goal: NutritionGoalInput): MacroPercentages {
   if (goal.calories <= 0) return { ...emptyPercentages };
   const carbohydrates = Math.min(Math.round((goal.carbohydrates * 4 * 100) / goal.calories), 100);
