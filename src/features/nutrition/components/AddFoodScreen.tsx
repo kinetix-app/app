@@ -129,10 +129,11 @@ export function AddFoodScreen({
             />
           </>
         ) : null}
-        {tab === 'Recipe' &&
-          (showRecipeEditor ? (
-            <RecipeEditor onCreated={() => setShowRecipeEditor(false)} />
-          ) : (
+        {tab === 'Recipe' && showRecipeEditor ? (
+          <RecipeEditor onCreated={() => setShowRecipeEditor(false)} />
+        ) : null}
+        {!showRecipeEditor ? (
+          <View style={tab === 'Recipe' ? undefined : styles.hidden}>
             <RecipePicker
               meal={meal}
               date={date}
@@ -140,7 +141,8 @@ export function AddFoodScreen({
               onSaved={onSaved}
               onClose={onClose}
             />
-          ))}
+          </View>
+        ) : null}
         {tab === 'Food' && !showFoodEditor ? (
           <FoodContent
             meal={meal}
@@ -852,6 +854,7 @@ function RecipeEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
 }
 
 const styles = StyleSheet.create({
+  hidden: { display: 'none' },
   screen: { flex: 1 },
   content: {
     padding: spacing['space-4'],
