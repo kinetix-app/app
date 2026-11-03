@@ -68,7 +68,7 @@ export function NutritionDiaryScreen({
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
-  const weekTranslate = React.useRef(new Animated.Value(0)).current;
+  const [weekTranslate] = React.useState(() => new Animated.Value(0));
   const [isWeekAnimating, setIsWeekAnimating] = React.useState(false);
   const selected = week.find((day) => day.id === selectedDay) ?? week[0];
   const goal = useQuery({
