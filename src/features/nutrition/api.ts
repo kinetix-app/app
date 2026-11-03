@@ -50,6 +50,10 @@ export const nutritionApi = {
   createFood: (input: FoodInput) =>
     apiClient.post('/api/v1/foods', foodInputSchema.parse(input), { schema: foodSchema }),
   deleteFood: (foodId: number) => apiClient.delete(`/api/v1/foods/${foodId}`),
+  updateFood: (foodId: number, input: FoodInput) =>
+    apiClient.patch(`/api/v1/foods/${foodId}`, foodInputSchema.parse(input), {
+      schema: foodSchema,
+    }),
   createRecipe: (input: RecipeInput) =>
     apiClient.post('/api/v1/recipes', recipeInputSchema.parse(input), { schema: recipeSchema }),
   recipes: (signal?: AbortSignal) =>
@@ -60,6 +64,10 @@ export const nutritionApi = {
       signal,
     }),
   deleteRecipe: (recipeId: number) => apiClient.delete(`/api/v1/recipes/${recipeId}`),
+  updateRecipe: (recipeId: number, input: RecipeInput) =>
+    apiClient.patch(`/api/v1/recipes/${recipeId}`, recipeInputSchema.parse(input), {
+      schema: recipeSchema,
+    }),
   addMealItem: (input: MealItemInput) =>
     apiClient.post('/api/v1/nutrition/meal-items', mealItemInputSchema.parse(input), {
       schema: mealItemSchema,

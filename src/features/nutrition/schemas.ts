@@ -47,6 +47,13 @@ export const recipeSchema = z.object({
   protein: z.coerce.number(),
   carbohydrates: z.coerce.number(),
   fats: z.coerce.number(),
+  ingredients: z.array(
+    z.object({
+      food_id: z.number().int().positive(),
+      name: z.string(),
+      quantity_grams: z.coerce.number().positive(),
+    }),
+  ),
 });
 export const recipeListSchema = z.array(recipeSchema);
 export type Recipe = z.infer<typeof recipeSchema>;

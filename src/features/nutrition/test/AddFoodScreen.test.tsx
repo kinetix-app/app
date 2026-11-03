@@ -14,9 +14,11 @@ jest.mock('../api', () => ({
     foods: jest.fn(),
     searchFoods: jest.fn(),
     createFood: jest.fn(),
+    updateFood: jest.fn(),
     deleteFood: jest.fn(),
     recipes: jest.fn(),
     createRecipe: jest.fn(),
+    updateRecipe: jest.fn(),
     deleteRecipe: jest.fn(),
     addMealItem: jest.fn(),
     addRecipeMealItem: jest.fn(),
@@ -42,6 +44,7 @@ const recipe: Recipe = {
   protein: 6,
   carbohydrates: 40,
   fats: 2,
+  ingredients: [{ food_id: food.id, name: food.name, quantity_grams: 100 }],
 };
 function open() {
   const onSaved = jest.fn();
@@ -54,7 +57,13 @@ function open() {
   });
   render(
     <QueryClientProvider client={client}>
-      <AddFoodScreen accountId={1} meal="Lunch" date="2026-10-28" onSaved={onSaved} onClose={onClose} />
+      <AddFoodScreen
+        accountId={1}
+        meal="Lunch"
+        date="2026-10-28"
+        onSaved={onSaved}
+        onClose={onClose}
+      />
     </QueryClientProvider>,
   );
   return { onSaved, onClose };
@@ -150,6 +159,27 @@ test('creates a food with a macro estimate and refreshes the catalogue', async (
   });
   expect(nutritionApi.foods).toHaveBeenCalledTimes(2);
 });
+test('reuses the food form with the existing values when editing', async () => {
+  jest.mocked(nutritionApi.updateFood).mockResolvedValue({ ...food, name: 'Brown rice' });
+  open();
+  fireEvent.press(await screen.findByLabelText('Edit Rice'));
+  expect(screen.getByLabelText('Food name').props.value).toBe('Rice');
+  expect(screen.getByLabelText('calories').props.value).toBe('100');
+  fireEvent.changeText(screen.getByLabelText('Food name'), 'Brown rice');
+  fireEvent.press(screen.getByText('Save changes'));
+  await waitFor(() =>
+    expect(nutritionApi.updateFood).toHaveBeenCalledWith(1, {
+      name: 'Brown rice',
+      brand: null,
+      barcode: null,
+      calories: 100,
+      protein: 3,
+      carbohydrates: 20,
+      fats: 1,
+    }),
+  );
+  expect(screen.queryByText('Edit food')).toBeNull();
+});
 test('requires positive recipe servings and adds the chosen recipe to the diary', async () => {
   const { onSaved, onClose } = open();
   fireEvent.press(screen.getByText('Recipe'));
@@ -166,6 +196,26 @@ test('requires positive recipe servings and adds the chosen recipe to the diary'
     servings: 1.5,
   });
   expect(onClose).toHaveBeenCalledTimes(1);
+});
+test('reuses the recipe form with its ingredients when editing', async () => {
+  jest.mocked(nutritionApi.updateRecipe).mockResolvedValue({ ...recipe, name: 'Brown rice bowl' });
+  open();
+  fireEvent.press(screen.getByText('Recipe'));
+  fireEvent.press(await screen.findByLabelText('Edit Rice bowl'));
+  expect(screen.getByLabelText('Recipe name').props.value).toBe('Rice bowl');
+  expect(screen.getByLabelText('Recipe servings').props.value).toBe('2');
+  expect(screen.getByLabelText('Rice quantity').props.value).toBe('100');
+  fireEvent.changeText(screen.getByLabelText('Recipe name'), 'Brown rice bowl');
+  fireEvent.changeText(screen.getByLabelText('Rice quantity'), '150');
+  fireEvent.press(screen.getByText('Save changes'));
+  await waitFor(() =>
+    expect(nutritionApi.updateRecipe).toHaveBeenCalledWith(2, {
+      name: 'Brown rice bowl',
+      servings: 2,
+      ingredients: [{ food_id: 1, quantity_grams: 150 }],
+    }),
+  );
+  expect(screen.queryByText('Edit recipe')).toBeNull();
 });
 test('recipe deletion can be cancelled, preserves referenced history and clears removed selection', async () => {
   jest

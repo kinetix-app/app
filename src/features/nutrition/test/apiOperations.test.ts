@@ -73,6 +73,17 @@ test('creates food and nutrition targets and preserves zero macros on updates', 
   };
   await nutritionApi.createFood(food);
   expect(post).toHaveBeenLastCalledWith('/api/v1/foods', food, { schema: foodSchema });
+  await nutritionApi.updateFood(1, food);
+  expect(patch).toHaveBeenLastCalledWith('/api/v1/foods/1', food, { schema: foodSchema });
+  const recipe = {
+    name: 'Bowl',
+    servings: 2,
+    ingredients: [{ food_id: 1, quantity_grams: 100 }],
+  };
+  await nutritionApi.updateRecipe(2, recipe);
+  expect(patch).toHaveBeenLastCalledWith('/api/v1/recipes/2', recipe, {
+    schema: recipeSchema,
+  });
   const goal = { calories: 2000, protein: 100, carbohydrates: 200, fats: 0 };
   await nutritionApi.createGoal(goal);
   expect(post).toHaveBeenLastCalledWith('/api/v1/nutrition-goals', goal, {
