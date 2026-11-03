@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +44,7 @@ export function AddFoodScreen({
       debouncedSearch
         ? nutritionApi.searchFoods(debouncedSearch, signal)
         : nutritionApi.foods(signal),
+    placeholderData: keepPreviousData,
   });
   const save = useMutation({
     mutationFn: () => {
@@ -452,6 +453,7 @@ function RecipePicker({
       debouncedSearch
         ? nutritionApi.searchRecipes(debouncedSearch, signal)
         : nutritionApi.recipes(signal),
+    placeholderData: keepPreviousData,
   });
   const remove = useMutation({
     mutationFn: (recipeId: number) => nutritionApi.deleteRecipe(recipeId),
