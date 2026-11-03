@@ -5,6 +5,7 @@ import {
   foodInputSchema,
   foodSchema,
   mealItemInputSchema,
+  mealItemPatchSchema,
   mealItemSchema,
   nutritionDaySchema,
   nutritionGoalInputSchema,
@@ -14,6 +15,7 @@ import {
   recipeMealItemInputSchema,
   recipeSchema,
   type MealItemInput,
+  type MealItemPatch,
   type FoodInput,
   type NutritionGoalInput,
   type RecipeInput,
@@ -74,6 +76,8 @@ export const nutritionApi = {
     }),
   deleteMealItem: (mealItemId: number) =>
     apiClient.delete(`/api/v1/nutrition/meal-items/${mealItemId}`),
+  updateMealItem: (mealItemId: number, input: MealItemPatch) =>
+    apiClient.patch(`/api/v1/nutrition/meal-items/${mealItemId}`, mealItemPatchSchema.parse(input)),
   addRecipeMealItem: (input: RecipeMealItemInput) =>
     apiClient.post('/api/v1/nutrition/recipe-items', recipeMealItemInputSchema.parse(input), {
       schema: mealItemSchema,

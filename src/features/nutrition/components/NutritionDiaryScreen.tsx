@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
+import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 import { nutritionApi } from '../api';
@@ -25,15 +26,13 @@ const mealTypeId = (meal: (typeof mealTypes)[number]) =>
 
 const localDateId = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-const currentWeek = () => {
+const addDays = (date: Date, days: number) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+const mondayFor = (date: Date) => addDays(date, -((date.getDay() + 6) % 7));
+const weekFor = (monday: Date) => {
   const today = new Date();
-  const monday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate() - ((today.getDay() + 6) % 7),
-  );
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + index);
+    const date = addDays(monday, index);
     return {
       id: localDateId(date),
       weekday: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date),
@@ -53,10 +52,12 @@ export function NutritionDiaryScreen({
   onEditGoal?: () => void;
 }>) {
   const p = usePalette();
-  const week = React.useMemo(() => currentWeek(), []);
+  const [weekStart, setWeekStart] = React.useState(() => mondayFor(new Date()));
+  const week = React.useMemo(() => weekFor(weekStart), [weekStart]);
   const [selectedDay, setSelectedDay] = React.useState(() => localDateId(new Date()));
   const [selectedMeal, setSelectedMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
   const [editingMeal, setEditingMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
+  const [draftAmounts, setDraftAmounts] = React.useState<Record<number, string>>({});
   const selected = week.find((day) => day.id === selectedDay) ?? week[0];
   const goal = useQuery({
     queryKey: ['nutrition', accountId, 'goal'],
@@ -71,6 +72,37 @@ export function NutritionDiaryScreen({
     mutationFn: (mealItemId: number) => nutritionApi.deleteMealItem(mealItemId),
     onSuccess: () => void day.refetch(),
   });
+  const updateItem = useMutation({
+    mutationFn: ({ id, value, isRecipe }: { id: number; value: number; isRecipe: boolean }) =>
+      nutritionApi.updateMealItem(id, isRecipe ? { servings: value } : { quantity_grams: value }),
+    onSuccess: () => void day.refetch(),
+  });
+  const toggleMealEditing = (meal: (typeof mealTypes)[number]) => {
+    if (editingMeal === meal) {
+      setEditingMeal(null);
+      return;
+    }
+    setDraftAmounts(
+      Object.fromEntries(
+        consumed.items
+          .filter((item) => item.meal_type === mealTypeId(meal))
+          .map((item) => [
+            item.id,
+            String(item.recipe_id ? (item.servings ?? '') : (item.quantity_grams ?? '')),
+          ]),
+      ),
+    );
+    setEditingMeal(meal);
+  };
+  const changeWeek = (weeks: number) => {
+    setWeekStart((current) => addDays(current, weeks * 7));
+    setSelectedDay((current) => {
+      const [year, month, day] = current.split('-').map(Number);
+      return localDateId(addDays(new Date(year, month - 1, day), weeks * 7));
+    });
+    setEditingMeal(null);
+    setDraftAmounts({});
+  };
   const macroProgress = macros.map((macro) => {
     const goalValue = goal.data?.[macro.field];
     return {
@@ -123,7 +155,19 @@ export function NutritionDiaryScreen({
             </Text>
           </ScreenHeader>
 
-          <View accessibilityRole="tablist" accessibilityLabel="Week of October 19">
+          <View
+            accessibilityRole="tablist"
+            accessibilityLabel="Nutrition week"
+            style={styles.weekNavigation}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Previous week"
+              onPress={() => changeWeek(-1)}
+              style={({ pressed }) => [styles.weekNavButton, pressed && styles.pressed]}
+            >
+              <Feather name="chevron-left" size={24} color={p['ink-muted']} />
+            </Pressable>
             <View style={styles.weekStrip}>
               {week.map((day) => {
                 const isSelected = day.id === selectedDay;
@@ -133,7 +177,11 @@ export function NutritionDiaryScreen({
                     accessibilityRole="tab"
                     accessibilityLabel={`${day.weekday} October ${day.day}${day.isToday ? ', today' : ''}`}
                     accessibilityState={{ selected: isSelected }}
-                    onPress={() => setSelectedDay(day.id)}
+                    onPress={() => {
+                      setSelectedDay(day.id);
+                      setEditingMeal(null);
+                      setDraftAmounts({});
+                    }}
                     style={({ pressed }) => [styles.dayButton, pressed && styles.pressed]}
                   >
                     <Text
@@ -162,6 +210,14 @@ export function NutritionDiaryScreen({
                 );
               })}
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Next week"
+              onPress={() => changeWeek(1)}
+              style={({ pressed }) => [styles.weekNavButton, pressed && styles.pressed]}
+            >
+              <Feather name="chevron-right" size={24} color={p['ink-muted']} />
+            </Pressable>
           </View>
 
           <View style={[styles.summaryCard, { backgroundColor: p['surface-200'] }]}>
@@ -261,7 +317,7 @@ export function NutritionDiaryScreen({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`${editingMeal === meal ? 'Finish editing' : 'Edit'} ${meal}`}
-                    onPress={() => setEditingMeal((current) => (current === meal ? null : meal))}
+                    onPress={() => toggleMealEditing(meal)}
                   >
                     <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
                       {editingMeal === meal ? 'Done' : 'Edit'}
@@ -276,28 +332,74 @@ export function NutritionDiaryScreen({
                     <View key={item.id} style={styles.loggedItem}>
                       <View style={styles.itemCopy}>
                         <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
-                        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                          {item.recipe_id
-                            ? servingLabel(item.servings)
-                            : `${item.quantity_grams} g`}
-                        </Text>
+                        {editingMeal === meal ? (
+                          <TextField
+                            accessibilityLabel={`Edit ${item.name} quantity`}
+                            keyboardType="decimal-pad"
+                            value={draftAmounts[item.id] ?? ''}
+                            onChangeText={(value) =>
+                              setDraftAmounts((current) => ({ ...current, [item.id]: value }))
+                            }
+                            containerStyle={styles.quantityField}
+                            inputStyle={styles.quantityInput}
+                            trailing={
+                              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                                {item.recipe_id ? 'servings' : 'g'}
+                              </Text>
+                            }
+                          />
+                        ) : (
+                          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                            {item.recipe_id
+                              ? servingLabel(item.servings)
+                              : `${item.quantity_grams} g`}
+                          </Text>
+                        )}
                       </View>
                       <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
                         {formatNumber(item.calories)} kcal
                       </Text>
                       {editingMeal === meal ? (
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`Delete ${item.name}`}
-                          disabled={removeItem.isPending}
-                          onPress={() => removeItem.mutate(item.id)}
-                          style={styles.deleteItem}
-                        >
-                          <Feather name="trash-2" size={18} color={p.danger} />
-                        </Pressable>
+                        <View style={styles.itemEditActions}>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Save ${item.name} quantity`}
+                            accessibilityState={{
+                              disabled: updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
+                            }}
+                            disabled={updateItem.isPending || Number(draftAmounts[item.id]) <= 0}
+                            onPress={() =>
+                              updateItem.mutate({
+                                id: item.id,
+                                value: Number(draftAmounts[item.id]),
+                                isRecipe: Boolean(item.recipe_id),
+                              })
+                            }
+                            style={styles.deleteItem}
+                          >
+                            <Feather name="check" size={19} color={p['brand-ink']} />
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete ${item.name}`}
+                            disabled={removeItem.isPending}
+                            onPress={() => removeItem.mutate(item.id)}
+                            style={styles.deleteItem}
+                          >
+                            <Feather name="trash-2" size={18} color={p.danger} />
+                          </Pressable>
+                        </View>
                       ) : null}
                     </View>
                   ))}
+                {editingMeal === meal && updateItem.isError ? (
+                  <Text
+                    accessibilityRole="alert"
+                    style={[textStyles['body-sm'], { color: p.danger }]}
+                  >
+                    We could not update this entry.
+                  </Text>
+                ) : null}
                 {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
                   <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
                     No food logged yet
@@ -347,7 +449,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  weekStrip: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing['space-1'] },
+  weekNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: -spacing['space-3'],
+  },
+  weekNavButton: {
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekStrip: { flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
   dayButton: {
     flex: 1,
     minHeight: sizes['tap-min'],
@@ -395,6 +508,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  itemEditActions: { flexDirection: 'row', alignItems: 'center' },
+  quantityField: { width: 132, minHeight: sizes['control-height-sm'] },
+  quantityInput: { textAlign: 'right' },
   itemCopy: { flex: 1, gap: spacing['space-1'] },
   mealAddButton: {
     minHeight: sizes['control-height-sm'],

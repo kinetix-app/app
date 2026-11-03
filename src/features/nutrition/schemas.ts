@@ -90,6 +90,11 @@ export const mealItemInputSchema = z.object({
   quantity_grams: z.number().positive().max(999999.99),
 });
 export type MealItemInput = z.infer<typeof mealItemInputSchema>;
+export const mealItemPatchSchema = z.union([
+  z.object({ quantity_grams: z.number().positive().max(999999.99) }),
+  z.object({ servings: z.number().positive().max(999999.99) }),
+]);
+export type MealItemPatch = z.infer<typeof mealItemPatchSchema>;
 export const recipeMealItemInputSchema = z.object({
   date: z.string(),
   meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
