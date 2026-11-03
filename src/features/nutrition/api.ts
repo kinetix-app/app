@@ -54,6 +54,11 @@ export const nutritionApi = {
     apiClient.post('/api/v1/recipes', recipeInputSchema.parse(input), { schema: recipeSchema }),
   recipes: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/recipes', { schema: recipeListSchema, signal }),
+  searchRecipes: (name: string, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/recipes?name=${encodeURIComponent(name.trim())}`, {
+      schema: recipeListSchema,
+      signal,
+    }),
   deleteRecipe: (recipeId: number) => apiClient.delete(`/api/v1/recipes/${recipeId}`),
   addMealItem: (input: MealItemInput) =>
     apiClient.post('/api/v1/nutrition/meal-items', mealItemInputSchema.parse(input), {

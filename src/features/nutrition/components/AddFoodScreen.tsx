@@ -440,9 +440,18 @@ function RecipePicker({
   const [selected, setSelected] = React.useState<Recipe | null>(null);
   const [recipeToDelete, setRecipeToDelete] = React.useState<Recipe | null>(null);
   const [servings, setServings] = React.useState('1');
+  const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
   const recipes = useQuery({
-    queryKey: ['nutrition', 'recipes'],
-    queryFn: ({ signal }) => nutritionApi.recipes(signal),
+    queryKey: ['nutrition', 'recipes', debouncedSearch],
+    queryFn: ({ signal }) =>
+      debouncedSearch
+        ? nutritionApi.searchRecipes(debouncedSearch, signal)
+        : nutritionApi.recipes(signal),
   });
   const remove = useMutation({
     mutationFn: (recipeId: number) => nutritionApi.deleteRecipe(recipeId),
@@ -479,6 +488,14 @@ function RecipePicker({
         <Feather name="plus" size={20} color={p['brand-ink']} />
         <Text style={[textStyles.label, { color: p['brand-ink'] }]}>New recipe</Text>
       </Pressable>
+      <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
+      <TextField
+        accessibilityLabel="Search recipe"
+        leading={<Feather name="search" size={20} color={p['ink-muted']} />}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Chicken rice, pasta…"
+      />
       <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
         {recipes.data?.map((recipe, index) => (
           <React.Fragment key={recipe.id}>
@@ -530,7 +547,10 @@ function RecipePicker({
             </View>
           </React.Fragment>
         ))}
-        {!recipes.isPending && !recipes.data?.length ? (
+        {debouncedSearch && !recipes.isPending && !recipes.data?.length ? (
+          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes found.</Text>
+        ) : null}
+        {!debouncedSearch && !recipes.isPending && !recipes.data?.length ? (
           <View style={styles.emptyRecipes}>
             <Feather name="book-open" size={22} color={p['ink-muted']} />
             <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
