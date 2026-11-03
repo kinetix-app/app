@@ -96,8 +96,8 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   const completed = await response.json();
   expect(completed.client_session_id).toBe(persistedDraft.client_session_id);
   expect(completed.exercises[0].sets[0].reps).toBe(9);
-  await page.getByRole('tab', { name: 'Workout', exact: true }).click();
-  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Training history', exact: true }).click();
   await page.getByRole('button', { name: `View workout ${completed.id}`, exact: true }).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Home', exact: true }).click();

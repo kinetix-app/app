@@ -14,9 +14,10 @@ async function signIn(page: Page) {
   await page.goto('/');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
-  const me = page.waitForResponse((r) => r.url().endsWith('/api/v1/me'));
+  const me = page.waitForResponse((r) => r.url().endsWith('/api/v1/auth/me'));
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await me).status()).toBe(200);
+  await page.getByRole('tab', { name: 'Workout', exact: true }).click();
 }
 
 test('shared editor and real server draft tick, retry, resume, discard and completion', async ({
@@ -24,6 +25,18 @@ test('shared editor and real server draft tick, retry, resume, discard and compl
 }) => {
   test.setTimeout(120000);
   expect(email && password, 'Private integration profile is required').toBeTruthy();
+  if (process.env.APP_ENV !== 'test' || !process.env.DATABASE_URL?.endsWith('_test'))
+    throw new Error('Use a run-owned isolated test database');
+  const previous = await (await fetch(`${api}/api/v1/session-drafts`, { headers })).json();
+  if (previous)
+    expect(
+      (
+        await fetch(`${api}/api/v1/session-drafts/${previous.client_session_id}`, {
+          method: 'DELETE',
+          headers,
+        })
+      ).status,
+    ).toBe(204);
   await page.setViewportSize({ width: 390, height: 844 });
   const catalogue = await fetch(`${api}/api/v1/exercises?name=Acceptance%20press`, { headers });
   const exerciseId = (await catalogue.json()).items[0].id;
@@ -70,10 +83,12 @@ test('shared editor and real server draft tick, retry, resume, discard and compl
     await page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true }).click();
     await expect(page.getByLabel('Exercise 1 set 4 kg', { exact: true })).toHaveValue('100.00');
     await page.getByRole('button', { name: /^Edit sets for /, expanded: true }).click();
+    await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
     const started = page.waitForResponse(
       (r) => r.request().method() === 'PUT' && r.url().includes('/session-drafts/'),
     );
-    await page.getByRole('button', { name: 'Start routine', exact: true }).click();
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
+    await page.getByRole('button', { name: `Train ${name}`, exact: true }).click();
     expect((await started).status()).toBe(200);
     const server = await (await fetch(`${api}/api/v1/session-drafts`, { headers })).json();
     clientId = server.client_session_id;
@@ -118,8 +133,8 @@ test('shared editor and real server draft tick, retry, resume, discard and compl
       ).toBeVisible();
     }
     await expect(
-      page.getByRole('button', { name: 'Record set 3 (coming soon)', exact: true }),
-    ).toBeDisabled();
+      page.getByRole('button', { name: 'Save exercise 1 set 3', exact: true }),
+    ).toBeEnabled();
     await page.getByRole('button', { name: 'Unsave exercise 1 set 1', exact: true }).click();
     await expect(
       page.getByRole('button', { name: 'Save exercise 1 set 1', exact: true }),
@@ -232,7 +247,7 @@ test('shared editor and real server draft tick, retry, resume, discard and compl
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.getByRole('button', { name: 'Discard workout', exact: true }).click();
     await page.getByRole('button', { name: 'Discard', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeEnabled();
     expect(await (await fetch(`${api}/api/v1/session-drafts`, { headers })).json()).toBeNull();
   } finally {
     if (clientId)

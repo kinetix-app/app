@@ -146,7 +146,7 @@ test('plus starts the existing workout editor and a minimized draft survives nav
   await screen.findByLabelText('Add food to Breakfast');
   expect(screen.getByLabelText('Resume workout')).toBeTruthy();
   fireEvent.press(screen.getByRole('tab', { name: 'Workout' }));
-  await screen.findByText('Routines');
+  await screen.findByText('Workouts');
   expect(
     screen.getByRole('button', { name: 'Start workout' }).props.accessibilityState.disabled,
   ).toBe(true);
@@ -204,7 +204,7 @@ test('account switches reset navigation/forms and cancel all private feature que
   await screen.findByText('Alice');
   expect(signal?.aborted).toBe(true);
   expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
-  expect(screen.queryByText('Routines')).toBeNull();
+  expect(screen.queryByText('Workouts')).toBeNull();
 });
 
 test('a new authenticated response replaces cached completion for the same account', async () => {
@@ -270,7 +270,7 @@ test('completed onboarding keeps form checking available in a resumed workout', 
   expect(screen.getByText('Check your form')).toBeTruthy();
 });
 
-test('Profile owns account actions and prepared progress, while Workout history opens Profile', async () => {
+test('Profile owns account actions, progress and history; Workout omits duplicate history navigation', async () => {
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 20, offset: 0 });
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await screen.findByText('Alice');
@@ -287,10 +287,11 @@ test('Profile owns account actions and prepared progress, while Workout history 
   await screen.findByText('No completed workouts yet.');
   fireEvent.press(screen.getByLabelText('Back to profile'));
   fireEvent.press(screen.getByRole('tab', { name: 'Workout' }));
-  await screen.findByText('Routines');
+  await screen.findByText('Workouts');
   expect(screen.queryByText('Sign out')).toBeNull();
-  fireEvent.press(screen.getByText('History'));
-  expect(screen.getByRole('tab', { name: 'Profile' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.queryByText('History')).toBeNull();
+  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByText('Training history'));
   expect(screen.getByLabelText('Back to profile')).toBeTruthy();
 });
 

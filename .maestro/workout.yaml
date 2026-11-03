@@ -24,12 +24,13 @@ appId: cat.udl.kinetix
 - hideKeyboard
 - tapOn: Save exercise 1 set 1
 - tapOn: Minimize workout
-- assertVisible: History
+- assertVisible: Workouts
 - tapOn: Resume workout
 - assertVisible: Edit sets for Acceptance press
 - tapOn: Finish
 - extendedWaitUntil:
-    visible: History
+    visible: Workouts
     timeout: 20000
-- tapOn: History
+- tapOn: Profile
+- tapOn: Training history
 - assertVisible: Workout history

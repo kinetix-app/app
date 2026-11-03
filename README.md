@@ -231,7 +231,7 @@ development clients after installing locked dependencies.
 
 ## Workout recording and server drafts
 
-Start a blank workout or start a saved routine from its editor, record kg/lb and repetitions,
+Start a blank workout or start a saved routine with its card’s play button or Train action, record kg/lb and repetitions,
 minimize/resume, and save each result with its tick. Start creates a server draft; Finish
 atomically moves saved results into completed history. Start actions are disabled while a workout is ongoing. Newly added exercises use the latest saved
 configuration as placeholders. Drafts resume after sign-in, including

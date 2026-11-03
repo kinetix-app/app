@@ -1,9 +1,11 @@
 import React from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { TrainingWorkspace as Workspace } from '../components/TrainingWorkspace';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
-import { SessionProvider } from '../components/SessionProvider';
+import { Button } from '../components/ui';
+import { SessionProvider, useSession } from '../components/SessionProvider';
 import { SessionHost } from '../components/SessionHost';
 
 import { trainingApi } from '../api';
@@ -15,12 +17,41 @@ function TrainingWorkspace(props: { accountId: number; onSignOut: () => void }) 
       <SessionProvider {...props}>
         <SessionHost>
           <Workspace accountId={props.accountId} />
+          <BlankWorkoutAction />
         </SessionHost>
       </SessionProvider>
     </PrivateQueryProvider>
   );
 }
 
+async function openRoutineActions(name = 'Push') {
+  fireEvent.press(await screen.findByLabelText(`Routine actions for ${name}`));
+  await screen.findByLabelText(`Train ${name}`);
+}
+async function startRoutine(name = 'Push') {
+  await openRoutineActions(name);
+  fireEvent.press(screen.getByLabelText(`Train ${name}`));
+}
+function closeRoutineActions() {
+  fireEvent.press(screen.getByLabelText('Close routine actions'));
+}
+
+// The Home bottom bar owns blank-workout start outside the workspace.
+function BlankWorkoutAction() {
+  const session = useSession();
+  return (
+    <Button
+      title="Start workout"
+      disabled={!session.ready || session.storageError || Boolean(session.draft)}
+      onPress={() => session.start()}
+    />
+  );
+}
+
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: jest.fn(),
+  requestMediaLibraryPermissionsAsync: jest.fn(),
+}));
 jest.mock(
   '@react-native-async-storage/async-storage',
   () => ({
@@ -67,6 +98,7 @@ jest.mock('expo-network', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: jest.requireActual('react-native').View,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 jest.mock('../api', () => ({
   trainingApi: {
@@ -84,6 +116,11 @@ jest.mock('../api', () => ({
     lastConfiguration: jest.fn(),
     bodyParts: jest.fn(),
     save: jest.fn(),
+    create: jest.fn(),
+    removeRoutine: jest.fn(),
+    uploadPicture: jest.fn(),
+    removePicture: jest.fn(),
+    picture: jest.fn(),
   },
 }));
 
@@ -106,7 +143,7 @@ beforeEach(() => {
   jest.mocked(trainingApi.discardDraft).mockResolvedValue();
   jest.mocked(trainingApi.lastConfiguration).mockResolvedValue({ exercise_id: 1, sets: [] });
   jest.mocked(trainingApi.routines).mockResolvedValue({
-    items: [{ id: 10, name: 'Push' }],
+    items: [{ ...exampleRoutine }],
     limit: 20,
     offset: 0,
   });
@@ -117,6 +154,8 @@ beforeEach(() => {
   jest.mocked(trainingApi.exercise).mockResolvedValue(exampleExercise);
   jest.mocked(trainingApi.bodyParts).mockResolvedValue({ items: ['CHEST', 'UPPER ARMS'] });
   jest.mocked(trainingApi.save).mockResolvedValue(exampleRoutine);
+  jest.mocked(trainingApi.create).mockResolvedValue(exampleRoutine);
+  jest.mocked(trainingApi.removeRoutine).mockResolvedValue();
 });
 
 test('loads and edits saved defaults, retains input on failure, then saves with slot identity', async () => {
@@ -144,6 +183,7 @@ test('loads and edits saved defaults, retains input on failure, then saves with 
   expect(trainingApi.save).toHaveBeenCalledWith(
     {
       name: 'Updated push',
+      notes: null,
       exercises: [{ id: 20, exercise_id: 1, sets: [{ reps: 8, weight_kg: '82.50' }] }],
     },
     10,
@@ -154,7 +194,7 @@ test('loads and edits saved defaults, retains input on failure, then saves with 
 
 test('creates a routine by selecting exercises, filtering body-parts and adding valid kg/reps sets', async () => {
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.changeText(screen.getByLabelText('Routine name'), 'New push');
   fireEvent.press(screen.getByText('Add exercise'));
   await screen.findByLabelText('Add Bench press');
@@ -177,13 +217,15 @@ test('creates a routine by selecting exercises, filtering body-parts and adding 
   await screen.findByLabelText('Routine name');
   fireEvent.press(screen.getByText('Save'));
   await screen.findByText('Routine saved.');
-  expect(trainingApi.save).toHaveBeenCalledWith(
-    {
-      name: 'New push',
-      exercises: [{ exercise_id: 1, sets: [{ reps: 8, weight_kg: '80' }] }],
-    },
-    undefined,
-  );
+  expect(trainingApi.create).toHaveBeenCalledTimes(1);
+  const form = jest.mocked(trainingApi.create).mock.calls[0][0];
+  expect(JSON.parse(String(form.get('content')))).toEqual({
+    name: 'New push',
+    notes: null,
+    exercises: [{ exercise_id: 1, sets: [{ reps: 8, weight_kg: '80' }] }],
+  });
+  expect(form.has('file')).toBe(false);
+  expect(trainingApi.save).not.toHaveBeenCalled();
 });
 
 test('cancel confirms dirty changes and account changes discard private forms and queries', async () => {
@@ -197,7 +239,7 @@ test('cancel confirms dirty changes and account changes discard private forms an
   expect(screen.getByLabelText('Routine name').props.value).toBe('Private draft');
   jest.mocked(trainingApi.routines).mockResolvedValue({ items: [], limit: 20, offset: 0 });
   view.rerender(<TrainingWorkspace accountId={2} onSignOut={jest.fn()} />);
-  await screen.findByText('Your next workout starts here.');
+  await screen.findByText('Build your first routine');
   expect(screen.queryByLabelText('Routine name')).toBeNull();
   expect(screen.queryByText('Push')).toBeNull();
 });
@@ -217,7 +259,7 @@ test('unmount cancels pending private reads and ignores late results', async () 
   expect(signal?.aborted).toBe(true);
   await act(async () => {
     finish({
-      items: [{ id: 10, name: 'Late private routine' }],
+      items: [{ ...exampleRoutine, name: 'Late private routine' }],
       limit: 20,
       offset: 0,
     });
@@ -226,7 +268,7 @@ test('unmount cancels pending private reads and ignores late results', async () 
 
 test('body-part chips and debounced name search compose, clear and reset pagination', async () => {
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.press(screen.getByText('Add exercise'));
   fireEvent.press(screen.getByLabelText('Filter body parts'));
   fireEvent.press(await screen.findByRole('checkbox', { name: 'UPPER ARMS' }));
@@ -302,6 +344,7 @@ test('drag completion preserves stable slot identities and edited sets in the sa
     expect(trainingApi.save).toHaveBeenCalledWith(
       {
         name: 'Push',
+        notes: null,
         exercises: [
           { id: 21, exercise_id: 2, sets: [] },
           { id: 20, exercise_id: 1, sets: [{ reps: 8, weight_kg: '82.50' }] },
@@ -319,7 +362,7 @@ test('empty summary pages are explicit while routines can search by name', async
   await waitFor(() =>
     expect(trainingApi.routines).toHaveBeenLastCalledWith(0, expect.anything(), 'Push'),
   );
-  fireEvent.press(screen.getByText('New routine'));
+  fireEvent.press(screen.getByLabelText('New routine'));
   fireEvent.press(screen.getByText('Add exercise'));
   await screen.findByText('No exercises found. Try another name or body part.');
   view.unmount();
@@ -328,7 +371,7 @@ test('empty summary pages are explicit while routines can search by name', async
 test('body-part option failure permits browsing and retries from the filter modal', async () => {
   jest.mocked(trainingApi.bodyParts).mockRejectedValue(new Error('unavailable'));
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.press(screen.getByText('Add exercise'));
   await screen.findByLabelText('Add Bench press');
   fireEvent.press(screen.getByLabelText('Filter body parts'));
@@ -393,7 +436,7 @@ test('overview summarises varied sets and set editor retains changes across back
 
 test('multi-select filters apply only on Save, support cancel, badges and clearing', async () => {
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.press(screen.getByText('Add exercise'));
   await screen.findByLabelText('Add Bench press');
   fireEvent.press(screen.getByLabelText('Filter body parts'));
@@ -448,7 +491,7 @@ test('end of list automatically fetches once while pending and stops after a sho
         }),
   );
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.press(screen.getByText('Add exercise'));
   await screen.findByLabelText('Add Row');
   fireEvent(screen.getByTestId('exercise-catalogue'), 'endReached');
@@ -479,7 +522,7 @@ test('failed automatic page fetch retains results and waits for explicit retry',
         : Promise.reject(new Error('offline')),
     );
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.press(screen.getByText('Add exercise'));
   await screen.findByLabelText('Add Bench press');
   fireEvent(screen.getByTestId('exercise-catalogue'), 'endReached');
@@ -499,8 +542,7 @@ test('routine start snapshots guidance with empty actual results, minimize resum
     .mockRejectedValueOnce(new Error('offline'))
     .mockResolvedValueOnce({} as Awaited<ReturnType<typeof trainingApi.finishDraft>>);
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Edit Push'));
-  fireEvent.press(await screen.findByText('Start routine'));
+  await startRoutine();
   await waitFor(() =>
     expect(
       screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
@@ -588,7 +630,7 @@ test('routine save preserves canonical precision while unit toggles create no wr
   );
 });
 
-test('dirty routine must save before local start and a failed save retains the form', async () => {
+test('routine editor saves changes without starting a workout', async () => {
   jest
     .mocked(trainingApi.save)
     .mockRejectedValueOnce(new Error('offline'))
@@ -596,14 +638,15 @@ test('dirty routine must save before local start and a failed save retains the f
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
   fireEvent.press(await screen.findByLabelText('Edit Push'));
   fireEvent.changeText(await screen.findByLabelText('Routine name'), 'Changed');
-  fireEvent.press(screen.getByText('Start routine'));
+  expect(screen.queryByText('Start routine')).toBeNull();
+  fireEvent.press(screen.getByText('Save'));
   await screen.findByRole('alert');
   expect(screen.getByLabelText('Routine name').props.value).toBe('Changed');
+  fireEvent.press(screen.getByText('Save'));
+  await screen.findByText('Routine saved.');
   expect(screen.queryByText('Finish')).toBeNull();
-  fireEvent.press(screen.getByText('Start routine'));
-  await screen.findByText('Finish');
   expect(trainingApi.save).toHaveBeenCalledTimes(2);
-  expect(trainingApi.complete).not.toHaveBeenCalled();
+  expect(trainingApi.saveDraft).not.toHaveBeenCalled();
 });
 
 test('resuming a minimized workout preserves unsaved routine edits beneath the workout', async () => {
@@ -617,9 +660,7 @@ test('resuming a minimized workout preserves unsaved routine edits beneath the w
   fireEvent.press(screen.getByLabelText('Minimize workout'));
   fireEvent.press(await screen.findByLabelText('Edit Push'));
   fireEvent.changeText(await screen.findByLabelText('Routine name'), 'Private unsaved name');
-  expect(
-    screen.getByRole('button', { name: 'Start routine' }).props.accessibilityState.disabled,
-  ).toBe(true);
+  expect(screen.queryByText('Start routine')).toBeNull();
   fireEvent.press(screen.getByLabelText('Resume workout'));
   await screen.findByText('Finish');
   fireEvent.press(screen.getByLabelText('Minimize workout'));
@@ -630,8 +671,13 @@ test('resuming a minimized workout preserves unsaved routine edits beneath the w
 test('saved routine cards expose Edit and Start and direct start refreshes cached guidance with empty results', async () => {
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
   expect(await screen.findByRole('button', { name: 'Edit Push' })).toBeTruthy();
-  expect(screen.getByText('Edit')).toBeTruthy();
-  expect(screen.getByText('Start')).toBeTruthy();
+  expect(screen.getByLabelText('Start Push')).toBeTruthy();
+  expect(screen.queryByLabelText('Train Push')).toBeNull();
+  await openRoutineActions();
+  expect(screen.getByLabelText('Train Push')).toBeTruthy();
+  closeRoutineActions();
+  expect(screen.queryByText('Edit')).toBeNull();
+  expect(screen.queryByText('Start')).toBeNull();
   fireEvent.press(screen.getByLabelText('Edit Push'));
   await screen.findByLabelText('Routine name');
   fireEvent.press(screen.getByLabelText('Back to routines'));
@@ -644,7 +690,7 @@ test('saved routine cards expose Edit and Start and direct start refreshes cache
       },
     ],
   });
-  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await startRoutine();
   await waitFor(() =>
     expect(
       screen.getByLabelText('Edit sets for Updated bench').props.accessibilityState.disabled,
@@ -668,16 +714,20 @@ test('routine direct start guards concurrent taps and retries failed reads witho
       }),
   );
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Start Push'));
-  fireEvent.press(screen.getByLabelText('Start Push'));
-  expect(screen.getByText('Starting…')).toBeTruthy();
-  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(true);
+  await startRoutine();
+  await openRoutineActions();
+  fireEvent.press(screen.getByLabelText('Train Push'));
+  expect(screen.getByLabelText('Train Push').props.accessibilityState.disabled).toBe(true);
+  expect(screen.getByLabelText('Train Push').props.accessibilityState.disabled).toBe(true);
   expect(screen.getByLabelText('Edit Push').props.accessibilityState.disabled).toBe(false);
   expect(trainingApi.routine).toHaveBeenCalledTimes(1);
+  closeRoutineActions();
   await act(async () => fail(new Error('offline')));
   await screen.findByRole('alert');
   expect(screen.queryByText('Finish')).toBeNull();
-  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(false);
+  await openRoutineActions();
+  expect(screen.getByLabelText('Train Push').props.accessibilityState.disabled).toBe(false);
+  closeRoutineActions();
   fireEvent.press(screen.getByText('Retry'));
   await screen.findByLabelText('Edit sets for Bench press');
   expect(trainingApi.routine).toHaveBeenCalledTimes(2);
@@ -685,15 +735,12 @@ test('routine direct start guards concurrent taps and retries failed reads witho
 
 test('all starts remain disabled while an ongoing workout can only resume through its panel', async () => {
   jest.mocked(trainingApi.routines).mockResolvedValue({
-    items: [
-      { id: 10, name: 'Push' },
-      { id: 11, name: 'Other routine' },
-    ],
+    items: [{ ...exampleRoutine }, { ...exampleRoutine, id: 11, name: 'Other routine' }],
     limit: 20,
     offset: 0,
   });
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await startRoutine();
   await waitFor(() =>
     expect(
       screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
@@ -705,10 +752,13 @@ test('all starts remain disabled while an ongoing workout can only resume throug
   collapseExercise();
   fireEvent.press(screen.getByLabelText('Minimize workout'));
   jest.mocked(trainingApi.routine).mockRejectedValue(new Error('offline'));
-  expect(
-    (await screen.findByLabelText('Start Other routine')).props.accessibilityState.disabled,
-  ).toBe(true);
-  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(true);
+  await openRoutineActions('Other routine');
+  expect(screen.getByLabelText('Train Other routine').props.accessibilityState.disabled).toBe(true);
+  expect(screen.getByText('Finish or discard your ongoing workout to start another.')).toBeTruthy();
+  closeRoutineActions();
+  await openRoutineActions();
+  expect(screen.getByLabelText('Train Push').props.accessibilityState.disabled).toBe(true);
+  closeRoutineActions();
   expect(
     screen.getByRole('button', { name: 'Start workout' }).props.accessibilityState.disabled,
   ).toBe(true);
@@ -733,12 +783,12 @@ test('pending routine start is cancelled on account change and cannot create a l
       }),
   );
   const view = render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await startRoutine();
   const signal = jest.mocked(trainingApi.routine).mock.calls[0][1];
   view.rerender(<TrainingWorkspace accountId={2} onSignOut={jest.fn()} />);
   expect(signal?.aborted).toBe(true);
   await act(async () => finish(exampleRoutine));
-  await screen.findByLabelText('Start Push');
+  await screen.findByLabelText('Routine actions for Push');
   expect(screen.queryByText('Finish')).toBeNull();
   expect(screen.queryByLabelText('Resume workout')).toBeNull();
 });
@@ -752,17 +802,22 @@ test('routine start waits for draft restoration and stays disabled after a stora
       }),
   );
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  const start = await screen.findByLabelText('Start Push');
+  await openRoutineActions();
+  const start = screen.getByLabelText('Train Push');
   expect(start.props.accessibilityState.disabled).toBe(true);
   fireEvent.press(start);
   expect(trainingApi.routine).not.toHaveBeenCalled();
   await act(async () => fail(new Error('storage unavailable')));
+  closeRoutineActions();
   await screen.findByText('Retry storage');
-  expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(true);
+  await openRoutineActions();
+  expect(screen.getByLabelText('Train Push').props.accessibilityState.disabled).toBe(true);
   expect(screen.getByLabelText('Edit Push').props.accessibilityState.disabled).toBe(false);
+  closeRoutineActions();
   fireEvent.press(screen.getByText('Retry storage'));
+  await openRoutineActions();
   await waitFor(() =>
-    expect(screen.getByLabelText('Start Push').props.accessibilityState.disabled).toBe(false),
+    expect(screen.getByLabelText('Train Push').props.accessibilityState.disabled).toBe(false),
   );
 });
 
@@ -776,7 +831,8 @@ test('inline cards toggle without hiding the routine and the floating workout su
   expect(screen.queryByLabelText('Display weight in lb')).toBeNull();
   fireEvent.press(expand);
   expect(screen.queryByLabelText('Exercise 1 set 1 kg')).toBeNull();
-  fireEvent.press(screen.getByText('Start routine'));
+  fireEvent.press(screen.getByLabelText('Back to routines'));
+  await startRoutine();
   await waitFor(() =>
     expect(screen.getByLabelText('Minimize workout').props.accessibilityState.disabled).toBe(false),
   );
@@ -834,7 +890,7 @@ test('routine update prompt can cancel or finish with only saved sets and a froz
     .mocked(trainingApi.finishDraft)
     .mockResolvedValueOnce({} as Awaited<ReturnType<typeof trainingApi.finishDraft>>);
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await startRoutine();
   await waitFor(() =>
     expect(
       screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
@@ -889,7 +945,7 @@ test('saving the final outstanding set advances only after success; all complete
     ],
   });
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await startRoutine();
   await waitFor(() =>
     expect(
       screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
@@ -961,7 +1017,7 @@ test('completion skips finished exercises, wraps to earlier unfinished cards and
     })),
   });
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Start Push'));
+  await startRoutine();
   await waitFor(() =>
     expect(
       screen.getByLabelText('Edit sets for Bench press').props.accessibilityState.disabled,
@@ -1005,7 +1061,7 @@ test('completion skips finished exercises, wraps to earlier unfinished cards and
 
 test('routine validation blocks missing names and empty exercise lists before saving', async () => {
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByText('New routine'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.press(screen.getByText('Save'));
   expect(await screen.findByText('Enter a routine name.')).toBeTruthy();
   fireEvent.changeText(screen.getByLabelText('Routine name'), 'Empty routine');
@@ -1051,8 +1107,122 @@ test('incomplete saved defaults display empty fields and require valid reps befo
   expect(trainingApi.save).toHaveBeenCalledWith(
     {
       name: 'Push',
+      notes: null,
       exercises: [{ id: 20, exercise_id: 1, sets: [{ reps: 8, weight_kg: '0' }] }],
     },
     10,
   );
+});
+
+test('compact header and cards show metadata, clamp notes, and editor persists optional notes', async () => {
+  jest.mocked(trainingApi.routines).mockResolvedValue({
+    items: [
+      {
+        ...exampleRoutine,
+        notes: 'Use controlled reps and rest between sets.',
+        last_performed_at: '2026-11-01T10:00:00Z',
+      },
+    ],
+    limit: 20,
+    offset: 0,
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('Workouts');
+  expect(screen.getByLabelText('New routine')).toBeTruthy();
+  expect(screen.queryByText('History')).toBeNull();
+  expect(await screen.findByText('1 exercise')).toBeTruthy();
+  expect(screen.getByLabelText(/^Last trained /).props.numberOfLines).toBe(1);
+  expect(screen.getByText('Use controlled reps and rest between sets.').props.numberOfLines).toBe(
+    2,
+  );
+  expect(screen.getByLabelText(/^Last trained /)).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Edit Push'));
+  await screen.findByLabelText('Routine name');
+  expect(screen.queryByLabelText('Routine notes')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Add routine notes'));
+  fireEvent.changeText(screen.getByLabelText('Routine notes'), 'Keep shoulders stable.');
+  fireEvent.press(screen.getByLabelText('Hide routine notes'));
+  fireEvent.press(screen.getByLabelText('Save routine'));
+  await waitFor(() =>
+    expect(trainingApi.save).toHaveBeenCalledWith(
+      expect.objectContaining({ notes: 'Keep shoulders stable.' }),
+      10,
+    ),
+  );
+  expect(trainingApi.saveDraft).not.toHaveBeenCalled();
+});
+
+test('empty routine suggestion opens creation and no-result search offers accurate feedback', async () => {
+  jest.mocked(trainingApi.routines).mockResolvedValue({ items: [], limit: 20, offset: 0 });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByText('Create routine'));
+  expect(await screen.findByLabelText('Routine name')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Back to routines'));
+  fireEvent.changeText(await screen.findByLabelText('Search routines'), 'Missing');
+  await screen.findByText('No routines found');
+  expect(screen.queryByText('Create routine')).toBeNull();
+});
+
+test('failed multipart creation keeps all fields and retries content with image together', async () => {
+  jest
+    .mocked(ImagePicker.requestMediaLibraryPermissionsAsync)
+    .mockResolvedValue({ granted: true } as ImagePicker.MediaLibraryPermissionResponse);
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: 'file:///cover.jpg', mimeType: 'image/jpeg', width: 100, height: 100 }],
+  });
+  jest
+    .mocked(trainingApi.create)
+    .mockRejectedValueOnce(new Error('storage unavailable'))
+    .mockResolvedValueOnce(exampleRoutine);
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.changeText(screen.getByLabelText('Routine name'), 'Cover retry');
+  fireEvent.press(screen.getByText('Add exercise'));
+  fireEvent.press(await screen.findByLabelText('Add Bench press'));
+  fireEvent.press(screen.getByLabelText('Add routine cover'));
+  await screen.findByText('New cover · Save to apply');
+  fireEvent.press(screen.getByLabelText('Save routine'));
+  await screen.findByRole('alert');
+  expect(screen.queryByText(/Routine details saved/)).toBeNull();
+  expect(screen.getByLabelText('Routine name').props.value).toBe('Cover retry');
+  expect(screen.getByLabelText('Routine cover')).toBeTruthy();
+  expect(trainingApi.save).not.toHaveBeenCalled();
+  expect(trainingApi.uploadPicture).not.toHaveBeenCalled();
+  const first = jest.mocked(trainingApi.create).mock.calls[0][0];
+  expect(first.has('file')).toBe(true);
+  expect(JSON.parse(String(first.get('content'))).name).toBe('Cover retry');
+  fireEvent.press(screen.getByLabelText('Save routine'));
+  await screen.findByText('Routine saved.');
+  expect(trainingApi.create).toHaveBeenCalledTimes(2);
+  expect(trainingApi.save).not.toHaveBeenCalled();
+  expect(trainingApi.uploadPicture).not.toHaveBeenCalled();
+});
+
+test('routine deletion requires confirmation, preserves the sheet on failure, and retries then refreshes the list', async () => {
+  jest
+    .mocked(trainingApi.removeRoutine)
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce();
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  await openRoutineActions();
+  expect(screen.getByText('Train')).toBeTruthy();
+  expect(screen.queryByText('Routine options')).toBeNull();
+  expect(screen.getByText('Edit')).toBeTruthy();
+  expect(screen.getByText('Delete')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Delete Push'));
+  expect(screen.getByText('Delete routine?')).toBeTruthy();
+  expect(trainingApi.removeRoutine).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByLabelText('Keep routine'));
+  fireEvent.press(screen.getByLabelText('Delete Push'));
+  fireEvent.press(screen.getByLabelText('Confirm delete Push'));
+  await screen.findByText('Could not delete the routine. Try again.');
+  expect(screen.getByLabelText('Confirm delete Push')).toBeTruthy();
+  jest.mocked(trainingApi.routines).mockResolvedValue({ items: [], limit: 20, offset: 0 });
+  fireEvent.press(screen.getByLabelText('Confirm delete Push'));
+  await waitFor(() => expect(screen.queryByLabelText('Routine actions for Push')).toBeNull());
+  expect(screen.queryByText('Routine deleted.')).toBeNull();
+  expect(trainingApi.removeRoutine).toHaveBeenCalledTimes(2);
+  expect(trainingApi.removeRoutine).toHaveBeenLastCalledWith(10);
+  expect(screen.queryByLabelText('Routine actions for Push')).toBeNull();
 });

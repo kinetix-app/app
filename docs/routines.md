@@ -150,3 +150,15 @@ form validation and Save; only workout sets have database-confirmation ticks, wh
 can be toggled back to draft. Weight fields display kg without unit selectors until an
 account preference is available. See [workouts.md](workouts.md) for the timer,
 floating resume panel, discard and completion lifecycle.
+
+## Compact workout workspace (#94)
+
+Workout uses a header `+ / Routine` action, a searchable list and an actionable first-routine empty state. History remains in Profile; blank workouts start from the shared bottom bar. Tapping a routine's content opens editing; its separate filled-triangle play control starts a freshly fetched routine. The right-hand ellipsis opens a mobile bottom action sheet with Train, Edit and Delete. Both training controls remain disabled during an ongoing workout. The sheet supports outside-tap dismissal, Escape/platform Back and focus return to its trigger.
+
+Cards show a private cover (or gym icon), a two-line notes excerpt, a secondary exercise-count chip without an icon, and the latest completed workout's end date alongside it in the device's local timezone. Unfinished drafts never count as last performed. Current routine authoring supports gym exercises only.
+
+The editor keeps Save in its fixed top-right header and omits Start. Optional notes expand below the name, accept up to 1000 characters and persist as `notes`; clearing saves null. The compact cover row supports selection, replacement and removal. JPEG, PNG and WebP images up to 5 MiB are normalized by the backend and delivered through authenticated requests. Covers never use public storage URLs.
+
+Creation sends a single multipart `POST /api/v1/routines`: `content` contains the routine JSON and optional `file` contains the cover. The backend returns 201 only after the routine, planned sets and selected cover reference are committed together. A failed image upload or database transaction leaves no new routine; entered values and the selected photo remain available for retry. Editing an existing routine still saves its details before applying a replacement/removal; a cover failure preserves the saved details and reports the remaining change. A canceled picker or editor does not upload or remove an image. Apply backend migration `20261103_01` before using these operations. No new native dependency is introduced.
+
+Deleting a routine requires confirmation. It removes the template from the active library, keeps completed workouts and their original routine provenance, and removes its private cover. A draft using that routine blocks deletion with 409; finish or discard it first. Failed deletion retains the confirmation and can be retried. Apply backend migration `20261103_02` for this behavior. Existing deleted routine IDs return 404 from read/edit/source operations; deletion retries by their owner remain safe.

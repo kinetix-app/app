@@ -20,9 +20,10 @@ async function signIn(page: Page) {
   await page.goto('/');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
-  const me = page.waitForResponse((response) => response.url().endsWith('/api/v1/me'));
+  const me = page.waitForResponse((response) => response.url().endsWith('/api/v1/auth/me'));
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await me).status()).toBe(200);
+  await page.getByRole('tab', { name: 'Workout', exact: true }).click();
 }
 
 test('partial results, independent routine origin, history placeholders and atomic optional routine update', async ({
@@ -67,15 +68,18 @@ test('partial results, independent routine origin, history placeholders and atom
   try {
     await signIn(page);
     await page.getByLabel('Search routines', { exact: true }).fill(name);
-    const start = page.getByRole('button', { name: `Start ${name}`, exact: true });
+    const start = page.getByRole('button', { name: `Train ${name}`, exact: true });
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await start.click();
     await expect(page.getByRole('button', { name: 'Minimize workout', exact: true })).toBeEnabled();
     draftId = (await (await request('/session-drafts')).json()).client_session_id;
     await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await expect(start).toBeDisabled();
+    await page.getByRole('button', { name: 'Close routine actions', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Start routine', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Start routine', exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
     // Replacing template slots mid-workout must not invalidate the independent session rows.
     expect(
@@ -181,6 +185,7 @@ test('partial results, independent routine origin, history placeholders and atom
     });
     await page.unroute('**/api/v1/session-drafts/*/finish');
     // Declining the update permits an entirely unfulfilled exercise without touching the template.
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await start.click();
     await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeEnabled();
     const secondFinish = page.waitForResponse(

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   BackHandler,
@@ -9,12 +9,18 @@ import {
   Modal,
   Keyboard,
   Text,
+  Pressable,
   View,
 } from 'react-native';
 import DraggableFlatList from './ExerciseDragList';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
-import { spacing, textStyles, usePalette } from '@/theme/tokens';
+import { sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+import {
+  RoutinePictureEditor,
+  routinePictureForm,
+  type RoutinePictureDraft,
+} from './RoutinePictureEditor';
 import { trainingApi } from '../api';
 import { ExerciseDragHandle } from './ExerciseDragHandle';
 import { ExerciseDetails } from './ExerciseDetails';
@@ -38,7 +44,7 @@ type DraftExercise = {
   exercise: ExerciseSummary;
   sets: DraftSet[];
 };
-type Draft = { name: string; exercises: DraftExercise[] };
+type Draft = { name: string; notes: string; exercises: DraftExercise[] };
 
 function SetSummary({ control, index }: Readonly<{ control: Control<Draft>; index: number }>) {
   const p = usePalette();
@@ -147,25 +153,27 @@ export function RoutineEditor({
   accountId,
   routine,
   onSaved,
-  onStart,
-  canStart = true,
   onClose,
 }: Readonly<{
   accountId: number;
   routine?: Routine;
   onSaved: (value: Routine) => void;
-  onStart?: (value: Routine) => void;
-  canStart?: boolean;
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const cache = useQueryClient();
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const alive = useRef(true);
-  const startAfterSave = useRef(false);
+  const [notesOpen, setNotesOpen] = useState(Boolean(routine?.notes));
+  const [pictureDraft, setPictureDraft] = useState<RoutinePictureDraft>({ kind: 'keep' });
+  const [pictureBusy, setPictureBusy] = useState(false);
+  const savedRoutine = useRef<Routine | undefined>(routine);
+  const appliedPicture = useRef<RoutinePictureDraft | undefined>(undefined);
+  const [detailsSaved, setDetailsSaved] = useState(false);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -175,6 +183,7 @@ export function RoutineEditor({
   const { control, handleSubmit, formState, setError, getValues } = useForm<Draft>({
     defaultValues: {
       name: routine?.name ?? '',
+      notes: routine?.notes ?? '',
       exercises:
         routine?.exercises.map((slot) => ({
           slotId: slot.id,
@@ -192,35 +201,53 @@ export function RoutineEditor({
     control,
     name: 'exercises',
   });
-  const isDirty = formState.isDirty;
+  const isDirty = formState.isDirty || pictureDraft.kind !== 'keep';
   const save = useMutation({
-    mutationFn: (input: RoutineInput) => trainingApi.save(input, routine?.id),
+    mutationFn: async (input: RoutineInput) => {
+      if (!routine) {
+        const form =
+          pictureDraft.kind === 'select' ? routinePictureForm(pictureDraft.asset) : new FormData();
+        form.append('content', JSON.stringify(input));
+        return trainingApi.create(form);
+      }
+      const result = await trainingApi.save(input, savedRoutine.current?.id ?? routine.id);
+      savedRoutine.current = result;
+      cache.setQueryData(['training', accountId, 'routine', result.id, 'kg'], result);
+      void cache.invalidateQueries({ queryKey: ['training', accountId, 'routines'] });
+      setDetailsSaved(true);
+      if (appliedPicture.current === pictureDraft || pictureDraft.kind === 'keep') return result;
+      const withPicture =
+        pictureDraft.kind === 'select'
+          ? await trainingApi.uploadPicture(result.id, routinePictureForm(pictureDraft.asset))
+          : await trainingApi.removePicture(result.id);
+      appliedPicture.current = pictureDraft;
+      savedRoutine.current = withPicture;
+      return withPicture;
+    },
     retry: false,
     onSuccess: (result) => {
-      if (alive.current) {
-        if (startAfterSave.current && onStart) onStart(result);
-        else onSaved(result);
-      }
+      if (alive.current) onSaved(result);
     },
   });
   function close() {
-    if (save.isPending) return;
+    if (save.isPending || pictureBusy) return;
     if (isDirty) setDiscard(true);
     else onClose();
   }
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!alive.current) return false;
-      if (save.isPending) return true;
+      if (save.isPending || pictureBusy) return true;
       if (isDirty) setDiscard(true);
       else onClose();
       return true;
     });
     return () => listener.remove();
-  }, [isDirty, save.isPending, onClose]);
+  }, [isDirty, save.isPending, pictureBusy, onClose]);
   const submit = handleSubmit((values) => {
     const parsed = routineInputSchema.safeParse({
       name: values.name,
+      notes: values.notes.trim() || null,
       exercises: values.exercises.map((slot) => ({
         ...(slot.slotId === undefined ? {} : { id: slot.slotId }),
         exercise_id: slot.exercise.id,
@@ -243,7 +270,7 @@ export function RoutineEditor({
     }
     save.mutate(parsed.data);
   });
-  const disabled = save.isPending || dragging;
+  const disabled = save.isPending || dragging || pictureBusy;
   return (
     <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
       <KeyboardAvoidingView
@@ -253,6 +280,35 @@ export function RoutineEditor({
         importantForAccessibility={discard ? 'no-hide-descendants' : 'auto'}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <View style={[ui.row, { padding: spacing['space-4'] }]}>
+          <IconButton
+            icon="arrow-left"
+            label="Back to routines"
+            onPress={close}
+            disabled={disabled}
+          />
+          <Text accessibilityRole="header" style={[ui.heading, { flex: 1, color: p.ink }]}>
+            {routine ? 'Edit routine' : 'New routine'}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save routine"
+            accessibilityState={{ disabled }}
+            disabled={disabled}
+            onPress={() => void submit()}
+            style={({ pressed }) => ({
+              minHeight: sizes['tap-min'],
+              minWidth: sizes['tap-min'],
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: disabled || pressed ? 0.55 : 1,
+            })}
+          >
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+              {save.isPending ? 'Saving…' : 'Save'}
+            </Text>
+          </Pressable>
+        </View>
         <DraggableFlatList
           testID="routine-exercises"
           data={fields}
@@ -271,18 +327,6 @@ export function RoutineEditor({
           }}
           ListHeaderComponent={
             <View style={ui.gap}>
-              <View style={ui.row}>
-                <IconButton
-                  icon="arrow-left"
-                  label="Back to routines"
-                  onPress={close}
-                  disabled={disabled}
-                />
-                <Text style={[ui.heading, { color: p.ink }]}>
-                  {routine ? 'Edit routine' : 'New routine'}
-                </Text>
-              </View>
-              <Text style={{ color: p.ink }}>Routine name</Text>
               <Controller
                 control={control}
                 name="name"
@@ -297,6 +341,16 @@ export function RoutineEditor({
                   <>
                     <TextField
                       accessibilityLabel="Routine name"
+                      placeholder="Name your routine"
+                      maxLength={150}
+                      inputStyle={textStyles['title-lg']}
+                      containerStyle={{
+                        backgroundColor: p['surface-100'],
+                        borderWidth: 0,
+                        borderBottomWidth: 1,
+                        borderRadius: 0,
+                        paddingHorizontal: 0,
+                      }}
                       value={field.value}
                       onChangeText={field.onChange}
                       onBlur={field.onBlur}
@@ -310,7 +364,62 @@ export function RoutineEditor({
                   </>
                 )}
               />
-              <Text style={{ color: p['ink-muted'] }}>You can rename it later.</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={notesOpen ? 'Hide routine notes' : 'Add routine notes'}
+                accessibilityState={{ expanded: notesOpen, disabled }}
+                disabled={disabled}
+                onPress={() => setNotesOpen(!notesOpen)}
+                style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
+              >
+                <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
+                  {notesOpen ? 'Notes (optional) −' : '+ Add notes'}
+                </Text>
+              </Pressable>
+              {notesOpen ? (
+                <Controller
+                  control={control}
+                  name="notes"
+                  rules={{ maxLength: { value: 1000, message: 'Use at most 1000 characters.' } }}
+                  render={({ field, fieldState }) => (
+                    <View style={ui.gap}>
+                      <TextField
+                        accessibilityLabel="Routine notes"
+                        placeholder="Focus, reminders or a plan for this routine…"
+                        value={field.value}
+                        onChangeText={field.onChange}
+                        onBlur={field.onBlur}
+                        editable={!disabled}
+                        multiline
+                        maxLength={1000}
+                        inputStyle={{ minHeight: 64, textAlignVertical: 'top' }}
+                      />
+                      <Text
+                        style={[
+                          textStyles['body-sm'],
+                          { color: p['ink-muted'], textAlign: 'right' },
+                        ]}
+                      >
+                        {field.value.length}/1000
+                      </Text>
+                      {fieldState.error ? (
+                        <Text accessibilityRole="alert" style={{ color: p.danger }}>
+                          {fieldState.error.message}
+                        </Text>
+                      ) : null}
+                    </View>
+                  )}
+                />
+              ) : null}
+              <RoutinePictureEditor
+                accountId={accountId}
+                routineId={routine?.id}
+                path={routine?.image_url}
+                draft={pictureDraft}
+                onChange={setPictureDraft}
+                onBusy={setPictureBusy}
+                disabled={disabled}
+              />
               <Text style={{ color: p['ink-muted'], fontWeight: '700' }}>
                 EXERCISES · {fields.length}
               </Text>
@@ -371,28 +480,16 @@ export function RoutineEditor({
                   {formState.errors.root.message}
                 </Text>
               ) : null}
-              {save.isError ? <Failure error={save.error} /> : null}
-              <Button
-                title={save.isPending ? 'Saving…' : 'Save'}
-                onPress={() => {
-                  startAfterSave.current = false;
-                  void submit();
-                }}
-                disabled={disabled}
-              />
-              {onStart ? (
-                <Button
-                  title="Start routine"
-                  disabled={disabled || !canStart}
-                  onPress={() => {
-                    if (routine && !isDirty) {
-                      onStart(routine);
-                      return;
-                    }
-                    startAfterSave.current = true;
-                    void submit();
-                  }}
-                />
+              {save.isError ? (
+                <View style={ui.gap}>
+                  {detailsSaved ? (
+                    <Text accessibilityRole="alert" style={{ color: p.danger }}>
+                      Routine details saved. Your cover change could not be saved. Save again to
+                      retry, or go back to keep the saved details.
+                    </Text>
+                  ) : null}
+                  <Failure error={save.error} />
+                </View>
               ) : null}
             </View>
           }
@@ -447,9 +544,13 @@ export function RoutineEditor({
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              Discard your unsaved changes?
+              {detailsSaved ? 'Discard remaining changes?' : 'Discard your unsaved changes?'}
             </Text>
-            <Text style={{ color: p['ink-muted'] }}>Your changes have not been saved.</Text>
+            <Text style={{ color: p['ink-muted'] }}>
+              {detailsSaved
+                ? 'Previously saved routine details will be kept. Any remaining edits will be discarded.'
+                : 'Your changes have not been saved.'}
+            </Text>
             <Button title="Keep editing" onPress={() => setDiscard(false)} secondary />
             <Button title="Discard" onPress={onClose} tone="danger" />
           </View>

@@ -63,7 +63,8 @@ test('confirmed final sets advance exercise cards and the floating panel uses pr
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: /^Sign in/ }).click();
     await page.getByLabel('Search routines', { exact: true }).fill(name);
-    await page.getByRole('button', { name: `Start ${name}`, exact: true }).click();
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
+    await page.getByRole('button', { name: `Train ${name}`, exact: true }).click();
     const cards = page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true });
     await expect(cards).toHaveCount(2);
     await cards.first().click();

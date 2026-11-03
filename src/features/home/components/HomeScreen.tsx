@@ -171,14 +171,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
         />
       );
     if (item === 'profile') return renderProfilePanel();
-    if (item === 'workout')
-      return (
-        <TrainingWorkspace
-          accountId={accountId}
-          showStartAction={false}
-          onHistory={() => openProfile('history')}
-        />
-      );
+    if (item === 'workout') return <TrainingWorkspace accountId={accountId} />;
     return (
       <NutritionDiaryScreen
         accountId={accountId}

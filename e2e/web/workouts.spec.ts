@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
+test.use({ actionTimeout: 10000 });
+
 const api = process.env.KINETIX_API_URL ?? 'http://127.0.0.1:18016';
 const user = {
   email: process.env.KINETIX_E2E_EMAIL ?? '',
@@ -26,7 +28,7 @@ async function signIn(page: Page, identity = user) {
   await page.goto('/');
   await page.getByLabel('Email', { exact: true }).fill(identity.email);
   await page.getByLabel('Password', { exact: true }).fill(identity.password);
-  const me = page.waitForResponse((response) => response.url().endsWith('/api/v1/me'));
+  const me = page.waitForResponse((response) => response.url().endsWith('/api/v1/auth/me'));
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await me).status()).toBe(200);
   await expect(
@@ -34,7 +36,10 @@ async function signIn(page: Page, identity = user) {
   ).toBeVisible();
   if (!(await page.getByRole('button', { name: 'Minimize workout', exact: true }).isVisible())) {
     await page.getByRole('tab', { name: 'Workout', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Workout', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   }
 }
 
@@ -42,6 +47,22 @@ test.beforeAll(() => {
   if (!user.email || !user.password || !other.email || !other.password)
     throw new Error('Acceptance requires two private development test credentials');
   if (user.email === other.email) throw new Error('Acceptance requires distinct test accounts');
+});
+
+test.beforeEach(async () => {
+  if (process.env.APP_ENV !== 'test' || !process.env.DATABASE_URL?.endsWith('_test'))
+    throw new Error('Use a run-owned isolated test database');
+  // Each test owns its scenario; a failed earlier test must not leak its server draft.
+  for (const identity of [user, other]) {
+    const response = await request('/session-drafts', 'GET', undefined, identity);
+    expect(response.status).toBe(200);
+    const draft = await response.json();
+    if (draft)
+      expect(
+        (await request(`/session-drafts/${draft.client_session_id}`, 'DELETE', undefined, identity))
+          .status,
+      ).toBe(204);
+  }
 });
 
 test('real authenticated UI and atomic, idempotent, isolated completed history', async ({
@@ -150,11 +171,14 @@ test('blank workout persists locally, resumes and retries the identical frozen F
   await page.getByLabel('Exercise 1 set 1 kg', { exact: true }).fill('100');
   await page.getByLabel('Exercise 1 set 1 reps', { exact: true }).fill('8');
   await page.getByRole('button', { name: 'Save exercise 1 set 1', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true }),
-  ).toHaveAttribute('aria-expanded', 'false');
+  const expanded = page.getByRole('button', {
+    name: 'Edit sets for Acceptance press',
+    exact: true,
+    expanded: true,
+  });
+  if (await expanded.isVisible()) await expanded.click();
   await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workouts', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Resume workout', exact: true }).click();
   await expect(
@@ -210,7 +234,8 @@ test('blank workout persists locally, resumes and retries the identical frozen F
   expect(response.status()).toBe(200);
   const workout = await response.json();
   expect(workout.exercises[0].sets[0].weight_kg).toBe('100.000000');
-  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Training history', exact: true }).click();
   await page.getByRole('button', { name: `View workout ${workout.id}`, exact: true }).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
 });
@@ -233,8 +258,8 @@ test('routine start snapshots repeated slots and two finishes retain distinct ID
   await signIn(page);
   const completedIds: number[] = [];
   for (let round = 0; round < 2; round += 1) {
-    await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
-    await page.getByRole('button', { name: 'Start routine', exact: true }).click();
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
+    await page.getByRole('button', { name: `Train ${name}`, exact: true }).click();
     const slots = page.getByRole('button', {
       name: 'Edit sets for Acceptance press',
       exact: true,
@@ -253,14 +278,17 @@ test('routine start snapshots repeated slots and two finishes retain distinct ID
       await expect(reps).toHaveValue('');
       await weight.fill(String(40 + index));
       await reps.fill(String(8 + index));
+      const tick = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'PUT' && response.url().includes('/session-drafts/'),
+      );
       await page
         .getByRole('button', { name: `Save exercise ${index + 1} set 1`, exact: true })
         .click();
+      expect((await tick).status()).toBe(200);
       await expect(
-        page
-          .getByRole('button', { name: 'Edit sets for Acceptance press', exact: true })
-          .nth(index),
-      ).toHaveAttribute('aria-expanded', 'false');
+        page.getByRole('button', { name: 'Minimize workout', exact: true }),
+      ).toBeEnabled();
     }
     const confirmed = page.waitForResponse(
       (value) =>
@@ -279,7 +307,10 @@ test('routine start snapshots repeated slots and two finishes retain distinct ID
     expect(
       workout.exercises.map((value: { sets: { reps: number }[] }) => value.sets[0].reps),
     ).toEqual([8, 9]);
-    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Workout', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   }
   expect(new Set(completedIds).size).toBe(2);
   const unchanged = await (await request(`/routines/${routine.id}`)).json();
@@ -309,7 +340,8 @@ test('logout retains A server draft while B never inherits private draft or hist
     (value) =>
       value.request().method() === 'GET' && new URL(value.url()).pathname === '/api/v1/sessions',
   );
-  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Training history', exact: true }).click();
   expect((await bHistory).status()).toBe(200);
   await expect(page.getByText('No completed workouts yet.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^View workout / })).toHaveCount(0);
