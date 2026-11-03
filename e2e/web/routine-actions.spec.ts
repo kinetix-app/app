@@ -122,8 +122,12 @@ test('saved routine actions edit, start fresh details, retry and preserve a resu
   await page.getByRole('button', { name: 'Close routine actions', exact: true }).click();
   const resume = page.getByRole('button', { name: 'Resume workout', exact: true });
   await expect(resume).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-  await expect(resume).toHaveCSS('border-width', '1px');
-  expect(await resume.evaluate((element) => getComputedStyle(element).borderColor)).toBe(
+  await expect(resume).toHaveCSS('border-width', '0px');
+  expect(
+    await resume.evaluate(
+      (element) => getComputedStyle(element.firstElementChild ?? element).color,
+    ),
+  ).toBe(
     await page
       .getByRole('button', { name: 'Start workout', exact: true })
       .evaluate((element) => getComputedStyle(element).backgroundColor),

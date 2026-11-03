@@ -142,7 +142,7 @@ function MinimizedWorkoutCard({ onDiscard }: Readonly<{ onDiscard: () => void }>
             icon="play"
             onOverlay
             label="Resume workout"
-            outlined
+            bare
             disabled={session.pending}
             onPress={() => session.change((value) => ({ ...value, minimized: false }))}
           />
