@@ -1,4 +1,5 @@
 import React from 'react';
+import { Animated } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NutritionDiaryScreen } from '../components/NutritionDiaryScreen';
@@ -110,6 +111,11 @@ function open() {
 }
 beforeEach(() => {
   jest.resetAllMocks();
+  jest.spyOn(Animated, 'timing').mockReturnValue({
+    start: (callback?: (result: { finished: boolean }) => void) => callback?.({ finished: true }),
+    stop: jest.fn(),
+    reset: jest.fn(),
+  } as never);
   jest.mocked(nutritionApi.goal).mockResolvedValue(goal);
   jest.mocked(nutritionApi.day).mockResolvedValue(day);
 });
@@ -193,6 +199,25 @@ test('navigates to the previous and next week while preserving the weekday', asy
   fireEvent.press(screen.getByLabelText('Next week'));
   await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(3));
   expect(jest.mocked(nutritionApi.day).mock.calls[2][0]).toBe(initialDate);
+});
+test('opens the calendar and loads the week containing the selected day', async () => {
+  open();
+  await screen.findByText('Rice');
+  fireEvent.press(screen.getByLabelText('Open calendar'));
+  expect(screen.getByLabelText('Previous month')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Next month'));
+  const target = screen
+    .getAllByRole('button')
+    .find(
+      (button) =>
+        typeof button.props.accessibilityLabel === 'string' &&
+        button.props.accessibilityLabel.startsWith('Select ') &&
+        !button.props.accessibilityState?.selected,
+    )!;
+  fireEvent.press(target);
+  await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(2));
+  expect(screen.queryByLabelText('Previous month')).toBeNull();
+  expect(screen.getByLabelText('Open calendar')).toBeTruthy();
 });
 test('allows tracking without a target and retries a failed goal request', async () => {
   jest
