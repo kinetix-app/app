@@ -294,8 +294,8 @@ function FoodResults({
                 </Text>
               </View>
             </Pressable>
-            <View style={styles.itemActions}>
-              {food.user_id === accountId ? (
+            {food.user_id === accountId ? (
+              <View style={styles.itemActions}>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Edit ${food.name}`}
@@ -304,17 +304,17 @@ function FoodResults({
                 >
                   <Feather name="edit-2" size={19} color={p['brand-ink']} />
                 </Pressable>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${food.name}`}
-                onPress={() => onRequestDelete(food)}
-                hitSlop={spacing['space-1']}
-                style={styles.deleteRecipe}
-              >
-                <Feather name="trash-2" size={20} color={p.danger} />
-              </Pressable>
-            </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${food.name}`}
+                  onPress={() => onRequestDelete(food)}
+                  hitSlop={spacing['space-1']}
+                  style={styles.deleteRecipe}
+                >
+                  <Feather name="trash-2" size={20} color={p.danger} />
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         </React.Fragment>
       ))}
@@ -554,8 +554,8 @@ function RecipePicker({
                   </Text>
                 </View>
               </Pressable>
-              <View style={styles.itemActions}>
-                {recipe.user_id === accountId ? (
+              {recipe.user_id === accountId ? (
+                <View style={styles.itemActions}>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Edit ${recipe.name}`}
@@ -564,22 +564,22 @@ function RecipePicker({
                   >
                     <Feather name="edit-2" size={19} color={p['brand-ink']} />
                   </Pressable>
-                ) : null}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${recipe.name}`}
-                  accessibilityState={{ disabled: remove.isPending }}
-                  disabled={remove.isPending}
-                  onPress={() => {
-                    remove.reset();
-                    setRecipeToDelete(recipe);
-                  }}
-                  hitSlop={spacing['space-2']}
-                  style={styles.deleteRecipe}
-                >
-                  <Feather name="trash-2" size={20} color={p.danger} />
-                </Pressable>
-              </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${recipe.name}`}
+                    accessibilityState={{ disabled: remove.isPending }}
+                    disabled={remove.isPending}
+                    onPress={() => {
+                      remove.reset();
+                      setRecipeToDelete(recipe);
+                    }}
+                    hitSlop={spacing['space-2']}
+                    style={styles.deleteRecipe}
+                  >
+                    <Feather name="trash-2" size={20} color={p.danger} />
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           </React.Fragment>
         ))}
