@@ -131,6 +131,8 @@ test('home shows profile and an optional nutrition entry while keeping one botto
   expect(screen.getAllByLabelText('Main navigation')).toHaveLength(1);
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   await screen.findByLabelText('Add food to Breakfast');
+  fireEvent.press(screen.getByLabelText('Add food to Breakfast'));
+  expect(screen.queryByLabelText('Main navigation')).toBeNull();
 });
 
 test('plus starts the existing workout editor and a minimized draft survives navigation without duplicate starts', async () => {

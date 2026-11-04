@@ -51,10 +51,12 @@ export function NutritionDiaryScreen({
   accountId,
   onBack,
   onEditGoal,
+  onAddFoodOpenChange,
 }: Readonly<{
   accountId: number;
   onBack?: () => void;
   onEditGoal?: () => void;
+  onAddFoodOpenChange?: (isOpen: boolean) => void;
 }>) {
   const p = usePalette();
   const [weekStart, setWeekStart] = React.useState(() => mondayFor(new Date()));
@@ -161,7 +163,10 @@ export function NutritionDiaryScreen({
         accountId={accountId}
         meal={selectedMeal}
         date={selectedDay}
-        onClose={() => setSelectedMeal(null)}
+        onClose={() => {
+          setSelectedMeal(null);
+          onAddFoodOpenChange?.(false);
+        }}
         onSaved={() => void day.refetch()}
       />
     );
@@ -370,14 +375,47 @@ export function NutritionDiaryScreen({
                   {meal.toUpperCase()}
                 </Text>
                 <View style={styles.mealHeaderActions}>
-                  <Text style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}>
-                    {formatNumber(
-                      consumed.items
-                        .filter((item) => item.meal_type === mealTypeId(meal))
-                        .reduce((total, item) => total + item.calories, 0),
-                    )}{' '}
-                    KCAL
-                  </Text>
+                  {consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
+                    <>
+                      <Text
+                        style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}
+                      >
+                        {formatNumber(
+                          consumed.items
+                            .filter((item) => item.meal_type === mealTypeId(meal))
+                            .reduce((total, item) => total + item.calories, 0),
+                        )}{' '}
+                        KCAL
+                      </Text>
+                      <View style={styles.mealMacroSummary}>
+                        {(
+                          [
+                            ['C', 'carbohydrates'],
+                            ['P', 'protein'],
+                            ['F', 'fats'],
+                          ] as const
+                        ).map(([label, macro]) => (
+                          <View key={label} style={styles.mealMacro}>
+                            <Text style={[textStyles.overline, { color: p.ink }]}>{label}</Text>
+                            <Text
+                              style={[
+                                textStyles.overline,
+                                styles.tabular,
+                                { color: p['ink-muted'] },
+                              ]}
+                            >
+                              {formatNumber(
+                                consumed.items
+                                  .filter((item) => item.meal_type === mealTypeId(meal))
+                                  .reduce((total, item) => total + item[macro], 0),
+                              )}
+                              g
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`${editingMeal === meal ? 'Finish editing' : 'Edit'} ${meal}`}
@@ -390,96 +428,101 @@ export function NutritionDiaryScreen({
                 </View>
               </View>
               <View style={[styles.mealCard, { backgroundColor: p['surface-200'] }]}>
-                {consumed.items
-                  .filter((item) => item.meal_type === mealTypeId(meal))
-                  .map((item) => (
-                    <View key={item.id} style={styles.loggedItem}>
-                      <View style={styles.itemCopy}>
-                        <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
-                        {editingMeal === meal ? (
-                          <TextField
-                            accessibilityLabel={`Edit ${item.name} quantity`}
-                            keyboardType="decimal-pad"
-                            value={draftAmounts[item.id] ?? ''}
-                            onChangeText={(value) =>
-                              setDraftAmounts((current) => ({ ...current, [item.id]: value }))
-                            }
-                            containerStyle={styles.quantityField}
-                            inputStyle={styles.quantityInput}
-                            trailing={
-                              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                                {item.recipe_id ? 'servings' : 'g'}
-                              </Text>
-                            }
-                          />
-                        ) : (
-                          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                            {item.recipe_id
-                              ? servingLabel(item.servings)
-                              : `${item.quantity_grams} g`}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                        {formatNumber(item.calories)} kcal
-                      </Text>
-                      {editingMeal === meal ? (
-                        <View style={styles.itemEditActions}>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`Save ${item.name} quantity`}
-                            accessibilityState={{
-                              disabled: updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
-                            }}
-                            disabled={updateItem.isPending || Number(draftAmounts[item.id]) <= 0}
-                            onPress={() =>
-                              updateItem.mutate({
-                                id: item.id,
-                                value: Number(draftAmounts[item.id]),
-                                isRecipe: Boolean(item.recipe_id),
-                              })
-                            }
-                            style={styles.deleteItem}
-                          >
-                            <Feather name="check" size={19} color={p['brand-ink']} />
-                          </Pressable>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`Delete ${item.name}`}
-                            disabled={removeItem.isPending}
-                            onPress={() => removeItem.mutate(item.id)}
-                            style={styles.deleteItem}
-                          >
-                            <Feather name="trash-2" size={18} color={p.danger} />
-                          </Pressable>
+                <View style={styles.mealCardContent}>
+                  {consumed.items
+                    .filter((item) => item.meal_type === mealTypeId(meal))
+                    .map((item) => (
+                      <View key={item.id} style={styles.loggedItem}>
+                        <View style={styles.itemCopy}>
+                          <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
+                          {editingMeal === meal ? (
+                            <TextField
+                              accessibilityLabel={`Edit ${item.name} quantity`}
+                              keyboardType="decimal-pad"
+                              value={draftAmounts[item.id] ?? ''}
+                              onChangeText={(value) =>
+                                setDraftAmounts((current) => ({ ...current, [item.id]: value }))
+                              }
+                              containerStyle={styles.quantityField}
+                              inputStyle={styles.quantityInput}
+                              trailing={
+                                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                                  {item.recipe_id ? 'servings' : 'g'}
+                                </Text>
+                              }
+                            />
+                          ) : (
+                            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                              {item.recipe_id
+                                ? servingLabel(item.servings)
+                                : `${item.quantity_grams} g`}
+                            </Text>
+                          )}
                         </View>
-                      ) : null}
-                    </View>
-                  ))}
-                {editingMeal === meal && updateItem.isError ? (
-                  <Text
-                    accessibilityRole="alert"
-                    style={[textStyles['body-sm'], { color: p.danger }]}
-                  >
-                    We could not update this entry.
-                  </Text>
-                ) : null}
-                {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
-                  <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                    No food logged yet
-                  </Text>
-                ) : null}
+                        <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                          {formatNumber(item.calories)} kcal
+                        </Text>
+                        {editingMeal === meal ? (
+                          <View style={styles.itemEditActions}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={`Save ${item.name} quantity`}
+                              accessibilityState={{
+                                disabled:
+                                  updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
+                              }}
+                              disabled={updateItem.isPending || Number(draftAmounts[item.id]) <= 0}
+                              onPress={() =>
+                                updateItem.mutate({
+                                  id: item.id,
+                                  value: Number(draftAmounts[item.id]),
+                                  isRecipe: Boolean(item.recipe_id),
+                                })
+                              }
+                              style={styles.deleteItem}
+                            >
+                              <Feather name="check" size={19} color={p['brand-ink']} />
+                            </Pressable>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={`Delete ${item.name}`}
+                              disabled={removeItem.isPending}
+                              onPress={() => removeItem.mutate(item.id)}
+                              style={styles.deleteItem}
+                            >
+                              <Feather name="trash-2" size={18} color={p.danger} />
+                            </Pressable>
+                          </View>
+                        ) : null}
+                      </View>
+                    ))}
+                  {editingMeal === meal && updateItem.isError ? (
+                    <Text
+                      accessibilityRole="alert"
+                      style={[textStyles['body-sm'], { color: p.danger }]}
+                    >
+                      We could not update this entry.
+                    </Text>
+                  ) : null}
+                  {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
+                    <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                      No food logged yet
+                    </Text>
+                  ) : null}
+                </View>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Add food to ${meal}`}
-                  onPress={() => setSelectedMeal(meal)}
+                  onPress={() => {
+                    setSelectedMeal(meal);
+                    onAddFoodOpenChange?.(true);
+                  }}
                   style={({ pressed }) => [
                     styles.mealAddButton,
                     { backgroundColor: p['brand-soft'], opacity: pressed ? 0.65 : 1 },
                   ]}
                 >
                   <Feather name="plus" size={20} color={p['brand-ink']} />
-                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Add food</Text>
                 </Pressable>
               </View>
             </View>
@@ -637,6 +680,7 @@ const styles = StyleSheet.create({
   weekNavButton: {
     width: sizes['tap-min'],
     height: sizes['tap-min'],
+    marginBottom: spacing['space-1'],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -672,11 +716,16 @@ const styles = StyleSheet.create({
   mealGroup: { gap: spacing['space-2'] },
   mealHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   mealHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  mealMacroSummary: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] },
+  mealMacro: { flexDirection: 'row', alignItems: 'baseline', gap: spacing['space-1'] },
   mealCard: {
     borderRadius: radii['radius-lg'],
     padding: spacing['space-4'],
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing['space-3'],
   },
+  mealCardContent: { flex: 1, gap: spacing['space-3'] },
   loggedItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -694,12 +743,11 @@ const styles = StyleSheet.create({
   quantityInput: { textAlign: 'right' },
   itemCopy: { flex: 1, gap: spacing['space-1'] },
   mealAddButton: {
-    minHeight: sizes['control-height-sm'],
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
     borderRadius: radii['radius-pill'],
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing['space-2'],
   },
   tabular: { fontVariant: ['tabular-nums'] },
   calendarBackdrop: {

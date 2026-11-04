@@ -37,11 +37,21 @@ export function AddFoodScreen({
   const [foodToDelete, setFoodToDelete] = React.useState<Food | null>(null);
   const [editingFood, setEditingFood] = React.useState<Food | null>(null);
   const [editingRecipe, setEditingRecipe] = React.useState<Recipe | null>(null);
-  const [amount, setAmount] = React.useState('200');
+  const [amount, setAmount] = React.useState('');
+  const [previewAmount, setPreviewAmount] = React.useState('');
+  const toggleFoodSelection = (food: Food) => {
+    setSelected((current) => (current?.id === food.id ? null : food));
+    setAmount('');
+    setPreviewAmount('');
+  };
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setPreviewAmount(amount), 500);
+    return () => clearTimeout(timer);
+  }, [amount]);
   const results = useQuery({
     queryKey: ['nutrition', 'foods', debouncedSearch],
     queryFn: ({ signal }) =>
@@ -180,7 +190,7 @@ export function AddFoodScreen({
             isPending={results.isPending}
             search={debouncedSearch}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={toggleFoodSelection}
             accountId={accountId}
             onEdit={(food) => {
               setEditingFood(food);
@@ -198,6 +208,7 @@ export function AddFoodScreen({
               if (foodToDelete) removeFood.mutate(foodToDelete.id);
             }}
             amount={amount}
+            previewAmount={previewAmount}
             onAmountChange={setAmount}
             savePending={save.isPending}
             onSave={() => save.mutate()}
@@ -224,6 +235,7 @@ function FoodContent({
   removeFoodPending,
   onConfirmDelete,
   amount,
+  previewAmount,
   onAmountChange,
   savePending,
   onSave,
@@ -243,6 +255,7 @@ function FoodContent({
   removeFoodPending: boolean;
   onConfirmDelete: () => void;
   amount: string;
+  previewAmount: string;
   onAmountChange: (amount: string) => void;
   savePending: boolean;
   onSave: () => void;
@@ -266,15 +279,19 @@ function FoodContent({
         onCancel={onCancelDelete}
         onConfirm={onConfirmDelete}
       />
-      {selected ? <SelectedFoodPreview food={selected} /> : null}
-      <FoodAmount
-        meal={meal}
-        selected={selected}
-        amount={amount}
-        onAmountChange={onAmountChange}
-        savePending={savePending}
-        onSave={onSave}
-      />
+      {selected ? (
+        <>
+          <SelectedFoodPreview food={selected} amount={previewAmount} />
+          <FoodAmount
+            meal={meal}
+            selected={selected}
+            amount={amount}
+            onAmountChange={onAmountChange}
+            savePending={savePending}
+            onSave={onSave}
+          />
+        </>
+      ) : null}
     </>
   );
 }
@@ -299,9 +316,11 @@ function FoodResults({
   onRequestDelete: (food: Food) => void;
 }>) {
   const p = usePalette();
+  const selectedIndex = selected ? foods.findIndex((food) => food.id === selected.id) : -1;
+  const visibleFoods = selectedIndex >= 0 ? foods.slice(0, selectedIndex + 1) : foods;
   return (
     <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-      {foods.map((food) => (
+      {visibleFoods.map((food) => (
         <React.Fragment key={food.name}>
           <View style={styles.recipeRow}>
             <Pressable
@@ -434,7 +453,7 @@ function FoodAmount({
   const p = usePalette();
   const total =
     selected && Number(amount) ? ((selected.calories * Number(amount)) / 100).toFixed(0) : '—';
-  const disabled = !selected || savePending;
+  const disabled = !selected || Number(amount) <= 0 || savePending;
   return (
     <>
       <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
@@ -442,7 +461,7 @@ function FoodAmount({
         accessibilityLabel="Food amount"
         keyboardType="decimal-pad"
         value={amount}
-        onChangeText={onAmountChange}
+        onChangeText={(value) => onAmountChange(numericAmount(value))}
         trailing={<Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>}
       />
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Total: {total} kcal</Text>
@@ -461,12 +480,19 @@ function FoodAmount({
   );
 }
 
-function SelectedFoodPreview({ food }: Readonly<{ food: Food }>) {
+function numericAmount(value: string) {
+  const [integer, ...fraction] = value.replace(/[^0-9.]/g, '').split('.');
+  return fraction.length ? `${integer}.${fraction.join('')}` : integer;
+}
+
+function SelectedFoodPreview({ food, amount }: Readonly<{ food: Food; amount: string }>) {
   const p = usePalette();
+  const grams = Number(amount) > 0 ? Number(amount) : 100;
+  const multiplier = grams / 100;
   const macros = [
-    [`${food.protein} g`, 'Protein'],
-    [`${food.carbohydrates} g`, 'Carbs'],
-    [`${food.fats} g`, 'Fat'],
+    [`${formatGrams(food.protein * multiplier)} g`, 'Protein'],
+    [`${formatGrams(food.carbohydrates * multiplier)} g`, 'Carbs'],
+    [`${formatGrams(food.fats * multiplier)} g`, 'Fat'],
   ];
   return (
     <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
@@ -479,9 +505,13 @@ function SelectedFoodPreview({ food }: Readonly<{ food: Food }>) {
           </View>
         ))}
       </View>
-      <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per 100 g</Text>
+      <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per {grams} g</Text>
     </View>
   );
+}
+
+function formatGrams(value: number) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value);
 }
 
 function RecipePicker({
@@ -505,7 +535,7 @@ function RecipePicker({
   const queryClient = useQueryClient();
   const [selected, setSelected] = React.useState<Recipe | null>(null);
   const [recipeToDelete, setRecipeToDelete] = React.useState<Recipe | null>(null);
-  const [servings, setServings] = React.useState('1');
+  const [servings, setServings] = React.useState('');
   const [search, setSearch] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   React.useEffect(() => {
@@ -544,6 +574,10 @@ function RecipePicker({
     },
   });
   const validServings = Number(servings) > 0;
+  const toggleRecipeSelection = (recipe: Recipe) => {
+    setSelected((current) => (current?.id === recipe.id ? null : recipe));
+    setServings('');
+  };
 
   return (
     <View style={styles.recipeForm}>
@@ -571,7 +605,7 @@ function RecipePicker({
                 accessibilityRole="button"
                 accessibilityState={{ selected: selected?.id === recipe.id }}
                 accessibilityLabel={`Select ${recipe.name}`}
-                onPress={() => setSelected(recipe)}
+                onPress={() => toggleRecipeSelection(recipe)}
                 style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
               >
                 <View
@@ -693,30 +727,34 @@ function RecipePicker({
           </View>
         </View>
       </Modal>
-      <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
-      <TextField
-        accessibilityLabel="Recipe servings to add"
-        keyboardType="decimal-pad"
-        value={servings}
-        onChangeText={setServings}
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !selected || !validServings || save.isPending }}
-        disabled={!selected || !validServings || save.isPending}
-        onPress={() => save.mutate()}
-        style={[
-          styles.add,
-          {
-            backgroundColor: p.brand,
-            opacity: !selected || !validServings || save.isPending ? 0.55 : 1,
-          },
-        ]}
-      >
-        <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Adding…' : `Add to ${meal}`}
-        </Text>
-      </Pressable>
+      {selected ? (
+        <>
+          <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
+          <TextField
+            accessibilityLabel="Recipe servings to add"
+            keyboardType="decimal-pad"
+            value={servings}
+            onChangeText={setServings}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !validServings || save.isPending }}
+            disabled={!validServings || save.isPending}
+            onPress={() => save.mutate()}
+            style={[
+              styles.add,
+              {
+                backgroundColor: p.brand,
+                opacity: !validServings || save.isPending ? 0.55 : 1,
+              },
+            ]}
+          >
+            <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+              {save.isPending ? 'Adding…' : `Add to ${meal}`}
+            </Text>
+          </Pressable>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -776,7 +814,18 @@ function FoodEditor({ food, onSaved }: Readonly<{ food: Food | null; onSaved: ()
             accessibilityLabel={field}
             keyboardType="decimal-pad"
             value={values[field]}
-            onChangeText={(value) => setValues((current) => ({ ...current, [field]: value }))}
+            onChangeText={(value) =>
+              setValues((current) => {
+                const next = { ...current, [field]: value };
+                const macrosComplete = (['protein', 'carbohydrates', 'fats'] as const).every(
+                  (macro) => next[macro].trim() !== '' && Number.isFinite(Number(next[macro])),
+                );
+                if (field === 'calories' || !macrosComplete) return next;
+                const estimate =
+                  Number(next.protein) * 4 + Number(next.carbohydrates) * 4 + Number(next.fats) * 9;
+                return { ...next, calories: estimate.toFixed(0) };
+              })
+            }
             trailing={
               <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                 {field === 'calories' ? 'kcal' : 'g'}

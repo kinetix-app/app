@@ -51,6 +51,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   const accountId = account.id;
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
   const [nutritionOrigin, setNutritionOrigin] = useState<'profile' | 'nutrition'>('profile');
+  const [addingFood, setAddingFood] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState('');
   const loggingOut = useRef(false);
@@ -59,6 +60,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   const [tab, setTab] = useState<HomeTab>(initialTab);
   const [visited, setVisited] = useState<HomeTab[]>([initialTab]);
   function select(next: HomeTab) {
+    setAddingFood(false);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
@@ -182,6 +184,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
     return (
       <NutritionDiaryScreen
         accountId={accountId}
+        onAddFoodOpenChange={setAddingFood}
         onEditGoal={() => {
           openProfile('nutrition');
           setNutritionOrigin('nutrition');
@@ -204,12 +207,14 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
           </View>
         ))}
       </SessionHost>
-      <BottomBar
-        tab={tab}
-        onSelect={select}
-        canStart={session.ready && !session.pending && !session.storageError && !session.draft}
-        onStart={() => session.start()}
-      />
+      {!addingFood ? (
+        <BottomBar
+          tab={tab}
+          onSelect={select}
+          canStart={session.ready && !session.pending && !session.storageError && !session.draft}
+          onStart={() => session.start()}
+        />
+      ) : null}
     </View>
   );
 }
