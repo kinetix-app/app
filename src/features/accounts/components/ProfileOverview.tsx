@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { spacing, textStyles, usePalette } from '@/theme/tokens';
+import { sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { ProfileAvatar } from './ProfileAvatar';
 import { getObjective } from '../api';
 import type { Account } from '../schemas';
@@ -38,7 +38,17 @@ export function ProfileOverview({
       style={[s.screen, { backgroundColor: p['surface-100'] }]}
     >
       <ScrollView contentContainerStyle={s.content}>
-        <ScreenHeader title="Home" />
+        <ScreenHeader title="Home">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+            onPress={onOpenProfile}
+            hitSlop={spacing['space-1']}
+            style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+          >
+            <ProfileAvatar account={account} size={sizes['tap-min']} compact />
+          </Pressable>
+        </ScreenHeader>
         <View style={[s.card, { backgroundColor: p['surface-200'] }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-4'] }}>
             <ProfileAvatar account={account} size={64} />

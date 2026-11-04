@@ -2,16 +2,16 @@
 
 After either development Basic sign-in or Clerk account connection, `HomeScreen`
 owns the authenticated shell. The server-derived setup gate first requires a complete
-profile and selected objective. The default Home tab shows a read-only profile/objective summary with shortcuts into Profile, Workout and Nutrition. Profile owns account editing and sign-out. Numerical nutrition targets are optional; the goal
+profile and selected objective. The default Home tab shows a read-only profile/objective summary with shortcuts into Profile, Workout and Nutrition. Its header shows the user's profile picture (or initial) as an accessible "Open profile" button, the only entry to Profile outside in-app shortcuts. Profile is a shell destination, not a bottom-bar tab: opening it resumes its current panel, and its back arrow (or Android back on the overview) returns to the tab it was opened from. Profile owns account editing and sign-out. Numerical nutrition targets are optional; the goal
 editor offers Set up later and saving returns to its origin: Profile for a Profile entry, Nutrition for a diary or Home shortcut. The diary's Edit
-nutrition goal action opens the editor in the Profile tab; closing it returns to Nutrition. See [onboarding](onboarding.md).
+nutrition goal action opens the editor in Profile; closing it returns to Nutrition. See [onboarding](onboarding.md).
 
 The shared bottom bar uses the former nutrition bar's design and now has accessible,
 working controls. Workout opens routines, the shared routine/session editor and
 completed history through a shortcut into Profile. History details return to history, then to Profile. The central + starts a blank workout through the existing session
 controller; it is disabled during restoration, pending operations, storage failures
-or an existing workout. Nutrition retains diary, meal/food/recipe and goal operations.
-Profile replaces the previous disabled Progress tab. Its compact grouped rows open profile/picture editing, objective and nutrition-goal editing, training history and a prepared Progress screen. Progress shows the current saved profile weight and clearly marks weight history, measurement recording and strength trends as unavailable; it does not generate historical data.
+or an existing workout. Nutrition retains diary, meal/food/recipe and goal operations. League is a disabled placeholder ("Coming soon") for the future FriendsLeague feature.
+Profile's compact grouped rows open profile/picture editing, objective and nutrition-goal editing, training history and a prepared Progress screen. Progress shows the current saved profile weight and clearly marks weight history, measurement recording and strength trends as unavailable; it does not generate historical data.
 
 One account-scoped QueryClient serves all features. The workout provider remains
 mounted across tabs, so minimizing and switching tabs preserves the active workout.

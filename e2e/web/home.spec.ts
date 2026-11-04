@@ -105,9 +105,9 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   await expect(page.getByLabel('Daily calorie goal')).toHaveValue('2400');
   await page.getByRole('tab', { name: 'Nutrition', exact: true }).click();
   await page.getByRole('button', { name: 'Edit nutrition goal', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Profile', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Nutrition', exact: true })).toHaveAttribute(
     'aria-selected',
-    'true',
+    'false',
   );
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.getByLabel('Daily calorie goal')).toBeVisible();
