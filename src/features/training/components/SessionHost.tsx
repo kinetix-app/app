@@ -1,20 +1,27 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { spacing, usePalette } from '@/theme/tokens';
+import { radii, spacing, usePalette } from '@/theme/tokens';
 import { useSession } from './SessionProvider';
 import { WorkoutTimer } from './WorkoutEditor';
 import { OngoingSession } from './OngoingSession';
 import { Button, IconButton, Loading, ui } from './ui';
 
-export function SessionHost({ children }: Readonly<React.PropsWithChildren>) {
+export function SessionHost({
+  children,
+  hideMinimized = false,
+}: Readonly<
+  React.PropsWithChildren<{
+    hideMinimized?: boolean;
+  }>
+>) {
   const session = useSession();
   const p = usePalette();
   const [discard, setDiscard] = useState(false);
   return (
     <View style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
       <View
-        style={[ui.screen, { paddingBottom: session.draft?.minimized ? 112 : 0 }]}
+        style={ui.screen}
         aria-hidden={discard || Boolean(session.draft && !session.draft.minimized)}
         accessibilityElementsHidden={discard || Boolean(session.draft && !session.draft.minimized)}
         importantForAccessibility={
@@ -25,15 +32,21 @@ export function SessionHost({ children }: Readonly<React.PropsWithChildren>) {
         {!session.ready ? <PendingSessionState onDiscard={() => setDiscard(true)} /> : null}
         {session.ready && session.storageError && !session.draft ? <StorageErrorState /> : null}
       </View>
-      {session.draft?.minimized && !discard ? (
+      {session.draft?.minimized && !discard && !hideMinimized ? (
         <MinimizedWorkoutCard onDiscard={() => setDiscard(true)} />
       ) : null}
       <Modal
+        transparent
         visible={Boolean(session.draft && !session.draft.minimized)}
         animationType="slide"
         onRequestClose={() => session.change((value) => ({ ...value, minimized: true }))}
       >
-        {session.draft ? <OngoingSession /> : null}
+        <View
+          testID="workout-modal-surface"
+          style={[ui.screen, { backgroundColor: p['surface-100'] }]}
+        >
+          {session.draft ? <OngoingSession /> : null}
+        </View>
       </Modal>
       <DiscardConfirmation
         visible={discard}
@@ -103,14 +116,13 @@ function MinimizedWorkoutCard({ onDiscard }: Readonly<{ onDiscard: () => void }>
       <View
         testID="ongoing-workout-card"
         style={[
-          ui.card,
           {
+            borderRadius: radii['radius-lg'],
+            gap: spacing['space-3'],
             padding: spacing['space-3'],
             borderWidth: 1,
             borderColor: p.brand,
             backgroundColor: p['surface-overlay'],
-            elevation: 8,
-            boxShadow: `0px 4px 16px ${p.scrim}`,
           },
         ]}
       >
@@ -142,6 +154,7 @@ function MinimizedWorkoutCard({ onDiscard }: Readonly<{ onDiscard: () => void }>
             icon="play"
             onOverlay
             label="Resume workout"
+            bare
             disabled={session.pending}
             onPress={() => session.change((value) => ({ ...value, minimized: false }))}
           />

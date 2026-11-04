@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { TextField } from '@/components/TextField';
@@ -6,7 +6,8 @@ import { radii, spacing, sizes, usePalette } from '@/theme/tokens';
 import type { ActualSet } from '../sessionDraft';
 import { displayWeight } from '../sessionDraft';
 import { validWeight, type WeightUnit } from '../schemas';
-import { Button, ui } from './ui';
+import { ActionMenu } from './ActionMenu';
+import { ui } from './ui';
 
 export function SetFields({
   set,
@@ -45,18 +46,12 @@ export function SetFields({
             padding: spacing['space-3'],
             borderRadius: radii['radius-md'],
             backgroundColor: saved ? p['brand-soft'] : p['surface-200'],
-            borderWidth: onConfirm && !saved ? 1 : 0,
+            borderWidth: saved ? 0 : 1,
             borderColor: p['line-strong'],
           },
         ]}
       >
-        <SetPosition
-          number={number}
-          label={label}
-          disabled={disabled}
-          canRemove={Boolean(onConfirm)}
-          onRemove={onRemove}
-        />
+        <SetPosition number={number} label={label} disabled={disabled} onRemove={onRemove} />
         <View style={{ flex: 1 }}>
           <TextField
             accessibilityLabel={`${label} ${unit}`}
@@ -72,7 +67,6 @@ export function SetFields({
             inputStyle={{ textAlign: 'center' }}
             onChangeText={(value) => onChange({ ...set, value, unit })}
           />
-          <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>{unit}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <TextField
@@ -85,15 +79,8 @@ export function SetFields({
             inputStyle={{ textAlign: 'center' }}
             onChangeText={(reps) => onChange({ ...set, reps })}
           />
-          <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>reps</Text>
         </View>
-        <SetAction
-          onConfirm={onConfirm}
-          onRemove={onRemove}
-          disabled={disabled}
-          saved={saved}
-          label={label}
-        />
+        <SetAction onConfirm={onConfirm} disabled={disabled} saved={saved} label={label} />
       </View>
       {!weightValid ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -121,65 +108,71 @@ function SetPosition({
   number,
   label,
   disabled,
-  canRemove,
   onRemove,
 }: Readonly<{
   number?: number;
   label: string;
   disabled: boolean;
-  canRemove: boolean;
   onRemove: () => void;
 }>) {
   const p = usePalette();
+  const [open, setOpen] = useState(false);
   if (!number) return null;
   return (
-    <View style={{ width: canRemove ? 44 : 20, alignItems: 'center' }}>
-      <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>{number}</Text>
-      {canRemove ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={label.replace(
-            /^Exercise (\d+) set (\d+)$/,
-            'Remove set $2 from exercise $1',
-          )}
-          onPress={onRemove}
-          disabled={disabled}
-          style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Feather name="minus" size={16} color={p['ink-muted']} />
-        </Pressable>
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Actions for ${label.toLowerCase()}`}
+        accessibilityHint="Open set actions"
+        disabled={disabled}
+        onPress={() => setOpen(true)}
+        style={{
+          width: 44,
+          minHeight: 44,
+          borderRadius: radii['radius-sm'],
+          backgroundColor: p['surface-300'],
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: p.ink }}>{number}</Text>
+      </Pressable>
+      {open ? (
+        <ActionMenu
+          title={`Set ${number}`}
+          onClose={() => setOpen(false)}
+          actions={[{ title: 'Remove set', onPress: onRemove }]}
+        />
       ) : null}
+    </>
+  );
+}
+
+export function SetColumnHeaders({ confirmation = false }: Readonly<{ confirmation?: boolean }>) {
+  const p = usePalette();
+  return (
+    <View style={[ui.row, { paddingHorizontal: spacing['space-3'] }]}>
+      <Text style={{ width: 44, textAlign: 'center', color: p['ink-muted'] }}>Set</Text>
+      <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>kg</Text>
+      <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>Reps</Text>
+      {confirmation ? <View style={{ width: sizes['tap-min'] }} /> : null}
     </View>
   );
 }
 
 function SetAction({
   onConfirm,
-  onRemove,
   disabled,
   saved,
   label,
 }: Readonly<{
   onConfirm?: () => void;
-  onRemove: () => void;
   disabled: boolean;
   saved: boolean;
   label: string;
 }>) {
   const p = usePalette();
-  if (!onConfirm)
-    return (
-      <Button
-        title="−"
-        accessibilityLabel={label.replace(
-          /^Exercise (\d+) set (\d+)$/,
-          'Remove set $2 from exercise $1',
-        )}
-        secondary
-        disabled={disabled}
-        onPress={onRemove}
-      />
-    );
+  if (!onConfirm) return null;
   return (
     <Pressable
       accessibilityRole="button"

@@ -1,3 +1,4 @@
+import { minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
@@ -142,7 +143,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
   await page.getByRole('button', { name: 'Back to history', exact: true }).click();
   await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await minimizeWorkout(page);
   const draft = await (await request('/session-drafts')).json();
   await signOut(page);
   await signIn(page, true);

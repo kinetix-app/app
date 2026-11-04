@@ -5,7 +5,7 @@ import { usePalette } from '@/theme/tokens';
 
 const ActiveCell = createContext<number | null>(null);
 type DragState = {
-  rows: Map<number, HTMLDivElement>;
+  rows: Map<number, HTMLFieldSetElement>;
   source: { current: number | null };
   target: { current: number | null };
   startY: { current: number };
@@ -14,13 +14,21 @@ type DragState = {
   setOver: (index: number | null) => void;
 };
 
-function updateDrag(event: React.PointerEvent<HTMLDivElement>, index: number, state: DragState) {
+function updateDrag(
+  event: React.PointerEvent<HTMLFieldSetElement>,
+  index: number,
+  state: DragState,
+) {
   if (state.source.current !== index) return;
   setDragTarget(event, index, state);
   scrollDraggedRow(event);
 }
 
-function setDragTarget(event: React.PointerEvent<HTMLDivElement>, index: number, state: DragState) {
+function setDragTarget(
+  event: React.PointerEvent<HTMLFieldSetElement>,
+  index: number,
+  state: DragState,
+) {
   state.setOffset(event.clientY - state.startY.current);
   if (
     event.clientY >= state.originBox.current.top &&
@@ -41,7 +49,7 @@ function setDragTarget(event: React.PointerEvent<HTMLDivElement>, index: number,
   }
 }
 
-function scrollDraggedRow(event: React.PointerEvent<HTMLDivElement>) {
+function scrollDraggedRow(event: React.PointerEvent<HTMLFieldSetElement>) {
   let scroll = event.currentTarget.parentElement;
   while (scroll && !['auto', 'scroll'].includes(getComputedStyle(scroll).overflowY))
     scroll = scroll.parentElement;
@@ -74,7 +82,15 @@ function DragCell({
 /** Pointer capture supports mouse and touch without the browser's native HTML drag image. */
 export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
   const p = usePalette();
-  const rows = useRef(new Map<number, HTMLDivElement>());
+  const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdOrigin = useRef({ x: 0, y: 0 });
+  const pendingMouse = useRef<{ x: number; y: number; begin: () => void } | null>(null);
+  const suppressClick = useRef(false);
+  function clearHold() {
+    if (hold.current) clearTimeout(hold.current);
+    hold.current = null;
+  }
+  const rows = useRef(new Map<number, HTMLFieldSetElement>());
   const source = useRef<number | null>(null);
   const target = useRef<number | null>(null);
   const startY = useRef(0);
@@ -82,13 +98,26 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
   const [active, setActive] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const [offset, setOffset] = useState(0);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const release = () => {
+      pendingMouse.current = null;
+      clearHold();
+    };
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+    window.addEventListener('blur', release);
+    return () => {
       source.current = null;
-    },
-    [],
-  );
+      release();
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+      window.removeEventListener('blur', release);
+    };
+  }, []);
   function finish(cancelled = false) {
+    clearHold();
+    pendingMouse.current = null;
+    if (cancelled) suppressClick.current = false;
     const from = source.current;
     if (from === null) return;
     const to = cancelled ? from : (target.current ?? from);
@@ -101,6 +130,10 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
     const [item] = data.splice(from, 1);
     data.splice(to, 0, item);
     props.onDragEnd?.({ data, from, to });
+    // A moved pointer may produce no click; never swallow the next deliberate tap.
+    setTimeout(() => {
+      suppressClick.current = false;
+    }, 0);
   }
   return (
     <ActiveCell.Provider value={active}>
@@ -115,30 +148,80 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
         ListHeaderComponent={props.ListHeaderComponent}
         ListFooterComponent={props.ListFooterComponent}
         renderItem={({ item, index }) => (
-          <div
+          <fieldset
+            aria-label={`Exercise ${index + 1}`}
             ref={(node) => {
               if (node) rows.current.set(index, node);
               else rows.current.delete(index);
             }}
             onPointerDownCapture={(event) => {
+              if (event.button !== 0 || !(event.target instanceof Element)) return;
+              const handle = event.target.closest('[id^="reorder-handle-"]:not(:disabled)');
+              const card = event.target.closest('[id^="reorder-card-"]');
+              const dragContent = event.target.closest(
+                '[id$="-drag-details"], [id$="-drag-title"]',
+              );
               if (
-                event.button !== 0 ||
-                !(event.target instanceof Element) ||
-                !event.target.closest('[id^="reorder-handle-"]:not(:disabled)')
+                !handle &&
+                (!card ||
+                  card.getAttribute('aria-disabled') === 'true' ||
+                  (!dragContent && event.target.closest('input, button, [role="button"], a')))
               )
                 return;
-              event.preventDefault();
-              event.currentTarget.setPointerCapture(event.pointerId);
-              const box = event.currentTarget.getBoundingClientRect();
-              originBox.current = { top: box.top, bottom: box.bottom };
-              startY.current = event.clientY;
-              source.current = index;
-              target.current = index;
-              setActive(index);
-              props.onDragBegin?.(index);
+              const row = event.currentTarget;
+              const pointerId = event.pointerId;
+              const y = event.clientY;
+              function begin() {
+                hold.current = null;
+                row.setPointerCapture(pointerId);
+                const box = row.getBoundingClientRect();
+                originBox.current = { top: box.top, bottom: box.bottom };
+                startY.current = y;
+                source.current = index;
+                target.current = index;
+                suppressClick.current = true;
+                setActive(index);
+                props.onDragBegin?.(index);
+              }
+              clearHold();
+              pendingMouse.current = null;
+              holdOrigin.current = { x: event.clientX, y: event.clientY };
+              if (handle) {
+                event.preventDefault();
+                begin();
+              } else if (event.pointerType === 'mouse') {
+                pendingMouse.current = { x: event.clientX, y: event.clientY, begin };
+              } else hold.current = setTimeout(begin, 250);
             }}
-            onPointerMove={(event) =>
-              updateDrag(event, index, {
+            onClickCapture={(event) => {
+              if (suppressClick.current) {
+                event.preventDefault();
+                event.stopPropagation();
+                suppressClick.current = false;
+              }
+            }}
+            onPointerLeave={() => {
+              if (source.current === null) clearHold();
+            }}
+            onPointerMove={(event) => {
+              const pending = pendingMouse.current;
+              if (
+                pending &&
+                Math.hypot(event.clientX - pending.x, event.clientY - pending.y) >= 4
+              ) {
+                pendingMouse.current = null;
+                pending.begin();
+              }
+              if (
+                source.current === null &&
+                Math.hypot(
+                  event.clientX - holdOrigin.current.x,
+                  event.clientY - holdOrigin.current.y,
+                ) > 8
+              )
+                clearHold();
+              if (source.current === index) event.preventDefault();
+              updateDrag(event, source.current ?? index, {
                 rows: rows.current,
                 source,
                 target,
@@ -146,18 +229,24 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
                 originBox,
                 setOffset,
                 setOver,
-              })
-            }
+              });
+            }}
             onPointerUp={(event) => {
+              clearHold();
               if (source.current !== index) return;
               finish();
               event.currentTarget.releasePointerCapture(event.pointerId);
             }}
+            onDragStart={(event) => event.preventDefault()}
             onPointerCancel={() => finish(true)}
             onLostPointerCapture={() => {
               if (source.current === index) finish(true);
             }}
             style={{
+              border: 0,
+              padding: 0,
+              margin: 0,
+              minWidth: 0,
               position: 'relative',
               zIndex: active === index ? 2 : 0,
               transform: active === index ? `translateY(${offset}px)` : undefined,
@@ -172,7 +261,7 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
               drag: () => {},
               isActive: active === index,
             })}
-          </div>
+          </fieldset>
         )}
       />
     </ActiveCell.Provider>

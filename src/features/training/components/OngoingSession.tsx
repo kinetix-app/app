@@ -3,14 +3,13 @@ import { BackHandler, KeyboardAvoidingView, Modal, Platform, Text, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, usePalette } from '@/theme/tokens';
 import DraggableFlatList from './ExerciseDragList';
-import { ExerciseDragHandle } from './ExerciseDragHandle';
+import { ActionMenu } from './ActionMenu';
 import { ExerciseDetails } from './ExerciseDetails';
 import { ExercisePicker } from './ExercisePicker';
-import { displayWeight, emptyActualSet, type SessionDraft } from '../sessionDraft';
-import type { ExerciseSummary } from '../schemas';
-import { Button, IconButton, ui } from './ui';
+import { emptyActualSet, type SessionDraft } from '../sessionDraft';
+import { Button, ui } from './ui';
 import { SetFields } from './SetFields';
-import { WorkoutExerciseCard, WorkoutTimer } from './WorkoutEditor';
+import { WorkoutExerciseCard, WorkoutExerciseSummary, WorkoutTimer } from './WorkoutEditor';
 import { useSession } from './SessionProvider';
 import { FormCheckFlow, profileForExercise, useOptionalFormCheck } from '@/features/formcheck';
 
@@ -21,7 +20,7 @@ export function OngoingSession() {
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [finishPrompt, setFinishPrompt] = useState(false);
-  const [failedAdd, setFailedAdd] = useState<ExerciseSummary | null>(null);
+  const [actions, setActions] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [details, setDetails] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -40,12 +39,6 @@ export function OngoingSession() {
     });
     return () => listener.remove();
   });
-  async function addExercise(exercise: ExerciseSummary) {
-    setFailedAdd(null);
-    const id = await session.addExercise(exercise);
-    if (id) setSelected(id);
-    else setFailedAdd(exercise);
-  }
   if (!draft) return null;
   const locked = Boolean(draft.frozen) || session.pending;
   function editSlot(
@@ -90,15 +83,6 @@ export function OngoingSession() {
     if (!draft) return null;
     return (
       <View style={ui.gap}>
-        {slot.guidance.length ? (
-          <Text style={{ color: p['ink-muted'] }}>
-            Previous / planned:{' '}
-            {slot.guidance[0].weightKg === null
-              ? '—'
-              : Number(displayWeight(slot.guidance[0].weightKg, 'kg', 'kg')).toFixed(2)}{' '}
-            kg × {slot.guidance[0].reps ?? '—'} reps. Save each set with its tick.
-          </Text>
-        ) : null}
         {slot.sets.map((set, i) => (
           <React.Fragment key={set.id}>
             <SetFields
@@ -136,38 +120,20 @@ export function OngoingSession() {
               : null}
           </React.Fragment>
         ))}
-        <Button
-          title="Add set"
-          accessibilityLabel={`Add set to exercise ${index + 1}`}
-          onPress={() =>
-            editSlot(slot.id, (value) => ({
-              ...value,
-              sets: [...value.sets, emptyActualSet('kg')],
-            }))
-          }
-          tone="positive"
-          disabled={locked || slot.sets.length >= 100}
-        />
-        <Button
-          title="Remove exercise"
-          onPress={() => {
-            change((value) => ({
-              ...value,
-              exercises: value.exercises.filter((old) => old.id !== slot.id),
-            }));
-            setSelected(null);
-          }}
-          tone="danger"
-          disabled={locked}
-        />
       </View>
     );
+  }
+  function finish() {
+    if (!draft) return;
+    if (!draft.frozen && draft.routineId !== null) setFinishPrompt(true);
+    else void session.finish();
   }
   const header = (
     <View style={ui.gap}>
       <View
         testID="workout-pull-handle"
         accessibilityLabel="Pull down to minimize workout"
+        accessibilityState={{ disabled: session.pending }}
         onStartShouldSetResponder={() => !session.pending}
         onResponderTerminationRequest={() => false}
         onResponderGrant={({ nativeEvent }) => {
@@ -197,49 +163,27 @@ export function OngoingSession() {
         />
       </View>
       <View style={ui.row}>
-        <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
-          {draft.name}
-        </Text>
-        <IconButton
-          icon="chevron-down"
-          label="Minimize workout"
-          onPress={minimize}
-          disabled={session.pending}
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
+            {draft.name}
+          </Text>
+          <WorkoutTimer startedAt={draft.startedAt} endedAt={draft.frozen?.ended_at} compact />
+        </View>
+        <Button
+          title={finishButtonTitle(session.pending, Boolean(draft.frozen))}
+          onPress={finish}
+          disabled={session.pending || dragging || session.storageError}
         />
       </View>
-      <WorkoutTimer startedAt={draft.startedAt} endedAt={draft.frozen?.ended_at} />
       {draft.frozen ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          Finished {new Date(draft.frozen.ended_at).toLocaleString()}. Results are locked for safe
-          retry.
+          Results are locked. Retry Finish to save your workout.
         </Text>
-      ) : (
-        <Text style={{ color: p['ink-muted'] }}>
-          Record actual results. Guidance does not count as a recorded set.
-        </Text>
-      )}
+      ) : null}
       {session.error ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
           {session.error}
         </Text>
-      ) : null}
-      <Button
-        title={session.pending ? 'Working…' : 'Sync workout'}
-        onPress={() => {
-          void session.sync();
-        }}
-        secondary
-        disabled={session.pending || Boolean(draft.frozen)}
-      />
-      {failedAdd ? (
-        <Button
-          title="Retry adding exercise"
-          onPress={() => {
-            void addExercise(failedAdd);
-          }}
-          secondary
-          disabled={session.pending}
-        />
       ) : null}
       {session.storageError ? (
         <Button
@@ -257,9 +201,17 @@ export function OngoingSession() {
       <KeyboardAvoidingView
         style={ui.screen}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        aria-hidden={discard || finishPrompt}
-        accessibilityElementsHidden={discard || finishPrompt}
-        importantForAccessibility={discard || finishPrompt ? 'no-hide-descendants' : 'auto'}
+        aria-hidden={
+          discard || finishPrompt || actions || picker || details !== null || checking !== null
+        }
+        accessibilityElementsHidden={
+          discard || finishPrompt || actions || picker || details !== null || checking !== null
+        }
+        importantForAccessibility={
+          discard || finishPrompt || actions || picker || details !== null || checking !== null
+            ? 'no-hide-descendants'
+            : 'auto'
+        }
       >
         <DraggableFlatList
           data={draft.exercises}
@@ -288,33 +240,44 @@ export function OngoingSession() {
             return (
               <WorkoutExerciseCard
                 exercise={item.exercise}
+                dragId={locked ? undefined : `reorder-card-${item.id}`}
+                onDrag={locked ? undefined : drag}
+                onMove={(delta) => {
+                  const to = index + delta;
+                  if (!locked && to >= 0 && to < draft.exercises.length)
+                    change((value) => {
+                      const exercises = [...value.exercises];
+                      exercises.splice(to, 0, ...exercises.splice(index, 1));
+                      return { ...value, exercises };
+                    });
+                }}
                 active={isActive}
-                disabled={session.pending || dragging}
+                disabled={locked || dragging}
                 onSets={() => setSelected(selected === item.id ? null : item.id)}
                 expanded={selected === item.id}
                 onDetails={() => setDetails(item.exercise.id)}
                 summary={
-                  <Text style={{ color: p['ink-muted'] }}>
-                    {item.sets.filter((set) => set.saved).length} / {item.sets.length} sets saved
-                  </Text>
-                }
-                dragHandle={
-                  <ExerciseDragHandle
-                    id={`reorder-handle-${item.id}`}
-                    label={`Reorder ${item.exercise.name}`}
-                    disabled={locked}
-                    onDrag={drag}
-                    onMove={(delta) => {
-                      const to = index + delta;
-                      if (to >= 0 && to < draft.exercises.length)
-                        change((value) => {
-                          const exercises = [...value.exercises];
-                          exercises.splice(to, 0, ...exercises.splice(index, 1));
-                          return { ...value, exercises };
-                        });
-                    }}
+                  <WorkoutExerciseSummary
+                    sets={item.sets}
+                    savedCount={item.sets.filter((set) => set.saved).length}
                   />
                 }
+                onRemove={() => {
+                  change((value) => ({
+                    ...value,
+                    exercises: value.exercises.filter((slot) => slot.id !== item.id),
+                  }));
+                  if (selected === item.id) setSelected(null);
+                }}
+                onAddSet={() =>
+                  editSlot(item.id, (value) => ({
+                    ...value,
+                    sets: [...value.sets, emptyActualSet('kg')],
+                  }))
+                }
+                addSetLabel={`Add set to exercise ${index + 1}`}
+                canAddSet={item.sets.length < 100}
+                confirmSets
               >
                 {renderSets(item, index)}
               </WorkoutExerciseCard>
@@ -332,17 +295,10 @@ export function OngoingSession() {
                 disabled={locked || dragging || draft.exercises.length >= 500}
               />
               <Button
-                title={finishButtonTitle(session.pending, Boolean(draft.frozen))}
-                onPress={() => {
-                  if (!draft.frozen && draft.routineId !== null) setFinishPrompt(true);
-                  else void session.finish();
-                }}
-                disabled={session.pending || dragging || session.storageError}
-              />
-              <Button
-                title="Discard workout"
-                onPress={() => setDiscard(true)}
-                tone="danger"
+                title="More actions"
+                icon="more-horizontal"
+                onPress={() => setActions(true)}
+                secondary
                 disabled={locked || dragging}
               />
             </View>
@@ -353,10 +309,37 @@ export function OngoingSession() {
         <ExercisePicker
           accountId={session.accountId}
           onClose={() => setPicker(false)}
-          onSelect={(exercise) => {
-            setPicker(false);
-            void addExercise(exercise);
+          maxSelection={500 - draft.exercises.length}
+          onSelect={async (exercises) => {
+            const added: number[] = [];
+            for (const exercise of exercises) {
+              const id = await session.addExercise(exercise);
+              if (!id) break;
+              added.push(exercise.id);
+              setSelected(id);
+            }
+            return added;
           }}
+        />
+      ) : null}
+      {actions ? (
+        <ActionMenu
+          title="Workout actions"
+          onClose={() => setActions(false)}
+          actions={[
+            { title: 'Sync workout', onPress: () => void session.sync(), disabled: locked },
+            {
+              title: finishButtonTitle(false, Boolean(draft.frozen)),
+              onPress: finish,
+              disabled: session.storageError,
+            },
+            {
+              title: 'Discard workout',
+              onPress: () => setDiscard(true),
+              tone: 'danger',
+              disabled: locked,
+            },
+          ]}
         />
       ) : null}
       {checking && profileForExercise(checking.exerciseName) ? (

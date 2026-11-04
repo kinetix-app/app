@@ -10,14 +10,22 @@ export function IconButton({
   onPress,
   disabled = false,
   onOverlay = false,
+  bare = false,
 }: Readonly<{
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
   disabled?: boolean;
   onOverlay?: boolean;
+  bare?: boolean;
 }>) {
   const p = usePalette();
+  let background = onOverlay ? p.brand : p['surface-300'];
+  let foreground = onOverlay ? p['on-brand'] : p.ink;
+  if (bare) {
+    background = 'transparent';
+    foreground = p.brand;
+  }
   return (
     <Pressable
       accessibilityRole="button"
@@ -31,11 +39,12 @@ export function IconButton({
         borderRadius: radii['radius-pill'],
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: onOverlay ? p.brand : p['surface-300'],
+        backgroundColor: background,
+        borderWidth: 0,
         opacity: disabled || pressed ? 0.55 : 1,
       })}
     >
-      <Feather name={icon} size={24} color={onOverlay ? p['on-brand'] : p.ink} />
+      <Feather name={icon} size={24} color={foreground} />
     </Pressable>
   );
 }
@@ -63,7 +72,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}

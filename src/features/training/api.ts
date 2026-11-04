@@ -19,6 +19,12 @@ import {
 } from './schemas';
 
 export const trainingApi = {
+  removeRoutine: (id: number) => apiClient.delete(`/api/v1/routines/${id}`),
+  uploadPicture: (id: number, form: FormData) =>
+    apiClient.postMultipart(`/api/v1/routines/${id}/picture`, form, { schema: routineSchema }),
+  removePicture: (id: number) =>
+    apiClient.delete(`/api/v1/routines/${id}/picture`, { schema: routineSchema }),
+  picture: (path: string, signal?: AbortSignal) => apiClient.getBlob(path, { signal }),
   draft: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/session-drafts', { schema: serverDraftSchema.nullable(), signal }),
   saveDraft: (id: string, input: DraftSnapshot, signal?: AbortSignal) =>
@@ -87,14 +93,12 @@ export const trainingApi = {
       schema: exerciseSchema,
       signal,
     }),
-  save: (input: RoutineInput, id?: number) =>
-    id === undefined
-      ? apiClient.post('/api/v1/routines', routineInputSchema.parse(input), {
-          schema: routineSchema,
-        })
-      : apiClient.patch(`/api/v1/routines/${id}`, routineInputSchema.parse(input), {
-          schema: routineSchema,
-        }),
+  create: (form: FormData) =>
+    apiClient.postMultipart('/api/v1/routines', form, { schema: routineSchema }),
+  save: (input: RoutineInput, id: number) =>
+    apiClient.patch(`/api/v1/routines/${id}`, routineInputSchema.parse(input), {
+      schema: routineSchema,
+    }),
 };
 
 function queryParameter(name: string, value: string) {
