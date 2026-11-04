@@ -101,6 +101,7 @@ test('session selection, set menus and whole-card reordering persist through syn
   await page.getByRole('tab', { name: 'Workout', exact: true }).click();
   const routineName = `Shared editor ${Date.now()}`;
   await page.getByRole('button', { name: /^(New routine|Create routine)$/ }).click();
+  await expect(page.getByRole('tablist', { name: 'Main navigation' })).toHaveCount(0);
   await page.getByLabel('Routine name', { exact: true }).fill(routineName);
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
   for (const name of names.slice(0, 2))
@@ -134,11 +135,13 @@ test('session selection, set menus and whole-card reordering persist through syn
   await signIn(page);
   await page.getByRole('tab', { name: 'Workout', exact: true }).click();
   await page.getByRole('button', { name: `Edit ${routineName}`, exact: true }).click();
+  await expect(page.getByRole('tablist', { name: 'Main navigation' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true }).click();
   await expect(page.getByLabel('Exercise 1 set 1 kg', { exact: true })).toHaveValue('60.00');
   await expect(page.getByLabel('Exercise 1 set 1 reps', { exact: true })).toHaveValue('8');
   await expect(page.getByRole('button', { name: /^Edit sets for/ })).toHaveCount(1);
   await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
+  await expect(page.getByRole('tablist', { name: 'Main navigation' })).toBeVisible();
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await expect(page.getByText('Add exercises to record your workout.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Minimize workout', exact: true })).toHaveCount(0);
@@ -155,6 +158,10 @@ test('session selection, set menus and whole-card reordering persist through syn
   await expect(
     page.getByRole('button', { name: 'Deselect Acceptance press', exact: true }),
   ).toBeVisible();
+  await expect(page.getByTestId('exercise-selection-action')).toHaveCSS(
+    'background-color',
+    'rgba(0, 0, 0, 0)',
+  );
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     await page.screenshot({
@@ -227,6 +234,7 @@ test('session selection, set menus and whole-card reordering persist through syn
   });
   expect(await (await request('/session-drafts', 'GET', undefined, true)).json()).toBeNull();
   await minimizeWorkout(page);
+  await page.screenshot({ path: '.codex/artifacts/previews/floating-session-panel.png' });
   await page.reload();
   await signIn(page);
   await page.getByRole('button', { name: 'Resume workout', exact: true }).click();

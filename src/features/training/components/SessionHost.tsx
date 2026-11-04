@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { spacing, usePalette } from '@/theme/tokens';
+import { radii, spacing, usePalette } from '@/theme/tokens';
 import { useSession } from './SessionProvider';
 import { WorkoutTimer } from './WorkoutEditor';
 import { OngoingSession } from './OngoingSession';
@@ -14,7 +14,7 @@ export function SessionHost({ children }: Readonly<React.PropsWithChildren>) {
   return (
     <View style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
       <View
-        style={[ui.screen, { paddingBottom: session.draft?.minimized ? 112 : 0 }]}
+        style={ui.screen}
         aria-hidden={discard || Boolean(session.draft && !session.draft.minimized)}
         accessibilityElementsHidden={discard || Boolean(session.draft && !session.draft.minimized)}
         importantForAccessibility={
@@ -103,14 +103,13 @@ function MinimizedWorkoutCard({ onDiscard }: Readonly<{ onDiscard: () => void }>
       <View
         testID="ongoing-workout-card"
         style={[
-          ui.card,
           {
+            borderRadius: radii['radius-lg'],
+            gap: spacing['space-3'],
             padding: spacing['space-3'],
             borderWidth: 1,
             borderColor: p.brand,
             backgroundColor: p['surface-overlay'],
-            elevation: 8,
-            boxShadow: `0px 4px 16px ${p.scrim}`,
           },
         ]}
       >

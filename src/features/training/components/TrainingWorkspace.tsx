@@ -20,11 +20,21 @@ import { RoutineEditor } from './RoutineEditor';
 import type { Routine, RoutineSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
-export function TrainingWorkspace({ accountId }: Readonly<{ accountId: number }>) {
+export function TrainingWorkspace({
+  accountId,
+  onEditingChange,
+}: Readonly<{
+  accountId: number;
+  onEditingChange?: (editing: boolean) => void;
+}>) {
   const p = usePalette();
   const session = useSession();
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
+  useEffect(() => {
+    onEditingChange?.(editing !== null);
+    return () => onEditingChange?.(false);
+  }, [editing, onEditingChange]);
   const [actions, setActions] = useState<{
     item: RoutineSummary;
     restoreFocus: () => void;

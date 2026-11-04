@@ -164,7 +164,7 @@
       },
       {
         "name": "surface-overlay",
-        "value": "#000000cc",
+        "value": "#000000aa",
         "usage": "Translucent black surface for the floating ongoing-workout panel in both themes. Pair with overlay-ink and a brand border."
       },
       {

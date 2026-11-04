@@ -117,3 +117,13 @@ reviewed at 390 × 844. Android/iOS/web exports passed with one Metro worker. Ch
 files pass Prettier; the global format check still flags the pre-existing
 `docs/features/README.md` outside this change. Native device gestures/keyboards,
 Maestro and production Clerk providers remain unverified.
+
+The minimized workout panel floats over the current screen without an opaque
+reserved strip or an outer card/shadow. Its single rounded surface uses the
+translucent overlay token; text and resume controls remain fully opaque.
+
+The floating-control refinement passed TypeScript, repository ESLint, formatting of
+changed files and 51 focused Home/training tests. Real browser acceptance covered
+hidden/restored routine navigation, transparent exercise-action positioning,
+minimized-panel translucency, resume/reload and workout persistence. Native device
+layout and keyboard validation remain unverified.

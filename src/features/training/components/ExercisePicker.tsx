@@ -316,6 +316,7 @@ export function ExercisePicker({
           />
           {selection.length > 0 ? (
             <View
+              testID="exercise-selection-action"
               aria-hidden={filterOpen || detailId !== null}
               accessibilityElementsHidden={filterOpen || detailId !== null}
               importantForAccessibility={
@@ -327,9 +328,6 @@ export function ExercisePicker({
                 left: spacing['space-4'],
                 right: spacing['space-4'],
                 alignSelf: 'center',
-                backgroundColor: p['surface-200'],
-                borderRadius: radii['radius-lg'],
-                padding: spacing['space-2'],
                 gap: spacing['space-2'],
               }}
             >

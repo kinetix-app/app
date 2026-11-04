@@ -18,4 +18,5 @@ export async function minimizeWorkout(page: Page) {
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 100, { steps: 10 });
   await page.mouse.up();
   await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+  await expect(page.getByTestId('workout-pull-handle')).toHaveCount(0);
 }

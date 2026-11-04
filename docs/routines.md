@@ -184,3 +184,8 @@ live summaries, exercise removal, card/name drag in both directions, save and
 reload/reopen; the ongoing-session journey and partial-result/routine-update
 regression also passed against an isolated PostgreSQL test database. Native
 gesture/device validation remains unavailable.
+
+Routine creation and editing hide the Home bottom bar until Save or confirmed
+discard returns to the routine list. Keep editing and validation/save failures
+retain both the form and the hidden navigation state. The counted exercise-picker
+action floats directly above the content, without an enclosing colored card.
