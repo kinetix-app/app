@@ -17,7 +17,12 @@ type ProfilePictureEditorProps = Readonly<{
   compact?: boolean;
 }>;
 
-function getPictureStatus(draft: ProfilePictureDraft, account: Account) {
+function getPictureStatus(draft: ProfilePictureDraft, account: Account, compact: boolean) {
+  if (compact) {
+    if (draft.kind === 'select') return 'New picture · Save to apply';
+    if (draft.kind === 'remove') return 'Picture removed · Save to apply';
+    return 'Profile picture';
+  }
   if (draft.kind === 'select') return 'Picture ready · saved when you confirm';
   if (draft.kind === 'remove') return 'No picture · removal saved when you confirm';
   if (account.profile.picture_url) return 'Current profile picture';
@@ -152,13 +157,7 @@ export function ProfilePictureEditor({
           accessibilityLiveRegion="polite"
           style={[textStyles.label, { color: p['ink-muted'] }]}
         >
-          {compact
-            ? draft.kind === 'select'
-              ? 'New picture · Save to apply'
-              : draft.kind === 'remove'
-                ? 'Picture removed · Save to apply'
-                : 'Profile picture'
-            : getPictureStatus(draft, account)}
+          {getPictureStatus(draft, account, compact)}
         </Text>
       )}
       {!compact ? (

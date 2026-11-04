@@ -13,24 +13,7 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
-export function RoutineActionsMenu({
-  name,
-  canStart,
-  canDelete,
-  startHint,
-  onClose,
-  onEdit,
-  hasCover,
-  coverPending,
-  coverError,
-  onChooseCover,
-  onRemoveCover,
-  onRetryCover,
-  onStart,
-  onDelete,
-  deleting,
-  deleteError,
-}: Readonly<{
+type RoutineActionsMenuProps = Readonly<{
   name: string;
   canStart: boolean;
   canDelete: boolean;
@@ -47,7 +30,10 @@ export function RoutineActionsMenu({
   onDelete: () => void;
   deleting: boolean;
   deleteError: unknown;
-}>) {
+}>;
+
+export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
+  const { name, onClose, onDelete, deleting, deleteError, coverPending } = props;
   const p = usePalette();
   const busy = deleting || coverPending;
   const insets = useSafeAreaInsets();
@@ -121,201 +107,21 @@ export function RoutineActionsMenu({
               ) : null}
             </View>
             {confirming ? (
-              <>
-                {deleteError ? (
-                  <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                    {error}
-                  </Text>
-                ) : null}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Confirm delete ${name}`}
-                  accessibilityState={{ disabled: busy, busy }}
-                  disabled={busy}
-                  onPress={onDelete}
-                  style={({ pressed }) => ({
-                    minHeight: sizes['control-height'],
-                    borderRadius: radii['radius-md'],
-                    padding: spacing['space-4'],
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'row',
-                    gap: spacing['space-2'],
-                    backgroundColor: p['surface-300'],
-                    borderWidth: 1,
-                    borderColor: p.danger,
-                    opacity: busy || pressed ? 0.55 : 1,
-                  })}
-                >
-                  {deleting ? (
-                    <ActivityIndicator color={p.danger} />
-                  ) : (
-                    <Feather name="trash-2" size={20} color={p.danger} />
-                  )}
-                  <Text style={[textStyles.label, { color: p.danger }]}>
-                    {deleting ? 'Deleting…' : 'Delete routine'}
-                  </Text>
-                </Pressable>
-              </>
+              <DeleteRoutineConfirmation
+                name={name}
+                busy={busy}
+                deleting={deleting}
+                deleteError={deleteError}
+                error={error}
+                onDelete={onDelete}
+              />
             ) : (
-              <>
-                <View
-                  style={{
-                    backgroundColor: p['surface-300'],
-                    borderRadius: radii['radius-lg'],
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Pressable
-                    ref={canStart ? first : undefined}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Train ${name}`}
-                    accessibilityState={{ disabled: !canStart || busy }}
-                    disabled={!canStart || busy}
-                    onPress={onStart}
-                    style={({ pressed }) => ({
-                      minHeight: sizes['control-height'],
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing['space-3'],
-                      padding: spacing['space-4'],
-                      backgroundColor: pressed ? p['brand-soft'] : 'transparent',
-                      opacity: canStart ? 1 : 0.55,
-                    })}
-                  >
-                    <MaterialIcons name="play-arrow" size={26} color={p['brand-ink']} />
-                    <Text style={[textStyles.body, { color: p['brand-ink'] }]}>Train</Text>
-                  </Pressable>
-                  <View
-                    style={{
-                      height: 1,
-                      backgroundColor: p.line,
-                      marginHorizontal: spacing['space-4'],
-                    }}
-                  />
-                  <Pressable
-                    ref={!canStart ? first : undefined}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${name}`}
-                    accessibilityState={{ disabled: busy }}
-                    disabled={busy}
-                    onPress={onEdit}
-                    style={({ pressed }) => ({
-                      minHeight: sizes['control-height'],
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing['space-3'],
-                      padding: spacing['space-4'],
-                      backgroundColor: pressed ? p['surface-200'] : 'transparent',
-                    })}
-                  >
-                    <Feather name="edit-2" size={22} color={p.ink} />
-                    <Text style={[textStyles.body, { color: p.ink }]}>Edit</Text>
-                  </Pressable>
-                </View>
-                <View
-                  style={{
-                    backgroundColor: p['surface-300'],
-                    borderRadius: radii['radius-lg'],
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${hasCover ? 'Change' : 'Add'} cover for ${name}`}
-                    accessibilityState={{ disabled: busy, busy: coverPending }}
-                    disabled={busy}
-                    onPress={onChooseCover}
-                    style={({ pressed }) => ({
-                      minHeight: sizes['control-height'],
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing['space-3'],
-                      padding: spacing['space-4'],
-                      opacity: busy || pressed ? 0.55 : 1,
-                    })}
-                  >
-                    <Feather name="image" size={22} color={p.ink} />
-                    <Text style={[textStyles.body, { color: p.ink }]}>
-                      {hasCover ? 'Change cover' : 'Add cover'}
-                    </Text>
-                    {coverPending ? (
-                      <ActivityIndicator accessibilityLabel="Updating cover" color={p.brand} />
-                    ) : null}
-                  </Pressable>
-                  {hasCover ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove cover for ${name}`}
-                      accessibilityState={{ disabled: busy }}
-                      disabled={busy}
-                      onPress={onRemoveCover}
-                      style={({ pressed }) => ({
-                        minHeight: sizes['control-height'],
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing['space-3'],
-                        padding: spacing['space-4'],
-                        opacity: busy || pressed ? 0.55 : 1,
-                      })}
-                    >
-                      <Feather name="trash-2" size={22} color={p.danger} />
-                      <Text style={[textStyles.body, { color: p.danger }]}>Remove cover</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-                {coverError ? (
-                  <View style={{ gap: spacing['space-2'] }}>
-                    <Text
-                      accessibilityRole="alert"
-                      style={[textStyles['body-sm'], { color: p.danger }]}
-                    >
-                      {coverError}
-                    </Text>
-                    {onRetryCover ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Retry cover upload"
-                        disabled={busy}
-                        onPress={onRetryCover}
-                        style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
-                      >
-                        <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry</Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ) : null}
-                {!canStart && startHint ? (
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {startHint}
-                  </Text>
-                ) : null}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${name}`}
-                  accessibilityState={{ disabled: !canDelete || busy }}
-                  disabled={!canDelete || busy}
-                  onPress={() => setConfirming(true)}
-                  style={({ pressed }) => ({
-                    minHeight: sizes['control-height'],
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing['space-3'],
-                    padding: spacing['space-4'],
-                    borderRadius: radii['radius-md'],
-                    backgroundColor: p['surface-300'],
-                    opacity: !canDelete || pressed ? 0.55 : 1,
-                  })}
-                >
-                  <Feather name="trash-2" size={22} color={p.danger} />
-                  <Text style={[textStyles.body, { color: p.danger }]}>Delete</Text>
-                </Pressable>
-                {!canDelete ? (
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    Finish or discard this routine’s ongoing workout before deleting.
-                  </Text>
-                ) : null}
-              </>
+              <RoutineActionOptions
+                {...props}
+                busy={busy}
+                first={first}
+                onConfirmDelete={() => setConfirming(true)}
+              />
             )}
             <Pressable
               accessibilityRole="button"
@@ -338,5 +144,279 @@ export function RoutineActionsMenu({
         </View>
       </View>
     </Modal>
+  );
+}
+
+function DeleteRoutineConfirmation({
+  name,
+  busy,
+  deleting,
+  deleteError,
+  error,
+  onDelete,
+}: Readonly<{
+  name: string;
+  busy: boolean;
+  deleting: boolean;
+  deleteError: unknown;
+  error: string;
+  onDelete: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <>
+      {deleteError ? (
+        <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
+          {error}
+        </Text>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Confirm delete ${name}`}
+        accessibilityState={{ disabled: busy, busy }}
+        disabled={busy}
+        onPress={onDelete}
+        style={({ pressed }) => ({
+          minHeight: sizes['control-height'],
+          borderRadius: radii['radius-md'],
+          padding: spacing['space-4'],
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'row',
+          gap: spacing['space-2'],
+          backgroundColor: p['surface-300'],
+          borderWidth: 1,
+          borderColor: p.danger,
+          opacity: busy || pressed ? 0.55 : 1,
+        })}
+      >
+        {deleting ? (
+          <ActivityIndicator color={p.danger} />
+        ) : (
+          <Feather name="trash-2" size={20} color={p.danger} />
+        )}
+        <Text style={[textStyles.label, { color: p.danger }]}>
+          {deleting ? 'Deleting…' : 'Delete routine'}
+        </Text>
+      </Pressable>
+    </>
+  );
+}
+
+function RoutineActionOptions({
+  name,
+  canStart,
+  canDelete,
+  startHint,
+  onStart,
+  onEdit,
+  hasCover,
+  coverPending,
+  coverError,
+  onChooseCover,
+  onRemoveCover,
+  onRetryCover,
+  busy,
+  first,
+  onConfirmDelete,
+}: RoutineActionsMenuProps &
+  Readonly<{
+    busy: boolean;
+    first: React.RefObject<View | null>;
+    onConfirmDelete: () => void;
+  }>) {
+  const p = usePalette();
+  return (
+    <>
+      <View
+        style={{
+          backgroundColor: p['surface-300'],
+          borderRadius: radii['radius-lg'],
+          overflow: 'hidden',
+        }}
+      >
+        <Pressable
+          ref={canStart ? first : undefined}
+          accessibilityRole="button"
+          accessibilityLabel={`Train ${name}`}
+          accessibilityState={{ disabled: !canStart || busy }}
+          disabled={!canStart || busy}
+          onPress={onStart}
+          style={({ pressed }) => ({
+            minHeight: sizes['control-height'],
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing['space-3'],
+            padding: spacing['space-4'],
+            backgroundColor: pressed ? p['brand-soft'] : 'transparent',
+            opacity: canStart ? 1 : 0.55,
+          })}
+        >
+          <MaterialIcons name="play-arrow" size={26} color={p['brand-ink']} />
+          <Text style={[textStyles.body, { color: p['brand-ink'] }]}>Train</Text>
+        </Pressable>
+        <View
+          style={{
+            height: 1,
+            backgroundColor: p.line,
+            marginHorizontal: spacing['space-4'],
+          }}
+        />
+        <Pressable
+          ref={!canStart ? first : undefined}
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${name}`}
+          accessibilityState={{ disabled: busy }}
+          disabled={busy}
+          onPress={onEdit}
+          style={({ pressed }) => ({
+            minHeight: sizes['control-height'],
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing['space-3'],
+            padding: spacing['space-4'],
+            backgroundColor: pressed ? p['surface-200'] : 'transparent',
+          })}
+        >
+          <Feather name="edit-2" size={22} color={p.ink} />
+          <Text style={[textStyles.body, { color: p.ink }]}>Edit</Text>
+        </Pressable>
+      </View>
+      <RoutineCoverActions
+        name={name}
+        hasCover={hasCover}
+        busy={busy}
+        coverPending={coverPending}
+        coverError={coverError}
+        onChooseCover={onChooseCover}
+        onRemoveCover={onRemoveCover}
+        onRetryCover={onRetryCover}
+      />
+      {!canStart && startHint ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{startHint}</Text>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Delete ${name}`}
+        accessibilityState={{ disabled: !canDelete || busy }}
+        disabled={!canDelete || busy}
+        onPress={onConfirmDelete}
+        style={({ pressed }) => ({
+          minHeight: sizes['control-height'],
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing['space-3'],
+          padding: spacing['space-4'],
+          borderRadius: radii['radius-md'],
+          backgroundColor: p['surface-300'],
+          opacity: !canDelete || pressed ? 0.55 : 1,
+        })}
+      >
+        <Feather name="trash-2" size={22} color={p.danger} />
+        <Text style={[textStyles.body, { color: p.danger }]}>Delete</Text>
+      </Pressable>
+      {!canDelete ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          Finish or discard this routine’s ongoing workout before deleting.
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
+function RoutineCoverActions({
+  name,
+  hasCover,
+  busy,
+  coverPending,
+  coverError,
+  onChooseCover,
+  onRemoveCover,
+  onRetryCover,
+}: Pick<
+  RoutineActionsMenuProps,
+  | 'name'
+  | 'hasCover'
+  | 'coverPending'
+  | 'coverError'
+  | 'onChooseCover'
+  | 'onRemoveCover'
+  | 'onRetryCover'
+> &
+  Readonly<{ busy: boolean }>) {
+  const p = usePalette();
+  return (
+    <>
+      {' '}
+      <View
+        style={{
+          backgroundColor: p['surface-300'],
+          borderRadius: radii['radius-lg'],
+          overflow: 'hidden',
+        }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${hasCover ? 'Change' : 'Add'} cover for ${name}`}
+          accessibilityState={{ disabled: busy, busy: coverPending }}
+          disabled={busy}
+          onPress={onChooseCover}
+          style={({ pressed }) => ({
+            minHeight: sizes['control-height'],
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing['space-3'],
+            padding: spacing['space-4'],
+            opacity: busy || pressed ? 0.55 : 1,
+          })}
+        >
+          <Feather name="image" size={22} color={p.ink} />
+          <Text style={[textStyles.body, { color: p.ink }]}>
+            {hasCover ? 'Change cover' : 'Add cover'}
+          </Text>
+          {coverPending ? (
+            <ActivityIndicator accessibilityLabel="Updating cover" color={p.brand} />
+          ) : null}
+        </Pressable>
+        {hasCover ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Remove cover for ${name}`}
+            accessibilityState={{ disabled: busy }}
+            disabled={busy}
+            onPress={onRemoveCover}
+            style={({ pressed }) => ({
+              minHeight: sizes['control-height'],
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing['space-3'],
+              padding: spacing['space-4'],
+              opacity: busy || pressed ? 0.55 : 1,
+            })}
+          >
+            <Feather name="trash-2" size={22} color={p.danger} />
+            <Text style={[textStyles.body, { color: p.danger }]}>Remove cover</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {coverError ? (
+        <View style={{ gap: spacing['space-2'] }}>
+          <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+            {coverError}
+          </Text>
+          {onRetryCover ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Retry cover upload"
+              disabled={busy}
+              onPress={onRetryCover}
+              style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
+            >
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+    </>
   );
 }

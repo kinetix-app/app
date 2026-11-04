@@ -20,6 +20,12 @@ export function IconButton({
   bare?: boolean;
 }>) {
   const p = usePalette();
+  let background = onOverlay ? p.brand : p['surface-300'];
+  let foreground = onOverlay ? p['on-brand'] : p.ink;
+  if (bare) {
+    background = 'transparent';
+    foreground = p.brand;
+  }
   return (
     <Pressable
       accessibilityRole="button"
@@ -33,12 +39,12 @@ export function IconButton({
         borderRadius: radii['radius-pill'],
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: bare ? 'transparent' : onOverlay ? p.brand : p['surface-300'],
+        backgroundColor: background,
         borderWidth: 0,
         opacity: disabled || pressed ? 0.55 : 1,
       })}
     >
-      <Feather name={icon} size={24} color={bare ? p.brand : onOverlay ? p['on-brand'] : p.ink} />
+      <Feather name={icon} size={24} color={foreground} />
     </Pressable>
   );
 }

@@ -5,7 +5,7 @@ import { usePalette } from '@/theme/tokens';
 
 const ActiveCell = createContext<number | null>(null);
 type DragState = {
-  rows: Map<number, HTMLDivElement>;
+  rows: Map<number, HTMLFieldSetElement>;
   source: { current: number | null };
   target: { current: number | null };
   startY: { current: number };
@@ -14,13 +14,21 @@ type DragState = {
   setOver: (index: number | null) => void;
 };
 
-function updateDrag(event: React.PointerEvent<HTMLDivElement>, index: number, state: DragState) {
+function updateDrag(
+  event: React.PointerEvent<HTMLFieldSetElement>,
+  index: number,
+  state: DragState,
+) {
   if (state.source.current !== index) return;
   setDragTarget(event, index, state);
   scrollDraggedRow(event);
 }
 
-function setDragTarget(event: React.PointerEvent<HTMLDivElement>, index: number, state: DragState) {
+function setDragTarget(
+  event: React.PointerEvent<HTMLFieldSetElement>,
+  index: number,
+  state: DragState,
+) {
   state.setOffset(event.clientY - state.startY.current);
   if (
     event.clientY >= state.originBox.current.top &&
@@ -41,7 +49,7 @@ function setDragTarget(event: React.PointerEvent<HTMLDivElement>, index: number,
   }
 }
 
-function scrollDraggedRow(event: React.PointerEvent<HTMLDivElement>) {
+function scrollDraggedRow(event: React.PointerEvent<HTMLFieldSetElement>) {
   let scroll = event.currentTarget.parentElement;
   while (scroll && !['auto', 'scroll'].includes(getComputedStyle(scroll).overflowY))
     scroll = scroll.parentElement;
@@ -82,7 +90,7 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
     if (hold.current) clearTimeout(hold.current);
     hold.current = null;
   }
-  const rows = useRef(new Map<number, HTMLDivElement>());
+  const rows = useRef(new Map<number, HTMLFieldSetElement>());
   const source = useRef<number | null>(null);
   const target = useRef<number | null>(null);
   const startY = useRef(0);
@@ -140,7 +148,8 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
         ListHeaderComponent={props.ListHeaderComponent}
         ListFooterComponent={props.ListFooterComponent}
         renderItem={({ item, index }) => (
-          <div
+          <fieldset
+            aria-label={`Exercise ${index + 1}`}
             ref={(node) => {
               if (node) rows.current.set(index, node);
               else rows.current.delete(index);
@@ -228,29 +237,16 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
               finish();
               event.currentTarget.releasePointerCapture(event.pointerId);
             }}
-            onKeyDown={(event) => {
-              if (
-                event.target instanceof Element &&
-                event.target.closest('[id^="reorder-card-"]') &&
-                (!event.target.closest('input, button, [role="button"], a') ||
-                  event.target.closest('[id$="-drag-title"]')) &&
-                (event.key === 'ArrowUp' || event.key === 'ArrowDown')
-              ) {
-                event.preventDefault();
-                const to = index + (event.key === 'ArrowUp' ? -1 : 1);
-                if (to >= 0 && to < props.data.length) {
-                  const data = [...props.data];
-                  data.splice(to, 0, ...data.splice(index, 1));
-                  props.onDragEnd?.({ data, from: index, to });
-                }
-              }
-            }}
             onDragStart={(event) => event.preventDefault()}
             onPointerCancel={() => finish(true)}
             onLostPointerCapture={() => {
               if (source.current === index) finish(true);
             }}
             style={{
+              border: 0,
+              padding: 0,
+              margin: 0,
+              minWidth: 0,
               position: 'relative',
               zIndex: active === index ? 2 : 0,
               transform: active === index ? `translateY(${offset}px)` : undefined,
@@ -265,7 +261,7 @@ export default function ExerciseDragList<T>(props: DraggableFlatListProps<T>) {
               drag: () => {},
               isActive: active === index,
             })}
-          </div>
+          </fieldset>
         )}
       />
     </ActiveCell.Provider>

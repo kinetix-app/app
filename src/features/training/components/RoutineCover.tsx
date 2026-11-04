@@ -56,6 +56,29 @@ export function RoutineCover({
     picture.isError ||
     (decoded?.blob === picture.data && decoded?.failed) ||
     (uri && failedUri === uri);
+  let content = (
+    <MaterialCommunityIcons
+      accessibilityLabel="Gym routine"
+      name="dumbbell"
+      size={28}
+      color={p['brand-ink']}
+    />
+  );
+  if (uri && !failed)
+    content = (
+      <Image
+        accessibilityLabel="Routine cover"
+        source={{ uri }}
+        onError={() => setFailedUri(uri)}
+        style={{ width: '100%', height: '100%' }}
+      />
+    );
+  else if (path && !preview && !failed)
+    content = (
+      <ActivityIndicator accessibilityLabel="Loading routine cover" color={p['brand-ink']} />
+    );
+  const retryVisible = Boolean(failed && path && !preview);
+
   return (
     <View
       style={{
@@ -69,24 +92,8 @@ export function RoutineCover({
         flexShrink: 0,
       }}
     >
-      {uri && !failed ? (
-        <Image
-          accessibilityLabel="Routine cover"
-          source={{ uri }}
-          onError={() => setFailedUri(uri)}
-          style={{ width: '100%', height: '100%' }}
-        />
-      ) : path && !preview && !failed ? (
-        <ActivityIndicator accessibilityLabel="Loading routine cover" color={p['brand-ink']} />
-      ) : (
-        <MaterialCommunityIcons
-          accessibilityLabel="Gym routine"
-          name="dumbbell"
-          size={28}
-          color={p['brand-ink']}
-        />
-      )}
-      {failed && path && !preview ? (
+      {content}
+      {retryVisible ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Retry routine cover"
@@ -107,7 +114,8 @@ export function RoutineCover({
         >
           <Feather name="refresh-cw" size={20} color={p.ink} />
         </Pressable>
-      ) : onOpen ? (
+      ) : null}
+      {!retryVisible && onOpen ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={openLabel}

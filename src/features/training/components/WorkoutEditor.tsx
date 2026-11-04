@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Platform, Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { ExerciseSummary } from '../schemas';
@@ -76,11 +76,12 @@ export function WorkoutExerciseSummary({
     const high = Math.max(...values);
     return low === high ? String(low) : `${low}–${high}`;
   }
+  const setLabel = sets.length === 1 ? 'set' : 'sets';
   return (
     <View style={{ gap: spacing['space-2'] }}>
       <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
         {savedCount === undefined
-          ? `${sets.length} ${sets.length === 1 ? 'set' : 'sets'}`
+          ? `${sets.length} ${setLabel}`
           : `${savedCount} / ${sets.length} sets saved`}
       </Text>
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
@@ -133,6 +134,7 @@ export function WorkoutExerciseCard({
         aria-hidden={actions}
         accessibilityElementsHidden={actions}
         importantForAccessibility={actions ? 'no-hide-descendants' : 'auto'}
+        {...exerciseReorderKeys(onMove, disabled)}
         nativeID={dragId}
         accessible={false}
         accessibilityLabel={dragId ? `Reorder ${exercise.name}` : undefined}
@@ -245,4 +247,23 @@ export function WorkoutExerciseCard({
       ) : null}
     </>
   );
+}
+
+function exerciseReorderKeys(onMove: ((delta: number) => void) | undefined, disabled: boolean) {
+  if (Platform.OS !== 'web' || !onMove) return {};
+  return {
+    onKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+      if (disabled || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (
+        target !== event.currentTarget &&
+        target.closest('input, button, [role="button"], a') &&
+        !target.closest('[id$="-drag-title"]')
+      )
+        return;
+      event.preventDefault();
+      onMove(event.key === 'ArrowUp' ? -1 : 1);
+    },
+  };
 }
