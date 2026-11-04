@@ -139,8 +139,15 @@ test('plus starts the existing workout editor and a minimized draft survives nav
     expect(screen.getByLabelText('Start workout').props.accessibilityState.disabled).toBe(false),
   );
   fireEvent.press(screen.getByLabelText('Start workout'));
-  await screen.findByLabelText('Minimize workout');
-  fireEvent.press(screen.getByLabelText('Minimize workout'));
+  await waitFor(() =>
+    expect(screen.getByTestId('workout-pull-handle').props.accessibilityState.disabled).toBe(false),
+  );
+  fireEvent(screen.getByTestId('workout-pull-handle'), 'responderGrant', {
+    nativeEvent: { pageY: 10 },
+  });
+  fireEvent(screen.getByTestId('workout-pull-handle'), 'responderRelease', {
+    nativeEvent: { pageY: 100 },
+  });
   expect(screen.getByLabelText('Start workout').props.accessibilityState.disabled).toBe(true);
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   await screen.findByLabelText('Add food to Breakfast');
@@ -151,7 +158,7 @@ test('plus starts the existing workout editor and a minimized draft survives nav
     screen.getByRole('button', { name: 'Start workout' }).props.accessibilityState.disabled,
   ).toBe(true);
   fireEvent.press(screen.getByLabelText('Resume workout'));
-  expect(screen.getByLabelText('Minimize workout')).toBeTruthy();
+  expect(screen.getByTestId('workout-pull-handle')).toBeTruthy();
   expect(trainingApi.draft).toHaveBeenCalledTimes(1);
 });
 

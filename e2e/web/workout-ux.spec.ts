@@ -1,3 +1,4 @@
+import { selectExercise, minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
@@ -90,7 +91,7 @@ test('compact routine workspace saves notes and private covers, retries without 
   await expect(page.getByRole('button', { name: 'Start routine', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
   await page.getByLabel('Search exercises', { exact: true }).fill('Acceptance press');
-  await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
+  await selectExercise(page, 'Acceptance press');
   await chooseCover(page, 'Add routine cover');
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
@@ -204,7 +205,7 @@ test('compact routine workspace saves notes and private covers, retries without 
   expect(cleared.image_url).toBeNull();
   await start.click();
   await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await minimizeWorkout(page);
   await expect(start).toBeDisabled();
   await expect(page.getByText('1 exercise', { exact: true })).toBeVisible();
   await expect(page.getByText('Not trained yet', { exact: true })).toBeVisible();

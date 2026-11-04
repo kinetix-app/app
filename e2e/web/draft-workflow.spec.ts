@@ -1,3 +1,4 @@
+import { minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
@@ -187,15 +188,13 @@ test('shared editor and real server draft tick, retry, resume, discard and compl
     await expect(
       page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true }),
     ).toHaveAttribute('aria-expanded', 'false');
-    await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+    await minimizeWorkout(page);
     await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
     const floating = await page
       .getByRole('button', { name: 'Ongoing workout options', exact: true })
       .boundingBox();
     expect(floating && floating.y > 650).toBeTruthy();
-    await expect(page.getByRole('button', { name: 'Minimize workout', exact: true })).toHaveCount(
-      0,
-    );
+    await expect(page.getByTestId('workout-pull-handle')).toHaveCount(0);
     for (const colorScheme of ['dark', 'light'] as const) {
       await page.emulateMedia({ colorScheme });
       await page.screenshot({

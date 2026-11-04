@@ -1,3 +1,4 @@
+import { selectExercise, minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 
 const api = process.env.KINETIX_API_URL ?? 'http://127.0.0.1:18016';
@@ -64,7 +65,7 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
 
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
-  await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
+  await selectExercise(page, 'Acceptance press');
   await page.getByLabel('Exercise 1 set 1 kg', { exact: true }).fill('35');
   await page.getByLabel('Exercise 1 set 1 reps', { exact: true }).fill('9');
   const saved = page.waitForResponse(
@@ -73,7 +74,7 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   );
   await page.getByRole('button', { name: 'Save exercise 1 set 1', exact: true }).click();
   expect((await saved).status()).toBe(200);
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await minimizeWorkout(page);
   await page.getByRole('tab', { name: 'Nutrition', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeDisabled();

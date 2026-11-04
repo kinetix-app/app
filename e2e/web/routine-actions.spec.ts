@@ -1,3 +1,4 @@
+import { minimizeWorkout } from './workout-controls';
 import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
@@ -99,7 +100,7 @@ test('saved routine actions edit, start fresh details, retry and preserve a resu
   await actions.click();
   await start.click();
   await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Minimize workout', exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('workout-pull-handle')).toHaveCount(0);
   await page.unroute(path);
   const detail = page.waitForResponse(
     (value) => new URL(value.url()).pathname === `/api/v1/routines/${routine.id}`,
@@ -114,7 +115,7 @@ test('saved routine actions edit, start fresh details, retry and preserve a resu
   await page.getByLabel('Exercise 1 set 1 kg', { exact: true }).fill('42');
   await page.getByLabel('Exercise 1 set 1 reps', { exact: true }).fill('9');
   await page.getByRole('button', { name: /^Edit sets for /, expanded: true }).click();
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await minimizeWorkout(page);
   await page.route(path, (route) => route.abort('failed'));
   await actions.click();
   await expect(start).toBeDisabled();
@@ -138,7 +139,7 @@ test('saved routine actions edit, start fresh details, retry and preserve a resu
   await expect(page.getByLabel('Exercise 1 set 1 kg', { exact: true })).toHaveValue('42');
   await expect(page.getByLabel('Exercise 1 set 1 reps', { exact: true })).toHaveValue('9');
   await page.getByRole('button', { name: /^Edit sets for /, expanded: true }).click();
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await minimizeWorkout(page);
   await page.reload();
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);

@@ -211,7 +211,7 @@ The full scope and research rationale live in management. Until verified cross-r
 
 After verified Basic or Clerk sign-in, the account opens its private routine workspace.
 Create a routine, choose catalogue exercises, add planned kg/repetition sets and save.
-Reopen it to edit its name, selection, order and default sets. Reorder exercise cards using their drag handles; click a name to edit its sets or a thumbnail for exercise details. Failed saves retain input;
+Reopen it to edit its name, selection, order and default sets. Reorder exercise cards by mouse drag or touch hold-and-drag; click a name to edit its sets or a thumbnail for exercise details. Failed saves retain input;
 Cancel asks before discarding a dirty form. Routine and workout editing share the exercise cards,
 inline expanded editor and numbered set fields; session ticks persist actual results separately.
 The backend must include the planned-set extension documented in [the routine contract](docs/routines.md).

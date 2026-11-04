@@ -1,3 +1,4 @@
+import { selectExercise, minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
@@ -71,9 +72,9 @@ test('partial results, independent routine origin, history placeholders and atom
     const start = page.getByRole('button', { name: `Train ${name}`, exact: true });
     await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await start.click();
-    await expect(page.getByRole('button', { name: 'Minimize workout', exact: true })).toBeEnabled();
+    await expect(page.getByTestId('workout-pull-handle')).toBeEnabled();
     draftId = (await (await request('/session-drafts')).json()).client_session_id;
-    await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+    await minimizeWorkout(page);
     await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await expect(start).toBeDisabled();
     await page.getByRole('button', { name: 'Close routine actions', exact: true }).click();
@@ -103,7 +104,7 @@ test('partial results, independent routine origin, history placeholders and atom
     const configuration = page.waitForResponse((response) =>
       response.url().includes(`/exercises/${exerciseId}/last-configuration`),
     );
-    await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
+    await selectExercise(page, 'Acceptance press');
     expect((await configuration).status()).toBe(200);
     await expect(page.getByLabel('Exercise 2 set 1 kg', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Exercise 2 set 1 kg', { exact: true })).toHaveAttribute(

@@ -3,7 +3,10 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { ExerciseSummary } from '../schemas';
-import { ui } from './ui';
+import { Button, IconButton, ui } from './ui';
+import { ActionMenu } from './ActionMenu';
+import { SetColumnHeaders } from './SetFields';
+import { displayWeight, type ActualSet } from '../sessionDraft';
 
 export function WorkoutTimer({
   startedAt,
@@ -52,6 +55,41 @@ function formatElapsedTime(hours: number, seconds: number) {
   return `${hourPrefix}${minutes}:${remainder}`;
 }
 
+/** Shared header summary for planned values and actual session input. */
+export function WorkoutExerciseSummary({
+  sets,
+  savedCount,
+}: Readonly<{
+  sets: readonly Pick<ActualSet, 'value' | 'unit' | 'reps'>[];
+  savedCount?: number;
+}>) {
+  const p = usePalette();
+  function range(key: 'reps' | 'value') {
+    const values = sets
+      .map((set) => {
+        const value = key === 'value' ? displayWeight(set.value, set.unit, 'kg') : set.reps;
+        return value.trim() ? Number(value) : Number.NaN;
+      })
+      .filter(Number.isFinite);
+    if (!values.length) return '—';
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    return low === high ? String(low) : `${low}–${high}`;
+  }
+  return (
+    <View style={{ gap: spacing['space-2'] }}>
+      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+        {savedCount === undefined
+          ? `${sets.length} ${sets.length === 1 ? 'set' : 'sets'}`
+          : `${savedCount} / ${sets.length} sets saved`}
+      </Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        {range('reps')} reps · {range('value')} kg
+      </Text>
+    </View>
+  );
+}
+
 /** Shared inline exercise editor. Name toggles sets; image opens catalogue information. */
 export function WorkoutExerciseCard({
   exercise,
@@ -61,8 +99,15 @@ export function WorkoutExerciseCard({
   disabled,
   active,
   expanded = false,
-  dragHandle,
+  onRemove,
+  onAddSet,
+  addSetLabel,
+  canAddSet = true,
+  confirmSets = false,
   children,
+  dragId,
+  onDrag,
+  onMove,
 }: React.PropsWithChildren<{
   exercise: ExerciseSummary;
   summary: React.ReactNode;
@@ -71,66 +116,133 @@ export function WorkoutExerciseCard({
   disabled: boolean;
   active?: boolean;
   expanded?: boolean;
-  dragHandle: React.ReactNode;
+  onRemove: () => void;
+  onAddSet: () => void;
+  addSetLabel: string;
+  canAddSet?: boolean;
+  confirmSets?: boolean;
+  dragId?: string;
+  onDrag?: () => void;
+  onMove?: (delta: number) => void;
 }>) {
   const p = usePalette();
+  const [actions, setActions] = useState(false);
   return (
-    <View
-      style={[
-        ui.card,
-        {
-          backgroundColor: active ? p['surface-300'] : p['surface-200'],
-          borderWidth: 1,
-          borderColor: active ? p.brand : p['surface-200'],
-        },
-      ]}
-    >
-      <View style={[ui.row, { alignItems: 'flex-start' }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Details for ${exercise.name}`}
-          onPress={onDetails}
-          disabled={disabled}
-          style={{
-            width: '32%',
-            minHeight: 100,
-            borderRadius: radii['radius-md'],
-            backgroundColor: p['surface-300'],
-            overflow: 'hidden',
-          }}
-        >
-          {exercise.image_url ? (
-            <Image
-              source={{ uri: exercise.image_url }}
-              accessibilityLabel={exercise.name}
-              resizeMode="contain"
-              style={{ width: '100%', height: 100 }}
-            />
-          ) : (
-            <View style={{ minHeight: 100, justifyContent: 'center', padding: spacing['space-3'] }}>
-              <Text style={{ color: p['ink-muted'] }}>No image</Text>
+    <>
+      <Pressable
+        aria-hidden={actions}
+        accessibilityElementsHidden={actions}
+        importantForAccessibility={actions ? 'no-hide-descendants' : 'auto'}
+        nativeID={dragId}
+        accessible={false}
+        accessibilityLabel={dragId ? `Reorder ${exercise.name}` : undefined}
+        accessibilityHint={
+          dragId ? 'Hold and drag to reorder. Use arrow keys with a keyboard.' : undefined
+        }
+        disabled={disabled}
+        onLongPress={onDrag}
+        delayLongPress={250}
+        style={[
+          ui.card,
+          {
+            backgroundColor: active ? p['surface-300'] : p['surface-200'],
+            borderWidth: 1,
+            borderColor: active ? p.brand : p['surface-200'],
+          },
+        ]}
+      >
+        <View style={[ui.row, { alignItems: 'flex-start' }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Details for ${exercise.name}`}
+            nativeID={dragId ? `${dragId}-drag-details` : undefined}
+            onPress={onDetails}
+            onLongPress={onDrag}
+            delayLongPress={250}
+            disabled={disabled}
+            style={{
+              width: '32%',
+              minHeight: 100,
+              borderRadius: radii['radius-md'],
+              backgroundColor: p['surface-300'],
+              overflow: 'hidden',
+            }}
+          >
+            {exercise.image_url ? (
+              <Image
+                source={{ uri: exercise.image_url }}
+                accessibilityLabel={exercise.name}
+                resizeMode="contain"
+                style={{ width: '100%', height: 100 }}
+              />
+            ) : (
+              <View
+                style={{ minHeight: 100, justifyContent: 'center', padding: spacing['space-3'] }}
+              >
+                <Text style={{ color: p['ink-muted'] }}>No image</Text>
+              </View>
+            )}
+          </Pressable>
+          <View style={{ flex: 1, gap: spacing['space-2'] }}>
+            <View style={[ui.row, { alignItems: 'flex-start', gap: spacing['space-1'] }]}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Edit sets for ${exercise.name}`}
+                nativeID={dragId ? `${dragId}-drag-title` : undefined}
+                accessibilityHint={dragId ? 'Hold and drag to reorder' : undefined}
+                accessibilityActions={
+                  onMove
+                    ? [
+                        { name: 'increment', label: 'Move exercise later' },
+                        { name: 'decrement', label: 'Move exercise earlier' },
+                      ]
+                    : undefined
+                }
+                onAccessibilityAction={({ nativeEvent }) => {
+                  if (!disabled) onMove?.(nativeEvent.actionName === 'increment' ? 1 : -1);
+                }}
+
+                aria-expanded={expanded}
+                accessibilityState={{ expanded, disabled }}
+                onPress={onSets}
+                onLongPress={onDrag}
+                delayLongPress={250}
+                disabled={disabled}
+                style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={[textStyles.label, { color: p.ink }]}>{exercise.name}</Text>
+              </Pressable>
+              <IconButton
+                icon="more-horizontal"
+                label={`Actions for ${exercise.name}`}
+                disabled={disabled}
+                onPress={() => setActions(true)}
+              />
             </View>
-          )}
-        </Pressable>
-        <View style={{ flex: 1, gap: spacing['space-2'] }}>
-          <View style={[ui.row, { alignItems: 'flex-start', gap: spacing['space-1'] }]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Edit sets for ${exercise.name}`}
-              aria-expanded={expanded}
-              accessibilityState={{ expanded, disabled }}
-              onPress={onSets}
-              disabled={disabled}
-              style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
-            >
-              <Text style={[textStyles.label, { color: p.ink }]}>{exercise.name}</Text>
-            </Pressable>
-            {dragHandle}
+            {summary}
           </View>
-          {summary}
         </View>
-      </View>
-      {expanded ? <View style={ui.gap}>{children}</View> : null}
-    </View>
+        {expanded ? (
+          <View style={ui.gap}>
+            <SetColumnHeaders confirmation={confirmSets} />
+            {children}
+            <Button
+              title="Add set"
+              accessibilityLabel={addSetLabel}
+              onPress={onAddSet}
+              tone="positive"
+              disabled={disabled || !canAddSet}
+            />
+          </View>
+        ) : null}
+      </Pressable>
+      {actions ? (
+        <ActionMenu
+          title="Exercise actions"
+          onClose={() => setActions(false)}
+          actions={[{ title: 'Remove exercise', tone: 'danger', onPress: onRemove, disabled }]}
+        />
+      ) : null}
+    </>
   );
 }

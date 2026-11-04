@@ -80,4 +80,40 @@ and native-device gaps are reported with delivery; mocked tests do not establish
 execution, production Clerk providers or concurrent multi-device editing.
 
 After the final outstanding set saves successfully, the next unfinished exercise expands automatically, skipping completed exercises and wrapping to earlier cards when needed.
-A failed save or an untick keeps the current exercise open. When no unfinished sets remain, the exercise collapses. The floating ongoing-workout panel uses a translucent black surface in both themes, a primary brand border, light text/timer, and a primary-color resume icon with no background or border. Its opacity affects only the background, keeping the controls and text readable.
+A failed save or an untick keeps the current exercise open. When no unfinished sets remain, the exercise collapses. The floating ongoing-workout panel uses a translucent black surface in the dark theme, a primary brand border, light text/timer, and a primary-color resume icon with no background or border. Its opacity affects only the background, keeping the controls and text readable.
+
+## Session editing UX
+
+The session header groups the workout name and elapsed time on the left with Finish
+on the right. Pull the top handle down to minimize; the dedicated minimize button
+has been removed. Add exercise and More actions follow the exercise list. More
+actions contains Sync workout, Finish and Discard workout; discard still requires
+confirmation and failed finishing keeps the existing locked retry behavior.
+
+Collapsed exercise summaries retain their existing presentation. Drag the card,
+image or name with a mouse to reorder it; touch uses a long press. Inputs and
+action buttons remain independent. Keyboard
+users can focus the exercise name and use Up/Down, and native accessibility exposes
+move-earlier/move-later actions. The overflow button opens Remove exercise. Expanded
+cards use Set/kg/Reps headers and previous values as placeholders. Tap a set number
+to open its neutral Remove set action. Completion ticks retain the existing save
+and next-unfinished-exercise behavior.
+
+The shared exercise picker supports an ordered selection across searches, filters
+and pages. Plus buttons become checkmarks and selected cards gain a brand border.
+The floating Add exercises button displays the selection count; no exercises are
+added until confirmation. Close abandons only the unconfirmed selection. Batch
+addition loads each exercise's real last configuration; if one fails, already-added
+exercises are removed from the selection and remaining ones stay available for
+retry without duplication. The 500-exercise session/routine limit still applies.
+
+Verified on 4 November 2026 for the session UX refinement: TypeScript and ESLint
+passed; the full Jest suite passed 300 tests, and the additional card accessibility
+regression passed separately. `session-ux.spec.ts` and `session-results.spec.ts` passed
+against the real Basic-authenticated app/API and a run-owned PostgreSQL `_test`
+database, including partial-add failure/retry, both drag directions, persisted
+order/results, reload/resume, finish and account isolation. Both themes were visually
+reviewed at 390 × 844. Android/iOS/web exports passed with one Metro worker. Changed
+files pass Prettier; the global format check still flags the pre-existing
+`docs/features/README.md` outside this change. Native device gestures/keyboards,
+Maestro and production Clerk providers remain unverified.

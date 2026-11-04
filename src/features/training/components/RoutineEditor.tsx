@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Alert,
   BackHandler,
   KeyboardAvoidingView,
   Platform,
@@ -22,7 +21,6 @@ import {
   type RoutinePictureDraft,
 } from './RoutinePictureEditor';
 import { trainingApi } from '../api';
-import { ExerciseDragHandle } from './ExerciseDragHandle';
 import { ExerciseDetails } from './ExerciseDetails';
 import { ExercisePicker } from './ExercisePicker';
 import {
@@ -33,9 +31,8 @@ import {
   validWeight,
   type WeightUnit,
 } from '../schemas';
-import { WorkoutExerciseCard } from './WorkoutEditor';
+import { WorkoutExerciseCard, WorkoutExerciseSummary } from './WorkoutEditor';
 import { SetFields } from './SetFields';
-import { displayWeight } from '../sessionDraft';
 import { Button, Failure, IconButton, ui } from './ui';
 
 type DraftSet = { reps: string; weight: string; unit: WeightUnit; canonicalWeight?: string };
@@ -47,49 +44,37 @@ type DraftExercise = {
 type Draft = { name: string; notes: string; exercises: DraftExercise[] };
 
 function SetSummary({ control, index }: Readonly<{ control: Control<Draft>; index: number }>) {
-  const p = usePalette();
   const sets = useWatch({ control, name: `exercises.${index}.sets` }) ?? [];
-  const range = (key: 'reps' | 'weight') => {
-    const values = sets
-      .map((set) => (set[key].trim() ? Number(summaryValue(key, set)) : Number.NaN))
-      .filter(Number.isFinite);
-    if (!values.length) return '—';
-    const low = Math.min(...values),
-      high = Math.max(...values);
-    return low === high ? String(low) : `${low}–${high}`;
-  };
   return (
-    <View style={{ gap: spacing['space-2'] }}>
-      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-        {sets.length} {sets.length === 1 ? 'set' : 'sets'}
-      </Text>
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {range('reps')} reps · {range('weight')} kg
-      </Text>
-    </View>
+    <WorkoutExerciseSummary
+      sets={sets.map((set) => ({ reps: set.reps, value: set.weight, unit: set.unit }))}
+    />
   );
 }
 
-function summaryValue(key: 'reps' | 'weight', set: DraftSet) {
-  if (key === 'weight') return displayWeight(set.weight, set.unit, 'kg');
-  return set.reps;
-}
-
-function Sets({
+function RoutineExerciseEditor({
   control,
   index,
-  disabled,
-}: Readonly<{
-  control: Control<Draft>;
-  index: number;
-  disabled: boolean;
-}>) {
+  ...card
+}: Readonly<
+  {
+    control: Control<Draft>;
+    index: number;
+  } & Omit<
+    React.ComponentProps<typeof WorkoutExerciseCard>,
+    'summary' | 'onAddSet' | 'canAddSet' | 'children'
+  >
+>) {
   const p = usePalette();
   const unit: WeightUnit = 'kg';
   const { fields, append, remove } = useFieldArray({ control, name: `exercises.${index}.sets` });
   return (
-    <View style={ui.gap}>
-      <Text style={{ color: p['ink-muted'] }}>PLANNED SETS · WEIGHT / REPS</Text>
+    <WorkoutExerciseCard
+      {...card}
+      summary={<SetSummary control={control} index={index} />}
+      onAddSet={() => append({ reps: '', weight: '', unit })}
+      canAddSet={fields.length < 100}
+    >
       {fields.map((set, i) => (
         <Controller
           key={set.id}
@@ -116,7 +101,7 @@ function Sets({
                 decimals={2}
                 number={i + 1}
                 label={`Exercise ${index + 1} set ${i + 1}`}
-                disabled={disabled}
+                disabled={card.disabled}
                 onChange={(next) =>
                   field.onChange({
                     weight: next.value,
@@ -138,14 +123,7 @@ function Sets({
           )}
         />
       ))}
-      <Button
-        title="+ Add set"
-        accessibilityLabel={`Add set to exercise ${index + 1}`}
-        onPress={() => append({ reps: '', weight: '', unit })}
-        tone="positive"
-        disabled={disabled || fields.length >= 100}
-      />
-    </View>
+    </WorkoutExerciseCard>
   );
 }
 
@@ -423,48 +401,34 @@ export function RoutineEditor({
               <Text style={{ color: p['ink-muted'], fontWeight: '700' }}>
                 EXERCISES · {fields.length}
               </Text>
-              {fields.length > 1 ? (
-                <Text style={{ color: p['ink-muted'] }}>Drag the ≡ handle to reorder.</Text>
-              ) : null}
             </View>
           }
           renderItem={({ item: slot, getIndex, drag, isActive }) => {
             const index = getIndex();
             if (index === undefined) return null;
             return (
-              <WorkoutExerciseCard
+              <RoutineExerciseEditor
+                control={control}
+                index={index}
                 exercise={slot.exercise}
                 active={isActive}
+                dragId={save.isPending || pictureBusy ? undefined : `reorder-card-${slot.id}`}
+                onDrag={save.isPending || pictureBusy ? undefined : drag}
+                onMove={(delta) => {
+                  if (disabled) return;
+                  const target = index + delta;
+                  if (target >= 0 && target < fields.length) move(index, target);
+                }}
+                onRemove={() => {
+                  remove(index);
+                  if (editingSlot === slot.id) setEditingSlot(null);
+                }}
+                addSetLabel={`Add set to exercise ${index + 1}`}
                 disabled={disabled}
                 onSets={() => setEditingSlot(editingSlot === slot.id ? null : slot.id)}
                 expanded={editingSlot === slot.id}
                 onDetails={() => setDetailId(slot.exercise.id)}
-                summary={<SetSummary control={control} index={index} />}
-                dragHandle={
-                  <ExerciseDragHandle
-                    id={`reorder-handle-${slot.id}`}
-                    label={`Reorder ${slot.exercise.name}`}
-                    disabled={save.isPending}
-                    onDrag={drag}
-                    onMove={(delta) => {
-                      if (disabled) return;
-                      const target = index + delta;
-                      if (target >= 0 && target < fields.length) move(index, target);
-                    }}
-                  />
-                }
-              >
-                <Sets key={slot.id} control={control} index={index} disabled={save.isPending} />
-                <Button
-                  title="Remove"
-                  accessibilityLabel={`Remove ${slot.exercise.name}`}
-                  tone="danger"
-                  onPress={() => {
-                    remove(index);
-                    setEditingSlot(null);
-                  }}
-                />
-              </WorkoutExerciseCard>
+              />
             );
           }}
           ListFooterComponent={
@@ -499,13 +463,11 @@ export function RoutineEditor({
         <ExercisePicker
           accountId={accountId}
           onClose={() => setPicker(false)}
-          onSelect={(exercise) => {
-            if (getValues('exercises').length >= 500) {
-              Alert.alert('Routine limit', 'A routine can contain at most 500 exercises.');
-              return;
-            }
-            append({ exercise, sets: [] });
-            setPicker(false);
+          maxSelection={500 - getValues('exercises').length}
+          onSelect={(exercises) => {
+            const available = exercises.slice(0, 500 - getValues('exercises').length);
+            append(available.map((exercise) => ({ exercise, sets: [] })));
+            return available.map((exercise) => exercise.id);
           }}
         />
       ) : null}

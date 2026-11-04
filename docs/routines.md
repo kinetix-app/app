@@ -11,7 +11,7 @@ session completion controls. Catalogue body-part chips use the exercise API. His
 separate API capabilities and are not simulated in this increment.
 
 1. Export the supplied design tokens into standalone frontend runtime files, supporting
-   light/dark surfaces, typography, spacing, radii and minimum touch targets.
+   dark surfaces, typography, spacing, radii and minimum touch targets.
 2. Extend the existing routine API to persist per-slot planned gym sets atomically.
    Derive set numbers from array order. Omitted sets preserve defaults on retained
    exercises; an empty array clears defaults. Completed sessions remain unchanged.
@@ -162,3 +162,25 @@ The editor keeps Save in its fixed top-right header and omits Start. Optional no
 Creation sends a single multipart `POST /api/v1/routines`: `content` contains the routine JSON and optional `file` contains the cover. The backend returns 201 only after the routine, planned sets and selected cover reference are committed together. A failed image upload or database transaction leaves no new routine; entered values and the selected photo remain available for retry. Editing an existing routine still saves its details before applying a replacement/removal; a cover failure preserves the saved details and reports the remaining change. A canceled picker or editor does not upload or remove an image. Apply backend migration `20261103_01` before using these operations. No new native dependency is introduced.
 
 Deleting a routine requires confirmation. It removes the template from the active library, keeps completed workouts and their original routine provenance, and removes its private cover. A draft using that routine blocks deletion with 409; finish or discard it first. Failed deletion retains the confirmation and can be retried. Apply backend migration `20261103_02` for this behavior. Existing deleted routine IDs return 404 from read/edit/source operations; deletion retries by their owner remain safe.
+
+The shared Add exercise picker now stages multiple exercises before confirmation.
+It uses a compact heading/close icon, search with clear action, an adjacent filter
+icon, larger thumbnails and smaller sentence-case body-part labels. The floating
+Add exercises action appends the selected batch in selection order. Search/filter
+changes retain the selection; closing the picker leaves the routine unchanged.
+Routine and ongoing-session cards now use the same `WorkoutExerciseCard`,
+`WorkoutExerciseSummary` and `SetFields`: primary-colored counts, live reps/kg ranges,
+whole-card drag, an exercise overflow menu, column headings, set-number removal and
+the shared Add set action. Routine form adapters own planned-value validation and
+field-array updates; session adapters own actual values and confirmation ticks.
+Routine creation/editing retains explicit Save and never records completed results.
+Session summaries use entered results, leaving blank values as dashes rather than
+counting guidance placeholders as measured performance.
+
+Unified-editor verification on 4 November 2026: TypeScript, repository ESLint and
+formatting of changed files passed. All 38 focused training tests passed. Real
+Basic-authenticated browser acceptance verified routine series addition/removal,
+live summaries, exercise removal, card/name drag in both directions, save and
+reload/reopen; the ongoing-session journey and partial-result/routine-update
+regression also passed against an isolated PostgreSQL test database. Native
+gesture/device validation remains unavailable.

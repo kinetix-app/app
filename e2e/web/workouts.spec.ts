@@ -1,3 +1,4 @@
+import { selectExercise, minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
@@ -32,9 +33,12 @@ async function signIn(page: Page, identity = user) {
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await me).status()).toBe(200);
   await expect(
-    page.getByRole('button', { name: /^(Start workout|Minimize workout|Resume workout)$/ }).first(),
+    page
+      .getByRole('button', { name: /^(Start workout|Resume workout)$/ })
+      .or(page.getByTestId('workout-pull-handle'))
+      .first(),
   ).toBeVisible();
-  if (!(await page.getByRole('button', { name: 'Minimize workout', exact: true }).isVisible())) {
+  if (!(await page.getByTestId('workout-pull-handle').isVisible())) {
     await page.getByRole('tab', { name: 'Workout', exact: true }).click();
     await expect(page.getByRole('tab', { name: 'Workout', exact: true })).toHaveAttribute(
       'aria-selected',
@@ -162,7 +166,7 @@ test('blank workout persists locally, resumes and retries the identical frozen F
   });
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
-  await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
+  await selectExercise(page, 'Acceptance press');
   await expect(page.getByLabel('Exercise 1 set 1 kg', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Exercise 1 set 1 reps', { exact: true })).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Display weight in lb', exact: true })).toHaveCount(
@@ -177,7 +181,7 @@ test('blank workout persists locally, resumes and retries the identical frozen F
     expanded: true,
   });
   if (await expanded.isVisible()) await expanded.click();
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await minimizeWorkout(page);
   await expect(page.getByRole('heading', { name: 'Workouts', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Resume workout', exact: true }).click();
@@ -286,9 +290,7 @@ test('routine start snapshots repeated slots and two finishes retain distinct ID
         .getByRole('button', { name: `Save exercise ${index + 1} set 1`, exact: true })
         .click();
       expect((await tick).status()).toBe(200);
-      await expect(
-        page.getByRole('button', { name: 'Minimize workout', exact: true }),
-      ).toBeEnabled();
+      await expect(page.getByTestId('workout-pull-handle')).toBeEnabled();
     }
     const confirmed = page.waitForResponse(
       (value) =>
@@ -327,8 +329,8 @@ test('logout retains A server draft while B never inherits private draft or hist
   await signIn(page);
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
-  await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await selectExercise(page, 'Acceptance press');
+  await minimizeWorkout(page);
   await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
