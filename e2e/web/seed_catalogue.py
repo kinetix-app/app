@@ -19,24 +19,30 @@ async def main():
         raise SystemExit("Acceptance seed requires a database ending in _test")
     engine = create_async_engine(url)
     async with engine.begin() as connection:
-        existing = await connection.scalar(
-            sa.select(exercise.c.id).where(
-                exercise.c.external_id == "kinetix-workout-e2e-press",
-                exercise.c.source == "ascend_edb_v2",
-            )
-        )
-        if existing is None:
-            await connection.execute(
-                exercise.insert().values(
-                    name="Acceptance press",
-                    activity_type="gym",
-                    source="ascend_edb_v2",
-                    external_id="kinetix-workout-e2e-press",
-                    imported_at=datetime.now(UTC),
-                    body_parts=["CHEST"],
-                    instructions=["Press with controlled movement."],
+        for name, key, body_part in [
+            ("Acceptance press", "press", "CHEST"),
+            ("Acceptance row", "row", "BACK"),
+            ("Acceptance squat", "squat", "UPPER LEGS"),
+        ]:
+            external_id = f"kinetix-workout-e2e-{key}"
+            existing = await connection.scalar(
+                sa.select(exercise.c.id).where(
+                    exercise.c.external_id == external_id,
+                    exercise.c.source == "ascend_edb_v2",
                 )
             )
+            if existing is None:
+                await connection.execute(
+                    exercise.insert().values(
+                        name=name,
+                        activity_type="gym",
+                        source="ascend_edb_v2",
+                        external_id=external_id,
+                        imported_at=datetime.now(UTC),
+                        body_parts=[body_part],
+                        instructions=["Move with control."],
+                    )
+                )
     await engine.dispose()
 
 

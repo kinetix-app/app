@@ -1,3 +1,4 @@
+import { selectExercise, minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
@@ -20,9 +21,10 @@ async function signIn(page: Page) {
   await page.goto('/');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
-  const me = page.waitForResponse((response) => response.url().endsWith('/api/v1/me'));
+  const me = page.waitForResponse((response) => response.url().endsWith('/api/v1/auth/me'));
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await me).status()).toBe(200);
+  await page.getByRole('tab', { name: 'Workout', exact: true }).click();
 }
 
 test('partial results, independent routine origin, history placeholders and atomic optional routine update', async ({
@@ -67,16 +69,29 @@ test('partial results, independent routine origin, history placeholders and atom
   try {
     await signIn(page);
     await page.getByLabel('Search routines', { exact: true }).fill(name);
-    const start = page.getByRole('button', { name: `Start ${name}`, exact: true });
+    const start = page.getByRole('button', { name: `Train ${name}`, exact: true });
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await start.click();
-    await expect(page.getByRole('button', { name: 'Minimize workout', exact: true })).toBeEnabled();
+    await expect(page.getByTestId('workout-pull-handle')).toBeEnabled();
     draftId = (await (await request('/session-drafts')).json()).client_session_id;
-    await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+    await minimizeWorkout(page);
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await expect(start).toBeDisabled();
+    await page.getByRole('button', { name: 'Close routine actions', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Start routine', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Start routine', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('ongoing-workout-card')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
+    await selectExercise(page, 'Acceptance press');
+    await expect(
+      page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true }),
+    ).toHaveCount(2);
+    await expect(page.getByTestId('ongoing-workout-card')).toHaveCount(0);
     await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
+    await page.getByRole('button', { name: 'Discard', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+    expect((await (await request('/session-drafts')).json()).client_session_id).toBe(draftId);
     // Replacing template slots mid-workout must not invalidate the independent session rows.
     expect(
       (
@@ -99,7 +114,7 @@ test('partial results, independent routine origin, history placeholders and atom
     const configuration = page.waitForResponse((response) =>
       response.url().includes(`/exercises/${exerciseId}/last-configuration`),
     );
-    await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
+    await selectExercise(page, 'Acceptance press');
     expect((await configuration).status()).toBe(200);
     await expect(page.getByLabel('Exercise 2 set 1 kg', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Exercise 2 set 1 kg', { exact: true })).toHaveAttribute(
@@ -181,6 +196,7 @@ test('partial results, independent routine origin, history placeholders and atom
     });
     await page.unroute('**/api/v1/session-drafts/*/finish');
     // Declining the update permits an entirely unfulfilled exercise without touching the template.
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
     await start.click();
     await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeEnabled();
     const secondFinish = page.waitForResponse(
@@ -197,4 +213,46 @@ test('partial results, independent routine origin, history placeholders and atom
   } finally {
     if (draftId) await request(`/session-drafts/${draftId}`, 'DELETE');
   }
+});
+
+test('finishing a workout keeps a themed surface throughout modal dismissal', async ({ page }) => {
+  await signIn(page);
+  await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeEnabled();
+  await page.evaluate(() => {
+    const modal = document
+      .querySelector('[data-testid="workout-pull-handle"]')
+      ?.closest('[aria-modal="true"]');
+    if (!(modal instanceof HTMLElement)) throw new Error('Workout modal is missing');
+    const workoutModal = modal;
+    const state = { colors: [] as string[], done: false };
+    (window as typeof window & { workoutDismissal?: typeof state }).workoutDismissal = state;
+    function sample() {
+      if (!workoutModal.isConnected) {
+        state.done = true;
+        return;
+      }
+      if (!workoutModal.querySelector('[data-testid="workout-pull-handle"]')) {
+        const surface =
+          workoutModal.querySelector('[data-testid="workout-modal-surface"]') ?? workoutModal;
+        state.colors.push(getComputedStyle(surface).backgroundColor);
+      }
+      requestAnimationFrame(sample);
+    }
+    sample();
+  });
+  await page.getByRole('button', { name: 'Finish', exact: true }).click();
+  await page.waitForFunction(
+    () =>
+      (window as typeof window & { workoutDismissal?: { done: boolean } }).workoutDismissal?.done,
+  );
+  const colors = await page.evaluate(
+    () =>
+      (window as typeof window & { workoutDismissal?: { colors: string[] } }).workoutDismissal
+        ?.colors ?? [],
+  );
+  expect(colors.length).toBeGreaterThan(0);
+  expect(colors).not.toContain('rgb(255, 255, 255)');
+  expect(colors).not.toContain('rgba(0, 0, 0, 0)');
+  await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeEnabled();
 });

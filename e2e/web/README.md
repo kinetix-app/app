@@ -86,4 +86,24 @@ This regression does not verify real Google/Apple sign-in or Android behavior.
 
 ## Dedicated Profile acceptance
 
-`profile.spec.ts` requires two private synthetic identities and a run-owned `_test` database with `APP_ENV=test`. It prepares only those accounts and verifies compact Profile navigation, failed profile save/retry, form retention across tabs, persisted edits after reload, prepared Progress, history list/detail/back navigation, two-account isolation and workout logout/resume. `onboarding.spec.ts`, `home.spec.ts` and `profile-picture.spec.ts` exercise the related setup, nutrition and picture journeys using the Profile tab. Run onboarding first against a fresh database. Browser acceptance does not establish native or real Clerk provider acceptance.
+`profile.spec.ts` requires two private synthetic identities and a run-owned `_test` database with `APP_ENV=test`. It prepares only those accounts and verifies compact Profile navigation, failed profile save/retry, form retention across tabs, persisted edits after reload, prepared Progress, history list/detail/back navigation, two-account isolation and workout logout/resume. `onboarding.spec.ts`, `home.spec.ts` and `profile-picture.spec.ts` exercise the related setup, nutrition and picture journeys using Profile opened from the Home avatar. Run onboarding first against a fresh database. Browser acceptance does not establish native or real Clerk provider acceptance.
+
+## Compact workout and routine covers
+
+`workout-ux.spec.ts` requires a fresh run-owned `_test` database, two distinct private synthetic identities, the seeded Acceptance press and configured private Azurite image storage. It prepares the test profiles and exercises first-routine creation, compact play/management controls, mobile Train/Edit/Delete sheet, confirmed deletion with retained history, notes, direct menu cover picking/upload/read/replacement/removal, creation without a cover, failed-create and failed-upload retry without duplicate routines, reload persistence, completed-workout date refresh and account isolation. It captures only synthetic routine screens in both themes at 390 × 844. Run with `pnpm exec playwright test --config e2e/web/playwright.config.ts workout-ux.spec.ts`. Browser evidence does not establish Android/iOS picker or layout behavior.
+
+## Session creation UX
+
+`session-ux.spec.ts` uses the isolated Basic setup above and three synthetic catalogue
+entries supplied by `seed_catalogue.py`: Acceptance press, Acceptance row and
+Acceptance squat. It verifies shared routine/session editor controls, routine save/reopen and both drag directions, retained multi-selection/search clearing, partial
+configuration failure/retry, whole-card drag in both directions, set/exercise menus,
+saved values/order, reload/resume, completed history and second-account isolation.
+It captures only synthetic screens in both themes. Run it with
+`pnpm exec playwright test --config e2e/web/playwright.config.ts session-ux.spec.ts`.
+`workout-controls.ts` centralizes batch confirmation and pull-to-minimize for the
+existing browser regressions. Native gesture/keyboard acceptance still requires
+Maestro on an isolated development device.
+
+On a fresh isolated database, run `session-ux.spec.ts` before
+`session-results.spec.ts`: the former prepares the two synthetic account profiles.

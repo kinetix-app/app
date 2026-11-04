@@ -7,9 +7,8 @@ export const macroFields = [
 ] as const;
 export type Macro = (typeof macroFields)[number][0];
 export type MacroValues = Record<Macro, string>;
-export type MacroPercentages = MacroValues;
-export type MacroGoalValues = MacroPercentages & { calories: string };
-export const emptyPercentages: MacroPercentages = { carbohydrates: '', protein: '', fats: '' };
+export type MacroGoalValues = MacroValues & { calories: string };
+export const emptyPercentages: MacroValues = { carbohydrates: '', protein: '', fats: '' };
 
 /** Parse nonnegative decimal input into integer hundredths; reject extra precision. */
 export function hundredths(value: string): number | undefined {
@@ -19,7 +18,7 @@ export function hundredths(value: string): number | undefined {
   return Number.isSafeInteger(result) ? result : undefined;
 }
 
-export function percentageTotal(percentages: MacroPercentages): number | undefined {
+export function percentageTotal(percentages: MacroValues): number | undefined {
   let total = 0;
   for (const [macro] of macroFields) {
     const value = hundredths(percentages[macro]);
@@ -44,7 +43,7 @@ export function macroGrams(
 }
 
 /** Show each share of stated calories independently; never normalize legacy targets. */
-export function percentagesFromGoal(goal: NutritionGoalInput): MacroPercentages {
+export function percentagesFromGoal(goal: NutritionGoalInput): MacroValues {
   if (goal.calories <= 0) return { ...emptyPercentages };
   return {
     carbohydrates: energyShare(goal.carbohydrates, 4, goal.calories),

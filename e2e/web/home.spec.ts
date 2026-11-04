@@ -1,3 +1,4 @@
+import { selectExercise, minimizeWorkout } from './workout-controls';
 import { expect, test, type Page } from '@playwright/test';
 
 const api = process.env.KINETIX_API_URL ?? 'http://127.0.0.1:18016';
@@ -56,15 +57,18 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   await page.getByRole('tab', { name: 'Workout', exact: true }).click();
   await page.getByRole('button', { name: 'New routine', exact: true }).click();
   await page.getByLabel('Routine name', { exact: true }).fill('Unsaved across tabs');
-  await page.getByRole('tab', { name: 'Nutrition', exact: true }).click();
-  await page.getByRole('tab', { name: 'Workout', exact: true }).click();
+  await expect(page.getByRole('tablist', { name: 'Main navigation' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
+  await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
   await expect(page.getByLabel('Routine name', { exact: true })).toHaveValue('Unsaved across tabs');
+  await expect(page.getByRole('tablist', { name: 'Main navigation' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
   await page.getByRole('button', { name: 'Discard', exact: true }).click();
+  await expect(page.getByRole('tablist', { name: 'Main navigation' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
-  await page.getByRole('button', { name: 'Add Acceptance press', exact: true }).click();
+  await selectExercise(page, 'Acceptance press');
   await page.getByLabel('Exercise 1 set 1 kg', { exact: true }).fill('35');
   await page.getByLabel('Exercise 1 set 1 reps', { exact: true }).fill('9');
   const saved = page.waitForResponse(
@@ -73,9 +77,15 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   );
   await page.getByRole('button', { name: 'Save exercise 1 set 1', exact: true }).click();
   expect((await saved).status()).toBe(200);
-  await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
+  await minimizeWorkout(page);
   await page.getByRole('tab', { name: 'Nutrition', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+  await expect(page.getByTestId('ongoing-workout-card')).toHaveCSS(
+    'background-color',
+    'rgba(0, 0, 0, 0.67)',
+  );
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+  await page.screenshot({ path: '.codex/artifacts/previews/floating-session-panel.png' });
   await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeDisabled();
   const persistedDraft = await get('/session-drafts');
   expect(persistedDraft.exercises[0].sets[0].reps).toBe(9);
@@ -96,8 +106,9 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   const completed = await response.json();
   expect(completed.client_session_id).toBe(persistedDraft.client_session_id);
   expect(completed.exercises[0].sets[0].reps).toBe(9);
-  await page.getByRole('tab', { name: 'Workout', exact: true }).click();
-  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Training history', exact: true }).click();
   await page.getByRole('button', { name: `View workout ${completed.id}`, exact: true }).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Home', exact: true }).click();

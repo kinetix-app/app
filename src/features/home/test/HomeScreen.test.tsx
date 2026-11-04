@@ -149,19 +149,26 @@ test('plus starts the existing workout editor and a minimized draft survives nav
     expect(screen.getByLabelText('Start workout').props.accessibilityState.disabled).toBe(false),
   );
   fireEvent.press(screen.getByLabelText('Start workout'));
-  await screen.findByLabelText('Minimize workout');
-  fireEvent.press(screen.getByLabelText('Minimize workout'));
+  await waitFor(() =>
+    expect(screen.getByTestId('workout-pull-handle').props.accessibilityState.disabled).toBe(false),
+  );
+  fireEvent(screen.getByTestId('workout-pull-handle'), 'responderGrant', {
+    nativeEvent: { pageY: 10 },
+  });
+  fireEvent(screen.getByTestId('workout-pull-handle'), 'responderRelease', {
+    nativeEvent: { pageY: 100 },
+  });
   expect(screen.getByLabelText('Start workout').props.accessibilityState.disabled).toBe(true);
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   await screen.findByLabelText('Add food to Breakfast');
   expect(screen.getByLabelText('Resume workout')).toBeTruthy();
   fireEvent.press(screen.getByRole('tab', { name: 'Workout' }));
-  await screen.findByText('Routines');
+  await screen.findByText('Workouts');
   expect(
     screen.getByRole('button', { name: 'Start workout' }).props.accessibilityState.disabled,
   ).toBe(true);
   fireEvent.press(screen.getByLabelText('Resume workout'));
-  expect(screen.getByLabelText('Minimize workout')).toBeTruthy();
+  expect(screen.getByTestId('workout-pull-handle')).toBeTruthy();
   expect(trainingApi.draft).toHaveBeenCalledTimes(1);
 });
 
@@ -214,7 +221,7 @@ test('account switches reset navigation/forms and cancel all private feature que
   await screen.findByText('Alice');
   expect(signal?.aborted).toBe(true);
   expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
-  expect(screen.queryByText('Routines')).toBeNull();
+  expect(screen.queryByText('Workouts')).toBeNull();
 });
 
 test('a new authenticated response replaces cached completion for the same account', async () => {
@@ -280,7 +287,7 @@ test('completed onboarding keeps form checking available in a resumed workout', 
   expect(screen.getByText('Check your form')).toBeTruthy();
 });
 
-test('Profile owns account actions and prepared progress, while Workout history opens Profile', async () => {
+test('Profile owns account actions, progress and history; Workout omits duplicate history navigation', async () => {
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 20, offset: 0 });
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await screen.findByText('Alice');
@@ -297,12 +304,17 @@ test('Profile owns account actions and prepared progress, while Workout history 
   await screen.findByText('No completed workouts yet.');
   fireEvent.press(screen.getByLabelText('Back to profile'));
   fireEvent.press(screen.getByRole('tab', { name: 'Workout' }));
-  await screen.findByText('Routines');
+  await screen.findByText('Workouts');
   expect(screen.queryByText('Sign out')).toBeNull();
-  fireEvent.press(screen.getByText('History'));
+  expect(screen.queryByText('History')).toBeNull();
+  expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
+  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
+  fireEvent.press(screen.getByText('Training history'));
+  expect(await screen.findByText('No completed workouts yet.')).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Back to profile'));
-  fireEvent.press(screen.getByRole('button', { name: 'Back to workout' }));
-  expect(screen.getByRole('tab', { name: 'Workout' }).props.accessibilityState.selected).toBe(true);
+  fireEvent.press(screen.getByRole('button', { name: 'Back to home' }));
+  expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
 });
 
 test('profile form survives switching tabs and failed saves; saved account updates Home', async () => {
@@ -345,6 +357,23 @@ test('nutrition goal closes to its origin without losing Profile', async () => {
   expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
     true,
   );
+});
+
+test('Home avatar resets the Profile return origin after a Nutrition shortcut', async () => {
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('Alice');
+  fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Edit nutrition goal' }));
+  fireEvent.press(await screen.findByText('Back'));
+  expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  // Profile remains mounted after the shortcut closes; Home's avatar resumes it.
+  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
+  expect(screen.getByRole('button', { name: 'Back to home' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Back to nutrition' })).toBeNull();
+  expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
 });
 
 test('Profile sign-out waits for local cleanup, prevents duplicates and allows retry after failure', async () => {

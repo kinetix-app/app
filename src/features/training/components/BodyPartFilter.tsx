@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { Button, Failure, Loading, ui } from './ui';
+import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export function BodyPartFilter({
   selected,
@@ -42,16 +42,22 @@ export function BodyPartFilter({
             { width: '100%', maxWidth: 480, maxHeight: '85%', backgroundColor: p['surface-200'] },
           ]}
         >
-          <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            Body parts
-          </Text>
+          <View style={ui.row}>
+            <Text
+              accessibilityRole="header"
+              style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
+            >
+              Body parts
+            </Text>
+            <IconButton icon="x" label="Close body part filters" onPress={onClose} />
+          </View>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            Show exercises matching any selected body part.
+            Select one or more to filter exercises.
           </Text>
           <ScrollView
             style={{ flexShrink: 1 }}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ gap: spacing['space-2'] }}
+            contentContainerStyle={{ gap: spacing['space-1'] }}
           >
             {pending ? <Loading /> : null}
             {error ? <Failure error={error} retry={retry} /> : null}
@@ -68,22 +74,27 @@ export function BodyPartFilter({
                       checked ? previous.filter((value) => value !== part) : [...previous, part],
                     )
                   }
-                  style={[
+                  style={({ pressed }) => [
                     ui.row,
                     {
                       minHeight: sizes['control-height'],
                       padding: spacing['space-3'],
                       borderRadius: radii['radius-md'],
-                      backgroundColor: checked ? p['brand-soft'] : p['surface-300'],
+                      backgroundColor: checked ? p['brand-soft'] : 'transparent',
+                      opacity: pressed ? 0.55 : 1,
                     },
                   ]}
                 >
+                  <Text
+                    style={[textStyles.body, { color: checked ? p['brand-ink'] : p.ink, flex: 1 }]}
+                  >
+                    {part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()}
+                  </Text>
                   <Feather
                     name={checked ? 'check-square' : 'square'}
                     size={24}
                     color={checked ? p['brand-ink'] : p['ink-muted']}
                   />
-                  <Text style={[textStyles.label, { color: p.ink, flex: 1 }]}>{part}</Text>
                 </Pressable>
               );
             })}
@@ -91,7 +102,29 @@ export function BodyPartFilter({
               <Text style={{ color: p['ink-muted'] }}>No body parts available.</Text>
             ) : null}
           </ScrollView>
-          <Button title="Clear" onPress={() => setDraft([])} secondary />
+          <View style={[ui.row, { justifyContent: 'space-between' }]}>
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[textStyles['body-sm'], { color: p['ink-muted'], flex: 1 }]}
+            >
+              {draft.length ? `${draft.length} selected` : 'All body parts'}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear draft body part filters"
+              accessibilityState={{ disabled: draft.length === 0 }}
+              disabled={draft.length === 0}
+              onPress={() => setDraft([])}
+              style={({ pressed }) => ({
+                minHeight: sizes['tap-min'],
+                paddingHorizontal: spacing['space-2'],
+                justifyContent: 'center',
+                opacity: pressed || !draft.length ? 0.55 : 1,
+              })}
+            >
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Clear</Text>
+            </Pressable>
+          </View>
           <View style={ui.row}>
             <View style={{ flex: 1 }}>
               <Button title="Cancel" onPress={onClose} secondary />

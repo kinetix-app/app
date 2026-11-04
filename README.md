@@ -211,7 +211,7 @@ The full scope and research rationale live in management. Until verified cross-r
 
 After verified Basic or Clerk sign-in, the account opens its private routine workspace.
 Create a routine, choose catalogue exercises, add planned kg/repetition sets and save.
-Reopen it to edit its name, selection, order and default sets. Reorder exercise cards using their drag handles; click a name to edit its sets or a thumbnail for exercise details. Failed saves retain input;
+Reopen it to edit its name, selection, order and default sets. Reorder exercise cards by mouse drag or touch hold-and-drag; click a name to edit its sets or a thumbnail for exercise details. Failed saves retain input;
 Cancel asks before discarding a dirty form. Routine and workout editing share the exercise cards,
 inline expanded editor and numbered set fields; session ticks persist actual results separately.
 The backend must include the planned-set extension documented in [the routine contract](docs/routines.md).
@@ -231,7 +231,7 @@ development clients after installing locked dependencies.
 
 ## Workout recording and server drafts
 
-Start a blank workout or start a saved routine from its editor, record kg/lb and repetitions,
+Start a blank workout or start a saved routine with its card’s play button or Train action, record kg/lb and repetitions,
 minimize/resume, and save each result with its tick. Start creates a server draft; Finish
 atomically moves saved results into completed history. Start actions are disabled while a workout is ongoing. Newly added exercises use the latest saved
 configuration as placeholders. Drafts resume after sign-in, including

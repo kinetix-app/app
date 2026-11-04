@@ -40,14 +40,12 @@ export function ProfileScreen({
   const goal = objectiveOptions.find((item) => item.value === objective.data?.objective)?.label;
   const values = profileDefaults(account);
   const imperial = values.measurement_system === 'imperial';
-  const height =
-    account.profile.height_cm === null
-      ? null
-      : imperial
-        ? `${values.height_ft} ft ${values.height_in} in`
-        : `${values.height_cm} cm`;
-  const weight =
-    account.profile.weight_kg === null ? null : `${values.weight} ${imperial ? 'lb' : 'kg'}`;
+  const heightLabel = imperial
+    ? `${values.height_ft} ft ${values.height_in} in`
+    : `${values.height_cm} cm`;
+  const height = account.profile.height_cm === null ? null : heightLabel;
+  const weightUnit = imperial ? 'lb' : 'kg';
+  const weight = account.profile.weight_kg === null ? null : `${values.weight} ${weightUnit}`;
   const details = [
     account.profile.age === null ? null : `${account.profile.age} years`,
     height,

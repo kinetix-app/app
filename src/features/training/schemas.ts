@@ -50,6 +50,14 @@ export const slotSchema = z.object({
 export const routineSummarySchema = z.object({
   id: entityId,
   name: z.string(),
+  notes: z.string().nullable(),
+  exercise_count: z.number().int().nonnegative(),
+  last_performed_at: z.iso.datetime({ offset: true }).nullable(),
+  activity_type: z.literal('gym'),
+  image_url: z
+    .string()
+    .regex(/^\/api\/v1\/routines\/[1-9]\d*\/picture(?:\?v=[a-zA-Z0-9-]+)?$/)
+    .nullable(),
 });
 export const routineSchema = routineSummarySchema.extend({
   exercises: z.array(slotSchema),
@@ -84,6 +92,7 @@ export const plannedSetSchema = z.union([
   z.strictObject({ reps: z.number().int().min(1).max(2147483647), weight: weightInputSchema }),
 ]);
 export const routineInputSchema = z.object({
+  notes: z.string().trim().max(1000).nullable().optional(),
   name: z.string().trim().min(1, 'Enter a routine name.').max(150),
   exercises: z
     .array(

@@ -7,8 +7,10 @@ editor offers Set up later and saving returns to its origin: Profile for a Profi
 nutrition goal action opens the editor in Profile; closing it returns to Nutrition. See [onboarding](onboarding.md).
 
 The shared bottom bar uses the former nutrition bar's design and now has accessible,
-working controls. Workout opens routines, the shared routine/session editor and
-completed history through a shortcut into Profile. History details return to history, then to Profile. The central + starts a blank workout through the existing session
+working controls. Workout opens routines and the shared routine/session editor, with no
+duplicate History shortcut. Completed history is available from Profile, opened through
+the Home avatar. History details return to history, then to Profile; the Profile back
+arrow returns to Home. The central + starts a blank workout through the existing session
 controller; it is disabled during restoration, pending operations, storage failures
 or an existing workout. Nutrition retains diary, meal/food/recipe and goal operations. League is a disabled placeholder ("Coming soon") for the future FriendsLeague feature.
 Profile's compact grouped rows open profile/picture editing, objective and nutrition-goal editing, training history and a prepared Progress screen. Progress shows the current saved profile weight and clearly marks weight history, measurement recording and strength trends as unavailable; it does not generate historical data.

@@ -6,12 +6,12 @@ import { palette } from '@/theme/tokens';
 test('focus and mouse hover highlight the field and forward focus/blur callbacks', () => {
   const onFocus = jest.fn();
   const onBlur = jest.fn();
-  render(<TextField accessibilityLabel="Name" theme="light" onFocus={onFocus} onBlur={onBlur} />);
+  render(<TextField accessibilityLabel="Name" onFocus={onFocus} onBlur={onBlur} />);
   const input = screen.getByLabelText('Name');
   const container = screen.root.findAll(
     (node) => typeof node.type === 'string' && node.props.onPointerEnter,
   )[0];
-  const p = palette('light');
+  const p = palette();
   expect(container).toHaveStyle({ borderColor: p['line-strong'] });
   fireEvent(input, 'focus', { nativeEvent: {} });
   expect(container).toHaveStyle({ borderColor: p.focus });
@@ -29,20 +29,19 @@ test('focus and mouse hover highlight the field and forward focus/blur callbacks
   expect(container).toHaveStyle({ borderColor: p['line-strong'] });
 });
 test('invalid styling takes priority over focus; disabled fields do not highlight', () => {
-  const view = render(<TextField accessibilityLabel="Name" invalid theme="dark" />);
+  const view = render(<TextField accessibilityLabel="Name" invalid />);
   const input = screen.getByLabelText('Name');
   fireEvent(input, 'focus', { nativeEvent: {} });
   expect(
     screen.root.findAll((node) => typeof node.type === 'string' && node.props.onPointerEnter)[0],
   ).toHaveStyle({
-    borderColor: palette('dark').danger,
+    borderColor: palette().danger,
   });
   fireEvent(input, 'blur', { nativeEvent: {} });
   view.rerender(
     <TextField
       accessibilityLabel="Name"
       editable={false}
-      theme="dark"
       placeholderTextColor="red"
       selectionColor="blue"
       underlineColorAndroid="green"
@@ -58,7 +57,7 @@ test('invalid styling takes priority over focus; disabled fields do not highligh
   expect(
     screen.root.findAll((node) => typeof node.type === 'string' && node.props.onPointerEnter)[0],
   ).toHaveStyle({
-    borderColor: palette('dark')['line-strong'],
+    borderColor: palette()['line-strong'],
     opacity: 0.6,
   });
   expect(screen.getByLabelText('Name').props).toMatchObject({

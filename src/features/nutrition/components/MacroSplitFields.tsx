@@ -40,6 +40,16 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
   const budget = macroBudget(values, mode);
   const equivalents = convertMacroDraft(values, mode);
   const energy = hundredths(calories);
+  let budgetColor = budget?.overBudget ? p.warning : p['ink-muted'];
+  if (invalidAmounts) budgetColor = p.danger;
+  let budgetMessage = 'Enter calories and all three macros.';
+  if (budget?.overBudget) {
+    budgetMessage = `Out of budget · ${budget.difference.toFixed(2)} kcal over ${Number(calories.replace(',', '.')).toFixed(2)} kcal`;
+  } else if (budget) {
+    budgetMessage = `${Math.max(0, -budget.difference).toFixed(2)} kcal remaining`;
+  } else if (invalidAmounts) {
+    budgetMessage = 'Use nonnegative numbers with up to two decimals.';
+  }
   return (
     <>
       <View style={styles.sectionHeader}>
@@ -156,20 +166,7 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
               : '—'}
           </Text>
         </View>
-        <Text
-          style={[
-            textStyles['body-sm'],
-            { color: invalidAmounts ? p.danger : budget?.overBudget ? p.warning : p['ink-muted'] },
-          ]}
-        >
-          {budget?.overBudget
-            ? `Out of budget · ${budget.difference.toFixed(2)} kcal over ${Number(calories.replace(',', '.')).toFixed(2)} kcal`
-            : budget
-              ? `${Math.max(0, -budget.difference).toFixed(2)} kcal remaining`
-              : invalidAmounts
-                ? 'Use nonnegative numbers with up to two decimals.'
-                : 'Enter calories and all three macros.'}
-        </Text>
+        <Text style={[textStyles['body-sm'], { color: budgetColor }]}>{budgetMessage}</Text>
       </View>
     </>
   );

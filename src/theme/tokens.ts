@@ -1,14 +1,8 @@
-import { useColorScheme, type TextStyle } from 'react-native';
+import type { TextStyle } from 'react-native';
 import source from './design-tokens.json';
 
-type Theme = 'dark' | 'light';
-export function palette(theme: Theme): Record<string, string> {
-  const values = Object.fromEntries(
-    source.color.tokens.map((token) => [
-      token.name,
-      typeof token.value === 'string' ? token.value : token.value[theme],
-    ]),
-  );
+export function palette(): Record<string, string> {
+  const values = Object.fromEntries(source.color.tokens.map((token) => [token.name, token.value]));
   values.focus = values.brand;
   return values;
 }
@@ -38,8 +32,8 @@ export const textStyles: Record<string, TextStyle> = Object.fromEntries(
     ];
   }),
 );
-export const shadows = (theme: Theme) =>
-  Object.fromEntries(source.shadow.tokens.map((token) => [token.name, token.value[theme]]));
+export const shadows = () =>
+  Object.fromEntries(source.shadow.tokens.map((token) => [token.name, token.value]));
 export function usePalette() {
-  return palette(useColorScheme() === 'light' ? 'light' : 'dark');
+  return palette();
 }

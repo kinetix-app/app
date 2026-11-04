@@ -1,6 +1,6 @@
 // Compatibility names for existing sign-in components, derived from the design system.
 import { palette } from './tokens';
-const dark = palette('dark');
+const dark = palette();
 export const colors = {
   background: dark['surface-100'],
   surface: dark['surface-200'],

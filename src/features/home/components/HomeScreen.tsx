@@ -64,6 +64,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   const p = usePalette();
   const session = useSession();
   const [tab, setTab] = useState<HomeTab>(initialTab);
+  const [routineEditing, setRoutineEditing] = useState(false);
   const [visited, setVisited] = useState<HomeTab[]>([initialTab]);
   const [profileOrigin, setProfileOrigin] = useState<ProfileOrigin>(
     initialTab === 'profile' ? 'home' : initialTab,
@@ -190,13 +191,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
       );
     if (item === 'profile') return renderProfilePanel();
     if (item === 'workout')
-      return (
-        <TrainingWorkspace
-          accountId={accountId}
-          showStartAction={false}
-          onHistory={() => openProfile('history')}
-        />
-      );
+      return <TrainingWorkspace accountId={accountId} onEditingChange={setRoutineEditing} />;
     return (
       <NutritionDiaryScreen
         accountId={accountId}
@@ -209,7 +204,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   }
   return (
     <View style={{ flex: 1, backgroundColor: p['surface-100'] }}>
-      <SessionHost>
+      <SessionHost hideMinimized={tab === 'workout' && routineEditing}>
         {visited.map((item) => (
           <View
             key={item}
@@ -222,12 +217,14 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
           </View>
         ))}
       </SessionHost>
-      <BottomBar
-        tab={tab}
-        onSelect={select}
-        canStart={session.ready && !session.pending && !session.storageError && !session.draft}
-        onStart={() => session.start()}
-      />
+      {tab !== 'workout' || !routineEditing ? (
+        <BottomBar
+          tab={tab}
+          onSelect={select}
+          canStart={session.ready && !session.pending && !session.storageError && !session.draft}
+          onStart={() => session.start()}
+        />
+      ) : null}
     </View>
   );
 }
