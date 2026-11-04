@@ -127,3 +127,15 @@ changed files and 51 focused Home/training tests. Real browser acceptance covere
 hidden/restored routine navigation, transparent exercise-action positioning,
 minimized-panel translucency, resume/reload and workout persistence. Native device
 layout and keyboard validation remain unverified.
+
+The session modal keeps an opaque theme-colored inner surface mounted throughout
+its slide-out animation, even after a successful Finish clears the draft. The
+modal window itself is transparent so neither web nor native defaults can expose
+a white background during dismissal. Browser regression samples every animation
+frame after session content disappears, covering the original white-flash failure.
+
+The dismissal regression reproduced white frames before the fix and passed after
+it. Verification passed TypeScript, ESLint, changed-file formatting, 72 focused
+Home/session tests and both real `session-results.spec.ts` browser journeys against
+a run-owned PostgreSQL test database. Physical Android/iOS dismissal remains
+unverified.

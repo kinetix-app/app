@@ -36,11 +36,17 @@ export function SessionHost({
         <MinimizedWorkoutCard onDiscard={() => setDiscard(true)} />
       ) : null}
       <Modal
+        transparent
         visible={Boolean(session.draft && !session.draft.minimized)}
         animationType="slide"
         onRequestClose={() => session.change((value) => ({ ...value, minimized: true }))}
       >
-        {session.draft ? <OngoingSession /> : null}
+        <View
+          testID="workout-modal-surface"
+          style={[ui.screen, { backgroundColor: p['surface-100'] }]}
+        >
+          {session.draft ? <OngoingSession /> : null}
+        </View>
       </Modal>
       <DiscardConfirmation
         visible={discard}

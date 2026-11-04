@@ -214,3 +214,45 @@ test('partial results, independent routine origin, history placeholders and atom
     if (draftId) await request(`/session-drafts/${draftId}`, 'DELETE');
   }
 });
+
+test('finishing a workout keeps a themed surface throughout modal dismissal', async ({ page }) => {
+  await signIn(page);
+  await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeEnabled();
+  await page.evaluate(() => {
+    const modal = document
+      .querySelector('[data-testid="workout-pull-handle"]')
+      ?.closest('[aria-modal="true"]');
+    if (!(modal instanceof HTMLElement)) throw new Error('Workout modal is missing');
+    const workoutModal = modal;
+    const state = { colors: [] as string[], done: false };
+    (window as typeof window & { workoutDismissal?: typeof state }).workoutDismissal = state;
+    function sample() {
+      if (!workoutModal.isConnected) {
+        state.done = true;
+        return;
+      }
+      if (!workoutModal.querySelector('[data-testid="workout-pull-handle"]')) {
+        const surface =
+          workoutModal.querySelector('[data-testid="workout-modal-surface"]') ?? workoutModal;
+        state.colors.push(getComputedStyle(surface).backgroundColor);
+      }
+      requestAnimationFrame(sample);
+    }
+    sample();
+  });
+  await page.getByRole('button', { name: 'Finish', exact: true }).click();
+  await page.waitForFunction(
+    () =>
+      (window as typeof window & { workoutDismissal?: { done: boolean } }).workoutDismissal?.done,
+  );
+  const colors = await page.evaluate(
+    () =>
+      (window as typeof window & { workoutDismissal?: { colors: string[] } }).workoutDismissal
+        ?.colors ?? [],
+  );
+  expect(colors.length).toBeGreaterThan(0);
+  expect(colors).not.toContain('rgb(255, 255, 255)');
+  expect(colors).not.toContain('rgba(0, 0, 0, 0)');
+  await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeEnabled();
+});
