@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,11 +14,13 @@ const mealTypeFor = (meal: string) =>
     'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export function AddFoodScreen({
+  accountId,
   meal,
   date,
   onClose,
   onSaved,
 }: Readonly<{
+  accountId: number;
   meal: string;
   date: string;
   onClose: () => void;
@@ -33,17 +35,30 @@ export function AddFoodScreen({
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [selected, setSelected] = React.useState<Food | null>(null);
   const [foodToDelete, setFoodToDelete] = React.useState<Food | null>(null);
-  const [amount, setAmount] = React.useState('200');
+  const [editingFood, setEditingFood] = React.useState<Food | null>(null);
+  const [editingRecipe, setEditingRecipe] = React.useState<Recipe | null>(null);
+  const [amount, setAmount] = React.useState('');
+  const [previewAmount, setPreviewAmount] = React.useState('');
+  const toggleFoodSelection = (food: Food) => {
+    setSelected((current) => (current?.id === food.id ? null : food));
+    setAmount('');
+    setPreviewAmount('');
+  };
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setPreviewAmount(amount), 500);
+    return () => clearTimeout(timer);
+  }, [amount]);
   const results = useQuery({
     queryKey: ['nutrition', 'foods', debouncedSearch],
     queryFn: ({ signal }) =>
       debouncedSearch
         ? nutritionApi.searchFoods(debouncedSearch, signal)
         : nutritionApi.foods(signal),
+    placeholderData: keepPreviousData,
   });
   const save = useMutation({
     mutationFn: () => {
@@ -106,13 +121,24 @@ export function AddFoodScreen({
           ))}
         </View>
         {tab === 'Food' && showFoodEditor ? (
-          <FoodEditor onCreated={() => setShowFoodEditor(false)} />
+          <FoodEditor
+            key={editingFood?.id ?? 'new-food'}
+            food={editingFood}
+            onSaved={() => {
+              setShowFoodEditor(false);
+              setEditingFood(null);
+              setSelected(null);
+            }}
+          />
         ) : null}
         {tab === 'Food' && !showFoodEditor ? (
           <>
             <Pressable
               accessibilityRole="button"
-              onPress={() => setShowFoodEditor(true)}
+              onPress={() => {
+                setEditingFood(null);
+                setShowFoodEditor(true);
+              }}
               style={[styles.newRecipe, { borderColor: p['brand-ink'] }]}
             >
               <Feather name="plus" size={20} color={p['brand-ink']} />
@@ -128,18 +154,35 @@ export function AddFoodScreen({
             />
           </>
         ) : null}
-        {tab === 'Recipe' &&
-          (showRecipeEditor ? (
-            <RecipeEditor onCreated={() => setShowRecipeEditor(false)} />
-          ) : (
+        {tab === 'Recipe' && showRecipeEditor ? (
+          <RecipeEditor
+            key={editingRecipe?.id ?? 'new-recipe'}
+            recipe={editingRecipe}
+            onSaved={() => {
+              setShowRecipeEditor(false);
+              setEditingRecipe(null);
+            }}
+          />
+        ) : null}
+        {!showRecipeEditor ? (
+          <View style={tab === 'Recipe' ? undefined : styles.hidden}>
             <RecipePicker
               meal={meal}
               date={date}
-              onNewRecipe={() => setShowRecipeEditor(true)}
+              onNewRecipe={() => {
+                setEditingRecipe(null);
+                setShowRecipeEditor(true);
+              }}
+              onEdit={(recipe) => {
+                setEditingRecipe(recipe);
+                setShowRecipeEditor(true);
+              }}
               onSaved={onSaved}
               onClose={onClose}
+              accountId={accountId}
             />
-          ))}
+          </View>
+        ) : null}
         {tab === 'Food' && !showFoodEditor ? (
           <FoodContent
             meal={meal}
@@ -147,7 +190,12 @@ export function AddFoodScreen({
             isPending={results.isPending}
             search={debouncedSearch}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={toggleFoodSelection}
+            accountId={accountId}
+            onEdit={(food) => {
+              setEditingFood(food);
+              setShowFoodEditor(true);
+            }}
             foodToDelete={foodToDelete}
             onRequestDelete={(food) => {
               removeFood.reset();
@@ -160,6 +208,7 @@ export function AddFoodScreen({
               if (foodToDelete) removeFood.mutate(foodToDelete.id);
             }}
             amount={amount}
+            previewAmount={previewAmount}
             onAmountChange={setAmount}
             savePending={save.isPending}
             onSave={() => save.mutate()}
@@ -177,6 +226,8 @@ function FoodContent({
   search,
   selected,
   onSelect,
+  accountId,
+  onEdit,
   foodToDelete,
   onRequestDelete,
   onCancelDelete,
@@ -184,6 +235,7 @@ function FoodContent({
   removeFoodPending,
   onConfirmDelete,
   amount,
+  previewAmount,
   onAmountChange,
   savePending,
   onSave,
@@ -194,6 +246,8 @@ function FoodContent({
   search: string;
   selected: Food | null;
   onSelect: (food: Food) => void;
+  accountId: number;
+  onEdit: (food: Food) => void;
   foodToDelete: Food | null;
   onRequestDelete: (food: Food) => void;
   onCancelDelete: () => void;
@@ -201,6 +255,7 @@ function FoodContent({
   removeFoodPending: boolean;
   onConfirmDelete: () => void;
   amount: string;
+  previewAmount: string;
   onAmountChange: (amount: string) => void;
   savePending: boolean;
   onSave: () => void;
@@ -213,6 +268,8 @@ function FoodContent({
         search={search}
         selected={selected}
         onSelect={onSelect}
+        accountId={accountId}
+        onEdit={onEdit}
         onRequestDelete={onRequestDelete}
       />
       <DeleteFoodConfirmation
@@ -222,15 +279,19 @@ function FoodContent({
         onCancel={onCancelDelete}
         onConfirm={onConfirmDelete}
       />
-      {selected ? <SelectedFoodPreview food={selected} /> : null}
-      <FoodAmount
-        meal={meal}
-        selected={selected}
-        amount={amount}
-        onAmountChange={onAmountChange}
-        savePending={savePending}
-        onSave={onSave}
-      />
+      {selected ? (
+        <>
+          <SelectedFoodPreview food={selected} amount={previewAmount} />
+          <FoodAmount
+            meal={meal}
+            selected={selected}
+            amount={amount}
+            onAmountChange={onAmountChange}
+            savePending={savePending}
+            onSave={onSave}
+          />
+        </>
+      ) : null}
     </>
   );
 }
@@ -241,6 +302,8 @@ function FoodResults({
   search,
   selected,
   onSelect,
+  accountId,
+  onEdit,
   onRequestDelete,
 }: Readonly<{
   foods: Food[];
@@ -248,14 +311,17 @@ function FoodResults({
   search: string;
   selected: Food | null;
   onSelect: (food: Food) => void;
+  accountId: number;
+  onEdit: (food: Food) => void;
   onRequestDelete: (food: Food) => void;
 }>) {
   const p = usePalette();
+  const selectedIndex = selected ? foods.findIndex((food) => food.id === selected.id) : -1;
+  const visibleFoods = selectedIndex >= 0 ? foods.slice(0, selectedIndex + 1) : foods;
   return (
     <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-      {foods.map((food, index) => (
+      {visibleFoods.map((food) => (
         <React.Fragment key={food.name}>
-          {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
           <View style={styles.recipeRow}>
             <Pressable
               accessibilityRole="button"
@@ -278,18 +344,33 @@ function FoodResults({
               </View>
               <View style={styles.flex}>
                 <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
-                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Per 100 g</Text>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                  Per 100 g · {food.calories} kcal
+                </Text>
               </View>
-              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>{food.calories} kcal</Text>
             </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Delete ${food.name}`}
-              onPress={() => onRequestDelete(food)}
-              style={styles.deleteRecipe}
-            >
-              <Feather name="trash-2" size={20} color={p.danger} />
-            </Pressable>
+            {food.user_id === accountId ? (
+              <View style={styles.itemActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${food.name}`}
+                  hitSlop={spacing['space-1']}
+                  onPress={() => onEdit(food)}
+                  style={styles.editItem}
+                >
+                  <Feather name="edit-2" size={19} color={p['brand-ink']} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${food.name}`}
+                  onPress={() => onRequestDelete(food)}
+                  hitSlop={spacing['space-1']}
+                  style={styles.deleteRecipe}
+                >
+                  <Feather name="trash-2" size={20} color={p.danger} />
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         </React.Fragment>
       ))}
@@ -372,7 +453,7 @@ function FoodAmount({
   const p = usePalette();
   const total =
     selected && Number(amount) ? ((selected.calories * Number(amount)) / 100).toFixed(0) : '—';
-  const disabled = !selected || savePending;
+  const disabled = !selected || Number(amount) <= 0 || savePending;
   return (
     <>
       <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
@@ -380,7 +461,7 @@ function FoodAmount({
         accessibilityLabel="Food amount"
         keyboardType="decimal-pad"
         value={amount}
-        onChangeText={onAmountChange}
+        onChangeText={(value) => onAmountChange(numericAmount(value))}
         trailing={<Text style={[textStyles.label, { color: p['ink-muted'] }]}>g</Text>}
       />
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Total: {total} kcal</Text>
@@ -399,12 +480,19 @@ function FoodAmount({
   );
 }
 
-function SelectedFoodPreview({ food }: Readonly<{ food: Food }>) {
+function numericAmount(value: string) {
+  const [integer, ...fraction] = value.replace(/[^0-9.]/g, '').split('.');
+  return fraction.length ? `${integer}.${fraction.join('')}` : integer;
+}
+
+function SelectedFoodPreview({ food, amount }: Readonly<{ food: Food; amount: string }>) {
   const p = usePalette();
+  const grams = Number(amount) > 0 ? Number(amount) : 100;
+  const multiplier = grams / 100;
   const macros = [
-    [`${food.protein} g`, 'Protein'],
-    [`${food.carbohydrates} g`, 'Carbs'],
-    [`${food.fats} g`, 'Fat'],
+    [`${formatGrams(food.protein * multiplier)} g`, 'Protein'],
+    [`${formatGrams(food.carbohydrates * multiplier)} g`, 'Carbs'],
+    [`${formatGrams(food.fats * multiplier)} g`, 'Fat'],
   ];
   return (
     <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
@@ -417,21 +505,29 @@ function SelectedFoodPreview({ food }: Readonly<{ food: Food }>) {
           </View>
         ))}
       </View>
-      <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per 100 g</Text>
+      <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>Values per {grams} g</Text>
     </View>
   );
 }
 
+function formatGrams(value: number) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value);
+}
+
 function RecipePicker({
+  accountId,
   meal,
   date,
   onNewRecipe,
+  onEdit,
   onSaved,
   onClose,
 }: Readonly<{
+  accountId: number;
   meal: string;
   date: string;
   onNewRecipe: () => void;
+  onEdit: (recipe: Recipe) => void;
   onSaved: () => void;
   onClose: () => void;
 }>) {
@@ -439,10 +535,20 @@ function RecipePicker({
   const queryClient = useQueryClient();
   const [selected, setSelected] = React.useState<Recipe | null>(null);
   const [recipeToDelete, setRecipeToDelete] = React.useState<Recipe | null>(null);
-  const [servings, setServings] = React.useState('1');
+  const [servings, setServings] = React.useState('');
+  const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
   const recipes = useQuery({
-    queryKey: ['nutrition', 'recipes'],
-    queryFn: ({ signal }) => nutritionApi.recipes(signal),
+    queryKey: ['nutrition', 'recipes', debouncedSearch],
+    queryFn: ({ signal }) =>
+      debouncedSearch
+        ? nutritionApi.searchRecipes(debouncedSearch, signal)
+        : nutritionApi.recipes(signal),
+    placeholderData: keepPreviousData,
   });
   const remove = useMutation({
     mutationFn: (recipeId: number) => nutritionApi.deleteRecipe(recipeId),
@@ -468,6 +574,10 @@ function RecipePicker({
     },
   });
   const validServings = Number(servings) > 0;
+  const toggleRecipeSelection = (recipe: Recipe) => {
+    setSelected((current) => (current?.id === recipe.id ? null : recipe));
+    setServings('');
+  };
 
   return (
     <View style={styles.recipeForm}>
@@ -479,16 +589,23 @@ function RecipePicker({
         <Feather name="plus" size={20} color={p['brand-ink']} />
         <Text style={[textStyles.label, { color: p['brand-ink'] }]}>New recipe</Text>
       </Pressable>
+      <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
+      <TextField
+        accessibilityLabel="Search recipe"
+        leading={<Feather name="search" size={20} color={p['ink-muted']} />}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Chicken rice, pasta…"
+      />
       <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-        {recipes.data?.map((recipe, index) => (
+        {recipes.data?.map((recipe) => (
           <React.Fragment key={recipe.id}>
-            {index > 0 ? <View style={[styles.divider, { backgroundColor: p.line }]} /> : null}
             <View style={styles.recipeRow}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: selected?.id === recipe.id }}
                 accessibilityLabel={`Select ${recipe.name}`}
-                onPress={() => setSelected(recipe)}
+                onPress={() => toggleRecipeSelection(recipe)}
                 style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
               >
                 <View
@@ -506,31 +623,44 @@ function RecipePicker({
                 <View style={styles.flex}>
                   <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    Per serving
+                    Per serving · {recipe.calories.toFixed(0)} kcal
                   </Text>
                 </View>
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                  {recipe.calories.toFixed(0)} kcal
-                </Text>
               </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${recipe.name}`}
-                accessibilityState={{ disabled: remove.isPending }}
-                disabled={remove.isPending}
-                onPress={() => {
-                  remove.reset();
-                  setRecipeToDelete(recipe);
-                }}
-                hitSlop={spacing['space-2']}
-                style={styles.deleteRecipe}
-              >
-                <Feather name="trash-2" size={20} color={p.danger} />
-              </Pressable>
+              {recipe.user_id === accountId ? (
+                <View style={styles.itemActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${recipe.name}`}
+                    hitSlop={spacing['space-1']}
+                    onPress={() => onEdit(recipe)}
+                    style={styles.editItem}
+                  >
+                    <Feather name="edit-2" size={19} color={p['brand-ink']} />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${recipe.name}`}
+                    accessibilityState={{ disabled: remove.isPending }}
+                    disabled={remove.isPending}
+                    onPress={() => {
+                      remove.reset();
+                      setRecipeToDelete(recipe);
+                    }}
+                    hitSlop={spacing['space-2']}
+                    style={styles.deleteRecipe}
+                  >
+                    <Feather name="trash-2" size={20} color={p.danger} />
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           </React.Fragment>
         ))}
-        {!recipes.isPending && !recipes.data?.length ? (
+        {debouncedSearch && !recipes.isPending && !recipes.data?.length ? (
+          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes found.</Text>
+        ) : null}
+        {!debouncedSearch && !recipes.isPending && !recipes.data?.length ? (
           <View style={styles.emptyRecipes}>
             <Feather name="book-open" size={22} color={p['ink-muted']} />
             <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
@@ -597,58 +727,64 @@ function RecipePicker({
           </View>
         </View>
       </Modal>
-      <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
-      <TextField
-        accessibilityLabel="Recipe servings to add"
-        keyboardType="decimal-pad"
-        value={servings}
-        onChangeText={setServings}
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !selected || !validServings || save.isPending }}
-        disabled={!selected || !validServings || save.isPending}
-        onPress={() => save.mutate()}
-        style={[
-          styles.add,
-          {
-            backgroundColor: p.brand,
-            opacity: !selected || !validServings || save.isPending ? 0.55 : 1,
-          },
-        ]}
-      >
-        <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Adding…' : `Add to ${meal}`}
-        </Text>
-      </Pressable>
+      {selected ? (
+        <>
+          <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
+          <TextField
+            accessibilityLabel="Recipe servings to add"
+            keyboardType="decimal-pad"
+            value={servings}
+            onChangeText={setServings}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !validServings || save.isPending }}
+            disabled={!validServings || save.isPending}
+            onPress={() => save.mutate()}
+            style={[
+              styles.add,
+              {
+                backgroundColor: p.brand,
+                opacity: !validServings || save.isPending ? 0.55 : 1,
+              },
+            ]}
+          >
+            <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+              {save.isPending ? 'Adding…' : `Add to ${meal}`}
+            </Text>
+          </Pressable>
+        </>
+      ) : null}
     </View>
   );
 }
 
-function FoodEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
+function FoodEditor({ food, onSaved }: Readonly<{ food: Food | null; onSaved: () => void }>) {
   const p = usePalette();
   const queryClient = useQueryClient();
-  const [name, setName] = React.useState('');
+  const [name, setName] = React.useState(food?.name ?? '');
   const [values, setValues] = React.useState({
-    calories: '',
-    protein: '',
-    carbohydrates: '',
-    fats: '',
+    calories: food?.calories.toString() ?? '',
+    protein: food?.protein.toString() ?? '',
+    carbohydrates: food?.carbohydrates.toString() ?? '',
+    fats: food?.fats.toString() ?? '',
   });
   const save = useMutation({
-    mutationFn: () =>
-      nutritionApi.createFood({
+    mutationFn: () => {
+      const input = {
         name: name.trim(),
-        brand: null,
-        barcode: null,
+        brand: food?.brand ?? null,
+        barcode: food?.barcode ?? null,
         calories: Number(values.calories),
         protein: Number(values.protein),
         carbohydrates: Number(values.carbohydrates),
         fats: Number(values.fats),
-      }),
+      };
+      return food ? nutritionApi.updateFood(food.id, input) : nutritionApi.createFood(input);
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods'] });
-      onCreated();
+      onSaved();
     },
   });
   const valid = Boolean(name.trim()) && Object.values(values).every((value) => Number(value) >= 0);
@@ -659,7 +795,9 @@ function FoodEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
 
   return (
     <View style={styles.recipeForm}>
-      <Text style={[textStyles['title-md'], { color: p.ink }]}>New food</Text>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>
+        {food ? 'Edit food' : 'New food'}
+      </Text>
       <Text style={[textStyles.label, { color: p.ink }]}>Name</Text>
       <TextField
         accessibilityLabel="Food name"
@@ -676,7 +814,18 @@ function FoodEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
             accessibilityLabel={field}
             keyboardType="decimal-pad"
             value={values[field]}
-            onChangeText={(value) => setValues((current) => ({ ...current, [field]: value }))}
+            onChangeText={(value) =>
+              setValues((current) => {
+                const next = { ...current, [field]: value };
+                const macrosComplete = (['protein', 'carbohydrates', 'fats'] as const).every(
+                  (macro) => next[macro].trim() !== '' && Number.isFinite(Number(next[macro])),
+                );
+                if (field === 'calories' || !macrosComplete) return next;
+                const estimate =
+                  Number(next.protein) * 4 + Number(next.carbohydrates) * 4 + Number(next.fats) * 9;
+                return { ...next, calories: estimate.toFixed(0) };
+              })
+            }
             trailing={
               <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                 {field === 'calories' ? 'kcal' : 'g'}
@@ -688,6 +837,9 @@ function FoodEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
         Macro estimate: {macroCalories.toFixed(0)} kcal per 100 g
       </Text>
+      {save.isError ? (
+        <Text style={[textStyles['body-sm'], { color: p.danger }]}>Could not save food.</Text>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         disabled={!valid || save.isPending}
@@ -698,38 +850,52 @@ function FoodEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Saving…' : 'Save food'}
+          {save.isPending ? 'Saving…' : food ? 'Save changes' : 'Save food'}
         </Text>
       </Pressable>
     </View>
   );
 }
 
-function RecipeEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
+function RecipeEditor({
+  recipe,
+  onSaved,
+}: Readonly<{ recipe: Recipe | null; onSaved: () => void }>) {
   const p = usePalette();
   const queryClient = useQueryClient();
-  const [name, setName] = React.useState('');
-  const [servings, setServings] = React.useState('1');
+  const [name, setName] = React.useState(recipe?.name ?? '');
+  const [servings, setServings] = React.useState(recipe?.servings.toString() ?? '1');
   const [search, setSearch] = React.useState('');
-  const [ingredients, setIngredients] = React.useState<{ food: Food; grams: string }[]>([]);
+  const [ingredients, setIngredients] = React.useState<
+    { food: Pick<Food, 'id' | 'name'>; grams: string }[]
+  >(
+    recipe?.ingredients.map((ingredient) => ({
+      food: { id: ingredient.food_id, name: ingredient.name },
+      grams: ingredient.quantity_grams.toString(),
+    })) ?? [],
+  );
   const results = useQuery({
     queryKey: ['nutrition', 'foods', 'recipe', search.trim()],
     enabled: Boolean(search.trim()),
     queryFn: ({ signal }) => nutritionApi.searchFoods(search.trim(), signal),
   });
   const save = useMutation({
-    mutationFn: () =>
-      nutritionApi.createRecipe({
+    mutationFn: () => {
+      const input = {
         name: name.trim(),
         servings: Number(servings),
         ingredients: ingredients.map(({ food, grams }) => ({
           food_id: food.id,
           quantity_grams: Number(grams),
         })),
-      }),
+      };
+      return recipe
+        ? nutritionApi.updateRecipe(recipe.id, input)
+        : nutritionApi.createRecipe(input);
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['nutrition', 'recipes'] });
-      onCreated();
+      onSaved();
     },
   });
   const valid =
@@ -741,7 +907,9 @@ function RecipeEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
 
   return (
     <View style={styles.recipeForm}>
-      <Text style={[textStyles['title-md'], { color: p.ink }]}>Create recipe</Text>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>
+        {recipe ? 'Edit recipe' : 'Create recipe'}
+      </Text>
       <Text style={[textStyles.label, { color: p.ink }]}>Recipe name</Text>
       <TextField
         accessibilityLabel="Recipe name"
@@ -811,6 +979,9 @@ function RecipeEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
           </Pressable>
         </View>
       ))}
+      {save.isError ? (
+        <Text style={[textStyles['body-sm'], { color: p.danger }]}>Could not save recipe.</Text>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: !valid || save.isPending }}
@@ -822,7 +993,7 @@ function RecipeEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Creating…' : 'Create recipe'}
+          {save.isPending ? 'Saving…' : recipe ? 'Save changes' : 'Create recipe'}
         </Text>
       </Pressable>
     </View>
@@ -830,6 +1001,7 @@ function RecipeEditor({ onCreated }: Readonly<{ onCreated: () => void }>) {
 }
 
 const styles = StyleSheet.create({
+  hidden: { display: 'none' },
   screen: { flex: 1 },
   content: {
     padding: spacing['space-4'],
@@ -877,16 +1049,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['space-3'],
     gap: spacing['space-2'],
   },
-  recipeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  recipeRow: { flexDirection: 'row', alignItems: 'center' },
   recipeSelect: {
     flex: 1,
+    minWidth: 0,
     minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing['space-3'],
   },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacing['space-3'],
+  },
   deleteRecipe: {
-    width: sizes['tap-min'],
+    width: 36,
+    height: sizes['tap-min'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editItem: {
+    width: 36,
     height: sizes['tap-min'],
     alignItems: 'center',
     justifyContent: 'center',
@@ -931,7 +1115,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing['space-2'],
   },
-  divider: { height: 1 },
   foodRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
   foodIcon: {
     width: 44,

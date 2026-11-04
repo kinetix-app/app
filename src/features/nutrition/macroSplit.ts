@@ -29,6 +29,71 @@ export function percentageTotal(percentages: MacroPercentages): number | undefin
   return total / 100;
 }
 
+/** Keep a percentage split at exactly 100% by adjusting one companion macro. */
+export function rebalancePercentages(
+  values: MacroPercentages,
+  changed: Macro,
+  nextValue: string,
+): MacroPercentages | undefined {
+  const next = hundredths(nextValue);
+  if (next === undefined) return undefined;
+  const macros = macroFields.map(([macro]) => macro);
+  const [first, second] = macros.filter((macro) => macro !== changed);
+  const changedValue = Math.min(Math.round(next / 100) * 100, 10000);
+  const remaining = 10000 - changedValue;
+  const firstValue = Math.round((hundredths(values[first]) ?? 0) / 100) * 100;
+  const secondValue = Math.round((hundredths(values[second]) ?? 0) / 100) * 100;
+  const previousTotal = firstValue + secondValue;
+  const nextFirst =
+    previousTotal > 0
+      ? Math.round((remaining * firstValue) / previousTotal / 100) * 100
+      : Math.floor(remaining / 200) * 100;
+  const nextSecond = remaining - nextFirst;
+  return {
+    ...values,
+    [changed]: String(changedValue / 100),
+    [first]: String(nextFirst / 100),
+    [second]: String(nextSecond / 100),
+  };
+}
+
+/** Keep gram inputs within the calorie target by adjusting one companion macro. */
+export function rebalanceGrams(
+  values: MacroGoalValues,
+  changed: Macro,
+  nextValue: string,
+): MacroValues | undefined {
+  const calories = hundredths(values.calories);
+  const next = hundredths(nextValue);
+  if (!calories || next === undefined) return undefined;
+  const macros = macroFields.map(([macro]) => macro);
+  const [first, second] = macros.filter((macro) => macro !== changed);
+  const factorFor = (macro: Macro) => macroFields.find(([field]) => field === macro)![2];
+  const changedFactor = factorFor(changed);
+  const changedAmount = Math.min(next, Math.floor(calories / changedFactor));
+  const remainingEnergy = calories - changedAmount * changedFactor;
+  const firstEnergy = (hundredths(values[first]) ?? 0) * factorFor(first);
+  const secondEnergy = (hundredths(values[second]) ?? 0) * factorFor(second);
+  const previousEnergy = firstEnergy + secondEnergy;
+  const nextFirstEnergy =
+    previousEnergy > 0
+      ? Math.round((remainingEnergy * firstEnergy) / previousEnergy)
+      : Math.floor(remainingEnergy / 2);
+  const firstAmount = Math.min(
+    Math.floor(nextFirstEnergy / factorFor(first)),
+    Math.floor(remainingEnergy / factorFor(first)),
+  );
+  const secondAmount = Math.floor(
+    Math.max(0, remainingEnergy - firstAmount * factorFor(first)) / factorFor(second),
+  );
+  return {
+    ...values,
+    [changed]: (changedAmount / 100).toFixed(2),
+    [first]: (firstAmount / 100).toFixed(2),
+    [second]: (secondAmount / 100).toFixed(2),
+  };
+}
+
 /** Preview a single share even while the other percentages are incomplete. */
 export function macroGrams(
   calories: string,
@@ -43,18 +108,19 @@ export function macroGrams(
   return Math.floor((energy * share + divisor / 2) / divisor) / 100;
 }
 
-/** Show each share of stated calories independently; never normalize legacy targets. */
+/** Convert stored grams into an integer split that always totals 100%. */
 export function percentagesFromGoal(goal: NutritionGoalInput): MacroPercentages {
   if (goal.calories <= 0) return { ...emptyPercentages };
+  const carbohydrates = Math.min(Math.round((goal.carbohydrates * 4 * 100) / goal.calories), 100);
+  const protein = Math.min(
+    Math.round((goal.protein * 4 * 100) / goal.calories),
+    100 - carbohydrates,
+  );
   return {
-    carbohydrates: energyShare(goal.carbohydrates, 4, goal.calories),
-    protein: energyShare(goal.protein, 4, goal.calories),
-    fats: energyShare(goal.fats, 9, goal.calories),
+    carbohydrates: String(carbohydrates),
+    protein: String(protein),
+    fats: String(100 - carbohydrates - protein),
   };
-}
-
-function energyShare(grams: number, factor: number, calories: number): string {
-  return (Math.round((grams * factor * 10000) / calories) / 100).toFixed(2);
 }
 
 export type MacroMode = 'percentages' | 'grams';
@@ -122,7 +188,11 @@ export function convertMacroDraft(values: MacroGoalValues, mode: MacroMode): Mac
       mode === 'percentages'
         ? macroGrams(values.calories, values[macro], factor)
         : Math.round((amount * factor * 10000) / energy) / 100;
-    converted[macro] = equivalent === undefined ? '' : equivalent.toFixed(2);
+    converted[macro] = equivalent === undefined ? '' : equivalent.toFixed(mode === 'grams' ? 0 : 2);
+  }
+  if (mode === 'grams' && Object.values(converted).every((value) => value !== '')) {
+    const balanced = rebalancePercentages(converted, 'fats', converted.fats);
+    return balanced ? { ...converted, ...balanced } : converted;
   }
   return converted;
 }
