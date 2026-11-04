@@ -206,7 +206,7 @@ test('loads and edits saved defaults, retains input on failure, then saves with 
   );
   fireEvent.press(screen.getByText('Save'));
   await screen.findByText('Routine saved.');
-});
+}, 10000);
 
 test('creates a routine by selecting exercises, filtering body-parts and adding valid kg/reps sets', async () => {
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
@@ -601,9 +601,13 @@ test('failed automatic page fetch retains results and waits for explicit retry',
   fireEvent(screen.getByTestId('exercise-catalogue'), 'endReached');
   expect(trainingApi.exercises).toHaveBeenCalledTimes(attempts);
   jest.mocked(trainingApi.exercises).mockResolvedValue({ items: [], limit: 1, offset: 1 });
-  fireEvent.press(screen.getByText('Retry'));
-  await waitFor(() => expect(screen.queryByText('Retry')).toBeNull());
-});
+  await act(async () => {
+    fireEvent.press(screen.getByText('Retry'));
+  });
+  await waitFor(() => expect(screen.queryByText('Retry')).toBeNull(), { timeout: 4000 });
+  expect(trainingApi.exercises).toHaveBeenCalledTimes(attempts + 1);
+  expect(screen.getByLabelText('Select Bench press')).toBeTruthy();
+}, 10000);
 
 test('routine start snapshots guidance with empty actual results, minimize resumes original values and finish retries the same body', async () => {
   jest

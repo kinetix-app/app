@@ -139,7 +139,8 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   await expect(
     page.getByText('Acceptance Alice', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('100.00');
   await expect(page.getByLabel('Height (feet)', { exact: true })).toHaveValue('5');
@@ -163,7 +164,8 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   });
   await page.reload();
   await signIn(page);
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('45.36');
   await expect(page.getByLabel('Height (cm)', { exact: true })).toHaveValue('170.82');
@@ -175,7 +177,8 @@ test('incomplete accounts finish profile/objective, log without targets, and edi
   ).toBeVisible();
   await page.emulateMedia({ colorScheme: 'light' });
   await page.screenshot({ path: '.codex/artifacts/previews/onboarding-home-light.png' });
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
   await signIn(page, true);

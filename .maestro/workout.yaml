@@ -35,6 +35,7 @@ appId: cat.udl.kinetix
 - extendedWaitUntil:
     visible: Workouts
     timeout: 20000
-- tapOn: Profile
+- tapOn: Home
+- tapOn: Open profile
 - tapOn: Training history
 - assertVisible: Workout history

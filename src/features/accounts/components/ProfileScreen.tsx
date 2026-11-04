@@ -9,6 +9,7 @@ import { profileDefaults } from '../profileForm';
 import type { Account } from '../schemas';
 import { objectiveOptions } from './ObjectiveEditor';
 import { ProfileAvatar } from './ProfileAvatar';
+import { ProfileBack } from './ProfileBack';
 import { ProfileGroup, ProfileRow } from './ProfileRows';
 import { setupStyles as s } from './SetupUI';
 
@@ -17,12 +18,16 @@ export type ProfilePanel =
 export function ProfileScreen({
   account,
   onOpen,
+  onBack,
+  backLabel,
   onSignOut,
   signingOut,
   signOutError,
 }: Readonly<{
   account: Account;
   onOpen: (panel: ProfilePanel) => void;
+  onBack: () => void;
+  backLabel: string;
   onSignOut: () => void;
   signingOut: boolean;
   signOutError: string;
@@ -54,7 +59,10 @@ export function ProfileScreen({
       style={[s.screen, { backgroundColor: p['surface-100'] }]}
     >
       <ScrollView contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}>
-        <ScreenHeader title="Profile" />
+        <ScreenHeader
+          title="Profile"
+          leading={<ProfileBack onPress={onBack} label={backLabel} />}
+        />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-4'] }}>
           <ProfileAvatar account={account} size={64} />
           <View style={{ flex: 1, gap: spacing['space-1'] }}>

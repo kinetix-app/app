@@ -123,14 +123,24 @@ test('home shows profile and an optional nutrition entry while keeping one botto
   expect(screen.getByText('View profile')).toBeTruthy();
   expect(screen.queryByText('Edit profile')).toBeNull();
   expect(screen.queryByText('Sign out')).toBeNull();
-  expect(
-    screen.getByRole('tab', { name: 'Profile' }).props.accessibilityState.disabled,
-  ).toBeUndefined();
+  expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Open profile' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'League' }).props.accessibilityState.disabled).toBe(true);
   expect(screen.getByText('Change objective')).toBeTruthy();
   expect(screen.getByText('Edit nutrition goal')).toBeTruthy();
   expect(screen.getAllByLabelText('Main navigation')).toHaveLength(1);
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   await screen.findByLabelText('Add food to Breakfast');
+});
+
+test('home header profile picture opens Profile and its back arrow returns Home', async () => {
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByRole('button', { name: 'Open profile' }));
+  expect(await screen.findByText('Edit profile')).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(false);
+  fireEvent.press(screen.getByRole('button', { name: 'Back to home' }));
+  expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.queryByText('Edit profile')).toBeNull();
 });
 
 test('plus starts the existing workout editor and a minimized draft survives navigation without duplicate starts', async () => {
@@ -281,7 +291,7 @@ test('Profile owns account actions, progress and history; Workout omits duplicat
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 20, offset: 0 });
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await screen.findByText('Alice');
-  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   expect(screen.getByText('25 years · 170.00 cm · 70.00 kg')).toBeTruthy();
   expect(screen.getByText('Edit profile')).toBeTruthy();
   expect(screen.getByText('Sign out')).toBeTruthy();
@@ -297,9 +307,14 @@ test('Profile owns account actions, progress and history; Workout omits duplicat
   await screen.findByText('Workouts');
   expect(screen.queryByText('Sign out')).toBeNull();
   expect(screen.queryByText('History')).toBeNull();
-  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
+  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   fireEvent.press(screen.getByText('Training history'));
-  expect(screen.getByLabelText('Back to profile')).toBeTruthy();
+  expect(await screen.findByText('No completed workouts yet.')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Back to profile'));
+  fireEvent.press(screen.getByRole('button', { name: 'Back to home' }));
+  expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
 });
 
 test('profile form survives switching tabs and failed saves; saved account updates Home', async () => {
@@ -316,7 +331,7 @@ test('profile form survives switching tabs and failed saves; saved account updat
   fireEvent.press(screen.getByText('Edit profile'));
   fireEvent.changeText(screen.getByLabelText('Name'), 'Alice updated');
   fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
-  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   expect(screen.getByLabelText('Name').props.value).toBe('Alice updated');
   fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
   await screen.findByText(
@@ -329,19 +344,36 @@ test('profile form survives switching tabs and failed saves; saved account updat
   expect(screen.getByText('Alice updated')).toBeTruthy();
 });
 
-test('nutrition goal closes to its origin without losing the Profile tab', async () => {
+test('nutrition goal closes to its origin without losing Profile', async () => {
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await screen.findByText('Alice');
-  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   fireEvent.press(screen.getByText('Edit nutrition goal'));
   fireEvent.press(await screen.findByText('Back'));
-  expect(screen.getByRole('tab', { name: 'Profile' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.getByRole('button', { name: 'Back to home' })).toBeTruthy();
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   fireEvent.press(await screen.findByRole('button', { name: 'Edit nutrition goal' }));
   fireEvent.press(await screen.findByText('Back'));
   expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
     true,
   );
+});
+
+test('Home avatar resets the Profile return origin after a Nutrition shortcut', async () => {
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('Alice');
+  fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Edit nutrition goal' }));
+  fireEvent.press(await screen.findByText('Back'));
+  expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  // Profile remains mounted after the shortcut closes; Home's avatar resumes it.
+  fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
+  expect(screen.getByRole('button', { name: 'Back to home' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Back to nutrition' })).toBeNull();
+  expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
 });
 
 test('Profile sign-out waits for local cleanup, prevents duplicates and allows retry after failure', async () => {
@@ -355,7 +387,7 @@ test('Profile sign-out waits for local cleanup, prevents duplicates and allows r
   );
   render(<HomeScreen accountId={1} onSignOut={onSignOut} />);
   await screen.findByText('Alice');
-  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   fireEvent.press(screen.getByText('Sign out'));
   await screen.findByText('Signing out…');
   fireEvent.press(screen.getByText('Signing out…'));
@@ -381,7 +413,7 @@ test('account switch discards private Profile fields and panel state', async () 
   jest.mocked(getAccount).mockResolvedValue(bob);
   view.rerender(<HomeScreen accountId={2} initialAccount={bob} onSignOut={jest.fn()} />);
   await screen.findByText('Bob');
-  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   expect(screen.queryByText('Private unsaved name')).toBeNull();
   expect(screen.queryByLabelText('Name')).toBeNull();
   expect(screen.getByText('Edit profile')).toBeTruthy();
@@ -405,10 +437,14 @@ test('hardware back closes editing and ignores hidden Profile panels', async () 
   fireEvent.changeText(screen.getByLabelText('Name'), 'Draft name');
   fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
   expect(callbacks.size).toBe(0);
-  fireEvent.press(screen.getByRole('tab', { name: 'Profile' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   await act(async () => {
     [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
   });
   expect(screen.getByText('Edit profile')).toBeTruthy();
+  await act(async () => {
+    [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
+  });
+  expect(screen.getByRole('tab', { name: 'Home' }).props.accessibilityState.selected).toBe(true);
   listener.mockRestore();
 });

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
+/** Profile is a shell destination opened from the Home header, not a bottom-bar tab. */
 export type HomeTab = 'home' | 'workout' | 'nutrition' | 'profile';
 
 export function BottomBar({
@@ -22,7 +23,8 @@ export function BottomBar({
     { id: 'home', icon: 'home', label: 'Home' },
     { id: 'workout', icon: 'activity', label: 'Workout' },
     { id: 'nutrition', icon: 'coffee', label: 'Nutrition' },
-    { id: 'profile', icon: 'user', label: 'Profile' },
+    // Disabled placeholder until FriendsLeague is built.
+    { id: 'league', icon: 'award', label: 'League' },
   ] as const;
   return (
     <SafeAreaView edges={['bottom']} style={{ backgroundColor: p['surface-200'] }}>
@@ -51,10 +53,18 @@ export function BottomBar({
             <Pressable
               accessibilityRole="tab"
               aria-selected={tab === item.id}
+              aria-disabled={item.id === 'league'}
               accessibilityLabel={item.label}
-              accessibilityState={{ selected: tab === item.id }}
-              onPress={() => onSelect(item.id)}
-              style={({ pressed }) => [styles.tab, { opacity: pressed ? 0.65 : 1 }]}
+              accessibilityHint={item.id === 'league' ? 'Coming soon' : undefined}
+              accessibilityState={{ selected: tab === item.id, disabled: item.id === 'league' }}
+              disabled={item.id === 'league'}
+              onPress={() => {
+                if (item.id !== 'league') onSelect(item.id);
+              }}
+              style={({ pressed }) => [
+                styles.tab,
+                { opacity: tabOpacity(item.id === 'league', pressed) },
+              ]}
             >
               <View style={[styles.icon, tab === item.id && { backgroundColor: p['brand-soft'] }]}>
                 <Feather
@@ -80,6 +90,10 @@ export function BottomBar({
 }
 function startOpacity(canStart: boolean, pressed: boolean) {
   if (!canStart) return 0.45;
+  return pressed ? 0.65 : 1;
+}
+function tabOpacity(disabled: boolean, pressed: boolean) {
+  if (disabled) return 0.45;
   return pressed ? 0.65 : 1;
 }
 

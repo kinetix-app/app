@@ -25,11 +25,14 @@ async function signIn(page: Page, second = false) {
   await page.getByLabel('Email', { exact: true }).fill(credentials[second ? 1 : 0][0]!);
   await page.getByLabel('Password', { exact: true }).fill(credentials[second ? 1 : 0][1]!);
   await page.getByRole('button', { name: /^Sign in/ }).click();
-  await expect(page.getByRole('tab', { name: 'Profile', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open profile', exact: true })).toBeVisible();
 }
-const profileTab = (page: Page) => page.getByRole('tab', { name: 'Profile', exact: true });
+async function openProfile(page: Page) {
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
+}
 async function signOut(page: Page) {
-  await profileTab(page).click();
+  await openProfile(page);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
 }
@@ -92,7 +95,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page);
   await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toHaveCount(0);
-  await profileTab(page).click();
+  await openProfile(page);
   await expect(page.getByRole('tablist')).toHaveCount(1);
   await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveCount(0);
   await expect(
@@ -105,7 +108,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Acceptance Alice updated');
   await page.getByRole('tab', { name: 'Nutrition', exact: true }).click();
-  await profileTab(page).click();
+  await openProfile(page);
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Acceptance Alice updated');
   await page.getByRole('radio', { name: 'Imperial', exact: true }).click();
   await page.route('**/api/v1/me/profile', (route) =>
@@ -129,7 +132,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
   ).toBeVisible();
   await page.reload();
   await signIn(page);
-  await profileTab(page).click();
+  await openProfile(page);
   await expect(
     page.getByText('Acceptance Alice updated', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
@@ -147,7 +150,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
   const draft = await (await request('/session-drafts')).json();
   await signOut(page);
   await signIn(page, true);
-  await profileTab(page).click();
+  await openProfile(page);
   await expect(
     page.getByText('Acceptance Bob', { exact: true }).filter({ visible: true }),
   ).toBeVisible();

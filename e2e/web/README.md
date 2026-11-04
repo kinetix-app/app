@@ -86,7 +86,7 @@ This regression does not verify real Google/Apple sign-in or Android behavior.
 
 ## Dedicated Profile acceptance
 
-`profile.spec.ts` requires two private synthetic identities and a run-owned `_test` database with `APP_ENV=test`. It prepares only those accounts and verifies compact Profile navigation, failed profile save/retry, form retention across tabs, persisted edits after reload, prepared Progress, history list/detail/back navigation, two-account isolation and workout logout/resume. `onboarding.spec.ts`, `home.spec.ts` and `profile-picture.spec.ts` exercise the related setup, nutrition and picture journeys using the Profile tab. Run onboarding first against a fresh database. Browser acceptance does not establish native or real Clerk provider acceptance.
+`profile.spec.ts` requires two private synthetic identities and a run-owned `_test` database with `APP_ENV=test`. It prepares only those accounts and verifies compact Profile navigation, failed profile save/retry, form retention across tabs, persisted edits after reload, prepared Progress, history list/detail/back navigation, two-account isolation and workout logout/resume. `onboarding.spec.ts`, `home.spec.ts` and `profile-picture.spec.ts` exercise the related setup, nutrition and picture journeys using Profile opened from the Home avatar. Run onboarding first against a fresh database. Browser acceptance does not establish native or real Clerk provider acceptance.
 
 ## Compact workout and routine covers
 

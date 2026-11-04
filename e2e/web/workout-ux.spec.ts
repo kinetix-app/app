@@ -286,7 +286,8 @@ test('compact routine workspace saves notes and private covers, retries without 
   expect(history.status).toBe(200);
   expect((await history.json()).routine_id).toBe(routine.id);
 
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await signIn(page, true);
   await expect(page.getByText('Build your first routine', { exact: true })).toBeVisible();

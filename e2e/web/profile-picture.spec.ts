@@ -24,7 +24,8 @@ async function signIn(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill(email!);
   await page.getByLabel('Password', { exact: true }).fill(password!);
   await page.getByRole('button', { name: /^Sign in/ }).click();
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
 }
 
@@ -64,7 +65,8 @@ test('profile photo writes happen only on Save and remain private across replace
   const firstBytes = Buffer.from(await first.arrayBuffer());
   expect((await fetch(`${api}${path}`)).status).toBe(401);
   expect((await fetch(`${api}${path}`, { headers: auth(true) })).status).toBe(404);
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   const writesBefore = photoWrites;
   await choose(page, 'android-icon-background.png', true);

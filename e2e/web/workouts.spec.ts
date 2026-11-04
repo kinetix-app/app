@@ -238,7 +238,8 @@ test('blank workout persists locally, resumes and retries the identical frozen F
   expect(response.status()).toBe(200);
   const workout = await response.json();
   expect(workout.exercises[0].sets[0].weight_kg).toBe('100.000000');
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
   await page.getByRole('button', { name: `View workout ${workout.id}`, exact: true }).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
@@ -332,7 +333,8 @@ test('logout retains A server draft while B never inherits private draft or hist
   await selectExercise(page, 'Acceptance press');
   await minimizeWorkout(page);
   await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
   await signIn(page, other);
@@ -342,13 +344,15 @@ test('logout retains A server draft while B never inherits private draft or hist
     (value) =>
       value.request().method() === 'GET' && new URL(value.url()).pathname === '/api/v1/sessions',
   );
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
   expect((await bHistory).status()).toBe(200);
   await expect(page.getByText('No completed workouts yet.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^View workout / })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
   await signIn(page);
