@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import {
   BackHandler,
   KeyboardAvoidingView,
@@ -15,11 +15,6 @@ import DraggableFlatList from './ExerciseDragList';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
 import { sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import {
-  RoutinePictureEditor,
-  routinePictureForm,
-  type RoutinePictureDraft,
-} from './RoutinePictureEditor';
 import { trainingApi } from '../api';
 import { ExerciseDetails } from './ExerciseDetails';
 import { ExercisePicker } from './ExercisePicker';
@@ -139,7 +134,6 @@ export function RoutineEditor({
   onClose: () => void;
 }>) {
   const p = usePalette();
-  const cache = useQueryClient();
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
@@ -147,11 +141,6 @@ export function RoutineEditor({
   const [dragging, setDragging] = useState(false);
   const alive = useRef(true);
   const [notesOpen, setNotesOpen] = useState(Boolean(routine?.notes));
-  const [pictureDraft, setPictureDraft] = useState<RoutinePictureDraft>({ kind: 'keep' });
-  const [pictureBusy, setPictureBusy] = useState(false);
-  const savedRoutine = useRef<Routine | undefined>(routine);
-  const appliedPicture = useRef<RoutinePictureDraft | undefined>(undefined);
-  const [detailsSaved, setDetailsSaved] = useState(false);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -179,28 +168,15 @@ export function RoutineEditor({
     control,
     name: 'exercises',
   });
-  const isDirty = formState.isDirty || pictureDraft.kind !== 'keep';
+  const isDirty = formState.isDirty;
   const save = useMutation({
     mutationFn: async (input: RoutineInput) => {
       if (!routine) {
-        const form =
-          pictureDraft.kind === 'select' ? routinePictureForm(pictureDraft.asset) : new FormData();
+        const form = new FormData();
         form.append('content', JSON.stringify(input));
         return trainingApi.create(form);
       }
-      const result = await trainingApi.save(input, savedRoutine.current?.id ?? routine.id);
-      savedRoutine.current = result;
-      cache.setQueryData(['training', accountId, 'routine', result.id, 'kg'], result);
-      void cache.invalidateQueries({ queryKey: ['training', accountId, 'routines'] });
-      setDetailsSaved(true);
-      if (appliedPicture.current === pictureDraft || pictureDraft.kind === 'keep') return result;
-      const withPicture =
-        pictureDraft.kind === 'select'
-          ? await trainingApi.uploadPicture(result.id, routinePictureForm(pictureDraft.asset))
-          : await trainingApi.removePicture(result.id);
-      appliedPicture.current = pictureDraft;
-      savedRoutine.current = withPicture;
-      return withPicture;
+      return trainingApi.save(input, routine.id);
     },
     retry: false,
     onSuccess: (result) => {
@@ -208,20 +184,20 @@ export function RoutineEditor({
     },
   });
   function close() {
-    if (save.isPending || pictureBusy) return;
+    if (save.isPending) return;
     if (isDirty) setDiscard(true);
     else onClose();
   }
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!alive.current) return false;
-      if (save.isPending || pictureBusy) return true;
+      if (save.isPending) return true;
       if (isDirty) setDiscard(true);
       else onClose();
       return true;
     });
     return () => listener.remove();
-  }, [isDirty, save.isPending, pictureBusy, onClose]);
+  }, [isDirty, save.isPending, onClose]);
   const submit = handleSubmit((values) => {
     const parsed = routineInputSchema.safeParse({
       name: values.name,
@@ -248,7 +224,7 @@ export function RoutineEditor({
     }
     save.mutate(parsed.data);
   });
-  const disabled = save.isPending || dragging || pictureBusy;
+  const disabled = save.isPending || dragging;
   return (
     <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
       <KeyboardAvoidingView
@@ -389,15 +365,6 @@ export function RoutineEditor({
                   )}
                 />
               ) : null}
-              <RoutinePictureEditor
-                accountId={accountId}
-                routineId={routine?.id}
-                path={routine?.image_url}
-                draft={pictureDraft}
-                onChange={setPictureDraft}
-                onBusy={setPictureBusy}
-                disabled={disabled}
-              />
               <Text style={{ color: p['ink-muted'], fontWeight: '700' }}>
                 EXERCISES · {fields.length}
               </Text>
@@ -412,8 +379,8 @@ export function RoutineEditor({
                 index={index}
                 exercise={slot.exercise}
                 active={isActive}
-                dragId={save.isPending || pictureBusy ? undefined : `reorder-card-${slot.id}`}
-                onDrag={save.isPending || pictureBusy ? undefined : drag}
+                dragId={save.isPending ? undefined : `reorder-card-${slot.id}`}
+                onDrag={save.isPending ? undefined : drag}
                 onMove={(delta) => {
                   if (disabled) return;
                   const target = index + delta;
@@ -446,12 +413,6 @@ export function RoutineEditor({
               ) : null}
               {save.isError ? (
                 <View style={ui.gap}>
-                  {detailsSaved ? (
-                    <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                      Routine details saved. Your cover change could not be saved. Save again to
-                      retry, or go back to keep the saved details.
-                    </Text>
-                  ) : null}
                   <Failure error={save.error} />
                 </View>
               ) : null}
@@ -506,13 +467,9 @@ export function RoutineEditor({
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {detailsSaved ? 'Discard remaining changes?' : 'Discard your unsaved changes?'}
+              Discard your unsaved changes?
             </Text>
-            <Text style={{ color: p['ink-muted'] }}>
-              {detailsSaved
-                ? 'Previously saved routine details will be kept. Any remaining edits will be discarded.'
-                : 'Your changes have not been saved.'}
-            </Text>
+            <Text style={{ color: p['ink-muted'] }}>Your changes have not been saved.</Text>
             <Button title="Keep editing" onPress={() => setDiscard(false)} secondary />
             <Button title="Discard" onPress={onClose} tone="danger" />
           </View>

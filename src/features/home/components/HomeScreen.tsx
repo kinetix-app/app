@@ -186,7 +186,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   }
   return (
     <View style={{ flex: 1, backgroundColor: p['surface-100'] }}>
-      <SessionHost>
+      <SessionHost hideMinimized={tab === 'workout' && routineEditing}>
         {visited.map((item) => (
           <View
             key={item}

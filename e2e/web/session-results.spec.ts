@@ -81,7 +81,17 @@ test('partial results, independent routine origin, history placeholders and atom
     await expect(page.getByRole('button', { name: 'Start workout', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
     await expect(page.getByRole('button', { name: 'Start routine', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('ongoing-workout-card')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
+    await selectExercise(page, 'Acceptance press');
+    await expect(
+      page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true }),
+    ).toHaveCount(2);
+    await expect(page.getByTestId('ongoing-workout-card')).toHaveCount(0);
     await page.getByRole('button', { name: 'Back to routines', exact: true }).click();
+    await page.getByRole('button', { name: 'Discard', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+    expect((await (await request('/session-drafts')).json()).client_session_id).toBe(draftId);
     // Replacing template slots mid-workout must not invalidate the independent session rows.
     expect(
       (

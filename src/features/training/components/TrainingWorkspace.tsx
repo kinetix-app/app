@@ -16,6 +16,8 @@ import { trainingApi } from '../api';
 import { useSession } from './SessionProvider';
 import { RoutineActionsMenu } from './RoutineActionsMenu';
 import { RoutineCover } from './RoutineCover';
+import type { ImagePickerAsset } from 'expo-image-picker';
+import { pickRoutinePicture, routinePictureForm } from './routinePicture';
 import { RoutineEditor } from './RoutineEditor';
 import type { Routine, RoutineSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
@@ -44,7 +46,81 @@ export function TrainingWorkspace({
     setActions(null);
     if (restore) requestAnimationFrame(restore);
   }
+  const coverBusy = useRef(false);
+  const [coverWorking, setCoverWorking] = useState(false);
+  const [coverError, setCoverError] = useState('');
+  const [failedCover, setFailedCover] = useState<{ id: number; asset: ImagePickerAsset } | null>(
+    null,
+  );
+  const coverMutation = useMutation({
+    mutationFn: ({ id, asset }: { id: number; asset?: ImagePickerAsset }) =>
+      asset
+        ? trainingApi.uploadPicture(id, routinePictureForm(asset))
+        : trainingApi.removePicture(id),
+    retry: false,
+    onSuccess: (result, { asset }) => {
+      if (!alive.current) return;
+      cache.setQueryData(['training', accountId, 'routine', result.id, 'kg'], result);
+      cache.setQueriesData<InfiniteData<Awaited<ReturnType<typeof trainingApi.routines>>>>(
+        { queryKey: ['training', accountId, 'routines'] },
+        (current) =>
+          current
+            ? {
+                ...current,
+                pages: current.pages.map((page) => ({
+                  ...page,
+                  items: page.items.map((item) =>
+                    item.id === result.id ? { ...item, image_url: result.image_url } : item,
+                  ),
+                })),
+              }
+            : current,
+      );
+      void cache.invalidateQueries({ queryKey: ['training', accountId, 'routines'] });
+      if (asset && actions?.item.id === result.id) closeActions();
+      else
+        setActions((current) =>
+          current?.item.id === result.id
+            ? { ...current, item: { ...current.item, image_url: result.image_url } }
+            : current,
+        );
+      setFailedCover(null);
+    },
+  });
+  async function manageCover(mode: 'choose' | 'remove' | 'retry') {
+    if (coverBusy.current || !actions) return;
+    coverBusy.current = true;
+    setCoverWorking(true);
+    setCoverError('');
+    try {
+      let asset: ImagePickerAsset | undefined;
+      if (mode === 'choose') {
+        const selected = await pickRoutinePicture();
+        if (!alive.current || !selected) return;
+        if ('error' in selected) {
+          setCoverError(selected.error);
+          return;
+        }
+        asset = selected.asset;
+      } else if (mode === 'retry') {
+        if (failedCover?.id !== actions.item.id) return;
+        asset = failedCover.asset;
+      }
+      setFailedCover(asset ? { id: actions.item.id, asset } : null);
+      await coverMutation.mutateAsync({ id: actions.item.id, asset });
+    } catch {
+      if (alive.current) setCoverError('Could not update the cover. Try again.');
+    } finally {
+      coverBusy.current = false;
+      if (alive.current) setCoverWorking(false);
+    }
+  }
   const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), 4000);
+    return () => clearTimeout(timer);
+  }, [saved]);
   const removeRoutine = useMutation({
     mutationFn: (id: number) => trainingApi.removeRoutine(id),
     retry: false,
@@ -184,6 +260,8 @@ export function TrainingWorkspace({
             }}
             onActions={(restoreFocus) => {
               removeRoutine.reset();
+              setCoverError('');
+              setFailedCover(null);
               setActions({ item, restoreFocus });
             }}
             canStart={session.ready && !session.storageError && !session.draft && starting === null}
@@ -221,6 +299,12 @@ export function TrainingWorkspace({
           }
           deleting={removeRoutine.isPending}
           deleteError={removeRoutine.isError ? removeRoutine.error : null}
+          hasCover={Boolean(actions.item.image_url)}
+          coverPending={coverWorking}
+          coverError={coverError}
+          onChooseCover={() => void manageCover('choose')}
+          onRemoveCover={() => void manageCover('remove')}
+          onRetryCover={failedCover ? () => void manageCover('retry') : undefined}
           onDelete={() => removeRoutine.mutate(actions.item.id)}
           onClose={closeActions}
           onEdit={() => {
@@ -387,8 +471,6 @@ function RoutineRow({
           routineId={item.id}
           path={item.image_url}
           size={sizes['control-height']}
-          onOpen={onEdit}
-          openLabel={`Edit cover for ${item.name}`}
         />
         <Pressable
           accessibilityRole="button"
@@ -418,7 +500,7 @@ function RoutineRow({
           accessibilityRole="button"
           accessibilityLabel={`Routine actions for ${item.name}`}
           accessibilityState={{ expanded: actionsOpen }}
-          accessibilityHint="Open train, edit and delete options"
+          accessibilityHint="Open train, edit, cover and delete options"
           onPress={() => onActions(() => trigger.current?.focus())}
           style={({ pressed }) => [styles.actions, { opacity: pressed ? 0.55 : 1 }]}
         >

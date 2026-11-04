@@ -153,13 +153,13 @@ floating resume panel, discard and completion lifecycle.
 
 ## Compact workout workspace (#94)
 
-Workout uses a header `+ / Routine` action, a searchable list and an actionable first-routine empty state. History remains in Profile; blank workouts start from the shared bottom bar. Tapping a routine's content opens editing; its separate filled-triangle play control starts a freshly fetched routine. The right-hand ellipsis opens a mobile bottom action sheet with Train, Edit and Delete. Both training controls remain disabled during an ongoing workout. The sheet supports outside-tap dismissal, Escape/platform Back and focus return to its trigger.
+Workout uses a header `+ / Routine` action, a searchable list and an actionable first-routine empty state. History remains in Profile; blank workouts start from the shared bottom bar. Tapping a routine's content opens editing; its separate filled-triangle play control starts a freshly fetched routine. The right-hand ellipsis opens a mobile bottom action sheet with Train, Edit, Add/Change cover, Remove cover (when present) and Delete. Both training controls remain disabled during an ongoing workout. The sheet supports outside-tap dismissal, Escape/platform Back and focus return to its trigger.
 
 Cards show a private cover (or gym icon), a two-line notes excerpt, a secondary exercise-count chip without an icon, and the latest completed workout's end date alongside it in the device's local timezone. Unfinished drafts never count as last performed. Current routine authoring supports gym exercises only.
 
-The editor keeps Save in its fixed top-right header and omits Start. Optional notes expand below the name, accept up to 1000 characters and persist as `notes`; clearing saves null. The compact cover row supports selection, replacement and removal. JPEG, PNG and WebP images up to 5 MiB are normalized by the backend and delivered through authenticated requests. Covers never use public storage URLs.
+The editor keeps Save in its fixed top-right header and omits Start. Optional notes expand below the name, accept up to 1000 characters and persist as `notes`; clearing saves null. Covers are managed directly from the routine card’s three-dot menu, outside the editor. JPEG, PNG and WebP images up to 5 MiB are normalized by the backend and delivered through authenticated requests. Covers never use public storage URLs.
 
-Creation sends a single multipart `POST /api/v1/routines`: `content` contains the routine JSON and optional `file` contains the cover. The backend returns 201 only after the routine, planned sets and selected cover reference are committed together. A failed image upload or database transaction leaves no new routine; entered values and the selected photo remain available for retry. Editing an existing routine still saves its details before applying a replacement/removal; a cover failure preserves the saved details and reports the remaining change. A canceled picker or editor does not upload or remove an image. Apply backend migration `20261103_01` before using these operations. No new native dependency is introduced.
+Routine creation sends multipart `POST /api/v1/routines` with only `content` (routine JSON); the editor never selects or uploads a cover. After saving a routine, Add cover / Change cover in its three-dot menu opens the system image picker and immediately posts the selection to `POST /api/v1/routines/{id}/picture`. Remove cover appears only when a cover exists and immediately calls `DELETE /api/v1/routines/{id}/picture`. Neither operation changes the name, notes or planned exercises. There is no second menu or separate Save cover step. The menu blocks competing actions during picking/upload/removal, updates the list cover on success and offers an explicit retry with the same file after upload failure. A successful add/change closes the action sheet and returns focus to its trigger; an upload failure keeps it open for retry. Canceling the picker performs no write. The backend's optional image-on-create capability remains available to other clients; this frontend no longer uses it. No new native dependency is introduced.
 
 Deleting a routine requires confirmation. It removes the template from the active library, keeps completed workouts and their original routine provenance, and removes its private cover. A draft using that routine blocks deletion with 409; finish or discard it first. Failed deletion retains the confirmation and can be retried. Apply backend migration `20261103_02` for this behavior. Existing deleted routine IDs return 404 from read/edit/source operations; deletion retries by their owner remain safe.
 
@@ -189,3 +189,18 @@ Routine creation and editing hide the Home bottom bar until Save or confirmed
 discard returns to the routine list. Keep editing and validation/save failures
 retain both the form and the hidden navigation state. The counted exercise-picker
 action floats directly above the content, without an enclosing colored card.
+
+Direct cover actions were verified with 38 focused training tests and a real
+browser/API/PostgreSQL/Azurite journey covering upload failure/retry, replacement,
+removal, reload and private-image isolation. Native picker/device behavior remains
+unverified.
+
+While creating or editing a routine, hide the minimized ongoing-workout panel as
+well as the bottom navigation so neither can overlap Add exercise or the form.
+This is presentation-only: the workout draft stays intact and the panel returns
+after saving or leaving the editor, including confirmed discard. Keep editing
+retains the hidden state.
+
+The successful routine-save confirmation is transient: it clears after four
+seconds. This only dismisses the UI notice; the saved routine and query data
+remain available. Failed operations retain their actionable error/retry feedback.

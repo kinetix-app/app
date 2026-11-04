@@ -7,7 +7,14 @@ import { WorkoutTimer } from './WorkoutEditor';
 import { OngoingSession } from './OngoingSession';
 import { Button, IconButton, Loading, ui } from './ui';
 
-export function SessionHost({ children }: Readonly<React.PropsWithChildren>) {
+export function SessionHost({
+  children,
+  hideMinimized = false,
+}: Readonly<
+  React.PropsWithChildren<{
+    hideMinimized?: boolean;
+  }>
+>) {
   const session = useSession();
   const p = usePalette();
   const [discard, setDiscard] = useState(false);
@@ -25,7 +32,7 @@ export function SessionHost({ children }: Readonly<React.PropsWithChildren>) {
         {!session.ready ? <PendingSessionState onDiscard={() => setDiscard(true)} /> : null}
         {session.ready && session.storageError && !session.draft ? <StorageErrorState /> : null}
       </View>
-      {session.draft?.minimized && !discard ? (
+      {session.draft?.minimized && !discard && !hideMinimized ? (
         <MinimizedWorkoutCard onDiscard={() => setDiscard(true)} />
       ) : null}
       <Modal

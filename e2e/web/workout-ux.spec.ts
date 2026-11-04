@@ -37,7 +37,6 @@ async function chooseCover(page: Page, label: string) {
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: label, exact: true }).click();
   await (await chooser).setFiles('assets/images/icon.png');
-  await expect(page.getByText('New cover · Save to apply')).toBeVisible();
 }
 
 test('compact routine workspace saves notes and private covers, retries without duplicates and updates last training', async ({
@@ -92,7 +91,7 @@ test('compact routine workspace saves notes and private covers, retries without 
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
   await page.getByLabel('Search exercises', { exact: true }).fill('Acceptance press');
   await selectExercise(page, 'Acceptance press');
-  await chooseCover(page, 'Add routine cover');
+  await expect(page.getByRole('button', { name: 'Add routine cover', exact: true })).toHaveCount(0);
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     const saveBox = await page
@@ -130,7 +129,7 @@ test('compact routine workspace saves notes and private covers, retries without 
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByText(/Routine details saved/)).toHaveCount(0);
   await expect(page.getByLabel('Routine name', { exact: true })).toHaveValue(name);
-  await expect(page.getByLabel('Routine cover', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Routine cover', { exact: true })).toHaveCount(0);
   expect(
     (await (await request(`/routines?name=${encodeURIComponent(name)}`)).json()).items,
   ).toHaveLength(0);
@@ -145,12 +144,12 @@ test('compact routine workspace saves notes and private covers, retries without 
   await page.getByRole('button', { name: 'Save routine', exact: true }).click();
   const createResponse = await created;
   expect(createResponse.status()).toBe(201);
-  expect((await createResponse.json()).image_url).toBeTruthy();
+  expect((await createResponse.json()).image_url).toBeNull();
   const createRequest = createResponse.request();
   expect(createRequest.headers()['content-type']).toMatch(/^multipart\/form-data; boundary=/);
   const body = createRequest.postDataBuffer();
   expect(Boolean(body?.includes(Buffer.from('name="content"')))).toBe(true);
-  expect(Boolean(body?.includes(Buffer.from('name="file"')))).toBe(true);
+  expect(Boolean(body?.includes(Buffer.from('name="file"')))).toBe(false);
   await page.getByLabel('Search routines', { exact: true }).fill(name);
   await expect(page.getByRole('button', { name: /^Routine actions for / })).toHaveCount(1);
   const edit = page.getByRole('button', { name: `Edit ${name}`, exact: true });
@@ -159,6 +158,24 @@ test('compact routine workspace saves notes and private covers, retries without 
   await expect(edit).toBeVisible();
   expect(createRequests).toBe(2);
   expect(picturePosts).toBe(0);
+  await actions.click();
+  // Choosing the file immediately posts it through the cover endpoint.
+  await page.route(
+    picturePath,
+    (route) =>
+      route.request().method() === 'POST'
+        ? route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+        : route.fallback(),
+    { times: 1 },
+  );
+  await chooseCover(page, `Add cover for ${name}`);
+  await expect(page.getByText('Could not update the cover. Try again.')).toBeVisible();
+  await page.getByRole('button', { name: 'Retry cover upload', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Close routine actions', exact: true }),
+  ).toHaveCount(0);
+  expect(picturePosts).toBe(2);
+
   await expect(page.getByText('1 exercise', { exact: true })).toBeVisible();
   await expect(page.getByText('Not trained yet', { exact: true })).toBeVisible();
   await expect(
@@ -193,12 +210,26 @@ test('compact routine workspace saves notes and private covers, retries without 
   await page.getByLabel('Search routines', { exact: true }).fill(name);
   await expect(page.getByRole('button', { name: /^Routine actions for / })).toHaveCount(1);
   await expect(page.getByLabel('Routine cover', { exact: true })).toBeVisible();
+  await actions.click();
+  await chooseCover(page, `Change cover for ${name}`);
+  await expect(
+    page.getByRole('button', { name: 'Close routine actions', exact: true }),
+  ).toHaveCount(0);
+  expect(picturePosts).toBe(3);
   await edit.click();
   await expect(page.getByLabel('Routine notes', { exact: true })).toHaveValue(notes);
   await page.getByLabel('Routine notes', { exact: true }).fill('');
-  await page.getByRole('button', { name: 'Remove routine cover', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove routine cover', exact: true })).toHaveCount(
+    0,
+  );
   await page.getByRole('button', { name: 'Save routine', exact: true }).click();
   await expect(edit).toBeVisible();
+  await actions.click();
+  await page.getByRole('button', { name: `Remove cover for ${name}`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Add cover for ${name}`, exact: true }),
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Close routine actions', exact: true }).click();
   await expect(page.getByLabel('Routine cover', { exact: true })).toHaveCount(0);
   const cleared = await (await request(`/routines/${routine.id}`)).json();
   expect(cleared.notes).toBeNull();
