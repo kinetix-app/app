@@ -210,6 +210,22 @@ export function ExercisePicker({
                         </Pressable>
                       ))
                     )}
+                    {bodyParts.length > 1 ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Clear all body part filters"
+                        onPress={() => setBodyParts([])}
+                        style={({ pressed }) => ({
+                          alignSelf: 'center',
+                          minHeight: sizes['tap-min'],
+                          justifyContent: 'center',
+                          paddingHorizontal: spacing['space-2'],
+                          opacity: pressed ? 0.55 : 1,
+                        })}
+                      >
+                        <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Clear all</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                 </View>
                 {query.isPending ? <Loading /> : null}

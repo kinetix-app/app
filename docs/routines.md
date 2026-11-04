@@ -204,3 +204,10 @@ retains the hidden state.
 The successful routine-save confirmation is transient: it clears after four
 seconds. This only dismisses the UI notice; the saved routine and query data
 remain available. Failed operations retain their actionable error/retry feedback.
+
+The shared exercise picker shows a text-only Clear all action alongside the body-part
+badges when more than one filter is active. It immediately clears only body-part
+filters, retaining the name search and staged exercise selection. The filter modal
+uses a compact heading, sentence-case rows, right-aligned checkboxes and a selection
+count with a text-only Clear action. Clear changes only the draft; Save applies it,
+while Cancel, the close icon and platform Back preserve the applied filters.

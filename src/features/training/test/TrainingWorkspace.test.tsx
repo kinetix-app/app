@@ -475,6 +475,7 @@ test('multi-select filters apply only on Save, support cancel, badges and cleari
     ),
   );
   expect(screen.getByLabelText('Remove CHEST filter')).toBeTruthy();
+  expect(screen.getByLabelText('Clear all body part filters')).toBeTruthy();
   fireEvent.press(screen.getByLabelText(/^Filter body parts/));
   expect(screen.getByRole('checkbox', { name: 'CHEST' }).props.accessibilityState.checked).toBe(
     true,
@@ -483,6 +484,7 @@ test('multi-select filters apply only on Save, support cancel, badges and cleari
   fireEvent.press(screen.getByText('Cancel'));
   expect(screen.getByLabelText('Remove CHEST filter')).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Remove CHEST filter'));
+  expect(screen.queryByLabelText('Clear all body part filters')).toBeNull();
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith(
       ['UPPER ARMS'],
@@ -496,6 +498,51 @@ test('multi-select filters apply only on Save, support cancel, badges and cleari
   fireEvent.press(screen.getByLabelText('Save filters'));
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), ''),
+  );
+});
+
+test('clearing all applied body parts preserves the search and staged exercises', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.press(screen.getByText('Add exercise'));
+  fireEvent.press(await screen.findByLabelText('Select Bench press'));
+  expect(screen.queryByLabelText('Clear all body part filters')).toBeNull();
+  fireEvent.changeText(screen.getByLabelText('Search exercises'), 'press');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), 'press'),
+  );
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(await screen.findByRole('checkbox', { name: 'CHEST' }));
+  fireEvent.press(screen.getByRole('checkbox', { name: 'UPPER ARMS' }));
+  expect(screen.getByText('2 selected')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Save filters'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith(
+      ['CHEST', 'UPPER ARMS'],
+      0,
+      expect.anything(),
+      'press',
+    ),
+  );
+  fireEvent.press(screen.getByLabelText('Clear all body part filters'));
+  expect(screen.queryByLabelText('Remove CHEST filter')).toBeNull();
+  expect(screen.queryByLabelText('Remove UPPER ARMS filter')).toBeNull();
+  expect(screen.queryByLabelText('Clear all body part filters')).toBeNull();
+  expect(screen.getByLabelText('Search exercises').props.value).toBe('press');
+  expect(screen.getByText('Add exercises (1)')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  expect(screen.getByRole('checkbox', { name: 'CHEST' }).props.accessibilityState.checked).toBe(
+    false,
+  );
+  expect(
+    screen.getByRole('checkbox', { name: 'UPPER ARMS' }).props.accessibilityState.checked,
+  ).toBe(false);
+  fireEvent.press(screen.getByRole('checkbox', { name: 'CHEST' }));
+  fireEvent.press(screen.getByLabelText('Close body part filters'));
+  expect(screen.getByText('All body parts')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  expect(screen.getByRole('checkbox', { name: 'CHEST' }).props.accessibilityState.checked).toBe(
+    false,
   );
 });
 
