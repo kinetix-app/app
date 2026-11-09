@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { TextField } from '@/components/TextField';
 import { radii, spacing, sizes, textStyles, usePalette } from '@/theme/tokens';
-import { formatCardioTime } from '../cardio';
+import { formatCardioDuration, formatCardioTime } from '../cardio';
 import type { ActualSet } from '../sessionDraft';
 import { displayWeight } from '../sessionDraft';
 import { validWeight, type WeightUnit } from '../schemas';
@@ -61,7 +61,13 @@ export function SetFields({
       >
         <SetPosition number={number} label={label} disabled={disabled} onRemove={onRemove} />
         {cardio ? (
-          <CardioInputs set={set} label={label} disabled={disabled} onChange={onChange} />
+          <CardioInputs
+            set={set}
+            label={label}
+            disabled={disabled}
+            onChange={onChange}
+            guidance={guidance}
+          />
         ) : (
           <>
             <View style={{ flex: 1 }}>
@@ -112,12 +118,13 @@ export function SetFields({
 }
 
 type CardioFieldProps = Readonly<{
+  guidance?: { durationSeconds?: number | null; distanceKm?: string | null };
   set: ActualSet;
   label: string;
   disabled: boolean;
   onChange: (set: ActualSet) => void;
 }>;
-function CardioInputs({ set, label, disabled, onChange }: CardioFieldProps) {
+function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldProps) {
   const p = usePalette();
   const hasTime = [set.hours, set.minutes, set.seconds].some(
     (part) => part !== undefined && part !== '',
@@ -134,7 +141,7 @@ function CardioInputs({ set, label, disabled, onChange }: CardioFieldProps) {
           keyboardType="decimal-pad"
           editable={!disabled}
           value={set.distance ?? ''}
-          placeholder="km"
+          placeholder={guidance?.distanceKm ?? 'km'}
           inputStyle={{ textAlign: 'center' }}
           onChangeText={(distance) => onChange({ ...set, distance })}
         />
@@ -146,7 +153,11 @@ function CardioInputs({ set, label, disabled, onChange }: CardioFieldProps) {
           keyboardType="number-pad"
           editable={!disabled}
           value={time}
-          placeholder="mm:ss"
+          placeholder={
+            guidance?.durationSeconds != null
+              ? formatCardioDuration(guidance.durationSeconds)
+              : 'mm:ss'
+          }
           containerStyle={{ paddingHorizontal: spacing['space-2'] }}
           inputStyle={{
             ...textStyles['body-sm'],
@@ -192,8 +203,7 @@ function CardioGuidance({
   let previous = null;
   if (guidance && (guidance.reps !== null || guidance.weightKg !== null))
     previous = `Previous result: ${guidance.weightKg ?? '—'} kg · ${guidance.reps ?? '—'} reps`;
-  else if (guidance?.durationSeconds != null && guidance.distanceKm != null)
-    previous = `Previous result: ${guidance.distanceKm} km · ${guidance.durationSeconds} seconds`;
+
   return (
     <>
       {set.reps || set.value ? (

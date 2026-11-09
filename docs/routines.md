@@ -226,3 +226,15 @@ Cardio exercise cards summarize entered sets with kilometre and compact time ran
 using the same set count and saved-set count as gym cards. Empty or invalid values
 are omitted from ranges; missing measurements display a dash. Both routine and
 ongoing-workout summaries update as values change.
+
+Durations received from the API are displayed as `hh:mm:ss` in exercise history,
+completed workouts and previous-result guidance (for example, 750 seconds → `00:12:30`).
+
+Fetched cardio distance and time guide empty actual-set inputs through placeholders,
+matching gym guidance. Time placeholders use `hh:mm:ss`; guidance does not populate
+actual measurements or count as a recorded result.
+
+The filter dialog groups All/Gym/Cardio in a compact activity selector above the
+body-part checkboxes. All and Gym combine with body-part filters. Cardio hides
+body-part controls and clears applied body parts on Save. Activity and body-part
+changes apply together only on Save; closing or Cancel preserves applied filters.

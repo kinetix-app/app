@@ -51,7 +51,9 @@ test('cardio recording survives reload and persists mixed measurements', async (
   await page.getByRole('tab', { name: 'Workout', exact: true }).click();
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
+  await page.getByRole('button', { name: /^Filter body parts/ }).click();
   await page.getByRole('button', { name: 'Cardio', exact: true }).click();
+  await page.getByRole('button', { name: 'Save filters', exact: true }).click();
   await selectExercise(page, 'Acceptance cardio');
   await page.getByRole('button', { name: 'Save exercise 1 set 1', exact: true }).click();
   await expect(
@@ -72,7 +74,9 @@ test('cardio recording survives reload and persists mixed measurements', async (
     )
     .toBe(750);
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
+  await page.getByRole('button', { name: /^Filter body parts/ }).click();
   await page.getByRole('button', { name: 'Gym', exact: true }).click();
+  await page.getByRole('button', { name: 'Save filters', exact: true }).click();
   await selectExercise(page, 'Acceptance press');
   await page.getByLabel('Exercise 2 set 1 kg').fill('25');
   await page.getByLabel('Exercise 2 set 1 reps').fill('8');
@@ -109,7 +113,7 @@ test('cardio recording survives reload and persists mixed measurements', async (
   await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
   await page.getByRole('button', { name: `View workout ${result.id}`, exact: true }).click();
-  await expect(page.getByText('Set 1: 1.25 km · 750 seconds', { exact: true })).toBeVisible();
+  await expect(page.getByText('Set 1: 1.25 km · 00:12:30', { exact: true })).toBeVisible();
 });
 
 test('cardio routine defaults save, reopen and edit through the real app', async ({ page }) => {
@@ -129,7 +133,9 @@ test('cardio routine defaults save, reopen and edit through the real app', async
   await page.getByRole('button', { name: 'New routine', exact: true }).click();
   await page.getByLabel('Routine name').fill(name);
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
+  await page.getByRole('button', { name: /^Filter body parts/ }).click();
   await page.getByRole('button', { name: 'Cardio', exact: true }).click();
+  await page.getByRole('button', { name: 'Save filters', exact: true }).click();
   await selectExercise(page, 'Acceptance cardio');
   await page.getByRole('button', { name: 'Edit sets for Acceptance cardio' }).click();
   await page.getByRole('button', { name: 'Add set to exercise 1' }).click();

@@ -2,6 +2,7 @@ import React from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Pressable, Text, View } from 'react-native';
 import { spacing, usePalette } from '@/theme/tokens';
+import { formatCardioDuration } from '../cardio';
 import { trainingApi } from '../api';
 import type { ExerciseHistoryItem } from '../schemas';
 import { Failure, Loading, ui } from './ui';
@@ -73,14 +74,7 @@ function formatSet(set: ExerciseHistoryItem['sets'][number]) {
   else if (set.weight_kg !== null) values.push(`${set.weight_kg} kg`);
   if (set.distance_km !== null) values.push(`${set.distance_km} km`);
   if (set.duration_seconds !== null) {
-    const hours = Math.floor(set.duration_seconds / 3600);
-    const minutes = Math.floor((set.duration_seconds % 3600) / 60);
-    const seconds = set.duration_seconds % 60;
-    values.push(
-      [hours ? `${hours} hr` : '', minutes ? `${minutes} min` : '', `${seconds} sec`]
-        .filter(Boolean)
-        .join(' '),
-    );
+    values.push(formatCardioDuration(set.duration_seconds));
   }
   return values.join(' · ') || 'No measurements';
 }

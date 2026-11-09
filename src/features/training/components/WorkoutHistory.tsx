@@ -1,3 +1,4 @@
+import { formatCardioDuration } from '../cardio';
 import React, { useState } from 'react';
 import { FlatList, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -144,7 +145,7 @@ function SessionDetails({
             <Text key={set.set_number} style={{ color: palette.ink }}>
               Set {set.set_number}:{' '}
               {set.duration_seconds !== null || set.distance_km !== null
-                ? `${set.distance_km ?? '—'} km · ${set.duration_seconds ?? '—'} seconds`
+                ? `${set.distance_km ?? '—'} km · ${set.duration_seconds === null ? '—' : formatCardioDuration(set.duration_seconds)}`
                 : `${set.weight?.value ?? '—'} ${set.weight?.unit ?? unit} · ${set.reps ?? '—'} reps`}
             </Text>
           ))}

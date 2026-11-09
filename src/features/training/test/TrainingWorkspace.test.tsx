@@ -11,6 +11,12 @@ import { SessionHost } from '../components/SessionHost';
 import { trainingApi } from '../api';
 import { exampleExercise, exampleRoutine } from './fixtures';
 
+async function selectActivityFilter(activity: 'All' | 'Gym' | 'Cardio') {
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(await screen.findByRole('button', { name: activity }));
+  fireEvent.press(screen.getByLabelText('Save filters'));
+}
+
 function TrainingWorkspace(props: { accountId: number; onSignOut: () => void }) {
   return (
     <PrivateQueryProvider key={props.accountId}>
@@ -1486,7 +1492,7 @@ test('cardio routine accepts zero, rejects incomplete and negative values, and s
   fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.changeText(screen.getByLabelText('Routine name'), 'Cardio routine');
   fireEvent.press(screen.getByText('Add exercise'));
-  fireEvent.press(await screen.findByText('Cardio'));
+  await selectActivityFilter('Cardio');
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
   );
@@ -1577,15 +1583,15 @@ test('switching activity filters requests the first page and resets the selected
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
   fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.press(screen.getByText('Add exercise'));
-  fireEvent.press(await screen.findByText('Cardio'));
+  await selectActivityFilter('Cardio');
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
   );
-  fireEvent.press(screen.getByText('Gym'));
+  await selectActivityFilter('Gym');
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'gym'),
   );
-  fireEvent.press(screen.getByText('All'));
+  await selectActivityFilter('All');
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), ''),
   );
@@ -1629,13 +1635,59 @@ test('switching back to a previous activity starts with a fresh first page', asy
   await screen.findByLabelText('Select Bench press');
   fireEvent(screen.getByTestId('exercise-catalogue'), 'endReached');
   await screen.findByLabelText('Select Later page');
-  fireEvent.press(screen.getByText('Cardio'));
+  await selectActivityFilter('Cardio');
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
   );
-  fireEvent.press(screen.getByText('All'));
+  await selectActivityFilter('All');
   await waitFor(() =>
     expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), ''),
   );
   expect(screen.queryByLabelText('Select Later page')).toBeNull();
+});
+
+test('activity and body-part filters apply together and cardio excludes body parts', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.press(screen.getByText('Add exercise'));
+  await screen.findByLabelText('Select Bench press');
+  expect(screen.queryByRole('button', { name: 'Cardio' })).toBeNull();
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(await screen.findByRole('checkbox', { name: 'CHEST' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Gym' }));
+  expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '');
+  fireEvent.press(screen.getByLabelText('Save filters'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith(
+      ['CHEST'],
+      0,
+      expect.anything(),
+      '',
+      'gym',
+    ),
+  );
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(screen.getByRole('button', { name: 'Cardio' }));
+  expect(screen.queryByRole('checkbox', { name: 'CHEST' })).toBeNull();
+  fireEvent.press(screen.getByText('Cancel'));
+  expect(screen.getByLabelText('Remove CHEST filter')).toBeTruthy();
+  expect(trainingApi.exercises).toHaveBeenLastCalledWith(
+    ['CHEST'],
+    0,
+    expect.anything(),
+    '',
+    'gym',
+  );
+  await selectActivityFilter('Cardio');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
+  );
+  expect(screen.queryByLabelText('Remove CHEST filter')).toBeNull();
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(screen.getByRole('button', { name: 'All' }));
+  fireEvent.press(screen.getByRole('checkbox', { name: 'CHEST' }));
+  fireEvent.press(screen.getByLabelText('Save filters'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith(['CHEST'], 0, expect.anything(), ''),
+  );
 });

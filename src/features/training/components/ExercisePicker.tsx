@@ -15,18 +15,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { BodyPartFilter } from './BodyPartFilter';
+import { BodyPartFilter, type ActivityFilter } from './BodyPartFilter';
 import { trainingApi } from '../api';
 import { ExerciseDetails } from './ExerciseDetails';
 import type { ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
-
-type ActivityFilter = 'all' | 'gym' | 'cardio';
-const ACTIVITY_LABELS: Record<ActivityFilter, string> = {
-  all: 'All',
-  gym: 'Gym',
-  cardio: 'Cardio',
-};
 
 export function ExercisePicker({
   accountId,
@@ -154,7 +147,6 @@ export function ExercisePicker({
             ListHeaderComponent={
               <ExerciseCatalogueHeader
                 activityType={activityType}
-                setActivityType={selectActivityType}
                 search={search}
                 setSearch={setSearch}
                 setName={setName}
@@ -204,6 +196,7 @@ export function ExercisePicker({
         {filterOpen ? (
           <BodyPartFilter
             selected={bodyParts}
+            activityType={activityType}
             options={groups.data?.items ?? []}
             pending={groups.isPending}
             error={groups.error}
@@ -211,8 +204,9 @@ export function ExercisePicker({
               void groups.refetch();
             }}
             onClose={() => setFilterOpen(false)}
-            onApply={(parts) => {
+            onApply={(parts, activity) => {
               setBodyParts(parts);
+              selectActivityType(activity);
               setFilterOpen(false);
             }}
           />
@@ -333,7 +327,6 @@ function ExercisePickerRow({
 
 function ExerciseCatalogueHeader({
   activityType,
-  setActivityType,
   search,
   setSearch,
   setName,
@@ -347,7 +340,6 @@ function ExerciseCatalogueHeader({
   onRetry,
 }: Readonly<{
   activityType: ActivityFilter;
-  setActivityType: (value: ActivityFilter) => void;
   search: string;
   setSearch: (value: string) => void;
   setName: (value: string) => void;
@@ -363,25 +355,6 @@ function ExerciseCatalogueHeader({
   const p = usePalette();
   return (
     <View style={ui.gap}>
-      <View style={ui.row}>
-        {(['all', 'gym', 'cardio'] as const).map((type) => (
-          <Pressable
-            key={type}
-            accessibilityRole="button"
-            accessibilityState={{ selected: activityType === type }}
-            onPress={() => setActivityType(type)}
-            style={{
-              flex: 1,
-              minHeight: 44,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: activityType === type ? p['brand-soft'] : p['surface-200'],
-            }}
-          >
-            <Text style={{ color: p.ink }}>{ACTIVITY_LABELS[type]}</Text>
-          </Pressable>
-        ))}
-      </View>
       <View style={ui.gap}>
         <View style={ui.row}>
           <Text
@@ -419,8 +392,8 @@ function ExerciseCatalogueHeader({
           <IconButton
             icon="sliders"
             label={
-              bodyParts.length
-                ? `Filter body parts (${bodyParts.length} active)`
+              bodyParts.length || activityType !== 'all'
+                ? `Filter body parts (${bodyParts.length + (activityType === 'all' ? 0 : 1)} active)`
                 : 'Filter body parts'
             }
             onPress={() => {
@@ -430,7 +403,12 @@ function ExerciseCatalogueHeader({
           />
         </View>
         <View style={[ui.row, { flexWrap: 'wrap' }]}>
-          {bodyParts.length === 0 ? (
+          {activityType !== 'all' ? (
+            <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
+              {activityType === 'cardio' ? 'Cardio' : 'Gym'}
+            </Text>
+          ) : null}
+          {activityType === 'cardio' ? null : bodyParts.length === 0 ? (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>All body parts</Text>
           ) : (
             bodyParts.map((part) => (

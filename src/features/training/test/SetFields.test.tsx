@@ -63,3 +63,40 @@ test('one numeric time field formats digits and preserves duration for saving', 
   expect(time().props.value).toBe('00:00');
   expect(cardioInput(current!)?.duration_seconds).toBe(0);
 });
+
+test('fetched cardio guidance appears only as placeholders, including zero measurements', () => {
+  const onChange = jest.fn();
+  const props = {
+    cardio: true,
+    set: { id: 'set-1', reps: '', value: '', unit: 'kg' as const, distance: '' },
+    unit: 'kg' as const,
+    label: 'Set 1',
+    disabled: false,
+    onChange,
+    onRemove: jest.fn(),
+  };
+  const view = render(<SetFields {...props} />);
+  expect(screen.getByLabelText('Set 1 distance').props.placeholder).toBe('km');
+  expect(screen.getByLabelText('Set 1 time').props.placeholder).toBe('mm:ss');
+  view.rerender(
+    <SetFields
+      {...props}
+      guidance={{ reps: null, weightKg: null, distanceKm: '1.25', durationSeconds: 750 }}
+    />,
+  );
+  expect(screen.getByLabelText('Set 1 distance').props.placeholder).toBe('1.25');
+  expect(screen.getByLabelText('Set 1 time').props.placeholder).toBe('00:12:30');
+  expect(screen.getByLabelText('Set 1 distance').props.value).toBe('');
+  expect(screen.getByLabelText('Set 1 time').props.value).toBe('');
+  expect(screen.queryByText(/Previous result:/)).toBeNull();
+  expect(onChange).not.toHaveBeenCalled();
+  expect(cardioInput(props.set)).toBeNull();
+  view.rerender(
+    <SetFields
+      {...props}
+      guidance={{ reps: null, weightKg: null, distanceKm: '0', durationSeconds: 0 }}
+    />,
+  );
+  expect(screen.getByLabelText('Set 1 distance').props.placeholder).toBe('0');
+  expect(screen.getByLabelText('Set 1 time').props.placeholder).toBe('00:00:00');
+});

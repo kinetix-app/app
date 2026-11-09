@@ -28,3 +28,14 @@ export function formatCardioTime(hours: string, minutes: string, seconds: string
   const parts = Number(hours) > 0 ? [hours, minutes, seconds] : [minutes, seconds];
   return parts.map((part) => (part || '0').padStart(2, '0')).join(':');
 }
+
+/** Format API durations for history and previous-result displays. */
+export function formatCardioDuration(durationSeconds: number) {
+  return [
+    Math.floor(durationSeconds / 3600),
+    Math.floor((durationSeconds % 3600) / 60),
+    durationSeconds % 60,
+  ]
+    .map((part) => String(part).padStart(2, '0'))
+    .join(':');
+}
