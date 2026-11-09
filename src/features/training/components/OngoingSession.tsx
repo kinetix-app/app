@@ -88,6 +88,7 @@ export function OngoingSession() {
             <SetFields
               label={`Exercise ${index + 1} set ${i + 1}`}
               set={set}
+              cardio={slot.exercise.activity_type === 'cardio'}
               number={i + 1}
               guidance={slot.guidance[i]}
               saved={set.saved}
@@ -180,6 +181,14 @@ export function OngoingSession() {
           Results are locked. Retry Finish to save your workout.
         </Text>
       ) : null}
+      {draft.frozen ? (
+        <Button
+          title="Review locked sets"
+          onPress={() => void session.recoverFrozen()}
+          disabled={session.pending}
+          secondary
+        />
+      ) : null}
       {session.error ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
           {session.error}
@@ -259,6 +268,7 @@ export function OngoingSession() {
                 summary={
                   <WorkoutExerciseSummary
                     sets={item.sets}
+                    cardio={item.exercise.activity_type === 'cardio'}
                     savedCount={item.sets.filter((set) => set.saved).length}
                   />
                 }

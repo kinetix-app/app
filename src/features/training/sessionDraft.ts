@@ -1,10 +1,12 @@
 import { z } from 'zod/v4';
+import { cardioInput, cardioValues } from './cardio';
 import { randomUUID } from 'expo-crypto';
 import {
   completionInputSchema,
   entityId,
   exerciseSummarySchema,
   weightUnitSchema,
+  weightSchema,
   type CompletionInput,
   type Routine,
   type DraftSnapshot,
@@ -17,9 +19,33 @@ const actualSetSchema = z.object({
   reps: z.string(),
   value: z.string(),
   unit: weightUnitSchema,
+  distance: z.string().optional(),
+  hours: z.string().optional(),
+  minutes: z.string().optional(),
+  seconds: z.string().optional(),
   saved: z.boolean().optional(),
-  confirmed: z.object({ value: z.string(), reps: z.string(), unit: weightUnitSchema }).optional(),
-  drafted: z.object({ value: z.string(), reps: z.string(), unit: weightUnitSchema }).optional(),
+  confirmed: z
+    .object({
+      value: z.string(),
+      reps: z.string(),
+      unit: weightUnitSchema,
+      distance: z.string().optional(),
+      hours: z.string().optional(),
+      minutes: z.string().optional(),
+      seconds: z.string().optional(),
+    })
+    .optional(),
+  drafted: z
+    .object({
+      value: z.string(),
+      reps: z.string(),
+      unit: weightUnitSchema,
+      distance: z.string().optional(),
+      hours: z.string().optional(),
+      minutes: z.string().optional(),
+      seconds: z.string().optional(),
+    })
+    .optional(),
 });
 export const sessionDraftSchema = z.object({
   version: z.literal(1),
@@ -39,13 +65,39 @@ export const sessionDraftSchema = z.object({
           z.object({
             reps: z.number().int().nullable(),
             weightKg: z.string().nullable(),
+            durationSeconds: z.number().int().nullable().optional(),
+            distanceKm: z.string().nullable().optional(),
           }),
         ),
         sets: z.array(actualSetSchema).max(100),
       }),
     )
     .max(500),
-  frozen: completionInputSchema.nullable(),
+  frozen: z
+    .union([
+      completionInputSchema,
+      z.object({
+        client_session_id: z.uuid(),
+        routine_id: entityId.nullable().optional(),
+        started_at: z.iso.datetime({ offset: true }),
+        ended_at: z.iso.datetime({ offset: true }),
+        exercises: z.array(
+          z.object({
+            exercise_id: entityId,
+            sets: z.array(
+              z.union([
+                z.object({ reps: z.number().int().positive(), weight: weightSchema }),
+                z.object({
+                  duration_seconds: z.number().int().nonnegative(),
+                  distance_km: z.string(),
+                }),
+              ]),
+            ),
+          }),
+        ),
+      }),
+    ])
+    .nullable(),
   updateRoutine: z.boolean().optional(),
 });
 export type SessionDraft = z.infer<typeof sessionDraftSchema>;
@@ -74,6 +126,8 @@ export function createSessionDraft(accountId: number, routine?: Routine): Sessio
         guidance: slot.sets.map((set) => ({
           reps: set.reps,
           weightKg: set.weight_kg,
+          durationSeconds: set.duration_seconds,
+          distanceKm: set.distance_km,
         })),
         sets: (slot.sets.length ? slot.sets : [null]).map(() => emptyActualSet('kg')),
       })) ?? [],
@@ -100,10 +154,14 @@ export function freezeSession(
       exercise_id: slot.exercise.id,
       sets: slot.sets
         .filter((set) => set.saved)
-        .map((set) => ({
-          reps: /^\d+$/.test(set.reps) ? Number(set.reps) : Number.NaN,
-          weight: { value: set.value, unit: set.unit },
-        })),
+        .map((set) =>
+          slot.exercise.activity_type === 'cardio'
+            ? cardioInput(set)
+            : {
+                reps: /^\d+$/.test(set.reps) ? Number(set.reps) : Number.NaN,
+                weight: { value: set.value, unit: set.unit },
+              },
+        ),
     })),
   });
 }
@@ -122,23 +180,48 @@ export function draftSnapshot(draft: SessionDraft, savedOnly = false): DraftSnap
         .map((set) => {
           const confirmed = set.saved ? set : set.confirmed;
           const persisted = confirmed ?? set.drafted;
+          const gymSet = slot.exercise.activity_type !== 'cardio' && persisted;
           return {
             client_id: set.id,
             completed: Boolean(confirmed),
-            reps: persisted ? Number(persisted.reps) : null,
-            weight: persisted ? { value: persisted.value, unit: persisted.unit } : null,
+            reps: gymSet ? Number(persisted.reps) : null,
+            weight: gymSet ? { value: persisted.value, unit: persisted.unit } : null,
+            ...(slot.exercise.activity_type === 'cardio' && persisted
+              ? (cardioInput(persisted) ?? {})
+              : {}),
           };
         }),
     })),
   };
 }
+export async function refreshDraftExercises(
+  local: SessionDraft,
+  exercise: (id: number) => Promise<z.infer<typeof exerciseSummarySchema>>,
+): Promise<SessionDraft> {
+  return {
+    ...local,
+    exercises: await Promise.all(
+      local.exercises.map(async (slot) => {
+        try {
+          return { ...slot, exercise: await exercise(slot.exercise.id) };
+        } catch (error) {
+          if (!local.frozen) throw error;
+          return slot;
+        }
+      }),
+    ),
+  };
+}
+
 export async function restoreServerDraft(
   accountId: number,
   server: ServerDraft,
   local: SessionDraft | null,
   exercise: (id: number) => Promise<z.infer<typeof exerciseSummarySchema>>,
 ): Promise<SessionDraft> {
-  if (local?.clientId === server.client_session_id) return local;
+  if (local?.clientId === server.client_session_id) {
+    return refreshDraftExercises(local, exercise);
+  }
   return {
     version: 1,
     accountId,
@@ -160,12 +243,15 @@ export async function restoreServerDraft(
           value: set.weight?.value ?? '',
           unit: set.weight?.unit ?? 'kg',
           saved: set.completed,
-          ...(set.weight && set.reps !== null
+          ...cardioValues(set.duration_seconds ?? null, set.distance_km ?? null),
+          ...((set.weight && set.reps !== null) ||
+          (set.duration_seconds != null && set.distance_km != null)
             ? {
                 [set.completed ? 'confirmed' : 'drafted']: {
-                  value: set.weight.value,
-                  reps: String(set.reps),
-                  unit: set.weight.unit,
+                  value: set.weight?.value ?? '',
+                  reps: set.reps === null ? '' : String(set.reps),
+                  unit: set.weight?.unit ?? 'kg',
+                  ...cardioValues(set.duration_seconds ?? null, set.distance_km ?? null),
                 },
               }
             : {}),

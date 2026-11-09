@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { cardioInput, cardioValues, type CardioValues } from '../cardio';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import {
@@ -30,7 +31,14 @@ import { WorkoutExerciseCard, WorkoutExerciseSummary } from './WorkoutEditor';
 import { SetFields } from './SetFields';
 import { Button, Failure, IconButton, ui } from './ui';
 
-type DraftSet = { reps: string; weight: string; unit: WeightUnit; canonicalWeight?: string };
+type DraftSet = CardioValues & {
+  reps: string;
+  weight: string;
+  unit: WeightUnit;
+  canonicalWeight?: string;
+  legacy?: boolean;
+  legacyCardio?: CardioValues;
+};
 type DraftExercise = {
   slotId?: number;
   exercise: ExerciseSummary;
@@ -40,8 +48,10 @@ type Draft = { name: string; notes: string; exercises: DraftExercise[] };
 
 function SetSummary({ control, index }: Readonly<{ control: Control<Draft>; index: number }>) {
   const sets = useWatch({ control, name: `exercises.${index}.sets` }) ?? [];
+  const exercise = useWatch({ control, name: `exercises.${index}.exercise` });
   return (
     <WorkoutExerciseSummary
+      cardio={exercise.activity_type === 'cardio'}
       sets={sets.map((set) => ({ reps: set.reps, value: set.weight, unit: set.unit }))}
     />
   );
@@ -62,6 +72,8 @@ function RoutineExerciseEditor({
 >) {
   const p = usePalette();
   const unit: WeightUnit = 'kg';
+  const exercise = useWatch({ control, name: `exercises.${index}.exercise` });
+  const cardio = exercise.activity_type === 'cardio';
   const { fields, append, remove } = useFieldArray({ control, name: `exercises.${index}.sets` });
   return (
     <WorkoutExerciseCard
@@ -77,16 +89,25 @@ function RoutineExerciseEditor({
           name={`exercises.${index}.sets.${i}`}
           rules={{
             validate: (value) =>
-              (validWeight(value.weight, value.unit, 2) &&
-                /^\d+$/.test(value.reps) &&
-                Number(value.reps) >= 1 &&
-                Number(value.reps) <= 2147483647) ||
-              'Enter nonnegative kg, up to two decimals.',
+              (cardio
+                ? Boolean(cardioInput(value)) || unchangedLegacyCardio(value)
+                : validWeight(value.weight, value.unit, 2) &&
+                  /^\d+$/.test(value.reps) &&
+                  Number(value.reps) >= 1 &&
+                  Number(value.reps) <= 2147483647) || 'Enter valid set values.',
           }}
           render={({ field, fieldState }) => (
             <View style={ui.gap}>
+              {cardio && field.value.legacy ? (
+                <Text style={{ color: p['ink-muted'] }}>
+                  Previous default: {field.value.weight || '—'} kg · {field.value.reps || '—'} reps.
+                  Enter distance and time to replace it.
+                </Text>
+              ) : null}
               <SetFields
+                cardio={cardio}
                 set={{
+                  ...field.value,
                   id: set.id,
                   value: field.value.weight,
                   unit: field.value.unit,
@@ -99,6 +120,12 @@ function RoutineExerciseEditor({
                 disabled={card.disabled}
                 onChange={(next) =>
                   field.onChange({
+                    legacy: field.value.legacy,
+                    legacyCardio: field.value.legacyCardio,
+                    distance: next.distance,
+                    hours: next.hours,
+                    minutes: next.minutes,
+                    seconds: next.seconds,
                     weight: next.value,
                     unit: next.unit,
                     reps: next.reps,
@@ -160,6 +187,11 @@ export function RoutineEditor({
             weight: set.weight_kg === null ? '' : Number(set.weight_kg).toFixed(2),
             unit: 'kg' as const,
             canonicalWeight: set.weight_kg ?? undefined,
+            legacy:
+              slot.exercise.activity_type === 'cardio' &&
+              (set.duration_seconds === null || set.distance_km === null),
+            legacyCardio: cardioValues(set.duration_seconds, set.distance_km),
+            ...cardioValues(set.duration_seconds, set.distance_km),
           })),
         })) ?? [],
     },
@@ -205,10 +237,15 @@ export function RoutineEditor({
       exercises: values.exercises.map((slot) => ({
         ...(slot.slotId === undefined ? {} : { id: slot.slotId }),
         exercise_id: slot.exercise.id,
-        sets: slot.sets.map((set) => ({
-          reps: Number(set.reps),
-          ...setWeightInput(set),
-        })),
+        ...(preserveLegacySets(slot, routine)
+          ? {}
+          : {
+              sets: slot.sets.map((set) =>
+                slot.exercise.activity_type === 'cardio'
+                  ? cardioInput(set)
+                  : { reps: Number(set.reps), ...setWeightInput(set) },
+              ),
+            }),
       })),
     });
     if (!parsed.success) {
@@ -483,4 +520,39 @@ function setWeightInput(set: DraftSet) {
   if (set.canonicalWeight !== undefined) return { weight_kg: set.canonicalWeight };
   if (set.unit === 'kg') return { weight_kg: set.weight };
   return { weight: { value: set.weight, unit: set.unit } };
+}
+
+function preserveLegacySets(slot: DraftExercise, routine?: Routine): boolean {
+  if (slot.exercise.activity_type !== 'cardio' || !slot.sets.some((set) => set.legacy))
+    return false;
+  const original = routine?.exercises.find((item) => item.id === slot.slotId);
+  if (
+    original?.exercise.id !== slot.exercise.id ||
+    original.default_sets.length !== slot.sets.length
+  )
+    return false;
+  return slot.sets.every((set, index) => {
+    const old = original.default_sets[index];
+    const cardio = cardioValues(old.duration_seconds, old.distance_km);
+    return (
+      set.reps === (old.reps === null ? '' : String(old.reps)) &&
+      set.weight === (old.weight_kg === null ? '' : Number(old.weight_kg).toFixed(2)) &&
+      set.distance === cardio.distance &&
+      set.hours === cardio.hours &&
+      set.minutes === cardio.minutes &&
+      set.seconds === cardio.seconds
+    );
+  });
+}
+
+function unchangedLegacyCardio(set: DraftSet): boolean {
+  const original = set.legacyCardio;
+  return Boolean(
+    set.legacy &&
+    original &&
+    set.distance === original.distance &&
+    set.hours === original.hours &&
+    set.minutes === original.minutes &&
+    set.seconds === original.seconds,
+  );
 }
