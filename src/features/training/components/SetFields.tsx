@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { TextField } from '@/components/TextField';
-import { radii, spacing, sizes, usePalette } from '@/theme/tokens';
+import { radii, spacing, sizes, textStyles, usePalette } from '@/theme/tokens';
+import { formatCardioTime } from '../cardio';
 import type { ActualSet } from '../sessionDraft';
 import { displayWeight } from '../sessionDraft';
 import { validWeight, type WeightUnit } from '../schemas';
@@ -116,20 +117,64 @@ type CardioFieldProps = Readonly<{
   disabled: boolean;
   onChange: (set: ActualSet) => void;
 }>;
-const CARDIO_PLACEHOLDERS = { distance: 'km', hours: 'h', minutes: 'min', seconds: 'sec' } as const;
 function CardioInputs({ set, label, disabled, onChange }: CardioFieldProps) {
-  return (Object.keys(CARDIO_PLACEHOLDERS) as (keyof typeof CARDIO_PLACEHOLDERS)[]).map((key) => (
-    <View key={key} style={{ flex: 1 }}>
-      <TextField
-        accessibilityLabel={`${label} ${key}`}
-        keyboardType={key === 'distance' ? 'decimal-pad' : 'number-pad'}
-        editable={!disabled}
-        value={set[key] ?? ''}
-        placeholder={CARDIO_PLACEHOLDERS[key]}
-        onChangeText={(value) => onChange({ ...set, [key]: value })}
-      />
-    </View>
-  ));
+  const p = usePalette();
+  const hasTime = [set.hours, set.minutes, set.seconds].some(
+    (part) => part !== undefined && part !== '',
+  );
+  const time = hasTime
+    ? formatCardioTime(set.hours || '0', set.minutes || '0', set.seconds || '0')
+    : '';
+  const invalidTime = Number(set.minutes) > 59 || Number(set.seconds) > 59;
+  return (
+    <>
+      <View style={{ flex: 1 }}>
+        <TextField
+          accessibilityLabel={`${label} distance`}
+          keyboardType="decimal-pad"
+          editable={!disabled}
+          value={set.distance ?? ''}
+          placeholder="km"
+          inputStyle={{ textAlign: 'center' }}
+          onChangeText={(distance) => onChange({ ...set, distance })}
+        />
+      </View>
+      <View style={{ flex: 1.5, minWidth: 104 }}>
+        <TextField
+          accessibilityLabel={`${label} time`}
+          accessibilityHint="Enter digits for hours, minutes and seconds. For example, 1230 is 12:30; 10000 is 01:00:00."
+          keyboardType="number-pad"
+          editable={!disabled}
+          value={time}
+          placeholder="mm:ss"
+          containerStyle={{ paddingHorizontal: spacing['space-2'] }}
+          inputStyle={{
+            ...textStyles['body-sm'],
+            textAlign: 'center',
+            fontVariant: ['tabular-nums'],
+          }}
+          invalid={invalidTime}
+          onChangeText={(value) => {
+            const numeric = value.replace(/\D/g, '');
+            const digits = numeric.replace(/^0+(?=\d)/, '');
+            if (digits.length > 6 || (!value.includes(':') && numeric.length > 6)) return;
+            const padded = digits.padStart(6, '0');
+            onChange({
+              ...set,
+              hours: digits ? String(Number(padded.slice(0, -4))) : '',
+              minutes: digits ? String(Number(padded.slice(-4, -2))) : '',
+              seconds: digits ? String(Number(padded.slice(-2))) : '',
+            });
+          }}
+        />
+        {invalidTime ? (
+          <Text accessibilityRole="alert" style={{ color: p.danger }}>
+            Minutes and seconds must be between 00 and 59.
+          </Text>
+        ) : null}
+      </View>
+    </>
+  );
 }
 function CardioGuidance({
   set,

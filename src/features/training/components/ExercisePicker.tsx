@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   FlatList,
@@ -20,6 +20,13 @@ import { trainingApi } from '../api';
 import { ExerciseDetails } from './ExerciseDetails';
 import type { ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
+
+type ActivityFilter = 'all' | 'gym' | 'cardio';
+const ACTIVITY_LABELS: Record<ActivityFilter, string> = {
+  all: 'All',
+  gym: 'Gym',
+  cardio: 'Cardio',
+};
 
 export function ExercisePicker({
   accountId,
@@ -69,11 +76,19 @@ export function ExercisePicker({
   const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [bodyParts, setBodyParts] = useState<string[]>([]);
+  const [activityType, setActivityType] = useState<ActivityFilter>('all');
+  const [activityRevision, setActivityRevision] = useState(0);
+  const pickerInstance = useId();
+  function selectActivityType(next: ActivityFilter) {
+    if (next === activityType) return;
+    setActivityType(next);
+    setActivityRevision((revision) => revision + 1);
+  }
   const [filterOpen, setFilterOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   useEffect(() => {
     list.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [bodyParts, name]);
+  }, [bodyParts, name, activityType]);
   useEffect(() => {
     const timer = setTimeout(() => setName(search.trim()), 300);
     return () => clearTimeout(timer);
@@ -83,9 +98,21 @@ export function ExercisePicker({
     queryFn: ({ signal }) => trainingApi.bodyParts(signal),
   });
   const query = useInfiniteQuery({
-    queryKey: ['training', accountId, 'exercises', bodyParts, name],
+    queryKey: [
+      'training',
+      accountId,
+      'exercises',
+      bodyParts,
+      name,
+      activityType,
+      pickerInstance,
+      activityRevision,
+    ],
     initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) => trainingApi.exercises(bodyParts, pageParam, signal, name),
+    queryFn: ({ pageParam, signal }) =>
+      activityType === 'all'
+        ? trainingApi.exercises(bodyParts, pageParam, signal, name)
+        : trainingApi.exercises(bodyParts, pageParam, signal, name, activityType),
     getNextPageParam: (page) =>
       page.items.length === page.limit ? page.offset + page.limit : undefined,
   });
@@ -126,6 +153,8 @@ export function ExercisePicker({
             contentContainerStyle={[ui.content, selection.length > 0 && { paddingBottom: 120 }]}
             ListHeaderComponent={
               <ExerciseCatalogueHeader
+                activityType={activityType}
+                setActivityType={selectActivityType}
                 search={search}
                 setSearch={setSearch}
                 setName={setName}
@@ -303,6 +332,8 @@ function ExercisePickerRow({
 }
 
 function ExerciseCatalogueHeader({
+  activityType,
+  setActivityType,
   search,
   setSearch,
   setName,
@@ -315,6 +346,8 @@ function ExerciseCatalogueHeader({
   error,
   onRetry,
 }: Readonly<{
+  activityType: ActivityFilter;
+  setActivityType: (value: ActivityFilter) => void;
   search: string;
   setSearch: (value: string) => void;
   setName: (value: string) => void;
@@ -330,6 +363,25 @@ function ExerciseCatalogueHeader({
   const p = usePalette();
   return (
     <View style={ui.gap}>
+      <View style={ui.row}>
+        {(['all', 'gym', 'cardio'] as const).map((type) => (
+          <Pressable
+            key={type}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activityType === type }}
+            onPress={() => setActivityType(type)}
+            style={{
+              flex: 1,
+              minHeight: 44,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: activityType === type ? p['brand-soft'] : p['surface-200'],
+            }}
+          >
+            <Text style={{ color: p.ink }}>{ACTIVITY_LABELS[type]}</Text>
+          </Pressable>
+        ))}
+      </View>
       <View style={ui.gap}>
         <View style={ui.row}>
           <Text

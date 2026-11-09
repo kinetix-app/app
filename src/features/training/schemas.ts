@@ -38,6 +38,21 @@ export const setSchema = z.object({
   duration_seconds: z.number().int().nullable(),
   distance_km: z.string().nullable(),
 });
+export const exerciseHistoryPageSchema = z.object({
+  items: z.array(
+    z.object({
+      session_id: entityId,
+      started_at: z.iso.datetime({ offset: true }),
+      ended_at: z.iso.datetime({ offset: true }),
+      name: z.string(),
+      activity_type: z.string(),
+      sets: z.array(setSchema),
+    }),
+  ),
+  limit: z.number().int().positive(),
+  offset: z.number().int().nonnegative(),
+});
+export type ExerciseHistoryItem = z.infer<typeof exerciseHistoryPageSchema>['items'][number];
 export const slotSchema = z.object({
   id: entityId,
   exercise_order: z.number().int().positive(),

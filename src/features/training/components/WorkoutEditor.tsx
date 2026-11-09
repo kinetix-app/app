@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, Platform, Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { formatCardioTime, type CardioValues } from '../cardio';
 import type { ExerciseSummary } from '../schemas';
 import { Button, IconButton, ui } from './ui';
 import { ActionMenu } from './ActionMenu';
@@ -61,7 +62,7 @@ export function WorkoutExerciseSummary({
   savedCount,
   cardio = false,
 }: Readonly<{
-  sets: readonly Pick<ActualSet, 'value' | 'unit' | 'reps'>[];
+  sets: readonly (Pick<ActualSet, 'value' | 'unit' | 'reps'> & CardioValues)[];
   savedCount?: number;
   cardio?: boolean;
 }>) {
@@ -86,13 +87,41 @@ export function WorkoutExerciseSummary({
           ? `${sets.length} ${setLabel}`
           : `${savedCount} / ${sets.length} sets saved`}
       </Text>
-      {!cardio ? (
-        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {range('reps')} reps · {range('value')} kg
-        </Text>
-      ) : null}
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        {cardio ? cardioSummary(sets) : `${range('reps')} reps · ${range('value')} kg`}
+      </Text>
     </View>
   );
+}
+
+function cardioSummary(sets: readonly CardioValues[]) {
+  const distances = sets.flatMap(({ distance }) =>
+    distance && /^\d+(\.\d{1,2})?$/.test(distance) && Number(distance) <= 999999.99
+      ? [Number(distance)]
+      : [],
+  );
+  const durations = sets.flatMap(({ hours, minutes, seconds }) => {
+    if (![hours, minutes, seconds].every((value) => value !== undefined && /^\d+$/.test(value)))
+      return [];
+    const duration = Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+    return Number(minutes) <= 59 && Number(seconds) <= 59 && duration <= 2147483647
+      ? [duration]
+      : [];
+  });
+  return `${summaryRange(distances, String)} km · ${summaryRange(durations, (duration) =>
+    formatCardioTime(
+      String(Math.floor(duration / 3600)),
+      String(Math.floor((duration % 3600) / 60)),
+      String(duration % 60),
+    ),
+  )}`;
+}
+
+function summaryRange(values: number[], format: (value: number) => string) {
+  if (!values.length) return '—';
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  return low === high ? format(low) : `${format(low)}–${format(high)}`;
 }
 
 /** Shared inline exercise editor. Name toggles sets; image opens catalogue information. */

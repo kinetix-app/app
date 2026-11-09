@@ -213,3 +213,16 @@ filters, retaining the name search and staged exercise selection. The filter mod
 uses a compact heading, sentence-case rows, right-aligned checkboxes and a selection
 count with a text-only Clear action. Clear changes only the draft; Save applies it,
 while Cancel, the close icon and platform Back preserve the applied filters.
+
+### Exercise detail history
+
+Exercise details retain their media and instructions under the Instructions tab. The History tab requests completed sessions containing that exercise in pages, showing each session's local completion date and its recorded sets with units; repeated occurrences appear together in order. Evolution is reserved for future graphs. History supports empty, loading, retry and load-more states.
+
+Cardio sets use one numeric time field formatted as `mm:ss` (or `hh:mm:ss` from one hour): entering `1230`
+produces `12:30`. Input is limited to six digits, up to `99:59:59`. Minutes and seconds must be 00–59; saving continues to send
+total duration in seconds and distance in kilometres. Clearing time leaves it unset.
+
+Cardio exercise cards summarize entered sets with kilometre and compact time ranges (`mm:ss`, or `hh:mm:ss` from one hour),
+using the same set count and saved-set count as gym cards. Empty or invalid values
+are omitted from ranges; missing measurements display a dash. Both routine and
+ongoing-workout summaries update as values change.

@@ -22,3 +22,9 @@ export function cardioValues(duration: number | null, distance: string | null): 
     seconds: duration === null ? '' : String(duration % 60),
   };
 }
+
+/** Compact clock for set fields and exercise-card summaries. */
+export function formatCardioTime(hours: string, minutes: string, seconds: string) {
+  const parts = Number(hours) > 0 ? [hours, minutes, seconds] : [minutes, seconds];
+  return parts.map((part) => (part || '0').padStart(2, '0')).join(':');
+}
