@@ -1477,3 +1477,153 @@ test('the routine save confirmation expires after four seconds without removing 
     jest.useRealTimers();
   }
 });
+
+test('cardio routine accepts zero, rejects incomplete and negative values, and serializes only time and distance', async () => {
+  const cardio = { ...exampleExercise, name: 'Cardio test', activity_type: 'cardio' };
+  jest.mocked(trainingApi.exercises).mockResolvedValue({ items: [cardio], limit: 20, offset: 0 });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.changeText(screen.getByLabelText('Routine name'), 'Cardio routine');
+  fireEvent.press(screen.getByText('Add exercise'));
+  fireEvent.press(await screen.findByLabelText('Select Cardio test'));
+  await act(async () => fireEvent.press(screen.getByText('Add exercises (1)')));
+  fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
+  fireEvent.press(screen.getByLabelText('Add set to exercise 1'));
+  fireEvent.press(screen.getByText('Save'));
+  await screen.findByText('Enter valid set values.');
+  expect(trainingApi.create).not.toHaveBeenCalled();
+  for (const name of ['distance', 'hours', 'minutes', 'seconds'])
+    fireEvent.changeText(screen.getByLabelText(`Exercise 1 set 1 ${name}`), '0');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 distance'), '-1');
+  fireEvent.press(screen.getByText('Save'));
+  expect(trainingApi.create).not.toHaveBeenCalled();
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 distance'), '0');
+  fireEvent.press(screen.getByText('Save'));
+  await waitFor(() => expect(trainingApi.create).toHaveBeenCalledTimes(1));
+  const form = jest.mocked(trainingApi.create).mock.calls[0][0];
+  expect(JSON.parse(String(form.get('content'))).exercises[0].sets).toEqual([
+    { duration_seconds: 0, distance_km: '0' },
+  ]);
+});
+
+test('editing a reclassified routine retains unchanged legacy defaults and accepts replacement cardio defaults', async () => {
+  const cardio = { ...exampleExercise, name: 'Cardio test', activity_type: 'cardio' };
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [{ ...exampleRoutine.exercises[0], exercise: cardio }],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
+  expect(screen.getByText(/Previous default: 80.00 kg/)).toBeTruthy();
+  fireEvent.changeText(screen.getByLabelText('Routine name'), 'Retained');
+  fireEvent.press(screen.getByText('Save'));
+  await waitFor(() =>
+    expect(trainingApi.save).toHaveBeenCalledWith(
+      { name: 'Retained', notes: null, exercises: [{ id: 20, exercise_id: 1 }] },
+      10,
+    ),
+  );
+});
+
+test('cardio routine edits restore defaults and save replacement measurements', async () => {
+  const cardio = { ...exampleExercise, name: 'Cardio test', activity_type: 'cardio' };
+  const measured = {
+    set_number: 1,
+    reps: null,
+    weight_kg: null,
+    duration_seconds: 90,
+    distance_km: '1.25',
+  };
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [
+      {
+        ...exampleRoutine.exercises[0],
+        exercise: cardio,
+        default_sets: [measured],
+        sets: [measured],
+      },
+    ],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
+  expect(screen.getByLabelText('Exercise 1 set 1 distance').props.value).toBe('1.25');
+  expect(screen.getByLabelText('Exercise 1 set 1 hours').props.value).toBe('0');
+  expect(screen.getByLabelText('Exercise 1 set 1 minutes').props.value).toBe('1');
+  expect(screen.getByLabelText('Exercise 1 set 1 seconds').props.value).toBe('30');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 distance'), '2.50');
+  fireEvent.press(screen.getByText('Save'));
+  await waitFor(() =>
+    expect(trainingApi.save).toHaveBeenCalledWith(
+      {
+        name: 'Push',
+        notes: null,
+        exercises: [
+          { id: 20, exercise_id: 1, sets: [{ duration_seconds: 90, distance_km: '2.50' }] },
+        ],
+      },
+      10,
+    ),
+  );
+});
+
+test('an unchanged incomplete historical cardio default survives a routine name edit', async () => {
+  const cardio = { ...exampleExercise, name: 'Cardio test', activity_type: 'cardio' };
+  const partial = {
+    set_number: 1,
+    reps: null,
+    weight_kg: null,
+    duration_seconds: null,
+    distance_km: '1.25',
+  };
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [{ ...exampleRoutine.exercises[0], exercise: cardio, default_sets: [partial] }],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
+  fireEvent.changeText(screen.getByLabelText('Routine name'), 'Preserved');
+  fireEvent.press(screen.getByText('Save'));
+  await waitFor(() =>
+    expect(trainingApi.save).toHaveBeenCalledWith(
+      { name: 'Preserved', notes: null, exercises: [{ id: 20, exercise_id: 1 }] },
+      10,
+    ),
+  );
+});
+
+test('replacing legacy gym defaults with cardio saves only the replacement distance and duration', async () => {
+  const cardio = { ...exampleExercise, name: 'Cardio test', activity_type: 'cardio' };
+  jest.mocked(trainingApi.routine).mockResolvedValue({
+    ...exampleRoutine,
+    exercises: [{ ...exampleRoutine.exercises[0], exercise: cardio }],
+  });
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('Edit Push'));
+  fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
+  expect(screen.getByText(/Previous default: 80.00 kg/)).toBeTruthy();
+  for (const [field, value] of Object.entries({
+    distance: '1.25',
+    hours: '0',
+    minutes: '2',
+    seconds: '0',
+  })) {
+    fireEvent.changeText(screen.getByLabelText(`Exercise 1 set 1 ${field}`), value);
+  }
+  fireEvent.press(screen.getByText('Save'));
+  await waitFor(() =>
+    expect(trainingApi.save).toHaveBeenCalledWith(
+      {
+        name: 'Push',
+        notes: null,
+        exercises: [
+          { id: 20, exercise_id: 1, sets: [{ duration_seconds: 120, distance_km: '1.25' }] },
+        ],
+      },
+      10,
+    ),
+  );
+});
