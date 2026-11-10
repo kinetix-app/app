@@ -21,7 +21,9 @@ export function SetFields({
   onConfirm,
   saved = false,
   guidance,
+  cardio = false,
 }: Readonly<{
+  cardio?: boolean;
   set: ActualSet;
   unit: WeightUnit;
   label: string;
@@ -30,7 +32,12 @@ export function SetFields({
   number?: number;
   onConfirm?: () => void;
   saved?: boolean;
-  guidance?: { reps: number | null; weightKg: string | null };
+  guidance?: {
+    reps: number | null;
+    weightKg: string | null;
+    durationSeconds?: number | null;
+    distanceKm?: string | null;
+  };
   onChange: (set: ActualSet) => void;
   onRemove: () => void;
 }>) {
@@ -52,47 +59,106 @@ export function SetFields({
         ]}
       >
         <SetPosition number={number} label={label} disabled={disabled} onRemove={onRemove} />
-        <View style={{ flex: 1 }}>
-          <TextField
-            accessibilityLabel={`${label} ${unit}`}
-            keyboardType="decimal-pad"
-            editable={!disabled}
-            value={displayWeight(set.value, set.unit, unit)}
-            maxLength={20}
-            placeholder={
-              guidance?.weightKg != null
-                ? Number(displayWeight(guidance.weightKg, 'kg', unit)).toFixed(2)
-                : unit
-            }
-            inputStyle={{ textAlign: 'center' }}
-            onChangeText={(value) => onChange({ ...set, value, unit })}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <TextField
-            accessibilityLabel={`${label} reps`}
-            keyboardType="number-pad"
-            editable={!disabled}
-            value={set.reps}
-            maxLength={10}
-            placeholder={guidance?.reps != null ? String(guidance.reps) : 'reps'}
-            inputStyle={{ textAlign: 'center' }}
-            onChangeText={(reps) => onChange({ ...set, reps })}
-          />
-        </View>
+        {cardio ? (
+          <CardioInputs set={set} label={label} disabled={disabled} onChange={onChange} />
+        ) : (
+          <>
+            <View style={{ flex: 1 }}>
+              <TextField
+                accessibilityLabel={`${label} ${unit}`}
+                keyboardType="decimal-pad"
+                editable={!disabled}
+                value={displayWeight(set.value, set.unit, unit)}
+                maxLength={20}
+                placeholder={
+                  guidance?.weightKg != null
+                    ? Number(displayWeight(guidance.weightKg, 'kg', unit)).toFixed(2)
+                    : unit
+                }
+                inputStyle={{ textAlign: 'center' }}
+                onChangeText={(value) => onChange({ ...set, value, unit })}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <TextField
+                accessibilityLabel={`${label} reps`}
+                keyboardType="number-pad"
+                editable={!disabled}
+                value={set.reps}
+                maxLength={10}
+                placeholder={guidance?.reps != null ? String(guidance.reps) : 'reps'}
+                inputStyle={{ textAlign: 'center' }}
+                onChangeText={(reps) => onChange({ ...set, reps })}
+              />
+            </View>
+          </>
+        )}
         <SetAction onConfirm={onConfirm} disabled={disabled} saved={saved} label={label} />
       </View>
-      {!weightValid ? (
+      {cardio ? <CardioGuidance set={set} guidance={guidance} /> : null}
+      {!cardio && !weightValid ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Enter nonnegative weight up to 999999.99 kg with at most {decimals} decimals.
+          Enter positive weight up to 999999.99 kg with at most {decimals} decimals.
         </Text>
       ) : null}
-      {!validReps ? (
+      {!cardio && !validReps ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
           Enter positive whole repetitions.
         </Text>
       ) : null}
     </View>
+  );
+}
+
+type CardioFieldProps = Readonly<{
+  set: ActualSet;
+  label: string;
+  disabled: boolean;
+  onChange: (set: ActualSet) => void;
+}>;
+const CARDIO_PLACEHOLDERS = { distance: 'km', hours: 'h', minutes: 'min', seconds: 'sec' } as const;
+function CardioInputs({ set, label, disabled, onChange }: CardioFieldProps) {
+  return (Object.keys(CARDIO_PLACEHOLDERS) as (keyof typeof CARDIO_PLACEHOLDERS)[]).map((key) => (
+    <View key={key} style={{ flex: 1 }}>
+      <TextField
+        accessibilityLabel={`${label} ${key}`}
+        keyboardType={key === 'distance' ? 'decimal-pad' : 'number-pad'}
+        editable={!disabled}
+        value={set[key] ?? ''}
+        placeholder={CARDIO_PLACEHOLDERS[key]}
+        onChangeText={(value) => onChange({ ...set, [key]: value })}
+      />
+    </View>
+  ));
+}
+function CardioGuidance({
+  set,
+  guidance,
+}: Readonly<{
+  set: ActualSet;
+  guidance?: {
+    reps: number | null;
+    weightKg: string | null;
+    durationSeconds?: number | null;
+    distanceKm?: string | null;
+  };
+}>) {
+  const p = usePalette();
+  let previous = null;
+  if (guidance && (guidance.reps !== null || guidance.weightKg !== null))
+    previous = `Previous result: ${guidance.weightKg ?? '—'} kg · ${guidance.reps ?? '—'} reps`;
+  else if (guidance?.durationSeconds != null && guidance.distanceKm != null)
+    previous = `Previous result: ${guidance.distanceKm} km · ${guidance.durationSeconds} seconds`;
+  return (
+    <>
+      {set.reps || set.value ? (
+        <Text style={{ color: p['ink-muted'] }}>
+          Previous entry: {set.value || '—'} {set.unit} · {set.reps || '—'} reps. Enter distance and
+          time to replace it.
+        </Text>
+      ) : null}
+      {previous ? <Text style={{ color: p['ink-muted'] }}>{previous}</Text> : null}
+    </>
   );
 }
 

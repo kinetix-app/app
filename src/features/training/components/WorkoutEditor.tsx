@@ -59,9 +59,11 @@ function formatElapsedTime(hours: number, seconds: number) {
 export function WorkoutExerciseSummary({
   sets,
   savedCount,
+  cardio = false,
 }: Readonly<{
   sets: readonly Pick<ActualSet, 'value' | 'unit' | 'reps'>[];
   savedCount?: number;
+  cardio?: boolean;
 }>) {
   const p = usePalette();
   function range(key: 'reps' | 'value') {
@@ -84,9 +86,11 @@ export function WorkoutExerciseSummary({
           ? `${sets.length} ${setLabel}`
           : `${savedCount} / ${sets.length} sets saved`}
       </Text>
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {range('reps')} reps · {range('value')} kg
-      </Text>
+      {!cardio ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          {range('reps')} reps · {range('value')} kg
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -226,7 +230,9 @@ export function WorkoutExerciseCard({
         </View>
         {expanded ? (
           <View style={ui.gap}>
-            <SetColumnHeaders confirmation={confirmSets} />
+            {exercise.activity_type !== 'cardio' ? (
+              <SetColumnHeaders confirmation={confirmSets} />
+            ) : null}
             {children}
             <Button
               title="Add set"

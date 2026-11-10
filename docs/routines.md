@@ -28,10 +28,12 @@ separate API capabilities and are not simulated in this increment.
 ## Runtime contract
 
 All routes use the existing authenticated API client. List responses are paginated
-`{items, limit, offset}`; no filter means all selectable gym exercises. Body-part filtering (`body_part`)
-matches `body_parts` case-insensitively. Routine create/PATCH selections may include
-`sets: [{reps: 8, weight_kg: "80.00"}]`. Weights are nonnegative kilograms with at most
-two decimals; repetitions are positive integers. Set order determines set number.
+`{items, limit, offset}`; no filter returns selectable gym and cardio exercises. The
+All/Gym/Cardio selector composes with name and case-insensitive body-part filtering.
+Routine create/PATCH gym sets use `[{reps: 8, weight_kg: "80.00"}]`; weights are
+positive kilograms with at most two decimals and repetitions are positive integers.
+Cardio sets use `[{duration_seconds: 750, distance_km: "1.25"}]`; distance and whole
+seconds are required and may be zero. Set order determines set number.
 The editor changes saved `default_sets`, never the resolved previous-workout `sets`.
 
 This is template authoring, not session start or performance recording. Fonts use the
@@ -155,7 +157,7 @@ floating resume panel, discard and completion lifecycle.
 
 Workout uses a header `+ / Routine` action, a searchable list and an actionable first-routine empty state. History remains in Profile; blank workouts start from the shared bottom bar. Tapping a routine's content opens editing; its separate filled-triangle play control starts a freshly fetched routine. The right-hand ellipsis opens a mobile bottom action sheet with Train, Edit, Add/Change cover, Remove cover (when present) and Delete. Both training controls remain disabled during an ongoing workout. The sheet supports outside-tap dismissal, Escape/platform Back and focus return to its trigger.
 
-Cards show a private cover (or gym icon), a two-line notes excerpt, a secondary exercise-count chip without an icon, and the latest completed workout's end date alongside it in the device's local timezone. Unfinished drafts never count as last performed. Current routine authoring supports gym exercises only.
+Cards show a private cover (or gym icon), a two-line notes excerpt, a secondary exercise-count chip without an icon, and the latest completed workout's end date alongside it in the device's local timezone. Unfinished drafts never count as last performed. Routine authoring supports gym and cardio exercises in the same routine. Cardio fields use kilometres and hours/minutes/seconds; legacy repetitions and weights remain visible as historical values.
 
 The editor keeps Save in its fixed top-right header and omits Start. Optional notes expand below the name, accept up to 1000 characters and persist as `notes`; clearing saves null. Covers are managed directly from the routine card’s three-dot menu, outside the editor. JPEG, PNG and WebP images up to 5 MiB are normalized by the backend and delivered through authenticated requests. Covers never use public storage URLs.
 

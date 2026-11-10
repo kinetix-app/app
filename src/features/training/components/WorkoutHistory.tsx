@@ -142,8 +142,10 @@ function SessionDetails({
           </Text>
           {slot.sets.map((set) => (
             <Text key={set.set_number} style={{ color: palette.ink }}>
-              Set {set.set_number}: {set.weight?.value ?? '—'} {set.weight?.unit ?? unit} ·{' '}
-              {set.reps ?? '—'} reps
+              Set {set.set_number}:{' '}
+              {set.duration_seconds !== null || set.distance_km !== null
+                ? `${set.distance_km ?? '—'} km · ${set.duration_seconds ?? '—'} seconds`
+                : `${set.weight?.value ?? '—'} ${set.weight?.unit ?? unit} · ${set.reps ?? '—'} reps`}
             </Text>
           ))}
         </View>
