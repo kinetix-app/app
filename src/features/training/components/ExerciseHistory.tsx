@@ -50,14 +50,15 @@ export function ExerciseHistory({
 
 function HistoryCard({ item }: Readonly<{ item: ExerciseHistoryItem }>) {
   const p = usePalette();
+  const sets = keyedSets(item.sets);
   return (
     <View style={[ui.card, { backgroundColor: p['surface-200'], gap: spacing['space-1'] }]}>
       <Text style={{ color: p.ink, fontWeight: '700' }}>{item.name}</Text>
       <Text style={{ color: p['ink-muted'] }}>{new Date(item.ended_at).toLocaleString()}</Text>
       {item.sets.length ? (
-        item.sets.map((set, index) => (
-          <Text key={index} style={{ color: p.ink }}>
-            {index + 1} · {formatSet(set)}
+        sets.map(({ key, measurement }, index) => (
+          <Text key={key} style={{ color: p.ink }}>
+            {index + 1} · {measurement}
           </Text>
         ))
       ) : (
@@ -77,4 +78,16 @@ function formatSet(set: ExerciseHistoryItem['sets'][number]) {
     values.push(formatCardioDuration(set.duration_seconds));
   }
   return values.join(' · ') || 'No measurements';
+}
+
+function keyedSets(sets: ExerciseHistoryItem['sets']) {
+  // History groups repeated exercise occurrences; set numbers are not unique,
+  // and the API exposes no set IDs. Distinguish identical immutable rows by occurrence.
+  const occurrences = new Map<string, number>();
+  return sets.map((set) => {
+    const identity = JSON.stringify(set);
+    const occurrence = (occurrences.get(identity) ?? 0) + 1;
+    occurrences.set(identity, occurrence);
+    return { key: `${identity}:${occurrence}`, measurement: formatSet(set) };
+  });
 }

@@ -6,7 +6,7 @@ import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import { ExerciseMedia } from './ExerciseMedia';
 import { ExerciseHistory } from './ExerciseHistory';
-import type { ExerciseSummary } from '../schemas';
+import type { Exercise, ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export function ExerciseDetails({
@@ -73,35 +73,7 @@ export function ExerciseDetails({
                   Graphs will be available here in a future update.
                 </Text>
               ) : null}
-              {tab === 'Instructions' ? (
-                <>
-                  <ExerciseMedia
-                    name={detail.data.name}
-                    videoUrl={detail.data.video_url}
-                    imageUrl={detail.data.image_url}
-                  />
-                  {detail.data.overview ? (
-                    <Text style={{ color: p.ink }}>{detail.data.overview}</Text>
-                  ) : null}
-                  <View style={ui.gap}>
-                    {detail.data.equipments?.length ? (
-                      <Text style={{ color: p['ink-muted'] }}>
-                        Equipment: {detail.data.equipments.join(' · ')}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Text style={[ui.heading, { color: p.ink }]}>Instructions</Text>
-                  {detail.data.instructions?.length ? (
-                    detail.data.instructions.map((text, i) => (
-                      <Text key={text} style={{ color: p.ink }}>
-                        {i + 1}. {text}
-                      </Text>
-                    ))
-                  ) : (
-                    <Text style={{ color: p['ink-muted'] }}>No instructions available.</Text>
-                  )}
-                </>
-              ) : null}
+              {tab === 'Instructions' ? <ExerciseInstructions exercise={detail.data} /> : null}
               {onAdd ? (
                 <Button
                   title="Add"
@@ -117,5 +89,36 @@ export function ExerciseDetails({
         </ScrollView>
       </SafeAreaView>
     </Modal>
+  );
+}
+
+function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
+  const p = usePalette();
+  return (
+    <>
+      <ExerciseMedia
+        name={exercise.name}
+        videoUrl={exercise.video_url}
+        imageUrl={exercise.image_url}
+      />
+      {exercise.overview ? <Text style={{ color: p.ink }}>{exercise.overview}</Text> : null}
+      <View style={ui.gap}>
+        {exercise.equipments?.length ? (
+          <Text style={{ color: p['ink-muted'] }}>
+            Equipment: {exercise.equipments.join(' · ')}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={[ui.heading, { color: p.ink }]}>Instructions</Text>
+      {exercise.instructions?.length ? (
+        exercise.instructions.map((text, i) => (
+          <Text key={text} style={{ color: p.ink }}>
+            {i + 1}. {text}
+          </Text>
+        ))
+      ) : (
+        <Text style={{ color: p['ink-muted'] }}>No instructions available.</Text>
+      )}
+    </>
   );
 }

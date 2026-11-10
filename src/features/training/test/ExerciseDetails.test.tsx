@@ -56,6 +56,7 @@ test('retries history and loads the next page with explicit set units', async ()
     activity_type: 'gym',
     sets: [
       set,
+      { ...set },
       {
         ...set,
         reps: null,
@@ -75,7 +76,8 @@ test('retries history and loads the next page with explicit set units', async ()
   fireEvent.press(await screen.findByRole('tab', { name: 'History' }));
   fireEvent.press(await screen.findByText('Retry'));
   expect(await screen.findByText('1 · 12 reps · 40 kg')).toBeTruthy();
-  expect(screen.getByText('2 · 1.25 km · 00:12:30')).toBeTruthy();
+  expect(screen.getByText('2 · 12 reps · 40 kg')).toBeTruthy();
+  expect(screen.getByText('3 · 1.25 km · 00:12:30')).toBeTruthy();
   fireEvent.press(screen.getByText('Load more history'));
   await waitFor(() => expect(screen.queryByText('Load more history')).toBeNull());
   expect(screen.getByText('Workout')).toBeTruthy();

@@ -353,6 +353,7 @@ function ExerciseCatalogueHeader({
   onRetry: () => void;
 }>) {
   const p = usePalette();
+  const activeFilterCount = bodyParts.length + (activityType === 'all' ? 0 : 1);
   return (
     <View style={ui.gap}>
       <View style={ui.gap}>
@@ -392,8 +393,8 @@ function ExerciseCatalogueHeader({
           <IconButton
             icon="sliders"
             label={
-              bodyParts.length || activityType !== 'all'
-                ? `Filter body parts (${bodyParts.length + (activityType === 'all' ? 0 : 1)} active)`
+              activeFilterCount > 0
+                ? `Filter body parts (${activeFilterCount} active)`
                 : 'Filter body parts'
             }
             onPress={() => {
@@ -408,34 +409,9 @@ function ExerciseCatalogueHeader({
               {activityType === 'cardio' ? 'Cardio' : 'Gym'}
             </Text>
           ) : null}
-          {activityType === 'cardio' ? null : bodyParts.length === 0 ? (
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>All body parts</Text>
-          ) : (
-            bodyParts.map((part) => (
-              <Pressable
-                key={part}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${part} filter`}
-                onPress={() =>
-                  setBodyParts((previous) => previous.filter((value) => value !== part))
-                }
-                style={[
-                  ui.row,
-                  {
-                    minHeight: sizes['tap-min'],
-                    padding: spacing['space-3'],
-                    borderRadius: radii['radius-pill'],
-                    backgroundColor: p['brand-soft'],
-                  },
-                ]}
-              >
-                <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
-                  {part.toLowerCase()}
-                </Text>
-                <Feather name="x" size={16} color={p['brand-ink']} />
-              </Pressable>
-            ))
-          )}
+          {activityType !== 'cardio' ? (
+            <CatalogueBodyPartBadges bodyParts={bodyParts} setBodyParts={setBodyParts} />
+          ) : null}
           {bodyParts.length > 1 ? (
             <Pressable
               accessibilityRole="button"
@@ -504,5 +480,45 @@ function ExerciseSelectionAction({
         icon="plus"
       />
     </View>
+  );
+}
+
+function CatalogueBodyPartBadges({
+  bodyParts,
+  setBodyParts,
+}: Readonly<{
+  bodyParts: string[];
+  setBodyParts: React.Dispatch<React.SetStateAction<string[]>>;
+}>) {
+  const p = usePalette();
+  return (
+    <>
+      {bodyParts.length === 0 ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>All body parts</Text>
+      ) : (
+        bodyParts.map((part) => (
+          <Pressable
+            key={part}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${part} filter`}
+            onPress={() => setBodyParts((previous) => previous.filter((value) => value !== part))}
+            style={[
+              ui.row,
+              {
+                minHeight: sizes['tap-min'],
+                padding: spacing['space-3'],
+                borderRadius: radii['radius-pill'],
+                backgroundColor: p['brand-soft'],
+              },
+            ]}
+          >
+            <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
+              {part.toLowerCase()}
+            </Text>
+            <Feather name="x" size={16} color={p['brand-ink']} />
+          </Pressable>
+        ))
+      )}
+    </>
   );
 }

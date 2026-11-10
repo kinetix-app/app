@@ -143,14 +143,23 @@ function SessionDetails({
           </Text>
           {slot.sets.map((set) => (
             <Text key={set.set_number} style={{ color: palette.ink }}>
-              Set {set.set_number}:{' '}
-              {set.duration_seconds !== null || set.distance_km !== null
-                ? `${set.distance_km ?? '—'} km · ${set.duration_seconds === null ? '—' : formatCardioDuration(set.duration_seconds)}`
-                : `${set.weight?.value ?? '—'} ${set.weight?.unit ?? unit} · ${set.reps ?? '—'} reps`}
+              Set {set.set_number}: {formatWorkoutSet(set, unit)}
             </Text>
           ))}
         </View>
       ))}
     </View>
   );
+}
+
+function formatWorkoutSet(
+  set: CompletedSession['exercises'][number]['sets'][number],
+  unit: WeightUnit,
+) {
+  if (set.duration_seconds !== null || set.distance_km !== null) {
+    const duration =
+      set.duration_seconds === null ? '—' : formatCardioDuration(set.duration_seconds);
+    return `${set.distance_km ?? '—'} km · ${duration}`;
+  }
+  return `${set.weight?.value ?? '—'} ${set.weight?.unit ?? unit} · ${set.reps ?? '—'} reps`;
 }
