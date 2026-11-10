@@ -230,7 +230,7 @@ test('creates a routine by selecting exercises, filtering body-parts and adding 
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '80.001');
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '8');
   fireEvent.press(screen.getByText('Save'));
-  await screen.findByText('Enter nonnegative kg, up to two decimals.');
+  await screen.findByText('Enter positive weight up to 999999.99 kg with at most 2 decimals.');
   expect(trainingApi.save).not.toHaveBeenCalled();
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '80');
   collapseExercise();
@@ -1183,11 +1183,11 @@ test('incomplete saved defaults display empty fields and require valid reps befo
   fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
   expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('');
   expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('');
-  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '0');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '1');
   for (const reps of ['abc', '0', '2147483648']) {
     fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), reps);
     fireEvent.press(screen.getByText('Save'));
-    expect(await screen.findByText('Enter nonnegative kg, up to two decimals.')).toBeTruthy();
+    expect(await screen.findByText('Enter positive whole repetitions.')).toBeTruthy();
     expect(trainingApi.save).not.toHaveBeenCalled();
   }
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '8');
@@ -1197,7 +1197,7 @@ test('incomplete saved defaults display empty fields and require valid reps befo
     {
       name: 'Push',
       notes: null,
-      exercises: [{ id: 20, exercise_id: 1, sets: [{ reps: 8, weight_kg: '0' }] }],
+      exercises: [{ id: 20, exercise_id: 1, sets: [{ reps: 8, weight_kg: '1' }] }],
     },
     10,
   );
