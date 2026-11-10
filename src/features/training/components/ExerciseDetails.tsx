@@ -6,6 +6,7 @@ import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import { ExerciseMedia } from './ExerciseMedia';
 import { ExerciseHistory } from './ExerciseHistory';
+import { ExerciseEvolution } from './ExerciseEvolution';
 import type { Exercise, ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
@@ -51,6 +52,7 @@ export function ExerciseDetails({
                     key={value}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: tab === value }}
+                    aria-selected={tab === value}
                     onPress={() => setTab(value)}
                     style={{
                       flex: 1,
@@ -69,9 +71,11 @@ export function ExerciseDetails({
                 <ExerciseHistory accountId={accountId} exerciseId={exerciseId} />
               ) : null}
               {tab === 'Evolution' ? (
-                <Text style={{ color: p['ink-muted'] }}>
-                  Graphs will be available here in a future update.
-                </Text>
+                <ExerciseEvolution
+                  accountId={accountId}
+                  exerciseId={exerciseId}
+                  activityType={detail.data.activity_type}
+                />
               ) : null}
               {tab === 'Instructions' ? <ExerciseInstructions exercise={detail.data} /> : null}
               {onAdd ? (
