@@ -6,6 +6,7 @@ import {
   LayoutAnimation,
   Modal,
   Pressable,
+  PanResponder,
   ScrollView,
   Text,
   View,
@@ -57,7 +58,8 @@ function value(day: EvolutionDay, metric: Metric, weight: string, distance: stri
   if (raw === null) return '';
   if (metric === 'duration_seconds') return duration(Number(raw));
   const unit = metric === 'distance' ? distance : metric === 'reps' ? 'reps' : weight;
-  return `${raw} ${unit}`;
+  const formatted = metric === 'reps' ? raw : Number(raw).toFixed(metric === 'distance' ? 2 : 1);
+  return `${formatted} ${unit}`;
 }
 export function ExerciseEvolution({
   accountId,
@@ -70,7 +72,21 @@ export function ExerciseEvolution({
   const [range, setRange] = useState<Range>(3);
   const [selected, setSelected] = useState<string | null>(null);
   const [info, setInfo] = useState(false);
-  const [showValues, setShowValues] = useState(false);
+  const [sheetY] = useState(() => new Animated.Value(0));
+  const sheetPan = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 4,
+    onPanResponderMove: (_, gesture) => sheetY.setValue(Math.max(0, gesture.dy)),
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dy > 60 || gesture.vy > 0.7) setInfo(false);
+      Animated.timing(sheetY, {
+        toValue: 0,
+        duration: reduceMotion ? 0 : 180,
+        useNativeDriver: true,
+      }).start();
+    },
+    onPanResponderTerminate: () => sheetY.setValue(0),
+  });
   const [width, setWidth] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(true);
   const [opacity] = useState(() => new Animated.Value(1));
@@ -136,37 +152,18 @@ export function ExerciseEvolution({
         ).map((item) => {
           const key = item as Metric;
           return (
-            <Pressable
+            <EvolutionSelector
               key={key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: metric === key }}
-              aria-selected={metric === key}
+              label={labels[key]}
+              selected={metric === key}
+              role="tab"
+              reduceMotion={reduceMotion}
               onPress={() => {
                 animate();
                 setMetric(key);
                 setSelected(null);
               }}
-              style={{
-                minHeight: 44,
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ color: p.ink }}>{labels[key]}</Text>
-              {metric === key ? (
-                <Animated.View
-                  pointerEvents="none"
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: 2,
-                    backgroundColor: p.brand,
-                    opacity,
-                  }}
-                />
-              ) : null}
-            </Pressable>
+            />
           );
         })}
       </ScrollView>
@@ -243,7 +240,13 @@ export function ExerciseEvolution({
             <Text
               style={{ position: 'absolute', left: 0, top: 0, color: p['ink-muted'], fontSize: 10 }}
             >
-              {max}{' '}
+              {max.toFixed(
+                metric === 'distance'
+                  ? 2
+                  : metric === 'reps' || metric === 'duration_seconds'
+                    ? 0
+                    : 1,
+              )}{' '}
               {metric === 'distance'
                 ? distance
                 : metric === 'reps'
@@ -261,7 +264,13 @@ export function ExerciseEvolution({
                 fontSize: 10,
               }}
             >
-              {Number(min.toFixed(2))}
+              {min.toFixed(
+                metric === 'distance'
+                  ? 2
+                  : metric === 'reps' || metric === 'duration_seconds'
+                    ? 0
+                    : 1,
+              )}
             </Text>
             {points.slice(1).map((point, i) => {
               const prev = points[i];
@@ -350,63 +359,20 @@ export function ExerciseEvolution({
       ) : null}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         {([1, 3, 6, 12, 'All'] as Range[]).map((r) => (
-          <Pressable
+          <EvolutionSelector
             key={r}
-            accessibilityRole="button"
-            accessibilityState={{ selected: range === r }}
-            aria-selected={range === r}
+            label={r === 'All' ? r : r === 12 ? '1 year' : `${r} month${r === 1 ? '' : 's'}`}
+            selected={range === r}
+            role="button"
+            reduceMotion={reduceMotion}
             onPress={() => {
               animate();
               setRange(r);
               setSelected(null);
             }}
-            style={{ minHeight: 44, justifyContent: 'center' }}
-          >
-            <Text
-              style={{
-                color: range === r ? p.brand : p['ink-muted'],
-                fontWeight: range === r ? '700' : '400',
-              }}
-            >
-              {r === 'All' ? r : r === 12 ? '1 year' : `${r} month${r === 1 ? '' : 's'}`}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
-      {current ? (
-        <>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showValues }}
-            aria-expanded={showValues}
-            onPress={() => setShowValues(!showValues)}
-            style={{ minHeight: 44, justifyContent: 'center' }}
-          >
-            <Text style={{ color: p.brand }}>{showValues ? 'Hide values' : 'Show values'}</Text>
-          </Pressable>
-          {showValues ? (
-            <View>
-              {' '}
-              <Text style={{ color: p['ink-muted'] }}>Observations</Text>
-              {visible.map((day) => (
-                <Pressable
-                  key={day.date}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: selected === day.date }}
-                  aria-selected={selected === day.date}
-                  accessibilityLabel={`Select observation ${day.date}, ${value(day, metric, weight, distance)}`}
-                  onPress={() => setSelected(selected === day.date ? null : day.date)}
-                  style={{ minHeight: 44, justifyContent: 'center' }}
-                >
-                  <Text style={{ color: p.ink }}>
-                    {day.date} · {value(day, metric, weight, distance)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </>
-      ) : null}
       <Modal
         visible={info}
         transparent
@@ -414,42 +380,109 @@ export function ExerciseEvolution({
         onRequestClose={() => setInfo(false)}
       >
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: p.scrim }}>
-          <SafeAreaView
-            style={{
-              maxHeight: '75%',
-              backgroundColor: p['surface-200'],
-              padding: 20,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-            }}
-          >
-            <ScrollView>
+          <Animated.View style={{ maxHeight: '75%', transform: [{ translateY: sheetY }] }}>
+            <SafeAreaView
+              style={{
+                maxHeight: '100%',
+                backgroundColor: p['surface-200'],
+                padding: 20,
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+              }}
+            >
               <View
+                {...sheetPan.panHandlers}
                 style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
+                  minHeight: 44,
                   alignItems: 'center',
+                  justifyContent: 'center',
+                  touchAction: 'none',
                 }}
               >
-                <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, flex: 1 }}>
-                  {labels[metric]}
-                </Text>
-                <IconButton icon="x" label="Close explanation" onPress={() => setInfo(false)} />
+                <View
+                  style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: p['ink-muted'] }}
+                />
               </View>
-              <Text style={{ color: p.ink, lineHeight: 22 }}>
-                {descriptions[metric]}{' '}
-                {metric === 'distance'
-                  ? `Distance is shown in ${distance}.`
-                  : metric === 'duration_seconds'
-                    ? 'Time is shown in hours, minutes and seconds.'
-                    : metric === 'reps'
-                      ? ''
-                      : `Load is shown in ${weight}.`}
-              </Text>
-            </ScrollView>
-          </SafeAreaView>
+              <ScrollView>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, flex: 1 }}>
+                    {labels[metric]}
+                  </Text>
+                  <IconButton icon="x" label="Close explanation" onPress={() => setInfo(false)} />
+                </View>
+                <Text style={{ color: p.ink, lineHeight: 22 }}>
+                  {descriptions[metric]}{' '}
+                  {metric === 'distance'
+                    ? `Distance is shown in ${distance}.`
+                    : metric === 'duration_seconds'
+                      ? 'Time is shown in hours, minutes and seconds.'
+                      : metric === 'reps'
+                        ? ''
+                        : `Load is shown in ${weight}.`}
+                </Text>
+              </ScrollView>
+            </SafeAreaView>
+          </Animated.View>
         </View>
       </Modal>
     </View>
+  );
+}
+
+function EvolutionSelector({
+  label,
+  selected,
+  role,
+  reduceMotion,
+  onPress,
+}: Readonly<{
+  label: string;
+  selected: boolean;
+  role: 'tab' | 'button';
+  reduceMotion: boolean;
+  onPress: () => void;
+}>) {
+  const p = usePalette();
+  const [progress] = useState(() => new Animated.Value(selected ? 1 : 0));
+  useEffect(() => {
+    const transition = Animated.timing(progress, {
+      toValue: selected ? 1 : 0,
+      duration: reduceMotion ? 0 : 220,
+      useNativeDriver: true,
+    });
+    transition.start();
+    return () => transition.stop();
+  }, [selected, reduceMotion, progress]);
+  return (
+    <Pressable
+      accessibilityRole={role}
+      accessibilityState={{ selected }}
+      aria-selected={selected}
+      onPress={onPress}
+      style={{ minHeight: 44, justifyContent: 'center' }}
+    >
+      <Text style={{ color: selected ? p.brand : p.ink }}>{label}</Text>
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 2,
+          backgroundColor: p.brand,
+          opacity: progress,
+          transform: [
+            { scaleX: progress.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) },
+          ],
+        }}
+      />
+    </Pressable>
   );
 }

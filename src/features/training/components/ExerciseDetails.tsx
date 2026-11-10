@@ -31,7 +31,14 @@ export function ExerciseDetails({
     <Modal onRequestClose={onClose} animationType="slide">
       <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
         <ScrollView contentContainerStyle={ui.content}>
-          <IconButton icon="arrow-left" label="Back" onPress={onClose} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <IconButton icon="arrow-left" label="Back" onPress={onClose} />
+            {detail.data ? (
+              <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
+                {detail.data.name}
+              </Text>
+            ) : null}
+          </View>
           {detail.isPending ? <Loading /> : null}
           {detail.isError ? (
             <Failure
@@ -43,9 +50,6 @@ export function ExerciseDetails({
           ) : null}
           {detail.data ? (
             <>
-              <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                {detail.data.name}
-              </Text>
               <View accessibilityRole="tablist" style={ui.row}>
                 {(['Instructions', 'History', 'Evolution'] as const).map((value) => (
                   <Pressable
