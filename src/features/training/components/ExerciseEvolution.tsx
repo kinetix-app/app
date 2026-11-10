@@ -7,9 +7,11 @@ import {
   Modal,
   Pressable,
   PanResponder,
+  Platform,
   ScrollView,
   Text,
   View,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAccount } from '@/features/accounts/api';
@@ -17,6 +19,10 @@ import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import type { EvolutionDay } from '../schemas';
 import { Failure, IconButton, Loading } from './ui';
+
+// React Native Web supports this CSS property; native ViewStyle does not declare it.
+const gestureHandleStyle: ViewStyle & { touchAction?: 'none' } =
+  Platform.OS === 'web' ? { touchAction: 'none' } : {};
 
 type Metric = 'estimated_1rm' | 'weight' | 'volume' | 'reps' | 'distance' | 'duration_seconds';
 type Range = 1 | 3 | 6 | 12 | 'All';
@@ -392,12 +398,10 @@ export function ExerciseEvolution({
             >
               <View
                 {...sheetPan.panHandlers}
-                style={{
-                  minHeight: 44,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  touchAction: 'none',
-                }}
+                style={[
+                  { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+                  gestureHandleStyle,
+                ]}
               >
                 <View
                   style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: p['ink-muted'] }}
