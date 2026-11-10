@@ -213,3 +213,28 @@ filters, retaining the name search and staged exercise selection. The filter mod
 uses a compact heading, sentence-case rows, right-aligned checkboxes and a selection
 count with a text-only Clear action. Clear changes only the draft; Save applies it,
 while Cancel, the close icon and platform Back preserve the applied filters.
+
+### Exercise detail history
+
+Exercise details retain their media and instructions under the Instructions tab. The History tab requests completed sessions containing that exercise in pages, showing each session's local completion date and its recorded sets with units; repeated occurrences appear together in order. Evolution is reserved for future graphs. History supports empty, loading, retry and load-more states.
+
+Cardio sets use one numeric time field formatted as `mm:ss` (or `hh:mm:ss` from one hour): entering `1230`
+produces `12:30`. Input is limited to six digits, up to `99:59:59`. Minutes and seconds must be 00–59; saving continues to send
+total duration in seconds and distance in kilometres. Clearing time leaves it unset.
+
+Cardio exercise cards summarize entered sets with kilometre and compact time ranges (`mm:ss`, or `hh:mm:ss` from one hour),
+using the same set count and saved-set count as gym cards. Empty or invalid values
+are omitted from ranges; missing measurements display a dash. Both routine and
+ongoing-workout summaries update as values change.
+
+Durations received from the API are displayed as `hh:mm:ss` in exercise history,
+completed workouts and previous-result guidance (for example, 750 seconds → `00:12:30`).
+
+Fetched cardio distance and time guide empty actual-set inputs through placeholders,
+matching gym guidance. Time placeholders use `hh:mm:ss`; guidance does not populate
+actual measurements or count as a recorded result.
+
+The filter dialog groups All/Gym/Cardio in a compact activity selector above the
+body-part checkboxes. All and Gym combine with body-part filters. Cardio hides
+body-part controls and clears applied body parts on Save. Activity and body-part
+changes apply together only on Save; closing or Cancel preserves applied filters.

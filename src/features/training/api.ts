@@ -1,6 +1,7 @@
 import { apiClient } from '@/services/apiClient';
 import {
   exerciseConfigurationSchema,
+  exerciseHistoryPageSchema,
   draftSnapshotSchema,
   serverDraftSchema,
   type DraftSnapshot,
@@ -66,7 +67,13 @@ export const trainingApi = {
   },
   routine: (id: number, signal?: AbortSignal, unit: WeightUnit = 'kg') =>
     apiClient.get(`/api/v1/routines/${id}?weight_unit=${unit}`, { schema: routineSchema, signal }),
-  exercises: (bodyParts: string[], offset: number, signal?: AbortSignal, name = '') => {
+  exercises: (
+    bodyParts: string[],
+    offset: number,
+    signal?: AbortSignal,
+    name = '',
+    activityType = '',
+  ) => {
     const bodyPartParams = [...new Set(bodyParts.map((part) => part.trim()).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b))
       .map((part) => queryParameter('body_part', part))
@@ -74,13 +81,18 @@ export const trainingApi = {
     const trimmedName = name.trim();
     const nameParam = trimmedName ? queryParameter('name', trimmedName) : '';
     return apiClient.get(
-      `/api/v1/exercises?limit=20&offset=${offset}${bodyPartParams}${nameParam}`,
+      `/api/v1/exercises?limit=20&offset=${offset}${bodyPartParams}${nameParam}${activityType ? queryParameter('activity_type', activityType) : ''}`,
       { schema: exercisePageSchema, signal },
     );
   },
   bodyParts: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/exercises/body-parts', {
       schema: bodyPartsSchema,
+      signal,
+    }),
+  exerciseHistory: (id: number, offset: number, signal?: AbortSignal, unit: WeightUnit = 'kg') =>
+    apiClient.get(`/api/v1/exercises/${id}/history?limit=20&offset=${offset}&weight_unit=${unit}`, {
+      schema: exerciseHistoryPageSchema,
       signal,
     }),
   lastConfiguration: (id: number, signal?: AbortSignal) =>

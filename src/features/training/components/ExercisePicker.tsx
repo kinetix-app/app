@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   FlatList,
@@ -15,7 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { BodyPartFilter } from './BodyPartFilter';
+import { BodyPartFilter, type ActivityFilter } from './BodyPartFilter';
 import { trainingApi } from '../api';
 import { ExerciseDetails } from './ExerciseDetails';
 import type { ExerciseSummary } from '../schemas';
@@ -69,11 +69,19 @@ export function ExercisePicker({
   const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [bodyParts, setBodyParts] = useState<string[]>([]);
+  const [activityType, setActivityType] = useState<ActivityFilter>('all');
+  const [activityRevision, setActivityRevision] = useState(0);
+  const pickerInstance = useId();
+  function selectActivityType(next: ActivityFilter) {
+    if (next === activityType) return;
+    setActivityType(next);
+    setActivityRevision((revision) => revision + 1);
+  }
   const [filterOpen, setFilterOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   useEffect(() => {
     list.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [bodyParts, name]);
+  }, [bodyParts, name, activityType]);
   useEffect(() => {
     const timer = setTimeout(() => setName(search.trim()), 300);
     return () => clearTimeout(timer);
@@ -83,9 +91,21 @@ export function ExercisePicker({
     queryFn: ({ signal }) => trainingApi.bodyParts(signal),
   });
   const query = useInfiniteQuery({
-    queryKey: ['training', accountId, 'exercises', bodyParts, name],
+    queryKey: [
+      'training',
+      accountId,
+      'exercises',
+      bodyParts,
+      name,
+      activityType,
+      pickerInstance,
+      activityRevision,
+    ],
     initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) => trainingApi.exercises(bodyParts, pageParam, signal, name),
+    queryFn: ({ pageParam, signal }) =>
+      activityType === 'all'
+        ? trainingApi.exercises(bodyParts, pageParam, signal, name)
+        : trainingApi.exercises(bodyParts, pageParam, signal, name, activityType),
     getNextPageParam: (page) =>
       page.items.length === page.limit ? page.offset + page.limit : undefined,
   });
@@ -126,6 +146,7 @@ export function ExercisePicker({
             contentContainerStyle={[ui.content, selection.length > 0 && { paddingBottom: 120 }]}
             ListHeaderComponent={
               <ExerciseCatalogueHeader
+                activityType={activityType}
                 search={search}
                 setSearch={setSearch}
                 setName={setName}
@@ -175,6 +196,7 @@ export function ExercisePicker({
         {filterOpen ? (
           <BodyPartFilter
             selected={bodyParts}
+            activityType={activityType}
             options={groups.data?.items ?? []}
             pending={groups.isPending}
             error={groups.error}
@@ -182,8 +204,9 @@ export function ExercisePicker({
               void groups.refetch();
             }}
             onClose={() => setFilterOpen(false)}
-            onApply={(parts) => {
+            onApply={(parts, activity) => {
               setBodyParts(parts);
+              selectActivityType(activity);
               setFilterOpen(false);
             }}
           />
@@ -303,6 +326,7 @@ function ExercisePickerRow({
 }
 
 function ExerciseCatalogueHeader({
+  activityType,
   search,
   setSearch,
   setName,
@@ -315,6 +339,7 @@ function ExerciseCatalogueHeader({
   error,
   onRetry,
 }: Readonly<{
+  activityType: ActivityFilter;
   search: string;
   setSearch: (value: string) => void;
   setName: (value: string) => void;
@@ -328,6 +353,7 @@ function ExerciseCatalogueHeader({
   onRetry: () => void;
 }>) {
   const p = usePalette();
+  const activeFilterCount = bodyParts.length + (activityType === 'all' ? 0 : 1);
   return (
     <View style={ui.gap}>
       <View style={ui.gap}>
@@ -367,8 +393,8 @@ function ExerciseCatalogueHeader({
           <IconButton
             icon="sliders"
             label={
-              bodyParts.length
-                ? `Filter body parts (${bodyParts.length} active)`
+              activeFilterCount > 0
+                ? `Filter body parts (${activeFilterCount} active)`
                 : 'Filter body parts'
             }
             onPress={() => {
@@ -378,34 +404,14 @@ function ExerciseCatalogueHeader({
           />
         </View>
         <View style={[ui.row, { flexWrap: 'wrap' }]}>
-          {bodyParts.length === 0 ? (
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>All body parts</Text>
-          ) : (
-            bodyParts.map((part) => (
-              <Pressable
-                key={part}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${part} filter`}
-                onPress={() =>
-                  setBodyParts((previous) => previous.filter((value) => value !== part))
-                }
-                style={[
-                  ui.row,
-                  {
-                    minHeight: sizes['tap-min'],
-                    padding: spacing['space-3'],
-                    borderRadius: radii['radius-pill'],
-                    backgroundColor: p['brand-soft'],
-                  },
-                ]}
-              >
-                <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
-                  {part.toLowerCase()}
-                </Text>
-                <Feather name="x" size={16} color={p['brand-ink']} />
-              </Pressable>
-            ))
-          )}
+          {activityType !== 'all' ? (
+            <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
+              {activityType === 'cardio' ? 'Cardio' : 'Gym'}
+            </Text>
+          ) : null}
+          {activityType !== 'cardio' ? (
+            <CatalogueBodyPartBadges bodyParts={bodyParts} setBodyParts={setBodyParts} />
+          ) : null}
           {bodyParts.length > 1 ? (
             <Pressable
               accessibilityRole="button"
@@ -474,5 +480,45 @@ function ExerciseSelectionAction({
         icon="plus"
       />
     </View>
+  );
+}
+
+function CatalogueBodyPartBadges({
+  bodyParts,
+  setBodyParts,
+}: Readonly<{
+  bodyParts: string[];
+  setBodyParts: React.Dispatch<React.SetStateAction<string[]>>;
+}>) {
+  const p = usePalette();
+  return (
+    <>
+      {bodyParts.length === 0 ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>All body parts</Text>
+      ) : (
+        bodyParts.map((part) => (
+          <Pressable
+            key={part}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${part} filter`}
+            onPress={() => setBodyParts((previous) => previous.filter((value) => value !== part))}
+            style={[
+              ui.row,
+              {
+                minHeight: sizes['tap-min'],
+                padding: spacing['space-3'],
+                borderRadius: radii['radius-pill'],
+                backgroundColor: p['brand-soft'],
+              },
+            ]}
+          >
+            <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
+              {part.toLowerCase()}
+            </Text>
+            <Feather name="x" size={16} color={p['brand-ink']} />
+          </Pressable>
+        ))
+      )}
+    </>
   );
 }

@@ -52,7 +52,7 @@ function SetSummary({ control, index }: Readonly<{ control: Control<Draft>; inde
   return (
     <WorkoutExerciseSummary
       cardio={exercise.activity_type === 'cardio'}
-      sets={sets.map((set) => ({ reps: set.reps, value: set.weight, unit: set.unit }))}
+      sets={sets.map((set) => ({ ...set, value: set.weight }))}
     />
   );
 }

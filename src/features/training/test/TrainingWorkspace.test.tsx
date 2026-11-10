@@ -11,6 +11,12 @@ import { SessionHost } from '../components/SessionHost';
 import { trainingApi } from '../api';
 import { exampleExercise, exampleRoutine } from './fixtures';
 
+async function selectActivityFilter(activity: 'All' | 'Gym' | 'Cardio') {
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(await screen.findByRole('button', { name: activity }));
+  fireEvent.press(screen.getByLabelText('Save filters'));
+}
+
 function TrainingWorkspace(props: { accountId: number; onSignOut: () => void }) {
   return (
     <PrivateQueryProvider key={props.accountId}>
@@ -230,7 +236,7 @@ test('creates a routine by selecting exercises, filtering body-parts and adding 
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '80.001');
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '8');
   fireEvent.press(screen.getByText('Save'));
-  await screen.findByText('Enter positive weight up to 999999.99 kg with at most 2 decimals.');
+  await screen.findByText('Enter valid set values.');
   expect(trainingApi.save).not.toHaveBeenCalled();
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '80');
   collapseExercise();
@@ -1183,14 +1189,15 @@ test('incomplete saved defaults display empty fields and require valid reps befo
   fireEvent.press(screen.getByLabelText('Edit sets for Bench press'));
   expect(screen.getByLabelText('Exercise 1 set 1 kg').props.value).toBe('');
   expect(screen.getByLabelText('Exercise 1 set 1 reps').props.value).toBe('');
-  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '1');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '0');
   for (const reps of ['abc', '0', '2147483648']) {
     fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), reps);
     fireEvent.press(screen.getByText('Save'));
-    expect(await screen.findByText('Enter positive whole repetitions.')).toBeTruthy();
+    expect(await screen.findByText('Enter valid set values.')).toBeTruthy();
     expect(trainingApi.save).not.toHaveBeenCalled();
   }
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 reps'), '8');
+  fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 kg'), '1');
   fireEvent.press(screen.getByText('Save'));
   expect(await screen.findByText('Routine saved.')).toBeTruthy();
   expect(trainingApi.save).toHaveBeenCalledWith(
@@ -1485,6 +1492,10 @@ test('cardio routine accepts zero, rejects incomplete and negative values, and s
   fireEvent.press(await screen.findByLabelText('New routine'));
   fireEvent.changeText(screen.getByLabelText('Routine name'), 'Cardio routine');
   fireEvent.press(screen.getByText('Add exercise'));
+  await selectActivityFilter('Cardio');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
+  );
   fireEvent.press(await screen.findByLabelText('Select Cardio test'));
   await act(async () => fireEvent.press(screen.getByText('Add exercises (1)')));
   fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
@@ -1492,7 +1503,7 @@ test('cardio routine accepts zero, rejects incomplete and negative values, and s
   fireEvent.press(screen.getByText('Save'));
   await screen.findByText('Enter valid set values.');
   expect(trainingApi.create).not.toHaveBeenCalled();
-  for (const name of ['distance', 'hours', 'minutes', 'seconds'])
+  for (const name of ['distance', 'time'])
     fireEvent.changeText(screen.getByLabelText(`Exercise 1 set 1 ${name}`), '0');
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 distance'), '-1');
   fireEvent.press(screen.getByText('Save'));
@@ -1550,9 +1561,8 @@ test('cardio routine edits restore defaults and save replacement measurements', 
   fireEvent.press(await screen.findByLabelText('Edit Push'));
   fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
   expect(screen.getByLabelText('Exercise 1 set 1 distance').props.value).toBe('1.25');
-  expect(screen.getByLabelText('Exercise 1 set 1 hours').props.value).toBe('0');
-  expect(screen.getByLabelText('Exercise 1 set 1 minutes').props.value).toBe('1');
-  expect(screen.getByLabelText('Exercise 1 set 1 seconds').props.value).toBe('30');
+  expect(screen.getByLabelText('Exercise 1 set 1 time').props.value).toBe('01:30');
+  expect(screen.getByText('1.25 km · 01:30')).toBeTruthy();
   fireEvent.changeText(screen.getByLabelText('Exercise 1 set 1 distance'), '2.50');
   fireEvent.press(screen.getByText('Save'));
   await waitFor(() =>
@@ -1566,6 +1576,24 @@ test('cardio routine edits restore defaults and save replacement measurements', 
       },
       10,
     ),
+  );
+});
+
+test('switching activity filters requests the first page and resets the selected filter', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.press(screen.getByText('Add exercise'));
+  await selectActivityFilter('Cardio');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
+  );
+  await selectActivityFilter('Gym');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'gym'),
+  );
+  await selectActivityFilter('All');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), ''),
   );
 });
 
@@ -1595,35 +1623,71 @@ test('an unchanged incomplete historical cardio default survives a routine name 
   );
 });
 
-test('replacing legacy gym defaults with cardio saves only the replacement distance and duration', async () => {
-  const cardio = { ...exampleExercise, name: 'Cardio test', activity_type: 'cardio' };
-  jest.mocked(trainingApi.routine).mockResolvedValue({
-    ...exampleRoutine,
-    exercises: [{ ...exampleRoutine.exercises[0], exercise: cardio }],
-  });
+test('switching back to a previous activity starts with a fresh first page', async () => {
+  jest.mocked(trainingApi.exercises).mockImplementation(async (_parts, offset) => ({
+    items: offset === 0 ? [exampleExercise] : [{ ...exampleExercise, id: 2, name: 'Later page' }],
+    limit: 1,
+    offset,
+  }));
   render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
-  fireEvent.press(await screen.findByLabelText('Edit Push'));
-  fireEvent.press(await screen.findByLabelText('Edit sets for Cardio test'));
-  expect(screen.getByText(/Previous default: 80.00 kg/)).toBeTruthy();
-  for (const [field, value] of Object.entries({
-    distance: '1.25',
-    hours: '0',
-    minutes: '2',
-    seconds: '0',
-  })) {
-    fireEvent.changeText(screen.getByLabelText(`Exercise 1 set 1 ${field}`), value);
-  }
-  fireEvent.press(screen.getByText('Save'));
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.press(screen.getByText('Add exercise'));
+  await screen.findByLabelText('Select Bench press');
+  fireEvent(screen.getByTestId('exercise-catalogue'), 'endReached');
+  await screen.findByLabelText('Select Later page');
+  await selectActivityFilter('Cardio');
   await waitFor(() =>
-    expect(trainingApi.save).toHaveBeenCalledWith(
-      {
-        name: 'Push',
-        notes: null,
-        exercises: [
-          { id: 20, exercise_id: 1, sets: [{ duration_seconds: 120, distance_km: '1.25' }] },
-        ],
-      },
-      10,
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
+  );
+  await selectActivityFilter('All');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), ''),
+  );
+  expect(screen.queryByLabelText('Select Later page')).toBeNull();
+});
+
+test('activity and body-part filters apply together and cardio excludes body parts', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.press(screen.getByText('Add exercise'));
+  await screen.findByLabelText('Select Bench press');
+  expect(screen.queryByRole('button', { name: 'Cardio' })).toBeNull();
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(await screen.findByRole('checkbox', { name: 'CHEST' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Gym' }));
+  expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '');
+  fireEvent.press(screen.getByLabelText('Save filters'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith(
+      ['CHEST'],
+      0,
+      expect.anything(),
+      '',
+      'gym',
     ),
+  );
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(screen.getByRole('button', { name: 'Cardio' }));
+  expect(screen.queryByRole('checkbox', { name: 'CHEST' })).toBeNull();
+  fireEvent.press(screen.getByText('Cancel'));
+  expect(screen.getByLabelText('Remove CHEST filter')).toBeTruthy();
+  expect(trainingApi.exercises).toHaveBeenLastCalledWith(
+    ['CHEST'],
+    0,
+    expect.anything(),
+    '',
+    'gym',
+  );
+  await selectActivityFilter('Cardio');
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), '', 'cardio'),
+  );
+  expect(screen.queryByLabelText('Remove CHEST filter')).toBeNull();
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(screen.getByRole('button', { name: 'All' }));
+  fireEvent.press(screen.getByRole('checkbox', { name: 'CHEST' }));
+  fireEvent.press(screen.getByLabelText('Save filters'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith(['CHEST'], 0, expect.anything(), ''),
   );
 });

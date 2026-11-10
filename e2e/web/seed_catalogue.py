@@ -23,6 +23,7 @@ async def main():
             ("Acceptance press", "press", "CHEST"),
             ("Acceptance row", "row", "BACK"),
             ("Acceptance squat", "squat", "UPPER LEGS"),
+            ("Acceptance cardio", "cardio", None),
         ]:
             external_id = f"kinetix-workout-e2e-{key}"
             existing = await connection.scalar(
@@ -35,11 +36,11 @@ async def main():
                 await connection.execute(
                     exercise.insert().values(
                         name=name,
-                        activity_type="gym",
+                        activity_type="cardio" if key == "cardio" else "gym",
                         source="ascend_edb_v2",
                         external_id=external_id,
                         imported_at=datetime.now(UTC),
-                        body_parts=[body_part],
+                        body_parts=[body_part] if body_part else [],
                         instructions=["Move with control."],
                     )
                 )

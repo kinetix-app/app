@@ -53,3 +53,40 @@ test('the shared summary shows live set counts and reps/kg ranges without invent
   view.rerender(<WorkoutExerciseSummary sets={[{ reps: '', value: '', unit: 'kg' }]} />);
   expect(screen.getByText('— reps · — kg')).toBeTruthy();
 });
+
+test('cardio summaries show live distance and clock ranges, saved counts and blank values', () => {
+  const sets = [
+    {
+      reps: '',
+      value: '',
+      unit: 'kg' as const,
+      distance: '1.25',
+      hours: '0',
+      minutes: '12',
+      seconds: '30',
+    },
+    {
+      reps: '',
+      value: '',
+      unit: 'kg' as const,
+      distance: '2',
+      hours: '1',
+      minutes: '0',
+      seconds: '0',
+    },
+  ];
+  const view = render(<WorkoutExerciseSummary cardio sets={sets} savedCount={1} />);
+  expect(screen.getByText('1 / 2 sets saved')).toBeTruthy();
+  expect(screen.getByText('1.25–2 km · 12:30–01:00:00')).toBeTruthy();
+  view.rerender(<WorkoutExerciseSummary cardio sets={[sets[0]]} />);
+  expect(screen.getByText('1.25 km · 12:30')).toBeTruthy();
+  view.rerender(<WorkoutExerciseSummary cardio sets={[{ reps: '10', value: '50', unit: 'kg' }]} />);
+  expect(screen.getByText('— km · —')).toBeTruthy();
+  view.rerender(
+    <WorkoutExerciseSummary
+      cardio
+      sets={[{ ...sets[0], distance: '0', minutes: '0', seconds: '0' }]}
+    />,
+  );
+  expect(screen.getByText('0 km · 00:00')).toBeTruthy();
+});

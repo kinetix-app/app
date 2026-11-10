@@ -4,83 +4,99 @@ import { SetFields } from '../components/SetFields';
 import { cardioInput } from '../cardio';
 import type { ActualSet } from '../sessionDraft';
 
-jest.mock('@expo/vector-icons', () => ({ Feather: 'Icon' }));
-const emptySet: ActualSet = { id: 'cardio-1', reps: '', value: '', unit: 'kg' };
-const props = {
-  cardio: true,
-  unit: 'kg' as const,
-  label: 'Set 1',
-  disabled: false,
-  onRemove: jest.fn(),
-};
-
-test('cardio fields retain independent distance and time inputs and serialize them without gym values', () => {
-  let current = emptySet;
+test('one numeric time field formats digits and preserves duration for saving', () => {
+  let current: ActualSet;
   function Editor() {
-    const [set, setSet] = useState(emptySet);
+    const [set, setSet] = useState<ActualSet>({
+      id: 'set-1',
+      reps: '',
+      value: '',
+      unit: 'kg',
+      distance: '1',
+    });
     current = set;
-    return <SetFields {...props} set={set} onChange={setSet} />;
+    return (
+      <SetFields
+        cardio
+        set={set}
+        unit="kg"
+        label="Set 1"
+        disabled={false}
+        onChange={setSet}
+        onRemove={jest.fn()}
+      />
+    );
   }
   render(<Editor />);
-  expect(screen.queryByLabelText('Set 1 kg')).toBeNull();
-  expect(screen.queryByLabelText('Set 1 reps')).toBeNull();
-  for (const [field, value] of Object.entries({
-    distance: '1.25',
-    hours: '1',
-    minutes: '2',
-    seconds: '3',
-  })) {
-    fireEvent.changeText(screen.getByLabelText(`Set 1 ${field}`), value);
-    expect(screen.getByLabelText(`Set 1 ${field}`).props.value).toBe(value);
-  }
-  expect(cardioInput(current)).toEqual({ distance_km: '1.25', duration_seconds: 3723 });
+  expect(screen.queryByLabelText('Set 1 hours')).toBeNull();
+  const time = () => screen.getByLabelText('Set 1 time');
+  fireEvent.changeText(time(), 'abc1230');
+  expect(time().props.value).toBe('12:30');
+  expect(cardioInput(current!)).toEqual({ duration_seconds: 750, distance_km: '1' });
+  fireEvent.changeText(time(), '12345');
+  expect(time().props.value).toBe('01:23:45');
+  fireEvent.changeText(time(), '01:23:456');
+  expect(time().props.value).toBe('12:34:56');
+  expect(cardioInput(current!)?.duration_seconds).toBe(45296);
+  fireEvent.changeText(time(), '1234567');
+  expect(time().props.value).toBe('12:34:56');
+  fireEvent.changeText(time(), '0000000');
+  expect(time().props.value).toBe('12:34:56');
+  fireEvent.changeText(time(), '10000');
+  expect(time().props.value).toBe('01:00:00');
+  expect(cardioInput(current!)?.duration_seconds).toBe(3600);
+  fireEvent.changeText(time(), '5959');
+  expect(time().props.value).toBe('59:59');
+  fireEvent.changeText(time(), '995959');
+  expect(time().props.value).toBe('99:59:59');
+  fireEvent.changeText(time(), '99:59:599');
+  expect(time().props.value).toBe('99:59:59');
+  fireEvent.changeText(time(), '1260');
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'Minutes and seconds must be between 00 and 59.',
+  );
+  expect(cardioInput(current!)).toBeNull();
+  fireEvent.changeText(time(), '');
+  expect(time().props.value).toBe('');
+  expect(cardioInput(current!)).toBeNull();
+  fireEvent.changeText(time(), '0');
+  expect(time().props.value).toBe('00:00');
+  expect(cardioInput(current!)?.duration_seconds).toBe(0);
 });
 
-test('cardio guidance and reclassified gym history remain informational and never populate performed fields', () => {
+test('fetched cardio guidance appears only as placeholders, including zero measurements', () => {
   const onChange = jest.fn();
-  const view = render(<SetFields {...props} set={emptySet} onChange={onChange} />);
-  expect(screen.queryByText(/Previous result:/)).toBeNull();
+  const props = {
+    cardio: true,
+    set: { id: 'set-1', reps: '', value: '', unit: 'kg' as const, distance: '' },
+    unit: 'kg' as const,
+    label: 'Set 1',
+    disabled: false,
+    onChange,
+    onRemove: jest.fn(),
+  };
+  const view = render(<SetFields {...props} />);
+  expect(screen.getByLabelText('Set 1 distance').props.placeholder).toBe('km');
+  expect(screen.getByLabelText('Set 1 time').props.placeholder).toBe('mm:ss');
   view.rerender(
     <SetFields
       {...props}
-      set={emptySet}
-      onChange={onChange}
+      guidance={{ reps: null, weightKg: null, distanceKm: '1.25', durationSeconds: 750 }}
+    />,
+  );
+  expect(screen.getByLabelText('Set 1 distance').props.placeholder).toBe('1.25');
+  expect(screen.getByLabelText('Set 1 time').props.placeholder).toBe('00:12:30');
+  expect(screen.getByLabelText('Set 1 distance').props.value).toBe('');
+  expect(screen.getByLabelText('Set 1 time').props.value).toBe('');
+  expect(screen.queryByText(/Previous result:/)).toBeNull();
+  expect(onChange).not.toHaveBeenCalled();
+  expect(cardioInput(props.set)).toBeNull();
+  view.rerender(
+    <SetFields
+      {...props}
       guidance={{ reps: null, weightKg: null, distanceKm: '0', durationSeconds: 0 }}
     />,
   );
-  expect(screen.getByText('Previous result: 0 km · 0 seconds')).toBeTruthy();
-  expect(screen.getByLabelText('Set 1 distance').props.value).toBe('');
-  expect(onChange).not.toHaveBeenCalled();
-  view.rerender(
-    <SetFields
-      {...props}
-      set={{ ...emptySet, reps: '8', value: '40' }}
-      onChange={onChange}
-      guidance={{ reps: null, weightKg: '50' }}
-    />,
-  );
-  expect(screen.getByText('Previous result: 50 kg · — reps')).toBeTruthy();
-  expect(screen.getByText(/Previous entry: 40 kg · 8 reps/)).toBeTruthy();
-  view.rerender(
-    <SetFields
-      {...props}
-      disabled
-      set={{ ...emptySet, reps: '8' }}
-      onChange={onChange}
-      guidance={{ reps: 12, weightKg: null }}
-    />,
-  );
-  expect(screen.getByText('Previous result: — kg · 12 reps')).toBeTruthy();
-  expect(screen.getByText(/Previous entry: — kg · 8 reps/)).toBeTruthy();
-  expect(screen.getByLabelText('Set 1 distance').props.editable).toBe(false);
-  view.rerender(
-    <SetFields
-      {...props}
-      set={{ ...emptySet, value: '40' }}
-      onChange={onChange}
-      guidance={{ reps: null, weightKg: null }}
-    />,
-  );
-  expect(screen.getByText(/Previous entry: 40 kg · — reps/)).toBeTruthy();
-  expect(screen.queryByText(/Previous result:/)).toBeNull();
+  expect(screen.getByLabelText('Set 1 distance').props.placeholder).toBe('0');
+  expect(screen.getByLabelText('Set 1 time').props.placeholder).toBe('00:00:00');
 });

@@ -116,7 +116,7 @@ test('paginates, retries a failed next page and stops requesting after the last 
   await waitFor(() => expect(trainingApi.sessions).toHaveBeenCalledTimes(3));
 });
 
-test('preserves zero and missing cardio measurements with explicit distance and duration units', async () => {
+test('preserves zero and missing cardio measurements with explicit distance and clock units', async () => {
   const cardioSet = {
     set_number: 1,
     reps: null,
@@ -145,7 +145,7 @@ test('preserves zero and missing cardio measurements with explicit distance and 
   jest.mocked(trainingApi.session).mockResolvedValue(cardioSession);
   open();
   fireEvent.press(await screen.findByLabelText('View workout 1'));
-  expect(await screen.findByText('Set 1: 1.25 km · 750 seconds')).toBeTruthy();
-  expect(screen.getByText('Set 2: — km · 0 seconds')).toBeTruthy();
-  expect(screen.getByText('Set 3: 1.25 km · — seconds')).toBeTruthy();
+  expect(await screen.findByText('Set 1: 1.25 km · 00:12:30')).toBeTruthy();
+  expect(screen.getByText('Set 2: — km · 00:00:00')).toBeTruthy();
+  expect(screen.getByText('Set 3: 1.25 km · —')).toBeTruthy();
 });
