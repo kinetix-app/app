@@ -1691,3 +1691,45 @@ test('activity and body-part filters apply together and cardio excludes body par
     expect(trainingApi.exercises).toHaveBeenLastCalledWith(['CHEST'], 0, expect.anything(), ''),
   );
 });
+
+test('removing an activity badge preserves search, body parts and staged exercises', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByLabelText('New routine'));
+  fireEvent.press(screen.getByText('Add exercise'));
+  fireEvent.press(await screen.findByLabelText('Select Bench press'));
+  fireEvent.changeText(screen.getByLabelText('Search exercises'), 'Bench');
+  fireEvent(screen.getByLabelText('Search exercises'), 'submitEditing');
+  fireEvent.press(screen.getByLabelText(/^Filter body parts/));
+  fireEvent.press(await screen.findByRole('checkbox', { name: 'CHEST' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Gym' }));
+  fireEvent.press(screen.getByLabelText('Save filters'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith(
+      ['CHEST'],
+      0,
+      expect.anything(),
+      'Bench',
+      'gym',
+    ),
+  );
+  fireEvent.press(screen.getByLabelText('Remove Gym filter'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith(
+      ['CHEST'],
+      0,
+      expect.anything(),
+      'Bench',
+    ),
+  );
+  expect(screen.queryByLabelText('Remove Gym filter')).toBeNull();
+  expect(screen.getByLabelText('Remove CHEST filter')).toBeTruthy();
+  expect(screen.getByText('Add exercises (1)')).toBeTruthy();
+  await selectActivityFilter('Cardio');
+  fireEvent.press(screen.getByLabelText('Remove Cardio filter'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenLastCalledWith([], 0, expect.anything(), 'Bench'),
+  );
+  expect(screen.queryByLabelText('Remove Cardio filter')).toBeNull();
+  expect(screen.getByLabelText('Search exercises').props.value).toBe('Bench');
+  expect(screen.getByText('Add exercises (1)')).toBeTruthy();
+});

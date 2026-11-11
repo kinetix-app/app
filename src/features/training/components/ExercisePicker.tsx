@@ -147,6 +147,7 @@ export function ExercisePicker({
             ListHeaderComponent={
               <ExerciseCatalogueHeader
                 activityType={activityType}
+                onClearActivity={() => selectActivityType('all')}
                 search={search}
                 setSearch={setSearch}
                 setName={setName}
@@ -327,6 +328,7 @@ function ExercisePickerRow({
 
 function ExerciseCatalogueHeader({
   activityType,
+  onClearActivity,
   search,
   setSearch,
   setName,
@@ -340,6 +342,7 @@ function ExerciseCatalogueHeader({
   onRetry,
 }: Readonly<{
   activityType: ActivityFilter;
+  onClearActivity: () => void;
   search: string;
   setSearch: (value: string) => void;
   setName: (value: string) => void;
@@ -405,9 +408,25 @@ function ExerciseCatalogueHeader({
         </View>
         <View style={[ui.row, { flexWrap: 'wrap' }]}>
           {activityType !== 'all' ? (
-            <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
-              {activityType === 'cardio' ? 'Cardio' : 'Gym'}
-            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${activityType === 'cardio' ? 'Cardio' : 'Gym'} filter`}
+              onPress={onClearActivity}
+              style={[
+                ui.row,
+                {
+                  minHeight: sizes['tap-min'],
+                  padding: spacing['space-3'],
+                  borderRadius: radii['radius-pill'],
+                  backgroundColor: p['brand-soft'],
+                },
+              ]}
+            >
+              <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
+                {activityType === 'cardio' ? 'Cardio' : 'Gym'}
+              </Text>
+              <Feather name="x" size={16} color={p['brand-ink']} />
+            </Pressable>
           ) : null}
           {activityType !== 'cardio' ? (
             <CatalogueBodyPartBadges bodyParts={bodyParts} setBodyParts={setBodyParts} />
