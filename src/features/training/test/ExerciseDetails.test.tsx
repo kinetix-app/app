@@ -176,3 +176,71 @@ test('retries evolution using imperial profile units', async () => {
   ).toBeTruthy();
   expect(trainingApi.exerciseEvolution).toHaveBeenLastCalledWith(1, 'lb', 'mi', expect.anything());
 });
+
+test('uses the same selectable tabs for details and evolution and clears a point on range change', async () => {
+  const date = new Date().toISOString().slice(0, 10);
+  jest.mocked(trainingApi.exerciseEvolution).mockResolvedValue({
+    exercise_id: 1,
+    activity_type: 'gym',
+    weight_unit: 'kg',
+    distance_unit: 'km',
+    days: [
+      {
+        date,
+        estimated_1rm: '53.3',
+        weight: '40.0',
+        volume: '400.0',
+        reps: 10,
+        distance: null,
+        duration_seconds: null,
+        volume_partial: false,
+      },
+    ],
+  });
+  open();
+  const instructions = await screen.findByRole('tab', { name: 'Instructions' });
+  expect(instructions.props.accessibilityState.selected).toBe(true);
+  fireEvent.press(screen.getByRole('tab', { name: 'Evolution' }));
+  expect(screen.getByRole('tab', { name: 'Evolution' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  const point = await screen.findByRole('button', { name: `${date}, 53.3 kg` });
+  fireEvent.press(point);
+  expect(point.props.accessibilityState.selected).toBe(true);
+  fireEvent.press(screen.getByRole('button', { name: '1 month' }));
+  expect(
+    screen.getByRole('button', { name: `${date}, 53.3 kg` }).props.accessibilityState.selected,
+  ).toBe(false);
+  expect(screen.getByRole('button', { name: '1 month' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  expect(screen.queryByText('Show values')).toBeNull();
+});
+
+test('dismisses the metric explanation by dragging its handle down', async () => {
+  open();
+  fireEvent.press(await screen.findByRole('tab', { name: 'Evolution' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'About Estimated strength (1RM)' }));
+  expect(screen.getByText(/we do not know how close/)).toBeTruthy();
+  const handle = screen.getByTestId('evolution-info-grip');
+  const touch = {
+    touchActive: true,
+    currentTimeStamp: 10,
+    currentPageX: 0,
+    currentPageY: 100,
+    previousPageX: 0,
+    previousPageY: 0,
+  };
+  const event = {
+    touchHistory: {
+      numberActiveTouches: 1,
+      indexOfSingleActiveTouch: 0,
+      mostRecentTimeStamp: 10,
+      touchBank: [touch],
+    },
+  };
+  fireEvent(handle, 'responderGrant', event);
+  fireEvent(handle, 'responderMove', event);
+  fireEvent(handle, 'responderRelease', event);
+  expect(screen.queryByText(/we do not know how close/)).toBeNull();
+});

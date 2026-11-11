@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { AccessibilityInfo, Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import { ExerciseMedia } from './ExerciseMedia';
 import { ExerciseHistory } from './ExerciseHistory';
 import { ExerciseEvolution } from './ExerciseEvolution';
+import { AnimatedTextSelector } from './AnimatedTextSelector';
 import type { Exercise, ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
@@ -23,6 +24,12 @@ export function ExerciseDetails({
 }>) {
   const p = usePalette();
   const [tab, setTab] = useState<'Instructions' | 'History' | 'Evolution'>('Instructions');
+  const [reduceMotion, setReduceMotion] = useState(true);
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
   const detail = useQuery({
     queryKey: ['training', accountId, 'exercise', exerciseId],
     queryFn: ({ signal }) => trainingApi.exercise(exerciseId, signal),
@@ -52,23 +59,15 @@ export function ExerciseDetails({
             <>
               <View accessibilityRole="tablist" style={ui.row}>
                 {(['Instructions', 'History', 'Evolution'] as const).map((value) => (
-                  <Pressable
+                  <AnimatedTextSelector
                     key={value}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: tab === value }}
-                    aria-selected={tab === value}
+                    label={value}
+                    selected={tab === value}
+                    role="tab"
+                    reduceMotion={reduceMotion}
+                    equalWidth
                     onPress={() => setTab(value)}
-                    style={{
-                      flex: 1,
-                      minHeight: 44,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      borderBottomWidth: tab === value ? 2 : 0,
-                      borderColor: p.brand,
-                    }}
-                  >
-                    <Text style={{ color: p.ink }}>{value}</Text>
-                  </Pressable>
+                  />
                 ))}
               </View>
               {tab === 'History' ? (

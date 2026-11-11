@@ -19,6 +19,7 @@ import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import type { EvolutionDay } from '../schemas';
 import { Failure, IconButton, Loading } from './ui';
+import { AnimatedTextSelector } from './AnimatedTextSelector';
 
 // React Native Web supports this CSS property; native ViewStyle does not declare it.
 const gestureHandleStyle: ViewStyle & { touchAction?: 'none' } =
@@ -63,10 +64,63 @@ function value(day: EvolutionDay, metric: Metric, weight: string, distance: stri
   const raw = day[metric];
   if (raw === null) return '';
   if (metric === 'duration_seconds') return duration(Number(raw));
-  const unit = metric === 'distance' ? distance : metric === 'reps' ? 'reps' : weight;
-  const formatted = metric === 'reps' ? raw : Number(raw).toFixed(metric === 'distance' ? 2 : 1);
+  const unit = metricUnit(metric, weight, distance);
+  const formatted = metric === 'reps' ? raw : Number(raw).toFixed(axisPrecision(metric));
   return `${formatted} ${unit}`;
 }
+function metricUnit(metric: Metric, weight: string, distance: string): string {
+  if (metric === 'distance') return distance;
+  if (metric === 'reps') return 'reps';
+  if (metric === 'duration_seconds') return 's';
+  return weight;
+}
+function axisPrecision(metric: Metric): number {
+  if (metric === 'distance') return 2;
+  if (metric === 'reps' || metric === 'duration_seconds') return 0;
+  return 1;
+}
+function rangeLabel(range: Range): string {
+  if (range === 'All') return range;
+  if (range === 12) return '1 year';
+  return `${range} month${range === 1 ? '' : 's'}`;
+}
+function emptyMessage(hasValues: boolean, hasHistory: boolean): string {
+  if (hasValues) return 'No data in this period. Try a longer range.';
+  if (hasHistory) return 'This metric is unavailable for the recorded sets.';
+  return 'No data in this period. No observations are available yet.';
+}
+function metricUnitExplanation(metric: Metric, weight: string, distance: string): string {
+  if (metric === 'distance') return `Distance is shown in ${distance}.`;
+  if (metric === 'duration_seconds') return 'Time is shown in hours, minutes and seconds.';
+  if (metric === 'reps') return '';
+  return `Load is shown in ${weight}.`;
+}
+function MetricHeadline({
+  current,
+  metric,
+  weight,
+  distance,
+}: Readonly<{
+  current: EvolutionDay | undefined;
+  metric: Metric;
+  weight: string;
+  distance: string;
+}>) {
+  if (!current) return <>{labels[metric]}</>;
+  if (metric !== 'duration_seconds') return <>{value(current, metric, weight, distance)}</>;
+  return (
+    <>
+      {duration(Number(current.duration_seconds))
+        .split(/([hms])/)
+        .map((part, i) => (
+          <Text key={`${part}-${i}`} style={{ fontSize: /^[hms]$/.test(part) ? 12 : 20 }}>
+            {part}
+          </Text>
+        ))}
+    </>
+  );
+}
+
 export function ExerciseEvolution({
   accountId,
   exerciseId,
@@ -78,22 +132,6 @@ export function ExerciseEvolution({
   const [range, setRange] = useState<Range>(3);
   const [selected, setSelected] = useState<string | null>(null);
   const [info, setInfo] = useState(false);
-  const [sheetY] = useState(() => new Animated.Value(0));
-  const sheetPan = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 4,
-    onPanResponderMove: (_, gesture) => sheetY.setValue(Math.max(0, gesture.dy)),
-    onPanResponderRelease: (_, gesture) => {
-      if (gesture.dy > 60 || gesture.vy > 0.7) setInfo(false);
-      Animated.timing(sheetY, {
-        toValue: 0,
-        duration: reduceMotion ? 0 : 180,
-        useNativeDriver: true,
-      }).start();
-    },
-    onPanResponderTerminate: () => sheetY.setValue(0),
-  });
-  const [width, setWidth] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(true);
   const [opacity] = useState(() => new Animated.Value(1));
   useEffect(() => {
@@ -126,24 +164,6 @@ export function ExerciseEvolution({
   const all = history.filter((d) => d[metric] !== null);
   const visible = all.filter((d) => d.date >= start);
   const current = visible.find((d) => d.date === selected) ?? visible.at(-1);
-  const numbers = visible.map((d) => Number(d[metric]));
-  const low = Math.min(...numbers),
-    high = Math.max(...numbers);
-  const padding = high === low ? Math.max(Math.abs(high) * 0.1, 1) : (high - low) * 0.1;
-  const min = Math.max(0, low - padding),
-    max = high + padding;
-  const plotWidth = Math.max(0, width - 92),
-    height = 150;
-  const points = visible.map((d) => ({
-    day: d,
-    x:
-      visible.length === 1
-        ? plotWidth / 2
-        : ((Date.parse(d.date) - Date.parse(visible[0].date)) /
-            (Date.parse(visible[visible.length - 1].date) - Date.parse(visible[0].date))) *
-          plotWidth,
-    y: max === min ? height / 2 : height - ((Number(d[metric]) - min) / (max - min)) * height,
-  }));
   return (
     <View style={{ gap: 12 }}>
       <ScrollView
@@ -158,7 +178,7 @@ export function ExerciseEvolution({
         ).map((item) => {
           const key = item as Metric;
           return (
-            <EvolutionSelector
+            <AnimatedTextSelector
               key={key}
               label={labels[key]}
               selected={metric === key}
@@ -175,17 +195,7 @@ export function ExerciseEvolution({
       </ScrollView>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, fontWeight: '700' }}>
-          {current
-            ? metric === 'duration_seconds'
-              ? duration(Number(current.duration_seconds))
-                  .split(/([hms])/)
-                  .map((part, i) => (
-                    <Text key={`${part}-${i}`} style={{ fontSize: /^[hms]$/.test(part) ? 12 : 20 }}>
-                      {part}
-                    </Text>
-                  ))
-              : value(current, metric, weight, distance)
-            : labels[metric]}
+          <MetricHeadline current={current} metric={metric} weight={weight} distance={distance} />
         </Text>
         <IconButton
           icon="info"
@@ -213,11 +223,7 @@ export function ExerciseEvolution({
       ) : null}
       {query.data && !current ? (
         <Text style={{ color: p['ink-muted'] }}>
-          {all.length
-            ? 'No data in this period. Try a longer range.'
-            : history.length
-              ? 'This metric is unavailable for the recorded sets.'
-              : 'No data in this period. No observations are available yet.'}
+          {emptyMessage(all.length > 0, history.length > 0)}
         </Text>
       ) : null}
       {current ? (
@@ -226,148 +232,22 @@ export function ExerciseEvolution({
             {current.date}
             {metric === 'volume' && current.volume_partial ? ' · Some sets excluded' : ''}
           </Text>
-          <Animated.View
-            onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-            style={{ height: 205, paddingLeft: 48, opacity }}
-          >
-            {[0, 0.5, 1].map((v) => (
-              <View
-                key={v}
-                style={{
-                  position: 'absolute',
-                  left: 48,
-                  right: 0,
-                  top: v * height,
-                  borderTopWidth: 1,
-                  borderColor: p['surface-300'],
-                }}
-              />
-            ))}
-            <Text
-              style={{ position: 'absolute', left: 0, top: 0, color: p['ink-muted'], fontSize: 10 }}
-            >
-              {max.toFixed(
-                metric === 'distance'
-                  ? 2
-                  : metric === 'reps' || metric === 'duration_seconds'
-                    ? 0
-                    : 1,
-              )}{' '}
-              {metric === 'distance'
-                ? distance
-                : metric === 'reps'
-                  ? 'reps'
-                  : metric === 'duration_seconds'
-                    ? 's'
-                    : weight}
-            </Text>
-            <Text
-              style={{
-                position: 'absolute',
-                left: 0,
-                top: height - 12,
-                color: p['ink-muted'],
-                fontSize: 10,
-              }}
-            >
-              {min.toFixed(
-                metric === 'distance'
-                  ? 2
-                  : metric === 'reps' || metric === 'duration_seconds'
-                    ? 0
-                    : 1,
-              )}
-            </Text>
-            {points.slice(1).map((point, i) => {
-              const prev = points[i];
-              const dx = point.x - prev.x,
-                dy = point.y - prev.y;
-              return (
-                <View
-                  key={point.day.date}
-                  pointerEvents="none"
-                  style={{
-                    position: 'absolute',
-                    left: 70 + (prev.x + point.x) / 2 - Math.hypot(dx, dy) / 2,
-                    top: (prev.y + point.y) / 2,
-                    width: Math.hypot(dx, dy),
-                    height: 1,
-                    backgroundColor: p.brand,
-                    transform: [{ rotate: `${Math.atan2(dy, dx)}rad` }],
-                  }}
-                />
-              );
-            })}
-            {points.map((point) => (
-              <Pressable
-                key={point.day.date}
-                accessibilityRole="button"
-                accessibilityLabel={`${point.day.date}, ${value(point.day, metric, weight, distance)}`}
-                accessibilityState={{ selected: selected === point.day.date }}
-                aria-selected={selected === point.day.date}
-                onPress={() => setSelected(selected === point.day.date ? null : point.day.date)}
-                style={{
-                  position: 'absolute',
-                  left: 70 + point.x - 22,
-                  top: point.y - 22,
-                  width: 44,
-                  height: 44,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: p.brand }} />
-              </Pressable>
-            ))}
-            {selected &&
-              points
-                .filter((point) => point.day.date === selected)
-                .map((point) => (
-                  <Text
-                    key={point.day.date}
-                    pointerEvents="none"
-                    style={{
-                      position: 'absolute',
-                      left: Math.max(48, Math.min(width - 130, 75 + point.x)),
-                      top: Math.max(0, point.y - 35),
-                      color: p.ink,
-                      backgroundColor: p['surface-300'],
-                      fontSize: 12,
-                    }}
-                  >
-                    {point.day.date} · {value(point.day, metric, weight, distance)}
-                  </Text>
-                ))}
-            <Text
-              style={{
-                position: 'absolute',
-                left: 48,
-                top: height + 25,
-                color: p['ink-muted'],
-                fontSize: 10,
-              }}
-            >
-              {visible[0].date}
-            </Text>
-            <Text
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: height + 25,
-                color: p['ink-muted'],
-                fontSize: 10,
-              }}
-            >
-              {visible.length > 1 ? visible.at(-1)?.date : ''}
-            </Text>
-          </Animated.View>
+          <EvolutionGraph
+            visible={visible}
+            metric={metric}
+            weight={weight}
+            distance={distance}
+            selected={selected}
+            setSelected={setSelected}
+            opacity={opacity}
+          />
         </>
       ) : null}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         {([1, 3, 6, 12, 'All'] as Range[]).map((r) => (
-          <EvolutionSelector
+          <AnimatedTextSelector
             key={r}
-            label={r === 'All' ? r : r === 12 ? '1 year' : `${r} month${r === 1 ? '' : 's'}`}
+            label={rangeLabel(r)}
             selected={range === r}
             role="button"
             reduceMotion={reduceMotion}
@@ -379,114 +259,254 @@ export function ExerciseEvolution({
           />
         ))}
       </View>
-      <Modal
+      <MetricInfoSheet
         visible={info}
-        transparent
-        animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => setInfo(false)}
-      >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: p.scrim }}>
-          <Animated.View style={{ maxHeight: '75%', transform: [{ translateY: sheetY }] }}>
-            <SafeAreaView
-              style={{
-                maxHeight: '100%',
-                backgroundColor: p['surface-200'],
-                padding: 20,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-              }}
-            >
-              <View
-                {...sheetPan.panHandlers}
-                style={[
-                  { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-                  gestureHandleStyle,
-                ]}
-              >
-                <View
-                  style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: p['ink-muted'] }}
-                />
-              </View>
-              <ScrollView>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, flex: 1 }}>
-                    {labels[metric]}
-                  </Text>
-                  <IconButton icon="x" label="Close explanation" onPress={() => setInfo(false)} />
-                </View>
-                <Text style={{ color: p.ink, lineHeight: 22 }}>
-                  {descriptions[metric]}{' '}
-                  {metric === 'distance'
-                    ? `Distance is shown in ${distance}.`
-                    : metric === 'duration_seconds'
-                      ? 'Time is shown in hours, minutes and seconds.'
-                      : metric === 'reps'
-                        ? ''
-                        : `Load is shown in ${weight}.`}
-                </Text>
-              </ScrollView>
-            </SafeAreaView>
-          </Animated.View>
-        </View>
-      </Modal>
+        onClose={() => setInfo(false)}
+        metric={metric}
+        weight={weight}
+        distance={distance}
+        reduceMotion={reduceMotion}
+      />
     </View>
   );
 }
 
-function EvolutionSelector({
-  label,
+function EvolutionGraph({
+  visible,
+  metric,
+  weight,
+  distance,
   selected,
-  role,
-  reduceMotion,
-  onPress,
+  setSelected,
+  opacity,
 }: Readonly<{
-  label: string;
-  selected: boolean;
-  role: 'tab' | 'button';
-  reduceMotion: boolean;
-  onPress: () => void;
+  visible: EvolutionDay[];
+  metric: Metric;
+  weight: string;
+  distance: string;
+  selected: string | null;
+  setSelected: React.Dispatch<React.SetStateAction<string | null>>;
+  opacity: Animated.Value;
 }>) {
   const p = usePalette();
-  const [progress] = useState(() => new Animated.Value(selected ? 1 : 0));
-  useEffect(() => {
-    const transition = Animated.timing(progress, {
-      toValue: selected ? 1 : 0,
-      duration: reduceMotion ? 0 : 220,
-      useNativeDriver: true,
-    });
-    transition.start();
-    return () => transition.stop();
-  }, [selected, reduceMotion, progress]);
+  const [width, setWidth] = useState(0);
+  const numbers = visible.map((d) => Number(d[metric]));
+  const low = Math.min(...numbers),
+    high = Math.max(...numbers);
+  const padding = high === low ? Math.max(Math.abs(high) * 0.1, 1) : (high - low) * 0.1;
+  const min = Math.max(0, low - padding),
+    max = high + padding;
+  const plotWidth = Math.max(0, width - 92),
+    height = 150;
+  const points = visible.map((d) => ({
+    day: d,
+    x:
+      visible.length === 1
+        ? plotWidth / 2
+        : ((Date.parse(d.date) - Date.parse(visible[0].date)) /
+            (Date.parse(visible.at(-1)?.date ?? visible[0].date) - Date.parse(visible[0].date))) *
+          plotWidth,
+    y: max === min ? height / 2 : height - ((Number(d[metric]) - min) / (max - min)) * height,
+  }));
   return (
-    <Pressable
-      accessibilityRole={role}
-      accessibilityState={{ selected }}
-      aria-selected={selected}
-      onPress={onPress}
-      style={{ minHeight: 44, justifyContent: 'center' }}
+    <Animated.View
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      style={{ height: 205, paddingLeft: 48, opacity }}
     >
-      <Text style={{ color: selected ? p.brand : p.ink }}>{label}</Text>
-      <Animated.View
-        pointerEvents="none"
+      {[0, 0.5, 1].map((v) => (
+        <View
+          key={v}
+          style={{
+            position: 'absolute',
+            left: 48,
+            right: 0,
+            top: v * height,
+            borderTopWidth: 1,
+            borderColor: p['surface-300'],
+          }}
+        />
+      ))}
+      <Text style={{ position: 'absolute', left: 0, top: 0, color: p['ink-muted'], fontSize: 10 }}>
+        {max.toFixed(axisPrecision(metric))} {metricUnit(metric, weight, distance)}
+      </Text>
+      <Text
         style={{
           position: 'absolute',
-          bottom: 0,
           left: 0,
-          right: 0,
-          height: 2,
-          backgroundColor: p.brand,
-          opacity: progress,
-          transform: [
-            { scaleX: progress.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) },
-          ],
+          top: height - 12,
+          color: p['ink-muted'],
+          fontSize: 10,
         }}
-      />
-    </Pressable>
+      >
+        {min.toFixed(axisPrecision(metric))}
+      </Text>
+      {points.slice(1).map((point, i) => {
+        const prev = points[i];
+        const dx = point.x - prev.x,
+          dy = point.y - prev.y;
+        return (
+          <View
+            key={point.day.date}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: 70 + (prev.x + point.x) / 2 - Math.hypot(dx, dy) / 2,
+              top: (prev.y + point.y) / 2,
+              width: Math.hypot(dx, dy),
+              height: 1,
+              backgroundColor: p.brand,
+              transform: [{ rotate: `${Math.atan2(dy, dx)}rad` }],
+            }}
+          />
+        );
+      })}
+      {points.map((point) => (
+        <Pressable
+          key={point.day.date}
+          accessibilityRole="button"
+          accessibilityLabel={`${point.day.date}, ${value(point.day, metric, weight, distance)}`}
+          accessibilityState={{ selected: selected === point.day.date }}
+          aria-selected={selected === point.day.date}
+          onPress={() => setSelected(selected === point.day.date ? null : point.day.date)}
+          style={{
+            position: 'absolute',
+            left: 70 + point.x - 22,
+            top: point.y - 22,
+            width: 44,
+            height: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: p.brand }} />
+        </Pressable>
+      ))}
+      {selected &&
+        points
+          .filter((point) => point.day.date === selected)
+          .map((point) => (
+            <Text
+              key={point.day.date}
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: Math.max(48, Math.min(width - 130, 75 + point.x)),
+                top: Math.max(0, point.y - 35),
+                color: p.ink,
+                backgroundColor: p['surface-300'],
+                fontSize: 12,
+              }}
+            >
+              {point.day.date} · {value(point.day, metric, weight, distance)}
+            </Text>
+          ))}
+      <Text
+        style={{
+          position: 'absolute',
+          left: 48,
+          top: height + 25,
+          color: p['ink-muted'],
+          fontSize: 10,
+        }}
+      >
+        {visible[0].date}
+      </Text>
+      <Text
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: height + 25,
+          color: p['ink-muted'],
+          fontSize: 10,
+        }}
+      >
+        {visible.length > 1 ? visible.at(-1)?.date : ''}
+      </Text>
+    </Animated.View>
+  );
+}
+
+function MetricInfoSheet({
+  visible,
+  onClose,
+  metric,
+  weight,
+  distance,
+  reduceMotion,
+}: Readonly<{
+  visible: boolean;
+  onClose: () => void;
+  metric: Metric;
+  weight: string;
+  distance: string;
+  reduceMotion: boolean;
+}>) {
+  const p = usePalette();
+  const [sheetY] = useState(() => new Animated.Value(0));
+  const sheetPan = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 4,
+    onPanResponderMove: (_, gesture) => sheetY.setValue(Math.max(0, gesture.dy)),
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dy > 60 || gesture.vy > 0.7) onClose();
+      Animated.timing(sheetY, {
+        toValue: 0,
+        duration: reduceMotion ? 0 : 180,
+        useNativeDriver: true,
+      }).start();
+    },
+    onPanResponderTerminate: () => sheetY.setValue(0),
+  });
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reduceMotion ? 'none' : 'slide'}
+      onRequestClose={() => onClose()}
+    >
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: p.scrim }}>
+        <Animated.View style={{ maxHeight: '75%', transform: [{ translateY: sheetY }] }}>
+          <SafeAreaView
+            style={{
+              maxHeight: '100%',
+              backgroundColor: p['surface-200'],
+              padding: 20,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+            }}
+          >
+            <View
+              {...sheetPan.panHandlers}
+              testID="evolution-info-grip"
+              style={[
+                { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+                gestureHandleStyle,
+              ]}
+            >
+              <View
+                style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: p['ink-muted'] }}
+              />
+            </View>
+            <ScrollView>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, flex: 1 }}>
+                  {labels[metric]}
+                </Text>
+                <IconButton icon="x" label="Close explanation" onPress={() => onClose()} />
+              </View>
+              <Text style={{ color: p.ink, lineHeight: 22 }}>
+                {descriptions[metric]} {metricUnitExplanation(metric, weight, distance)}
+              </Text>
+            </ScrollView>
+          </SafeAreaView>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
