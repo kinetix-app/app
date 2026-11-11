@@ -107,3 +107,15 @@ Maestro on an isolated development device.
 
 On a fresh isolated database, run `session-ux.spec.ts` before
 `session-results.spec.ts`: the former prepares the two synthetic account profiles.
+
+## Exercise evolution acceptance
+
+`exercise-evolution.spec.ts` uses both private test identities and the synthetic
+Acceptance catalogue in a run-owned `_test` database. It records completed gym and
+cardio workouts through the real API, then verifies the authenticated Evolution UI,
+daily aggregation beyond one History page, repeated exercise occurrences, point and
+range selection, empty/older ranges, metric explanations, profile kg/km and lb/mi
+units, retry, reload, history immutability and second-account isolation. Run it with
+`pnpm exec playwright test --config e2e/web/playwright.config.ts exercise-evolution.spec.ts`.
+`exercise-history.spec.ts` covers the separate paginated History tab. Browser
+acceptance does not establish Android/iOS or screen-reader behavior.

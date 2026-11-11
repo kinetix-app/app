@@ -52,6 +52,25 @@ export const exerciseHistoryPageSchema = z.object({
   limit: z.number().int().positive(),
   offset: z.number().int().nonnegative(),
 });
+export const exerciseEvolutionSchema = z.object({
+  exercise_id: entityId,
+  activity_type: z.string(),
+  weight_unit: weightUnitSchema,
+  distance_unit: z.enum(['km', 'mi']),
+  days: z.array(
+    z.object({
+      date: z.iso.date(),
+      estimated_1rm: z.string().nullable(),
+      weight: z.string().nullable(),
+      volume: z.string().nullable(),
+      reps: z.number().int().nullable(),
+      distance: z.string().nullable(),
+      duration_seconds: z.number().int().nullable(),
+      volume_partial: z.boolean(),
+    }),
+  ),
+});
+export type EvolutionDay = z.infer<typeof exerciseEvolutionSchema>['days'][number];
 export type ExerciseHistoryItem = z.infer<typeof exerciseHistoryPageSchema>['items'][number];
 export const slotSchema = z.object({
   id: entityId,

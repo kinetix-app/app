@@ -2,6 +2,7 @@ import { apiClient } from '@/services/apiClient';
 import {
   exerciseConfigurationSchema,
   exerciseHistoryPageSchema,
+  exerciseEvolutionSchema,
   draftSnapshotSchema,
   serverDraftSchema,
   type DraftSnapshot,
@@ -90,6 +91,19 @@ export const trainingApi = {
       schema: bodyPartsSchema,
       signal,
     }),
+  exerciseEvolution: (
+    id: number,
+    weight: WeightUnit,
+    distance: 'km' | 'mi',
+    signal?: AbortSignal,
+  ) =>
+    apiClient.get(
+      `/api/v1/exercises/${id}/evolution?weight_unit=${weight}&distance_unit=${distance}`,
+      {
+        schema: exerciseEvolutionSchema,
+        signal,
+      },
+    ),
   exerciseHistory: (id: number, offset: number, signal?: AbortSignal, unit: WeightUnit = 'kg') =>
     apiClient.get(`/api/v1/exercises/${id}/history?limit=20&offset=${offset}&weight_unit=${unit}`, {
       schema: exerciseHistoryPageSchema,
