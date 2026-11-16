@@ -1,3 +1,4 @@
+import { minimizeWorkout } from './workout-controls';
 import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import tokens from '../../src/theme/design-tokens.json';
@@ -63,7 +64,8 @@ test('confirmed final sets advance exercise cards and the floating panel uses pr
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: /^Sign in/ }).click();
     await page.getByLabel('Search routines', { exact: true }).fill(name);
-    await page.getByRole('button', { name: `Start ${name}`, exact: true }).click();
+    await page.getByRole('button', { name: `Routine actions for ${name}`, exact: true }).click();
+    await page.getByRole('button', { name: `Train ${name}`, exact: true }).click();
     const cards = page.getByRole('button', { name: 'Edit sets for Acceptance press', exact: true });
     await expect(cards).toHaveCount(2);
     await cards.first().click();
@@ -144,10 +146,8 @@ test('confirmed final sets advance exercise cards and the floating panel uses pr
     ).toBeVisible();
     await expect(page.getByLabel('Exercise 1 set 2 kg', { exact: true })).toHaveValue('85');
     await cards.first().click();
-    await page.getByRole('button', { name: 'Minimize workout', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Minimize workout', exact: true })).toHaveCount(
-      0,
-    );
+    await minimizeWorkout(page);
+    await expect(page.getByTestId('workout-pull-handle')).toHaveCount(0);
     for (const theme of ['dark', 'light'] as const) {
       await page.emulateMedia({ colorScheme: theme });
       await expect(page.getByTestId('ongoing-workout-card')).toHaveCSS(

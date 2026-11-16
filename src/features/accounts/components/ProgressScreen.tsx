@@ -15,6 +15,7 @@ export function ProgressScreen({
 }: Readonly<{ account: Account; onClose: () => void }>) {
   const p = usePalette();
   const system = account.profile.measurement_system ?? 'metric';
+  const weightUnit = system === 'imperial' ? 'lb' : 'kg';
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -26,7 +27,7 @@ export function ProgressScreen({
           <View style={s.card}>
             <Text style={[textStyles['title-md'], { color: p.ink }]}>
               {account.profile.weight_kg
-                ? `${displayWeight(account.profile.weight_kg, system)} ${system === 'imperial' ? 'lb' : 'kg'}`
+                ? `${displayWeight(account.profile.weight_kg, system)} ${weightUnit}`
                 : 'No saved weight'}
             </Text>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>

@@ -32,24 +32,25 @@ export function SsoCallbackScreen() {
   if (Platform.OS !== 'web') return <Redirect href="/" />;
 
   const failed = status === 'failed';
-  const title = failed
-    ? 'Couldn’t finish sign-in'
-    : status === 'success'
-      ? 'Return to your original tab'
-      : 'Finishing sign-in…';
+  const messages = {
+    failed: {
+      title: 'Couldn’t finish sign-in',
+      description: 'Close this window and retry in your original tab.',
+    },
+    success: {
+      title: 'Return to your original tab',
+      description: 'This window will close automatically.',
+    },
+    completing: { title: 'Finishing sign-in…', description: undefined },
+  };
+  const { title, description } = messages[status];
 
   return (
     <AuthStatusScreen
       title={title}
       failed={failed}
       loadingLabel={status === 'completing' ? 'Finishing sign-in' : undefined}
-      description={
-        failed
-          ? 'Close this window and retry in your original tab.'
-          : status === 'success'
-            ? 'This window will close automatically.'
-            : undefined
-      }
+      description={description}
     >
       {failed ? (
         <Link

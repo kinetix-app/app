@@ -119,3 +119,38 @@ test('rejects ambiguous planned weight inputs instead of stripping one measureme
     }).success,
   ).toBe(false);
 });
+
+test('routine metadata and private cover paths are validated, and notes support clearing', () => {
+  expect(
+    routineSchema.parse({ ...exampleRoutine, image_url: '/api/v1/routines/10/picture?v=abc123' })
+      .exercise_count,
+  ).toBe(1);
+  expect(() =>
+    routineSchema.parse({ ...exampleRoutine, image_url: 'https://external.example/picture' }),
+  ).toThrow();
+  expect(() =>
+    routineSchema.parse({ ...exampleRoutine, last_performed_at: '2026-11-03' }),
+  ).toThrow();
+  expect(() =>
+    routineInputSchema.parse({
+      name: 'Push',
+      notes: 'a'.repeat(1001),
+      exercises: [{ exercise_id: 1 }],
+    }),
+  ).toThrow();
+  expect(
+    routineInputSchema.parse({ name: 'Push', notes: null, exercises: [{ exercise_id: 1 }] }).notes,
+  ).toBeNull();
+});
+
+test('creates routines through a single multipart request containing content and optional file', async () => {
+  const post = jest.spyOn(apiClient, 'postMultipart').mockResolvedValue(exampleRoutine);
+  const jsonPost = jest.spyOn(apiClient, 'post');
+  const form = new FormData();
+  form.append('content', JSON.stringify({ name: 'Push', exercises: [{ exercise_id: 1 }] }));
+  await trainingApi.create(form);
+  expect(post).toHaveBeenCalledWith('/api/v1/routines', form, { schema: routineSchema });
+  expect(jsonPost).not.toHaveBeenCalled();
+  post.mockRestore();
+  jsonPost.mockRestore();
+});

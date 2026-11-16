@@ -16,20 +16,26 @@ appId: cat.udl.kinetix
 - tapOn: Add exercise
 - tapOn: Search exercises
 - inputText: Acceptance press
-- tapOn: Add Acceptance press
+- tapOn: Select Acceptance press
+- tapOn: 'Add exercises \(1\)'
 - tapOn: Exercise 1 set 1 kg
 - inputText: '100'
 - tapOn: Exercise 1 set 1 reps
 - inputText: '8'
 - hideKeyboard
 - tapOn: Save exercise 1 set 1
-- tapOn: Minimize workout
-- assertVisible: History
+- swipe:
+    start: '50%,10%'
+    end: '50%,35%'
+    duration: 600
+- assertVisible: Workouts
 - tapOn: Resume workout
 - assertVisible: Edit sets for Acceptance press
 - tapOn: Finish
 - extendedWaitUntil:
-    visible: History
+    visible: Workouts
     timeout: 20000
-- tapOn: History
+- tapOn: Home
+- tapOn: Open profile
+- tapOn: Training history
 - assertVisible: Workout history

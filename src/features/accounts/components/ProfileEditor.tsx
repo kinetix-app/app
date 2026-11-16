@@ -375,12 +375,17 @@ export function ProfileEditor({
   const steps = ['About you', 'Personal information', 'Confirmation'];
   const disabled = pending || photoBusy;
   function back() {
-    if (disabled) return true;
+    if (disabled) return;
     if (mode === 'onboarding' && step > 0) setStep((value) => value - 1);
     else onCancel?.();
-    return true;
   }
-  useHardwareBack(back, active && (step > 0 || Boolean(onCancel)));
+  useHardwareBack(
+    () => {
+      back();
+      return true;
+    },
+    active && (step > 0 || Boolean(onCancel)),
+  );
   const currentFields =
     step === 0
       ? ['display_name']
@@ -426,85 +431,21 @@ export function ProfileEditor({
   }
   if (mode === 'edit')
     return (
-      <SafeAreaView
-        edges={['top', 'left', 'right']}
-        style={[s.screen, { backgroundColor: p['surface-100'] }]}
-      >
-        <KeyboardAvoidingView
-          style={s.screen}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}
-          >
-            <ScreenHeader
-              title="Edit profile"
-              leading={onCancel ? <ProfileBack disabled={disabled} onPress={back} /> : undefined}
-            >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Save profile"
-                accessibilityState={{ disabled }}
-                disabled={disabled}
-                onPress={() => {
-                  void save();
-                }}
-                style={{
-                  minHeight: sizes['tap-min'],
-                  paddingHorizontal: spacing['space-4'],
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: radii['radius-md'],
-                  backgroundColor: p.brand,
-                  opacity: disabled ? 0.55 : 1,
-                }}
-              >
-                <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-                  {pending ? 'Saving…' : 'Save'}
-                </Text>
-              </Pressable>
-            </ScreenHeader>
-            <ProfilePictureEditor
-              compact
-              account={photoAccount}
-              draft={photoDraft}
-              onDraftChange={setPhotoDraft}
-              disabled={pending}
-              onBusy={setPhotoBusy}
-            />
-            <ProfileFields disabled={disabled} errors={errors} form={form} step={0} unit={unit} />
-            <MeasurementSystemFields
-              compact
-              account={account}
-              disabled={disabled}
-              error={errors.measurement_system?.message}
-              form={form}
-            />
-            {(['ageWeight', 'height'] as const).map((group) => (
-              <View
-                key={group}
-                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] }}
-              >
-                <ProfileFields
-                  compact
-                  group={group}
-                  disabled={disabled}
-                  errors={errors}
-                  form={form}
-                  step={1}
-                  unit={unit}
-                />
-              </View>
-            ))}
-            {failure ? (
-              <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-                {failure}
-              </Text>
-            ) : null}
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+      <ProfileEditForm
+        account={account}
+        photoAccount={photoAccount}
+        photoDraft={photoDraft}
+        setPhotoDraft={setPhotoDraft}
+        pending={pending}
+        setPhotoBusy={setPhotoBusy}
+        disabled={disabled}
+        errors={errors}
+        form={form}
+        unit={unit}
+        failure={failure}
+        onBack={onCancel ? back : undefined}
+        onSave={() => void save()}
+      />
     );
   return (
     <SafeAreaView
@@ -516,18 +457,7 @@ export function ProfileEditor({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
-          <ScreenHeader
-            leading={
-              step > 0 || onCancel ? (
-                <ProfileBack
-                  label={step > 0 ? 'Back' : 'Back to profile'}
-                  disabled={disabled}
-                  onPress={back}
-                />
-              ) : undefined
-            }
-            title={onCancel ? 'Edit profile' : 'Your profile'}
-          />
+          <ProfileWizardHeader step={step} disabled={disabled} onCancel={onCancel} onBack={back} />
           <View style={{ gap: spacing['space-2'] }}>
             <Text
               accessibilityLiveRegion="polite"
@@ -639,3 +569,141 @@ const wizard = StyleSheet.create({
     paddingVertical: spacing['space-2'],
   },
 });
+
+function ProfileEditForm({
+  account,
+  photoAccount,
+  photoDraft,
+  setPhotoDraft,
+  pending,
+  setPhotoBusy,
+  disabled,
+  errors,
+  form,
+  unit,
+  failure,
+  onBack,
+  onSave,
+}: Readonly<{
+  account: Account;
+  photoAccount: Account;
+  photoDraft: ProfilePictureDraft;
+  setPhotoDraft: (draft: ProfilePictureDraft) => void;
+  pending: boolean;
+  setPhotoBusy: (busy: boolean) => void;
+  disabled: boolean;
+  errors: FieldErrors<ProfileFormValues>;
+  form: ProfileFormApi;
+  unit: ProfileFormValues['measurement_system'];
+  failure: string;
+  onBack?: () => void;
+  onSave: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <SafeAreaView
+      edges={['top', 'left', 'right']}
+      style={[s.screen, { backgroundColor: p['surface-100'] }]}
+    >
+      <KeyboardAvoidingView
+        style={s.screen}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}
+        >
+          <ScreenHeader
+            title="Edit profile"
+            leading={onBack ? <ProfileBack disabled={disabled} onPress={onBack} /> : undefined}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Save profile"
+              accessibilityState={{ disabled }}
+              disabled={disabled}
+              onPress={onSave}
+              style={{
+                minHeight: sizes['tap-min'],
+                paddingHorizontal: spacing['space-4'],
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: radii['radius-md'],
+                backgroundColor: p.brand,
+                opacity: disabled ? 0.55 : 1,
+              }}
+            >
+              <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+                {pending ? 'Saving…' : 'Save'}
+              </Text>
+            </Pressable>
+          </ScreenHeader>
+          <ProfilePictureEditor
+            compact
+            account={photoAccount}
+            draft={photoDraft}
+            onDraftChange={setPhotoDraft}
+            disabled={pending}
+            onBusy={setPhotoBusy}
+          />
+          <ProfileFields disabled={disabled} errors={errors} form={form} step={0} unit={unit} />
+          <MeasurementSystemFields
+            compact
+            account={account}
+            disabled={disabled}
+            error={errors.measurement_system?.message}
+            form={form}
+          />
+          {(['ageWeight', 'height'] as const).map((group) => (
+            <View
+              key={group}
+              style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] }}
+            >
+              <ProfileFields
+                compact
+                group={group}
+                disabled={disabled}
+                errors={errors}
+                form={form}
+                step={1}
+                unit={unit}
+              />
+            </View>
+          ))}
+          {failure ? (
+            <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+              {failure}
+            </Text>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function ProfileWizardHeader({
+  step,
+  disabled,
+  onCancel,
+  onBack,
+}: Readonly<{
+  step: number;
+  disabled: boolean;
+  onCancel?: () => void;
+  onBack: () => void;
+}>) {
+  return (
+    <ScreenHeader
+      leading={
+        step > 0 || onCancel ? (
+          <ProfileBack
+            label={step > 0 ? 'Back' : 'Back to profile'}
+            disabled={disabled}
+            onPress={onBack}
+          />
+        ) : undefined
+      }
+      title={onCancel ? 'Edit profile' : 'Your profile'}
+    />
+  );
+}

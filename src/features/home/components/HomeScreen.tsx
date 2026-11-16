@@ -41,6 +41,13 @@ function FormCheckHost({ accountId, children }: React.PropsWithChildren<{ accoun
   );
 }
 
+type ProfileOrigin = Exclude<HomeTab, 'profile'>;
+const profileBackLabels: Record<ProfileOrigin, string> = {
+  home: 'Back to home',
+  workout: 'Back to workout',
+  nutrition: 'Back to nutrition',
+};
+
 type HomeNavigationProps = Readonly<{
   account: Account;
   initialTab: HomeTab;
@@ -58,16 +65,25 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   const p = usePalette();
   const session = useSession();
   const [tab, setTab] = useState<HomeTab>(initialTab);
+  const [routineEditing, setRoutineEditing] = useState(false);
   const [visited, setVisited] = useState<HomeTab[]>([initialTab]);
+  const [profileOrigin, setProfileOrigin] = useState<ProfileOrigin>(
+    initialTab === 'profile' ? 'home' : initialTab,
+  );
   function select(next: HomeTab) {
     setAddingFood(false);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
+  /** Resumes Profile on its current panel, so unsaved edits survive leaving it. */
+  function showProfile() {
+    if (tab !== 'profile') setProfileOrigin(tab);
+    select('profile');
+  }
   function openProfile(panel: ProfilePanel) {
     setProfilePanel(panel);
     if (panel === 'nutrition') setNutritionOrigin('profile');
-    select('profile');
+    showProfile();
   }
   async function signOut() {
     if (loggingOut.current) return;
@@ -90,10 +106,11 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   }
   useHardwareBack(
     () => {
-      closeProfilePanel();
+      if (profilePanel === 'progress') closeProfilePanel();
+      else select(profileOrigin);
       return true;
     },
-    panelActive && profilePanel === 'progress',
+    panelActive && (profilePanel === 'progress' || profilePanel === 'overview'),
   );
   function renderProfilePanel() {
     switch (profilePanel) {
@@ -149,6 +166,8 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
           <ProfileScreen
             account={account}
             onOpen={openProfile}
+            onBack={() => select(profileOrigin)}
+            backLabel={profileBackLabels[profileOrigin]}
             onSignOut={() => {
               void signOut();
             }}
@@ -163,7 +182,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
       return (
         <ProfileOverview
           account={account}
-          onOpenProfile={() => openProfile('overview')}
+          onOpenProfile={showProfile}
           onEditObjective={() => openProfile('objective')}
           onEditNutrition={() => {
             openProfile('nutrition');
@@ -174,13 +193,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
       );
     if (item === 'profile') return renderProfilePanel();
     if (item === 'workout')
-      return (
-        <TrainingWorkspace
-          accountId={accountId}
-          showStartAction={false}
-          onHistory={() => openProfile('history')}
-        />
-      );
+      return <TrainingWorkspace accountId={accountId} onEditingChange={setRoutineEditing} />;
     return (
       <NutritionDiaryScreen
         accountId={accountId}
@@ -194,7 +207,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   }
   return (
     <View style={{ flex: 1, backgroundColor: p['surface-100'] }}>
-      <SessionHost>
+      <SessionHost hideMinimized={tab === 'workout' && routineEditing}>
         {visited.map((item) => (
           <View
             key={item}
@@ -207,7 +220,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
           </View>
         ))}
       </SessionHost>
-      {!addingFood ? (
+      {!addingFood && (tab !== 'workout' || !routineEditing) ? (
         <BottomBar
           tab={tab}
           onSelect={select}

@@ -129,7 +129,6 @@ export function DevelopmentSignInScreen({
                 Email
               </Text>
               <TextField
-                theme="dark"
                 leading={<Ionicons name="mail-outline" size={20} color={colors.icon} />}
                 accessibilityLabel="Email"
                 accessibilityLabelledBy="email-label"
@@ -146,7 +145,6 @@ export function DevelopmentSignInScreen({
                 Password
               </Text>
               <TextField
-                theme="dark"
                 leading={<Ionicons name="lock-closed-outline" size={20} color={colors.icon} />}
                 accessibilityLabel="Password"
                 accessibilityLabelledBy="password-label"

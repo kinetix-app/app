@@ -226,7 +226,6 @@ function SignInForm() {
       </View>
       <Text style={styles.label}>Email</Text>
       <TextField
-        theme="dark"
         leading={<Ionicons name="mail-outline" size={20} color={colors.icon} />}
         accessibilityLabel="Email"
         placeholder="Enter your email"
@@ -242,7 +241,6 @@ function SignInForm() {
         <>
           <Text style={styles.label}>Enter the verification code from your email.</Text>
           <TextField
-            theme="dark"
             leading={<Ionicons name="keypad-outline" size={20} color={colors.icon} />}
             accessibilityLabel="Email verification code"
             placeholder="Verification code"

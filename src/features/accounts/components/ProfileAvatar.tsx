@@ -6,7 +6,16 @@ import { getProfilePicture } from '../api';
 import { profilePicturePath, type Account } from '../schemas';
 import { SetupButton } from './SetupUI';
 
-type ProfileAvatarProps = Readonly<{ account: Account; preview?: string; size?: number }>;
+/**
+ * `compact` is for header-sized avatars: it adds a brand ring and omits the inline retry,
+ * falling back to the initial.
+ */
+type ProfileAvatarProps = Readonly<{
+  account: Account;
+  preview?: string;
+  size?: number;
+  compact?: boolean;
+}>;
 
 function getPictureUri(
   preview: string | undefined,
@@ -21,7 +30,7 @@ function getPictureUri(
   return decoded.uri;
 }
 
-export function ProfileAvatar({ account, preview, size = 112 }: ProfileAvatarProps) {
+export function ProfileAvatar({ account, preview, size = 112, compact }: ProfileAvatarProps) {
   const p = usePalette();
   const [decoded, setDecoded] = useState<{ blob: Blob; uri?: string; failed?: boolean }>();
   const privatePhoto = account.profile.picture_url === profilePicturePath && !preview;
@@ -88,11 +97,12 @@ export function ProfileAvatar({ account, preview, size = 112 }: ProfileAvatarPro
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
+          ...(compact ? { borderWidth: 2, borderColor: p.brand } : null),
         }}
       >
         {picture}
       </View>
-      {privatePhoto && failed ? (
+      {privatePhoto && failed && !compact ? (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
             Could not load your picture.

@@ -1,22 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { cardioInput, cardioValues, type CardioValues } from '../cardio';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import {
-  Alert,
   BackHandler,
   KeyboardAvoidingView,
   Platform,
   Modal,
   Keyboard,
   Text,
+  Pressable,
   View,
 } from 'react-native';
 import DraggableFlatList from './ExerciseDragList';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
-import { spacing, textStyles, usePalette } from '@/theme/tokens';
+import { sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
-import { ExerciseDragHandle } from './ExerciseDragHandle';
 import { ExerciseDetails } from './ExerciseDetails';
 import { ExercisePicker } from './ExercisePicker';
 import {
@@ -27,63 +27,61 @@ import {
   validWeight,
   type WeightUnit,
 } from '../schemas';
-import { WorkoutExerciseCard } from './WorkoutEditor';
+import { WorkoutExerciseCard, WorkoutExerciseSummary } from './WorkoutEditor';
 import { SetFields } from './SetFields';
-import { displayWeight } from '../sessionDraft';
 import { Button, Failure, IconButton, ui } from './ui';
 
-type DraftSet = { reps: string; weight: string; unit: WeightUnit; canonicalWeight?: string };
+type DraftSet = CardioValues & {
+  reps: string;
+  weight: string;
+  unit: WeightUnit;
+  canonicalWeight?: string;
+  legacy?: boolean;
+  legacyCardio?: CardioValues;
+};
 type DraftExercise = {
   slotId?: number;
   exercise: ExerciseSummary;
   sets: DraftSet[];
 };
-type Draft = { name: string; exercises: DraftExercise[] };
+type Draft = { name: string; notes: string; exercises: DraftExercise[] };
 
 function SetSummary({ control, index }: Readonly<{ control: Control<Draft>; index: number }>) {
-  const p = usePalette();
   const sets = useWatch({ control, name: `exercises.${index}.sets` }) ?? [];
-  const range = (key: 'reps' | 'weight') => {
-    const values = sets
-      .map((set) => (set[key].trim() ? Number(summaryValue(key, set)) : Number.NaN))
-      .filter(Number.isFinite);
-    if (!values.length) return '—';
-    const low = Math.min(...values),
-      high = Math.max(...values);
-    return low === high ? String(low) : `${low}–${high}`;
-  };
+  const exercise = useWatch({ control, name: `exercises.${index}.exercise` });
   return (
-    <View style={{ gap: spacing['space-2'] }}>
-      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-        {sets.length} {sets.length === 1 ? 'set' : 'sets'}
-      </Text>
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {range('reps')} reps · {range('weight')} kg
-      </Text>
-    </View>
+    <WorkoutExerciseSummary
+      cardio={exercise.activity_type === 'cardio'}
+      sets={sets.map((set) => ({ ...set, value: set.weight }))}
+    />
   );
 }
 
-function summaryValue(key: 'reps' | 'weight', set: DraftSet) {
-  if (key === 'weight') return displayWeight(set.weight, set.unit, 'kg');
-  return set.reps;
-}
-
-function Sets({
+function RoutineExerciseEditor({
   control,
   index,
-  disabled,
-}: Readonly<{
-  control: Control<Draft>;
-  index: number;
-  disabled: boolean;
-}>) {
+  ...card
+}: Readonly<
+  {
+    control: Control<Draft>;
+    index: number;
+  } & Omit<
+    React.ComponentProps<typeof WorkoutExerciseCard>,
+    'summary' | 'onAddSet' | 'canAddSet' | 'children'
+  >
+>) {
   const p = usePalette();
   const unit: WeightUnit = 'kg';
+  const exercise = useWatch({ control, name: `exercises.${index}.exercise` });
+  const cardio = exercise.activity_type === 'cardio';
   const { fields, append, remove } = useFieldArray({ control, name: `exercises.${index}.sets` });
   return (
-    <View style={ui.gap}>
-      <Text style={{ color: p['ink-muted'] }}>PLANNED SETS · WEIGHT / REPS</Text>
+    <WorkoutExerciseCard
+      {...card}
+      summary={<SetSummary control={control} index={index} />}
+      onAddSet={() => append({ reps: '', weight: '', unit })}
+      canAddSet={fields.length < 100}
+    >
       {fields.map((set, i) => (
         <Controller
           key={set.id}
@@ -91,16 +89,25 @@ function Sets({
           name={`exercises.${index}.sets.${i}`}
           rules={{
             validate: (value) =>
-              (validWeight(value.weight, value.unit, 2) &&
-                /^\d+$/.test(value.reps) &&
-                Number(value.reps) >= 1 &&
-                Number(value.reps) <= 2147483647) ||
-              'Enter nonnegative kg, up to two decimals.',
+              (cardio
+                ? Boolean(cardioInput(value)) || unchangedLegacyCardio(value)
+                : validWeight(value.weight, value.unit, 2) &&
+                  /^\d+$/.test(value.reps) &&
+                  Number(value.reps) >= 1 &&
+                  Number(value.reps) <= 2147483647) || 'Enter valid set values.',
           }}
           render={({ field, fieldState }) => (
             <View style={ui.gap}>
+              {cardio && field.value.legacy ? (
+                <Text style={{ color: p['ink-muted'] }}>
+                  Previous default: {field.value.weight || '—'} kg · {field.value.reps || '—'} reps.
+                  Enter distance and time to replace it.
+                </Text>
+              ) : null}
               <SetFields
+                cardio={cardio}
                 set={{
+                  ...field.value,
                   id: set.id,
                   value: field.value.weight,
                   unit: field.value.unit,
@@ -110,9 +117,15 @@ function Sets({
                 decimals={2}
                 number={i + 1}
                 label={`Exercise ${index + 1} set ${i + 1}`}
-                disabled={disabled}
+                disabled={card.disabled}
                 onChange={(next) =>
                   field.onChange({
+                    legacy: field.value.legacy,
+                    legacyCardio: field.value.legacyCardio,
+                    distance: next.distance,
+                    hours: next.hours,
+                    minutes: next.minutes,
+                    seconds: next.seconds,
                     weight: next.value,
                     unit: next.unit,
                     reps: next.reps,
@@ -132,14 +145,7 @@ function Sets({
           )}
         />
       ))}
-      <Button
-        title="+ Add set"
-        accessibilityLabel={`Add set to exercise ${index + 1}`}
-        onPress={() => append({ reps: '', weight: '', unit })}
-        tone="positive"
-        disabled={disabled || fields.length >= 100}
-      />
-    </View>
+    </WorkoutExerciseCard>
   );
 }
 
@@ -147,15 +153,11 @@ export function RoutineEditor({
   accountId,
   routine,
   onSaved,
-  onStart,
-  canStart = true,
   onClose,
 }: Readonly<{
   accountId: number;
   routine?: Routine;
   onSaved: (value: Routine) => void;
-  onStart?: (value: Routine) => void;
-  canStart?: boolean;
   onClose: () => void;
 }>) {
   const p = usePalette();
@@ -165,7 +167,7 @@ export function RoutineEditor({
   const [detailId, setDetailId] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const alive = useRef(true);
-  const startAfterSave = useRef(false);
+  const [notesOpen, setNotesOpen] = useState(Boolean(routine?.notes));
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -175,6 +177,7 @@ export function RoutineEditor({
   const { control, handleSubmit, formState, setError, getValues } = useForm<Draft>({
     defaultValues: {
       name: routine?.name ?? '',
+      notes: routine?.notes ?? '',
       exercises:
         routine?.exercises.map((slot) => ({
           slotId: slot.id,
@@ -184,6 +187,11 @@ export function RoutineEditor({
             weight: set.weight_kg === null ? '' : Number(set.weight_kg).toFixed(2),
             unit: 'kg' as const,
             canonicalWeight: set.weight_kg ?? undefined,
+            legacy:
+              slot.exercise.activity_type === 'cardio' &&
+              (set.duration_seconds === null || set.distance_km === null),
+            legacyCardio: cardioValues(set.duration_seconds, set.distance_km),
+            ...cardioValues(set.duration_seconds, set.distance_km),
           })),
         })) ?? [],
     },
@@ -194,13 +202,17 @@ export function RoutineEditor({
   });
   const isDirty = formState.isDirty;
   const save = useMutation({
-    mutationFn: (input: RoutineInput) => trainingApi.save(input, routine?.id),
+    mutationFn: async (input: RoutineInput) => {
+      if (!routine) {
+        const form = new FormData();
+        form.append('content', JSON.stringify(input));
+        return trainingApi.create(form);
+      }
+      return trainingApi.save(input, routine.id);
+    },
     retry: false,
     onSuccess: (result) => {
-      if (alive.current) {
-        if (startAfterSave.current && onStart) onStart(result);
-        else onSaved(result);
-      }
+      if (alive.current) onSaved(result);
     },
   });
   function close() {
@@ -221,13 +233,19 @@ export function RoutineEditor({
   const submit = handleSubmit((values) => {
     const parsed = routineInputSchema.safeParse({
       name: values.name,
+      notes: values.notes.trim() || null,
       exercises: values.exercises.map((slot) => ({
         ...(slot.slotId === undefined ? {} : { id: slot.slotId }),
         exercise_id: slot.exercise.id,
-        sets: slot.sets.map((set) => ({
-          reps: Number(set.reps),
-          ...setWeightInput(set),
-        })),
+        ...(preserveLegacySets(slot, routine)
+          ? {}
+          : {
+              sets: slot.sets.map((set) =>
+                slot.exercise.activity_type === 'cardio'
+                  ? cardioInput(set)
+                  : { reps: Number(set.reps), ...setWeightInput(set) },
+              ),
+            }),
       })),
     });
     if (!parsed.success) {
@@ -253,6 +271,35 @@ export function RoutineEditor({
         importantForAccessibility={discard ? 'no-hide-descendants' : 'auto'}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <View style={[ui.row, { padding: spacing['space-4'] }]}>
+          <IconButton
+            icon="arrow-left"
+            label="Back to routines"
+            onPress={close}
+            disabled={disabled}
+          />
+          <Text accessibilityRole="header" style={[ui.heading, { flex: 1, color: p.ink }]}>
+            {routine ? 'Edit routine' : 'New routine'}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save routine"
+            accessibilityState={{ disabled }}
+            disabled={disabled}
+            onPress={() => void submit()}
+            style={({ pressed }) => ({
+              minHeight: sizes['tap-min'],
+              minWidth: sizes['tap-min'],
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: disabled || pressed ? 0.55 : 1,
+            })}
+          >
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+              {save.isPending ? 'Saving…' : 'Save'}
+            </Text>
+          </Pressable>
+        </View>
         <DraggableFlatList
           testID="routine-exercises"
           data={fields}
@@ -271,18 +318,6 @@ export function RoutineEditor({
           }}
           ListHeaderComponent={
             <View style={ui.gap}>
-              <View style={ui.row}>
-                <IconButton
-                  icon="arrow-left"
-                  label="Back to routines"
-                  onPress={close}
-                  disabled={disabled}
-                />
-                <Text style={[ui.heading, { color: p.ink }]}>
-                  {routine ? 'Edit routine' : 'New routine'}
-                </Text>
-              </View>
-              <Text style={{ color: p.ink }}>Routine name</Text>
               <Controller
                 control={control}
                 name="name"
@@ -297,6 +332,16 @@ export function RoutineEditor({
                   <>
                     <TextField
                       accessibilityLabel="Routine name"
+                      placeholder="Name your routine"
+                      maxLength={150}
+                      inputStyle={textStyles['title-lg']}
+                      containerStyle={{
+                        backgroundColor: p['surface-100'],
+                        borderWidth: 0,
+                        borderBottomWidth: 1,
+                        borderRadius: 0,
+                        paddingHorizontal: 0,
+                      }}
                       value={field.value}
                       onChangeText={field.onChange}
                       onBlur={field.onBlur}
@@ -310,52 +355,84 @@ export function RoutineEditor({
                   </>
                 )}
               />
-              <Text style={{ color: p['ink-muted'] }}>You can rename it later.</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={notesOpen ? 'Hide routine notes' : 'Add routine notes'}
+                accessibilityState={{ expanded: notesOpen, disabled }}
+                disabled={disabled}
+                onPress={() => setNotesOpen(!notesOpen)}
+                style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
+              >
+                <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
+                  {notesOpen ? 'Notes (optional) −' : '+ Add notes'}
+                </Text>
+              </Pressable>
+              {notesOpen ? (
+                <Controller
+                  control={control}
+                  name="notes"
+                  rules={{ maxLength: { value: 1000, message: 'Use at most 1000 characters.' } }}
+                  render={({ field, fieldState }) => (
+                    <View style={ui.gap}>
+                      <TextField
+                        accessibilityLabel="Routine notes"
+                        placeholder="Focus, reminders or a plan for this routine…"
+                        value={field.value}
+                        onChangeText={field.onChange}
+                        onBlur={field.onBlur}
+                        editable={!disabled}
+                        multiline
+                        maxLength={1000}
+                        inputStyle={{ minHeight: 64, textAlignVertical: 'top' }}
+                      />
+                      <Text
+                        style={[
+                          textStyles['body-sm'],
+                          { color: p['ink-muted'], textAlign: 'right' },
+                        ]}
+                      >
+                        {field.value.length}/1000
+                      </Text>
+                      {fieldState.error ? (
+                        <Text accessibilityRole="alert" style={{ color: p.danger }}>
+                          {fieldState.error.message}
+                        </Text>
+                      ) : null}
+                    </View>
+                  )}
+                />
+              ) : null}
               <Text style={{ color: p['ink-muted'], fontWeight: '700' }}>
                 EXERCISES · {fields.length}
               </Text>
-              {fields.length > 1 ? (
-                <Text style={{ color: p['ink-muted'] }}>Drag the ≡ handle to reorder.</Text>
-              ) : null}
             </View>
           }
           renderItem={({ item: slot, getIndex, drag, isActive }) => {
             const index = getIndex();
             if (index === undefined) return null;
             return (
-              <WorkoutExerciseCard
+              <RoutineExerciseEditor
+                control={control}
+                index={index}
                 exercise={slot.exercise}
                 active={isActive}
+                dragId={save.isPending ? undefined : `reorder-card-${slot.id}`}
+                onDrag={save.isPending ? undefined : drag}
+                onMove={(delta) => {
+                  if (disabled) return;
+                  const target = index + delta;
+                  if (target >= 0 && target < fields.length) move(index, target);
+                }}
+                onRemove={() => {
+                  remove(index);
+                  if (editingSlot === slot.id) setEditingSlot(null);
+                }}
+                addSetLabel={`Add set to exercise ${index + 1}`}
                 disabled={disabled}
                 onSets={() => setEditingSlot(editingSlot === slot.id ? null : slot.id)}
                 expanded={editingSlot === slot.id}
                 onDetails={() => setDetailId(slot.exercise.id)}
-                summary={<SetSummary control={control} index={index} />}
-                dragHandle={
-                  <ExerciseDragHandle
-                    id={`reorder-handle-${slot.id}`}
-                    label={`Reorder ${slot.exercise.name}`}
-                    disabled={save.isPending}
-                    onDrag={drag}
-                    onMove={(delta) => {
-                      if (disabled) return;
-                      const target = index + delta;
-                      if (target >= 0 && target < fields.length) move(index, target);
-                    }}
-                  />
-                }
-              >
-                <Sets key={slot.id} control={control} index={index} disabled={save.isPending} />
-                <Button
-                  title="Remove"
-                  accessibilityLabel={`Remove ${slot.exercise.name}`}
-                  tone="danger"
-                  onPress={() => {
-                    remove(index);
-                    setEditingSlot(null);
-                  }}
-                />
-              </WorkoutExerciseCard>
+              />
             );
           }}
           ListFooterComponent={
@@ -371,28 +448,10 @@ export function RoutineEditor({
                   {formState.errors.root.message}
                 </Text>
               ) : null}
-              {save.isError ? <Failure error={save.error} /> : null}
-              <Button
-                title={save.isPending ? 'Saving…' : 'Save'}
-                onPress={() => {
-                  startAfterSave.current = false;
-                  void submit();
-                }}
-                disabled={disabled}
-              />
-              {onStart ? (
-                <Button
-                  title="Start routine"
-                  disabled={disabled || !canStart}
-                  onPress={() => {
-                    if (routine && !isDirty) {
-                      onStart(routine);
-                      return;
-                    }
-                    startAfterSave.current = true;
-                    void submit();
-                  }}
-                />
+              {save.isError ? (
+                <View style={ui.gap}>
+                  <Failure error={save.error} />
+                </View>
               ) : null}
             </View>
           }
@@ -402,13 +461,11 @@ export function RoutineEditor({
         <ExercisePicker
           accountId={accountId}
           onClose={() => setPicker(false)}
-          onSelect={(exercise) => {
-            if (getValues('exercises').length >= 500) {
-              Alert.alert('Routine limit', 'A routine can contain at most 500 exercises.');
-              return;
-            }
-            append({ exercise, sets: [] });
-            setPicker(false);
+          maxSelection={500 - getValues('exercises').length}
+          onSelect={(exercises) => {
+            const available = exercises.slice(0, 500 - getValues('exercises').length);
+            append(available.map((exercise) => ({ exercise, sets: [] })));
+            return available.map((exercise) => exercise.id);
           }}
         />
       ) : null}
@@ -463,4 +520,39 @@ function setWeightInput(set: DraftSet) {
   if (set.canonicalWeight !== undefined) return { weight_kg: set.canonicalWeight };
   if (set.unit === 'kg') return { weight_kg: set.weight };
   return { weight: { value: set.weight, unit: set.unit } };
+}
+
+function preserveLegacySets(slot: DraftExercise, routine?: Routine): boolean {
+  if (slot.exercise.activity_type !== 'cardio' || !slot.sets.some((set) => set.legacy))
+    return false;
+  const original = routine?.exercises.find((item) => item.id === slot.slotId);
+  if (
+    original?.exercise.id !== slot.exercise.id ||
+    original.default_sets.length !== slot.sets.length
+  )
+    return false;
+  return slot.sets.every((set, index) => {
+    const old = original.default_sets[index];
+    const cardio = cardioValues(old.duration_seconds, old.distance_km);
+    return (
+      set.reps === (old.reps === null ? '' : String(old.reps)) &&
+      set.weight === (old.weight_kg === null ? '' : Number(old.weight_kg).toFixed(2)) &&
+      set.distance === cardio.distance &&
+      set.hours === cardio.hours &&
+      set.minutes === cardio.minutes &&
+      set.seconds === cardio.seconds
+    );
+  });
+}
+
+function unchangedLegacyCardio(set: DraftSet): boolean {
+  const original = set.legacyCardio;
+  return Boolean(
+    set.legacy &&
+    original &&
+    set.distance === original.distance &&
+    set.hours === original.hours &&
+    set.minutes === original.minutes &&
+    set.seconds === original.seconds,
+  );
 }

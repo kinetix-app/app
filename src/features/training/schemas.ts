@@ -38,6 +38,40 @@ export const setSchema = z.object({
   duration_seconds: z.number().int().nullable(),
   distance_km: z.string().nullable(),
 });
+export const exerciseHistoryPageSchema = z.object({
+  items: z.array(
+    z.object({
+      session_id: entityId,
+      started_at: z.iso.datetime({ offset: true }),
+      ended_at: z.iso.datetime({ offset: true }),
+      name: z.string(),
+      activity_type: z.string(),
+      sets: z.array(setSchema),
+    }),
+  ),
+  limit: z.number().int().positive(),
+  offset: z.number().int().nonnegative(),
+});
+export const exerciseEvolutionSchema = z.object({
+  exercise_id: entityId,
+  activity_type: z.string(),
+  weight_unit: weightUnitSchema,
+  distance_unit: z.enum(['km', 'mi']),
+  days: z.array(
+    z.object({
+      date: z.iso.date(),
+      estimated_1rm: z.string().nullable(),
+      weight: z.string().nullable(),
+      volume: z.string().nullable(),
+      reps: z.number().int().nullable(),
+      distance: z.string().nullable(),
+      duration_seconds: z.number().int().nullable(),
+      volume_partial: z.boolean(),
+    }),
+  ),
+});
+export type EvolutionDay = z.infer<typeof exerciseEvolutionSchema>['days'][number];
+export type ExerciseHistoryItem = z.infer<typeof exerciseHistoryPageSchema>['items'][number];
 export const slotSchema = z.object({
   id: entityId,
   exercise_order: z.number().int().positive(),
@@ -50,6 +84,14 @@ export const slotSchema = z.object({
 export const routineSummarySchema = z.object({
   id: entityId,
   name: z.string(),
+  notes: z.string().nullable(),
+  exercise_count: z.number().int().nonnegative(),
+  last_performed_at: z.iso.datetime({ offset: true }).nullable(),
+  activity_type: z.literal('gym'),
+  image_url: z
+    .string()
+    .regex(/^\/api\/v1\/routines\/[1-9]\d*\/picture(?:\?v=[a-zA-Z0-9-]+)?$/)
+    .nullable(),
 });
 export const routineSchema = routineSummarySchema.extend({
   exercises: z.array(slotSchema),
@@ -70,13 +112,22 @@ const decimalWeightSchema = z
 export function validWeight(value: string, unit: 'kg' | 'lb', decimals = 6) {
   return (
     new RegExp(String.raw`^\d+(\.\d{1,${decimals}})?$`).test(value) &&
+    Number(value) * (unit === 'lb' ? 0.45359237 : 1) >= 0.0000005 &&
     Number(value) * (unit === 'lb' ? 0.45359237 : 1) <= 999999.99
   );
 }
 export const weightInputSchema = z
   .object({ value: decimalWeightSchema, unit: weightUnitSchema })
-  .refine((v) => validWeight(v.value, v.unit), 'Weight must be between 0 and 999999.99 kg.');
+  .refine((v) => validWeight(v.value, v.unit), 'Weight must be positive and at most 999999.99 kg.');
+const cardioSetSchema = z.strictObject({
+  duration_seconds: z.number().int().min(0).max(2147483647),
+  distance_km: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/)
+    .refine((v) => Number(v) <= 999999.99),
+});
 export const plannedSetSchema = z.union([
+  cardioSetSchema,
   z.strictObject({
     reps: z.number().int().min(1).max(2147483647),
     weight_kg: decimalWeightSchema.refine((v) => validWeight(v, 'kg'), 'Weight is too large.'),
@@ -84,6 +135,7 @@ export const plannedSetSchema = z.union([
   z.strictObject({ reps: z.number().int().min(1).max(2147483647), weight: weightInputSchema }),
 ]);
 export const routineInputSchema = z.object({
+  notes: z.string().trim().max(1000).nullable().optional(),
   name: z.string().trim().min(1, 'Enter a routine name.').max(150),
   exercises: z
     .array(
@@ -114,10 +166,13 @@ export const completionInputSchema = z
           exercise_id: entityId,
           sets: z
             .array(
-              z.object({
-                reps: z.number().int().min(1).max(2147483647),
-                weight: weightInputSchema,
-              }),
+              z.union([
+                cardioSetSchema,
+                z.object({
+                  reps: z.number().int().min(1).max(2147483647),
+                  weight: weightInputSchema,
+                }),
+              ]),
             )
             .max(100),
         }),
@@ -166,6 +221,8 @@ export const draftSnapshotSchema = z.object({
               client_id: z.uuid(),
               reps: z.number().int().min(1).max(2147483647).nullable(),
               weight: weightInputSchema.nullable(),
+              duration_seconds: z.number().int().nullable().optional(),
+              distance_km: z.string().nullable().optional(),
               completed: z.boolean(),
             }),
           )
@@ -175,6 +232,26 @@ export const draftSnapshotSchema = z.object({
     .max(500),
 });
 export const serverDraftSchema = draftSnapshotSchema.extend({
+  exercises: z
+    .array(
+      z.object({
+        client_id: z.uuid(),
+        exercise_id: entityId,
+        sets: z
+          .array(
+            z.object({
+              client_id: z.uuid(),
+              reps: z.number().int().nullable(),
+              weight: weightSchema.nullable(),
+              duration_seconds: z.number().int().nullable().optional(),
+              distance_km: z.string().nullable().optional(),
+              completed: z.boolean(),
+            }),
+          )
+          .max(100),
+      }),
+    )
+    .max(500),
   client_session_id: z.uuid(),
   state: z.literal('draft'),
 });

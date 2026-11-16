@@ -10,7 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { radii, sizes, spacing, textStyles, usePalette, palette } from '@/theme/tokens';
+import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 type TextFieldProps = Omit<TextInputProps, 'style'> & {
   containerStyle?: StyleProp<ViewStyle>;
@@ -18,7 +18,6 @@ type TextFieldProps = Omit<TextInputProps, 'style'> & {
   leading?: ReactNode;
   trailing?: ReactNode;
   invalid?: boolean;
-  theme?: 'system' | 'light' | 'dark';
 };
 
 export function TextField({
@@ -27,7 +26,6 @@ export function TextField({
   leading,
   trailing,
   invalid = false,
-  theme = 'system',
   editable,
   onFocus,
   onBlur,
@@ -36,8 +34,7 @@ export function TextField({
   underlineColorAndroid,
   ...input
 }: TextFieldProps) {
-  const systemPalette = usePalette();
-  const p = theme === 'system' ? systemPalette : palette(theme);
+  const p = usePalette();
   const [focused, setFocused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const isFocused = focused && editable !== false;

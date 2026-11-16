@@ -1,3 +1,4 @@
+import { cardioInput } from '../cardio';
 import React, {
   createContext,
   useCallback,
@@ -15,6 +16,7 @@ import {
   draftSnapshot,
   freezeSession,
   restoreServerDraft,
+  refreshDraftExercises,
   type SessionDraft,
 } from '../sessionDraft';
 import { sessionStorage } from '../sessionStorage';
@@ -33,6 +35,7 @@ type Controller = {
   saveSet: (slotId: string, setId: string) => Promise<boolean>;
   sync: () => Promise<void>;
   finish: (updateRoutine?: boolean) => Promise<void>;
+  recoverFrozen: () => Promise<void>;
   addExercise: (exercise: ExerciseSummary) => Promise<string | null>;
   discard: () => Promise<void>;
   retryStorage: () => Promise<void>;
@@ -68,11 +71,14 @@ export function SessionProvider({
     async (signal?: AbortSignal) => {
       const local = await sessionStorage.load(accountId);
       const server = await trainingApi.draft(signal);
-      const value = server
-        ? await restoreServerDraft(accountId, server, local, (id) =>
-            trainingApi.exercise(id, signal),
-          )
-        : local;
+      let value = null;
+      if (server) {
+        value = await restoreServerDraft(accountId, server, local, (id) =>
+          trainingApi.exercise(id, signal),
+        );
+      } else if (local) {
+        value = await refreshDraftExercises(local, (id) => trainingApi.exercise(id, signal));
+      }
       if (!alive.current || signal?.aborted) return;
       install(value);
       setReady(true);
@@ -126,7 +132,13 @@ export function SessionProvider({
               .find((value) => value.id === slot.id)
               ?.sets.find((value) => value.id === set.id);
             return old &&
-              (old.value !== set.value || old.reps !== set.reps || old.unit !== set.unit)
+              (old.value !== set.value ||
+                old.reps !== set.reps ||
+                old.unit !== set.unit ||
+                old.distance !== set.distance ||
+                old.hours !== set.hours ||
+                old.minutes !== set.minutes ||
+                old.seconds !== set.seconds)
               ? { ...set, saved: false }
               : set;
           }),
@@ -154,7 +166,19 @@ export function SessionProvider({
               ? {
                   ...set,
                   drafted: undefined,
-                  confirmed: { value: set.value, reps: set.reps, unit: set.unit },
+                  confirmed: {
+                    value: set.value,
+                    reps: set.reps,
+                    unit: set.unit,
+                    ...(set.distance !== undefined
+                      ? {
+                          distance: set.distance,
+                          hours: set.hours,
+                          minutes: set.minutes,
+                          seconds: set.seconds,
+                        }
+                      : {}),
+                  },
                 }
               : set,
           ),
@@ -212,7 +236,10 @@ export function SessionProvider({
       if (!original) return false;
       const guidance = slot?.guidance[index];
       const useSuggestedWeight =
-        !original.saved && original.value === '' && guidance?.weightKg != null;
+        slot?.exercise.activity_type !== 'cardio' &&
+        !original.saved &&
+        original.value === '' &&
+        guidance?.weightKg != null;
       const target = original.saved
         ? original
         : {
@@ -220,19 +247,23 @@ export function SessionProvider({
             value: useSuggestedWeight ? Number(guidance.weightKg).toFixed(2) : original.value,
             unit: useSuggestedWeight ? ('kg' as const) : original.unit,
             reps:
-              original.reps === '' && guidance?.reps != null
+              slot?.exercise.activity_type !== 'cardio' &&
+              original.reps === '' &&
+              guidance?.reps != null
                 ? String(guidance.reps)
                 : original.reps,
           };
       if (
         !target.saved &&
-        (!validWeight(target.value, target.unit) ||
-          !/^\d+$/.test(target.reps) ||
-          Number(target.reps) < 1 ||
-          Number(target.reps) > 2147483647)
+        (slot?.exercise.activity_type === 'cardio'
+          ? !cardioInput(target)
+          : !validWeight(target.value, target.unit) ||
+            !/^\d+$/.test(target.reps) ||
+            Number(target.reps) < 1 ||
+            Number(target.reps) > 2147483647)
       ) {
         setError(
-          'Enter a nonnegative weight and positive whole repetitions before saving this set.',
+          'Enter valid distance and time, or a positive weight and repetitions, before saving this set.',
         );
         return false;
       }
@@ -261,7 +292,23 @@ export function SessionProvider({
                         ...(target.saved
                           ? {
                               confirmed: undefined,
-                              drafted: { value: set.value, reps: set.reps, unit: set.unit },
+                              drafted: {
+                                value: set.value,
+                                reps: set.reps,
+                                unit: set.unit,
+                                ...(set.distance !== undefined
+                                  ? {
+                                      ...(set.distance !== undefined
+                                        ? {
+                                            distance: set.distance,
+                                            hours: set.hours,
+                                            minutes: set.minutes,
+                                            seconds: set.seconds,
+                                          }
+                                        : {}),
+                                    }
+                                  : {}),
+                              },
                             }
                           : {}),
                       }
@@ -307,6 +354,8 @@ export function SessionProvider({
               guidance: configuration.sets.map((set) => ({
                 reps: set.reps,
                 weightKg: set.weight_kg,
+                durationSeconds: set.duration_seconds,
+                distanceKm: set.distance_km,
               })),
               sets: (configuration.sets.length ? configuration.sets : [null]).map(() =>
                 emptyActualSet('kg'),
@@ -419,6 +468,40 @@ export function SessionProvider({
     },
     [storageError, accountId, persist, install, cache],
   );
+  const recoverFrozen = useCallback(async () => {
+    const value = current.current;
+    if (!value?.frozen || busy.current) return;
+    busy.current = true;
+    setPending(true);
+    try {
+      const server = await trainingApi.draft();
+      if (server?.client_session_id !== value.clientId) {
+        setError('This workout may already be finished. Retry Finish to recover its result.');
+        return;
+      }
+      const unlocked = {
+        ...value,
+        frozen: null,
+        exercises: value.exercises.map((slot) => ({
+          ...slot,
+          sets: slot.sets.map((set) => ({
+            ...set,
+            saved: false,
+            confirmed: undefined,
+            drafted: undefined,
+          })),
+        })),
+      };
+      await sessionStorage.save(unlocked);
+      install(unlocked);
+      setError('Review and save each set before finishing.');
+    } catch {
+      setError('Could not check the workout. Retry when connected.');
+    } finally {
+      busy.current = false;
+      if (alive.current) setPending(false);
+    }
+  }, [install]);
   const signOut = useCallback(async () => {
     if (closing.current) return false;
     closing.current = true;
@@ -450,6 +533,7 @@ export function SessionProvider({
       saveSet,
       sync,
       finish,
+      recoverFrozen,
       addExercise,
       discard,
       retryStorage,
@@ -467,6 +551,7 @@ export function SessionProvider({
       saveSet,
       sync,
       finish,
+      recoverFrozen,
       addExercise,
       discard,
       retryStorage,

@@ -20,13 +20,23 @@ export function AccountConnectionScreen({
   onSignOut,
 }: AccountConnectionScreenProps) {
   const palette = usePalette();
+  let title = 'Connecting your account…';
+  let loadingLabel: string | undefined = 'Connecting your account';
+  if (error) {
+    title = 'Couldn’t connect';
+    loadingLabel = undefined;
+  }
+  if (leaving) {
+    title = 'Signing out…';
+    loadingLabel = 'Signing out';
+  }
 
   return (
     <AuthStatusScreen
-      title={leaving ? 'Signing out…' : error ? 'Couldn’t connect' : 'Connecting your account…'}
+      title={title}
       description={leaving ? undefined : error || undefined}
       failed={Boolean(error) && !leaving}
-      loadingLabel={leaving ? 'Signing out' : error ? undefined : 'Connecting your account'}
+      loadingLabel={loadingLabel}
     >
       <View style={styles.actions}>
         {error && !leaving ? (

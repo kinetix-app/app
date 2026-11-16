@@ -4,6 +4,8 @@ import {
   displayWeight,
   freezeSession,
   sessionDraftSchema,
+  restoreServerDraft,
+  refreshDraftExercises,
 } from '../sessionDraft';
 import { exampleRoutine } from './fixtures';
 
@@ -111,4 +113,84 @@ test('partial completion keeps exercise order and only confirmed sets without ro
     1, 0,
   ]);
   expect(frozen.routine_id).toBe(exampleRoutine.id);
+});
+
+test('cardio sets preserve zero and reject incomplete time before completion', () => {
+  const draft = createSessionDraft(11, exampleRoutine);
+  draft.exercises[0].exercise.activity_type = 'cardio';
+  draft.exercises[0].sets[0] = {
+    id: 'cardio',
+    saved: true,
+    reps: '',
+    value: '',
+    unit: 'kg',
+    distance: '0.00',
+    hours: '0',
+    minutes: '0',
+    seconds: '0',
+  };
+  expect(freezeSession(draft, '2099-10-24T18:00:00Z').exercises[0].sets[0]).toEqual({
+    distance_km: '0.00',
+    duration_seconds: 0,
+  });
+  expect(draftSnapshot(draft).exercises[0].sets[0]).toMatchObject({
+    distance_km: '0.00',
+    duration_seconds: 0,
+    reps: null,
+    weight: null,
+  });
+  draft.exercises[0].sets[0].seconds = '';
+  expect(() => freezeSession(draft, '2099-10-24T18:00:00Z')).toThrow();
+});
+
+test('restoring a matching local draft refreshes classification without losing legacy input', async () => {
+  const local = createSessionDraft(11, exampleRoutine);
+  local.exercises[0].sets[0] = { id: 'old', value: '40', reps: '8', unit: 'kg', saved: true };
+  const server = {
+    client_session_id: local.clientId,
+    state: 'draft' as const,
+    name: local.name,
+    started_at: local.startedAt,
+    routine_id: local.routineId,
+    exercises: [],
+  };
+  const restored = await restoreServerDraft(11, server, local, async () => ({
+    ...local.exercises[0].exercise,
+    activity_type: 'cardio',
+  }));
+  expect(restored.exercises[0].exercise.activity_type).toBe('cardio');
+  expect(restored.exercises[0].sets[0]).toMatchObject({ value: '40', reps: '8', saved: true });
+  expect(() => freezeSession(restored, '2099-10-24T18:00:00Z')).toThrow();
+});
+
+test('legacy frozen zero-weight results remain readable for retry or explicit review', () => {
+  const draft = createSessionDraft(11, exampleRoutine);
+  const frozen = {
+    client_session_id: draft.clientId,
+    routine_id: draft.routineId,
+    started_at: draft.startedAt,
+    ended_at: '2099-10-24T18:00:00Z',
+    exercises: [{ exercise_id: 1, sets: [{ reps: 8, weight: { value: '0', unit: 'kg' } }] }],
+  };
+  const restored = sessionDraftSchema.parse({ ...draft, frozen });
+  expect(restored.frozen).toEqual(frozen);
+  expect(freezeSession(restored)).toEqual(frozen);
+});
+
+test('frozen retry survives an unavailable catalogue entry', async () => {
+  const draft = createSessionDraft(11, exampleRoutine);
+  const frozen = {
+    client_session_id: draft.clientId,
+    routine_id: draft.routineId,
+    started_at: draft.startedAt,
+    ended_at: '2099-10-24T18:00:00Z',
+    exercises: [
+      { exercise_id: 1, sets: [{ reps: 8, weight: { value: '40', unit: 'kg' as const } }] },
+    ],
+  };
+  const result = await refreshDraftExercises({ ...draft, frozen }, async () => {
+    throw new Error('not available');
+  });
+  expect(result.frozen).toEqual(frozen);
+  expect(result.exercises[0].exercise).toEqual(draft.exercises[0].exercise);
 });

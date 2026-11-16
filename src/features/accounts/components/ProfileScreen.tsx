@@ -9,6 +9,7 @@ import { profileDefaults } from '../profileForm';
 import type { Account } from '../schemas';
 import { objectiveOptions } from './ObjectiveEditor';
 import { ProfileAvatar } from './ProfileAvatar';
+import { ProfileBack } from './ProfileBack';
 import { ProfileGroup, ProfileRow } from './ProfileRows';
 import { setupStyles as s } from './SetupUI';
 
@@ -17,12 +18,16 @@ export type ProfilePanel =
 export function ProfileScreen({
   account,
   onOpen,
+  onBack,
+  backLabel,
   onSignOut,
   signingOut,
   signOutError,
 }: Readonly<{
   account: Account;
   onOpen: (panel: ProfilePanel) => void;
+  onBack: () => void;
+  backLabel: string;
   onSignOut: () => void;
   signingOut: boolean;
   signOutError: string;
@@ -35,14 +40,12 @@ export function ProfileScreen({
   const goal = objectiveOptions.find((item) => item.value === objective.data?.objective)?.label;
   const values = profileDefaults(account);
   const imperial = values.measurement_system === 'imperial';
-  const height =
-    account.profile.height_cm === null
-      ? null
-      : imperial
-        ? `${values.height_ft} ft ${values.height_in} in`
-        : `${values.height_cm} cm`;
-  const weight =
-    account.profile.weight_kg === null ? null : `${values.weight} ${imperial ? 'lb' : 'kg'}`;
+  const heightLabel = imperial
+    ? `${values.height_ft} ft ${values.height_in} in`
+    : `${values.height_cm} cm`;
+  const height = account.profile.height_cm === null ? null : heightLabel;
+  const weightUnit = imperial ? 'lb' : 'kg';
+  const weight = account.profile.weight_kg === null ? null : `${values.weight} ${weightUnit}`;
   const details = [
     account.profile.age === null ? null : `${account.profile.age} years`,
     height,
@@ -56,7 +59,10 @@ export function ProfileScreen({
       style={[s.screen, { backgroundColor: p['surface-100'] }]}
     >
       <ScrollView contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}>
-        <ScreenHeader title="Profile" />
+        <ScreenHeader
+          title="Profile"
+          leading={<ProfileBack onPress={onBack} label={backLabel} />}
+        />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-4'] }}>
           <ProfileAvatar account={account} size={64} />
           <View style={{ flex: 1, gap: spacing['space-1'] }}>

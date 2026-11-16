@@ -22,11 +22,10 @@ export function MacroEnergyInfo({ label, factor }: Props) {
     Math.min((position?.centerX ?? 0) - tooltipWidth / 2, width - tooltipWidth - margin),
   );
   const above = Boolean(position && position.bottom + gap + tooltipHeight > height - margin);
-  const top = position
-    ? above
-      ? Math.max(margin, position.top - gap - tooltipHeight)
-      : position.bottom + gap
-    : 0;
+  let top = 0;
+  if (position) {
+    top = above ? Math.max(margin, position.top - gap - tooltipHeight) : position.bottom + gap;
+  }
   const arrowLeft = Math.max(
     radii['radius-md'],
     Math.min(

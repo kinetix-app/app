@@ -97,6 +97,12 @@ function Controls() {
         }}
       />
       <Button
+        title="Review locked sets"
+        onPress={() => {
+          void session.recoverFrozen();
+        }}
+      />
+      <Button
         title="Discard"
         onPress={() => {
           void session.discard();
@@ -338,7 +344,6 @@ test.each([
   ['', '', '90.00', '12'],
   ['75', '', '75', '12'],
   ['', '7', '90.00', '7'],
-  ['0', '7', '0', '7'],
 ])(
   'tick fills only blank fields from guidance (%s, %s)',
   async (weight, reps, expectedWeight, expectedReps) => {
@@ -377,7 +382,7 @@ test.each(['no guidance', 'missing reps', 'invalid weight', 'invalid reps'])(
     await screen.findByText('ready');
     fireEvent.press(screen.getByText('Tick'));
     await screen.findByText(
-      'Enter a nonnegative weight and positive whole repetitions before saving this set.',
+      'Enter valid distance and time, or a positive weight and repetitions, before saving this set.',
     );
     expect(trainingApi.saveDraft).not.toHaveBeenCalled();
     expect(draft().exercises[0].sets[0].saved).not.toBe(true);
@@ -396,4 +401,55 @@ test('failed save retains accepted suggestions as unsaved input for retry', asyn
   expect(draft().exercises[0].sets[0].saved).not.toBe(true);
   fireEvent.press(screen.getByText('Tick'));
   await waitFor(() => expect(draft().exercises[0].sets[0].saved).toBe(true));
+});
+
+test('review locked sets unlocks only while the matching server draft is active', async () => {
+  const value = createSessionDraft(1, exampleRoutine);
+  value.exercises[0].sets[0] = { id: 'old', value: '0', reps: '8', unit: 'kg', saved: true };
+  value.frozen = {
+    client_session_id: value.clientId,
+    routine_id: value.routineId,
+    started_at: value.startedAt,
+    ended_at: '2099-10-24T18:00:00Z',
+    exercises: [{ exercise_id: 1, sets: [{ reps: 8, weight: { value: '0', unit: 'kg' } }] }],
+  };
+  jest.mocked(sessionStorage.load).mockResolvedValue(value);
+  jest.mocked(trainingApi.draft).mockResolvedValue(null);
+  mount();
+  await screen.findByText('ready');
+  fireEvent.press(screen.getByText('Review locked sets'));
+  await screen.findByText(
+    'This workout may already be finished. Retry Finish to recover its result.',
+  );
+  expect(draft().frozen).not.toBeNull();
+  jest.mocked(trainingApi.draft).mockResolvedValue({
+    ...draftSnapshot(value),
+    client_session_id: value.clientId,
+    state: 'draft',
+  });
+  fireEvent.press(screen.getByText('Review locked sets'));
+  await screen.findByText('Review and save each set before finishing.');
+  expect(draft().frozen).toBeNull();
+  expect(draft().exercises[0].sets[0]).toMatchObject({ value: '0', reps: '8', saved: false });
+});
+
+test('local-only restored draft refreshes classification without changing values or frozen retry', async () => {
+  const value = createSessionDraft(1, exampleRoutine);
+  value.exercises[0].sets[0] = { id: 'old', value: '40', reps: '8', unit: 'kg', saved: true };
+  value.frozen = {
+    client_session_id: value.clientId,
+    routine_id: value.routineId,
+    started_at: value.startedAt,
+    ended_at: '2099-10-24T18:00:00Z',
+    exercises: [{ exercise_id: 1, sets: [{ reps: 8, weight: { value: '40', unit: 'kg' } }] }],
+  };
+  jest.mocked(sessionStorage.load).mockResolvedValue(value);
+  jest
+    .mocked(trainingApi.exercise)
+    .mockResolvedValue({ ...exampleExercise, activity_type: 'cardio' });
+  mount();
+  await screen.findByText('ready');
+  expect(draft().exercises[0].exercise.activity_type).toBe('cardio');
+  expect(draft().exercises[0].sets[0]).toMatchObject({ value: '40', reps: '8', saved: true });
+  expect(draft().frozen).toEqual(value.frozen);
 });

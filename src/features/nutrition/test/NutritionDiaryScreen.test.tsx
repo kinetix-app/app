@@ -1,6 +1,6 @@
 import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NutritionDiaryScreen } from '../components/NutritionDiaryScreen';
 import { nutritionApi } from '../api';
@@ -137,20 +137,34 @@ test('displays meal quantities and caps progress at the goal; navigation callbac
   expect(onEditGoal).toHaveBeenCalledTimes(1);
 });
 test('deletes only the chosen logged item and refreshes the day', async () => {
-  open();
-  await screen.findByText('Rice');
-  expect(screen.queryByLabelText('Delete Rice')).toBeNull();
-  expect(screen.getByLabelText('Add food to Breakfast')).toBeTruthy();
-  fireEvent.press(screen.getByLabelText('Edit Breakfast'));
-  expect(screen.queryByLabelText('Add food to Breakfast')).toBeNull();
-  jest.mocked(nutritionApi.day).mockResolvedValue({ ...day, items: day.items.slice(1) });
-  fireEvent.press(screen.getByLabelText('Delete Rice'));
-  await waitFor(() => expect(screen.queryByText('Rice')).toBeNull());
-  expect(nutritionApi.deleteMealItem).toHaveBeenCalledWith(1);
-  expect(screen.getByText('Bowl')).toBeTruthy();
-  fireEvent.press(screen.getByLabelText('Finish editing Breakfast'));
-  expect(screen.getByLabelText('Edit Breakfast')).toBeTruthy();
-  expect(screen.getByLabelText('Add food to Breakfast')).toBeTruthy();
+  // Drive Query's notification timers instead of racing CI's wall-clock timeout.
+  jest.useFakeTimers();
+  try {
+    let finishDelete: () => void = () => {};
+    const deletion = new Promise<void>((resolve) => {
+      finishDelete = resolve;
+    });
+    jest.mocked(nutritionApi.deleteMealItem).mockReturnValue(deletion);
+    open();
+    await screen.findByText('Rice');
+    expect(screen.queryByLabelText('Delete Rice')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Edit Breakfast'));
+    jest.mocked(nutritionApi.day).mockResolvedValue({ ...day, items: day.items.slice(1) });
+    fireEvent.press(screen.getByLabelText('Delete Rice'));
+    await waitFor(() => expect(nutritionApi.deleteMealItem).toHaveBeenCalledWith(1));
+    expect(screen.getByText('Rice')).toBeTruthy();
+    expect(screen.getByLabelText('Delete Rice')).toBeDisabled();
+    expect(nutritionApi.day).toHaveBeenCalledTimes(1);
+    await act(async () => finishDelete());
+    await waitFor(() => expect(screen.queryByText('Rice')).toBeNull());
+    expect(nutritionApi.day).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Bowl')).toBeTruthy();
+    expect(screen.getByText('Two bowls')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Finish editing Breakfast'));
+    expect(screen.getByLabelText('Edit Breakfast')).toBeTruthy();
+  } finally {
+    jest.useRealTimers();
+  }
 });
 test('edits food grams and recipe servings from the diary', async () => {
   open();

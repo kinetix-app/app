@@ -16,6 +16,11 @@ export const exampleExercise: Exercise = {
 export const exampleRoutine: Routine = {
   id: 10,
   name: 'Push',
+  notes: null,
+  exercise_count: 1,
+  last_performed_at: null,
+  activity_type: 'gym',
+  image_url: null,
   exercises: [
     {
       id: 20,
