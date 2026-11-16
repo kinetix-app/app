@@ -12,6 +12,7 @@ prove delivery. Update the relevant page when feature behavior changes.
 | [Goals](goals.md)                   | Nutrition goals are integrated; physical-goal and measurement screens are not implemented.                                         |
 | [Nutrition](nutrition.md)           | Diary, food/recipe entry and nutrition-goal screens consume backend APIs.                                                          |
 | [Training](training.md)             | Routine, exercise catalogue, workout drafts and completed-history flows are implemented.                                           |
+| [Form check](form-check.md)         | Partial: on-device analysis of five exercises on the web build; Android/iOS still use the demo analyzer.                           |
 
 Detailed interaction contracts live in [home](../home.md), [routines](../routines.md),
 [workouts](../workouts.md), and [Clerk setup](../clerk-setup.md). The backend owns
