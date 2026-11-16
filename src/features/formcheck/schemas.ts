@@ -18,6 +18,10 @@ const analysisBase = {
   profileId: z.string(),
   analyzedAt: z.iso.datetime({ offset: true }),
   durationSeconds: z.number().nonnegative(),
+  /** Which engine and spec produced the result, so old results can be told apart. */
+  source: z
+    .object({ engine: z.string(), spec: z.string(), specVersion: z.number().int() })
+    .optional(),
 };
 /**
  * Result of analysing one recorded set. Ids refer to a form-check profile: the analyzer says
@@ -28,6 +32,8 @@ export const formAnalysisSchema = z.discriminatedUnion('status', [
     ...analysisBase,
     status: z.literal('assessed'),
     reps: z.array(repResultSchema).min(1),
+    /** 0–100 set score from the technique engine; absent in demo and older results. */
+    score: z.number().min(0).max(100).optional(),
   }),
   z.object({
     ...analysisBase,

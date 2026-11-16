@@ -25,16 +25,16 @@ test('groups failed checks, orders them by reach and offers the tip of the main 
     status: 'assessed',
     reps: [
       { index: 1, issues: [] },
-      { index: 2, issues: ['torso_lean'] },
-      { index: 3, issues: ['depth', 'torso_lean'] },
+      { index: 2, issues: ['hips_first'] },
+      { index: 3, issues: ['depth', 'hips_first'] },
       { index: 4, issues: ['depth'] },
-      { index: 5, issues: ['torso_lean'] },
+      { index: 5, issues: ['hips_first'] },
     ],
   };
   const view = buildAnalysisView(squat, analysis);
   if (view.kind !== 'assessed') throw new Error('expected an assessed view');
   expect(view.repCount).toBe(5);
-  expect(view.issues.map((issue) => issue.id)).toEqual(['torso_lean', 'depth']);
+  expect(view.issues.map((issue) => issue.id)).toEqual(['hips_first', 'depth']);
   expect(view.issues[0].title).toBe('Reps 2, 3 and 5 leaned too far forward');
   expect(view.issues[1].title).toBe('Reps 3 and 4 stopped above parallel');
   expect(view.reps.map((rep) => rep.label)).toEqual(['OK', 'Lean', 'High', 'High', 'Lean']);

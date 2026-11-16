@@ -4,59 +4,10 @@
  * Each fixture holds a set's landmarks, the spec and what Python returned for them. Regenerate with
  * `python export_fixtures.py --out <this folder>/fixtures` in the model repository.
  */
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { gunzipSync } from 'zlib';
-
 import { analyze } from '../analyze';
-import type { PoseSeries } from '../prepare';
-import { parseSpec, type Locale } from '../spec';
+import { parseSpec } from '../spec';
 import { bundledSpecs } from '../specs';
-
-type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
-type Fixture = {
-  name: string;
-  locale: Locale;
-  spec: unknown;
-  series: {
-    t: number[];
-    width: number;
-    height: number;
-    roll_deg: number;
-    landmarks: number[];
-    xy: (number | null)[][][];
-    visibility: number[][];
-    world: (number | null)[][][] | null;
-  };
-  expected: { [k: string]: Json };
-};
-
-const dir = join(__dirname, 'fixtures');
-const names: string[] = JSON.parse(readFileSync(join(dir, 'index.json'), 'utf8'));
-
-function load(name: string): Fixture {
-  return JSON.parse(gunzipSync(readFileSync(join(dir, `${name}.json.gz`))).toString('utf8'));
-}
-
-const num = (v: number | null) => (v === null ? NaN : v);
-
-/** Back to 33 landmarks per frame; the ones the engine does not read are invisible. */
-function toSeries(s: Fixture['series']): PoseSeries {
-  const frames = s.t.length;
-  const xy = Array.from({ length: frames }, () => Array.from({ length: 33 }, () => [NaN, NaN]));
-  const visibility = Array.from({ length: frames }, () => new Array<number>(33).fill(0));
-  const world = s.world
-    ? Array.from({ length: frames }, () => Array.from({ length: 33 }, () => [NaN, NaN, NaN]))
-    : null;
-  for (let f = 0; f < frames; f++) {
-    s.landmarks.forEach((k, c) => {
-      xy[f][k] = s.xy[f][c].map(num);
-      visibility[f][k] = s.visibility[f][c];
-      if (world && s.world) world[f][k] = s.world[f][c].map(num);
-    });
-  }
-  return { t: s.t, xy, visibility, width: s.width, height: s.height, world, rollDeg: s.roll_deg };
-}
+import { load, names, toSeries, type Json } from './loadFixtures';
 
 // Fields Python rounds before returning: a value on the rounding edge may differ by one unit.
 const ROUNDED: Record<string, number> = {
