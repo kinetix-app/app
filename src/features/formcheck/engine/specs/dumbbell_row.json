@@ -1,0 +1,368 @@
+{
+  "id": "dumbbell_row",
+  "version": 2,
+  "catalog": "dumbbell-one-arm-bent-over-row",
+  "name": {
+    "es": "Remo con mancuerna a una mano",
+    "en": "One-arm dumbbell row"
+  },
+  "view": "side",
+  "side_joints": ["shoulder", "elbow", "wrist", "hip"],
+  "camera": {
+    "es": "De lado, con el brazo que trabaja hacia el móvil y el cuerpo entero en el encuadre.",
+    "en": "Side-on, working arm toward the phone, whole body in frame."
+  },
+  "required": ["shoulder", "elbow", "wrist", "hip"],
+  "signals": {
+    "elbow": {
+      "type": "angle",
+      "points": ["shoulder", "elbow", "wrist"]
+    },
+    "pull": {
+      "type": "angle",
+      "points": ["hip", "shoulder", "elbow"]
+    },
+    "trunk": {
+      "type": "inclination",
+      "points": ["hip", "shoulder"]
+    },
+    "wrist_height": {
+      "type": "height",
+      "point": "wrist",
+      "scale": ["hip", "shoulder"]
+    }
+  },
+  "rep": {
+    "signal": "elbow",
+    "rest": "high",
+    "start_delta": 35,
+    "end_delta": 30,
+    "min_rom": 35,
+    "min_duration": 0.5,
+    "max_duration": 8.0
+  },
+  "metrics": {
+    "pull": {
+      "signal": "pull",
+      "phase": "rep",
+      "agg": "min"
+    },
+    "extension": {
+      "signal": "elbow",
+      "phase": "end_window",
+      "agg": "max"
+    },
+    "torso_angle": {
+      "signal": "trunk",
+      "phase": "rep",
+      "agg": "mean"
+    },
+    "jerk": {
+      "signal": "trunk",
+      "phase": "rep",
+      "agg": "range"
+    },
+    "lower_time": {
+      "type": "recovery_time",
+      "signal": "elbow",
+      "fraction": 0.8
+    },
+    "pull_speed": {
+      "type": "mean_speed",
+      "signal": "wrist_height",
+      "phase": "out"
+    }
+  },
+  "criteria": [
+    {
+      "id": "pull",
+      "metric": "pull",
+      "ideal_max": 25.0,
+      "tolerance": 25.0,
+      "weight": 0.35,
+      "severity": "invalidates",
+      "points": ["hip", "shoulder", "elbow"],
+      "unit": "deg"
+    },
+    {
+      "id": "extension",
+      "metric": "extension",
+      "ideal_min": 150.0,
+      "tolerance": 25.0,
+      "weight": 0.15,
+      "severity": "technique",
+      "points": ["shoulder", "elbow", "wrist"],
+      "unit": "deg"
+    },
+    {
+      "id": "torso_angle",
+      "metric": "torso_angle",
+      "ideal_min": 33.792,
+      "tolerance": 20.0,
+      "weight": 0.15,
+      "severity": "technique",
+      "points": ["hip", "shoulder"],
+      "unit": "deg"
+    },
+    {
+      "id": "jerk",
+      "metric": "jerk",
+      "ideal_max": 8.0,
+      "tolerance": 12.0,
+      "weight": 0.25,
+      "severity": "technique",
+      "points": ["hip", "shoulder"],
+      "unit": "deg",
+      "disabled": true
+    },
+    {
+      "id": "tempo",
+      "metric": "lower_time",
+      "ideal_min": 0.32,
+      "tolerance": 0.4,
+      "weight": 0.1,
+      "severity": "detail",
+      "points": ["shoulder", "elbow", "wrist"],
+      "unit": "s"
+    }
+  ],
+  "effort_metric": "pull_speed",
+  "cues": {
+    "pull": {
+      "label": {
+        "es": "el recorrido",
+        "en": "range of motion"
+      },
+      "trend": {
+        "es": "dejaste de tirar del todo",
+        "en": "you stopped pulling all the way"
+      },
+      "live": {
+        "es": "Codo atrás",
+        "en": "Elbow back"
+      },
+      "fix": {
+        "es": "Tira hasta que el codo pase la línea de la espalda.",
+        "en": "Pull until your elbow passes the line of your back."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones el codo se quedó ~{mag}° antes de la línea de la espalda.",
+        "en": "In {n} of {total} reps your elbow stopped ~{mag}° short of your back line."
+      },
+      "good": {
+        "es": "Llevaste el codo atrás del todo en cada repetición.",
+        "en": "You pulled your elbow all the way back every rep."
+      }
+    },
+    "extension": {
+      "label": {
+        "es": "la bajada",
+        "en": "the bottom"
+      },
+      "trend": {
+        "es": "dejaste de estirar el brazo",
+        "en": "you stopped straightening your arm"
+      },
+      "live": {
+        "es": "Brazo largo abajo",
+        "en": "Long arm at the bottom"
+      },
+      "fix": {
+        "es": "Deja que el brazo se estire del todo abajo antes del siguiente tirón.",
+        "en": "Let your arm straighten fully at the bottom before the next pull."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones no estiraste el brazo abajo (~{value}°).",
+        "en": "In {n} of {total} reps you didn't straighten your arm at the bottom (~{value}°)."
+      },
+      "good": {
+        "es": "Estiraste el brazo del todo en cada repetición.",
+        "en": "You straightened your arm on every rep."
+      }
+    },
+    "torso_angle": {
+      "label": {
+        "es": "la inclinación",
+        "en": "your torso angle"
+      },
+      "trend": {
+        "es": "te fuiste incorporando",
+        "en": "you started standing up"
+      },
+      "live": {
+        "es": "Pecho hacia el suelo",
+        "en": "Chest toward the floor"
+      },
+      "fix": {
+        "es": "Inclina más el tronco, cerca de la horizontal, con la espalda recta.",
+        "en": "Lean your torso further, close to horizontal, back straight."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones el tronco estaba demasiado erguido (~{value}° de inclinación).",
+        "en": "In {n} of {total} reps your torso was too upright (~{value}° of lean)."
+      },
+      "good": {
+        "es": "Mantuviste el tronco bien inclinado en toda la serie.",
+        "en": "You kept a good torso lean all set."
+      }
+    },
+    "jerk": {
+      "label": {
+        "es": "el tirón",
+        "en": "jerking"
+      },
+      "trend": {
+        "es": "empezaste a tirar con el tronco",
+        "en": "you started pulling with your torso"
+      },
+      "live": {
+        "es": "Tronco quieto",
+        "en": "Still torso"
+      },
+      "fix": {
+        "es": "Tira solo con el brazo y la espalda; el tronco no sube. Si hace falta, baja el peso.",
+        "en": "Pull with your arm and back only; your torso doesn't rise. Drop the weight if you need to."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones el tronco subió ~{value}° para ayudar.",
+        "en": "In {n} of {total} reps your torso rose ~{value}° to help."
+      },
+      "good": {
+        "es": "El tronco se quedó quieto en todas las repeticiones.",
+        "en": "Your torso stayed still on every rep."
+      }
+    },
+    "tempo": {
+      "label": {
+        "es": "el ritmo de bajada",
+        "en": "your lowering"
+      },
+      "trend": {
+        "es": "bajaste más rápido",
+        "en": "you lowered faster"
+      },
+      "live": {
+        "es": "Baja con control",
+        "en": "Lower with control"
+      },
+      "fix": {
+        "es": "Baja la mancuerna en un segundo, sin dejarla caer.",
+        "en": "Lower the dumbbell over a second; don't drop it."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones bajaste en ~{value} s.",
+        "en": "In {n} of {total} reps you lowered in ~{value} s."
+      },
+      "good": {
+        "es": "Bajaste con control en todas las repeticiones.",
+        "en": "You lowered with control on every rep."
+      }
+    }
+  },
+  "calibration": {
+    "source": "Mendeley 'Seven Fitness Exercises' (CC BY 4.0), side view: 21 good and 20 bad sets",
+    "rule": "loosen band edges until ~10% of good reps are flagged, at most one tolerance; disable if still > 15% flagged and AUC < 0.55",
+    "cross_validated": {
+      "separation": [0.57, 0.57],
+      "good_flagged": [0.25, 0.06]
+    },
+    "criteria": {
+      "pull": {
+        "from": 25.0,
+        "to": 25.0,
+        "flagged_good": 0.01,
+        "flagged_bad": 0.01,
+        "auc": 0.56,
+        "status": "unchanged"
+      },
+      "extension": {
+        "from": 150.0,
+        "to": 150.0,
+        "flagged_good": 0.0,
+        "flagged_bad": 0.01,
+        "auc": 0.56,
+        "status": "unchanged"
+      },
+      "torso_angle": {
+        "from": 35.0,
+        "to": 33.792,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.15,
+        "auc": 0.46,
+        "status": "calibrated"
+      },
+      "jerk": {
+        "from": 8.0,
+        "to": 20.0,
+        "flagged_good": 0.27,
+        "flagged_bad": 0.4,
+        "auc": 0.51,
+        "status": "disabled",
+        "why": "flags many good sets and does not separate good from bad: likely measurement noise; review with a coach before re-enabling"
+      },
+      "tempo": {
+        "from": 0.6,
+        "to": 0.32,
+        "flagged_good": 0.11,
+        "flagged_bad": 0.11,
+        "auc": 0.64,
+        "status": "calibrated"
+      }
+    }
+  },
+  "calibrated_from": {
+    "version": 1,
+    "criteria": [
+      {
+        "id": "pull",
+        "metric": "pull",
+        "ideal_max": 25.0,
+        "tolerance": 25.0,
+        "weight": 0.35,
+        "severity": "invalidates",
+        "points": ["hip", "shoulder", "elbow"],
+        "unit": "deg"
+      },
+      {
+        "id": "extension",
+        "metric": "extension",
+        "ideal_min": 150.0,
+        "tolerance": 25.0,
+        "weight": 0.15,
+        "severity": "technique",
+        "points": ["shoulder", "elbow", "wrist"],
+        "unit": "deg"
+      },
+      {
+        "id": "torso_angle",
+        "metric": "torso_angle",
+        "ideal_min": 35.0,
+        "tolerance": 20.0,
+        "weight": 0.15,
+        "severity": "technique",
+        "points": ["hip", "shoulder"],
+        "unit": "deg"
+      },
+      {
+        "id": "jerk",
+        "metric": "jerk",
+        "ideal_max": 8.0,
+        "tolerance": 12.0,
+        "weight": 0.25,
+        "severity": "technique",
+        "points": ["hip", "shoulder"],
+        "unit": "deg"
+      },
+      {
+        "id": "tempo",
+        "metric": "lower_time",
+        "ideal_min": 0.6,
+        "tolerance": 0.4,
+        "weight": 0.1,
+        "severity": "detail",
+        "points": ["shoulder", "elbow", "wrist"],
+        "unit": "s"
+      }
+    ]
+  }
+}

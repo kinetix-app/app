@@ -1,0 +1,372 @@
+{
+  "id": "back_squat",
+  "catalog": "squat",
+  "version": 2,
+  "name": {
+    "es": "Sentadilla con barra",
+    "en": "Back squat"
+  },
+  "view": "side",
+  "signals": {
+    "knee": {
+      "type": "angle",
+      "points": ["hip", "knee", "ankle"]
+    },
+    "trunk": {
+      "type": "inclination",
+      "points": ["hip", "shoulder"]
+    },
+    "depth": {
+      "type": "relative_height",
+      "points": ["hip", "knee"],
+      "scale": ["hip", "knee"]
+    },
+    "heel": {
+      "type": "relative_height",
+      "points": ["foot_index", "heel"],
+      "scale": ["heel", "foot_index"],
+      "baseline": "rest"
+    },
+    "hip_height": {
+      "type": "height",
+      "point": "hip",
+      "scale": ["hip", "knee"]
+    }
+  },
+  "rep": {
+    "signal": "knee",
+    "rest": "high",
+    "start_delta": 20,
+    "end_delta": 10,
+    "min_rom": 25,
+    "min_duration": 0.6,
+    "max_duration": 8.0
+  },
+  "metrics": {
+    "depth": {
+      "signal": "depth",
+      "phase": "rep",
+      "agg": "max"
+    },
+    "hips_first": {
+      "signal": "trunk",
+      "phase": "return_first_half",
+      "agg": "rise_from_start"
+    },
+    "heel_lift": {
+      "signal": "heel",
+      "phase": "rep",
+      "agg": "max"
+    },
+    "lockout": {
+      "signal": "knee",
+      "phase": "end_window",
+      "agg": "max"
+    },
+    "descent_time": {
+      "type": "duration",
+      "phase": "out"
+    },
+    "ascent_speed": {
+      "type": "mean_speed",
+      "signal": "hip_height",
+      "phase": "return"
+    }
+  },
+  "criteria": [
+    {
+      "id": "depth",
+      "metric": "depth",
+      "ideal_min": -0.15,
+      "tolerance": 0.15,
+      "weight": 0.45,
+      "severity": "invalidates",
+      "points": ["hip", "knee"],
+      "unit": "scale",
+      "scale": ["hip", "knee"]
+    },
+    {
+      "id": "hips_first",
+      "metric": "hips_first",
+      "ideal_max": 5.0,
+      "tolerance": 12.0,
+      "weight": 0.25,
+      "severity": "technique",
+      "points": ["hip", "shoulder"],
+      "unit": "deg"
+    },
+    {
+      "id": "heels",
+      "metric": "heel_lift",
+      "ideal_max": 0.2,
+      "tolerance": 0.12,
+      "weight": 0.1,
+      "severity": "technique",
+      "points": ["heel", "foot_index"],
+      "unit": "scale",
+      "scale": ["heel", "foot_index"]
+    },
+    {
+      "id": "lockout",
+      "metric": "lockout",
+      "ideal_min": 161.329,
+      "tolerance": 15.0,
+      "weight": 0.1,
+      "severity": "detail",
+      "points": ["hip", "knee", "ankle"],
+      "unit": "deg"
+    },
+    {
+      "id": "tempo",
+      "metric": "descent_time",
+      "ideal_min": 0.78,
+      "tolerance": 0.6,
+      "weight": 0.1,
+      "severity": "detail",
+      "points": ["hip", "knee", "ankle"],
+      "unit": "s"
+    }
+  ],
+  "effort_metric": "ascent_speed",
+  "cues": {
+    "depth": {
+      "label": {
+        "es": "la profundidad",
+        "en": "depth"
+      },
+      "trend": {
+        "es": "perdiste profundidad",
+        "en": "you lost depth"
+      },
+      "live": {
+        "es": "Más profundo",
+        "en": "Go deeper"
+      },
+      "fix": {
+        "es": "Imagina un banco bajo detrás de ti y baja hasta rozarlo.",
+        "en": "Picture a low bench behind you and sit down until you brush it."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones la cadera se quedó ~{mag} cm por encima de la rodilla.",
+        "en": "In {n} of {total} reps your hips stayed ~{mag} cm above your knees."
+      },
+      "good": {
+        "es": "Llegaste a la paralela en todas las repeticiones.",
+        "en": "You hit parallel on every rep."
+      }
+    },
+    "hips_first": {
+      "label": {
+        "es": "la salida del fondo",
+        "en": "the drive out of the hole"
+      },
+      "trend": {
+        "es": "la cadera empezó a subir antes que el pecho",
+        "en": "your hips started rising before your chest"
+      },
+      "live": {
+        "es": "¡Barra al techo!",
+        "en": "Bar to the ceiling!"
+      },
+      "fix": {
+        "es": "Al salir del fondo, empuja la barra hacia el techo con la espalda.",
+        "en": "Out of the bottom, drive the bar to the ceiling with your upper back."
+      },
+      "finding": {
+        "es": "Al salir del fondo, la cadera subió antes que el pecho en {n} de {total} repeticiones (el tronco se inclinó ~{value}° más).",
+        "en": "Out of the bottom, your hips rose before your chest in {n} of {total} reps (~{value}° extra lean)."
+      },
+      "good": {
+        "es": "Pecho y cadera subieron a la vez en todas las repeticiones.",
+        "en": "Chest and hips rose together on every rep."
+      }
+    },
+    "heels": {
+      "label": {
+        "es": "los talones",
+        "en": "your heels"
+      },
+      "trend": {
+        "es": "se despegaron los talones",
+        "en": "your heels came up"
+      },
+      "live": {
+        "es": "Pies clavados",
+        "en": "Feet planted"
+      },
+      "fix": {
+        "es": "Empuja el suelo con todo el pie, del talón a los dedos.",
+        "en": "Push the floor away with your whole foot, heel to toes."
+      },
+      "finding": {
+        "es": "El talón se despegó ~{value} cm del suelo en {n} de {total} repeticiones.",
+        "en": "Your heel came ~{value} cm off the floor in {n} of {total} reps."
+      },
+      "good": {
+        "es": "Los talones no se despegaron del suelo.",
+        "en": "Your heels stayed down."
+      }
+    },
+    "lockout": {
+      "label": {
+        "es": "el bloqueo",
+        "en": "lockout"
+      },
+      "trend": {
+        "es": "dejaste de estirar arriba",
+        "en": "you stopped locking out"
+      },
+      "live": {
+        "es": "Termina arriba",
+        "en": "Finish tall"
+      },
+      "fix": {
+        "es": "Termina cada repetición de pie del todo, como si quisieras tocar el techo con la cabeza.",
+        "en": "Finish every rep fully standing, as if reaching the ceiling with your head."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones no terminaste de estirar arriba (la rodilla se quedó en ~{value}°).",
+        "en": "In {n} of {total} reps you didn't fully stand up (knee stopped at ~{value}°)."
+      },
+      "good": {
+        "es": "Terminaste de pie del todo en cada repetición.",
+        "en": "You stood all the way up on every rep."
+      }
+    },
+    "tempo": {
+      "label": {
+        "es": "el ritmo de bajada",
+        "en": "your descent"
+      },
+      "trend": {
+        "es": "bajaste más rápido",
+        "en": "you dropped faster"
+      },
+      "live": {
+        "es": "Baja en dos",
+        "en": "Two counts down"
+      },
+      "fix": {
+        "es": "Cuenta «uno, dos» mientras bajas.",
+        "en": "Count «one, two» on the way down."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones bajaste en ~{value} s, demasiado rápido para controlar el fondo.",
+        "en": "In {n} of {total} reps you dropped in ~{value} s, too fast to control the bottom."
+      },
+      "good": {
+        "es": "Bajaste con control en todas las repeticiones.",
+        "en": "You lowered with control on every rep."
+      }
+    }
+  },
+  "calibration": {
+    "source": "Mendeley 'Seven Fitness Exercises' (CC BY 4.0), side view: 21 good and 23 bad sets",
+    "rule": "loosen band edges until ~10% of good reps are flagged, at most one tolerance; disable if still > 15% flagged and AUC < 0.55",
+    "cross_validated": {
+      "separation": [0.6, 0.65],
+      "good_flagged": [0.41, 0.18]
+    },
+    "criteria": {
+      "depth": {
+        "from": 0.0,
+        "to": -0.15,
+        "flagged_good": 0.39,
+        "flagged_bad": 0.55,
+        "auc": 0.64,
+        "status": "capped",
+        "why": "good sets would need more than one tolerance: review with a coach"
+      },
+      "hips_first": {
+        "from": 5.0,
+        "to": 5.0,
+        "flagged_good": 0.03,
+        "flagged_bad": 0.04,
+        "auc": 0.45,
+        "status": "unchanged"
+      },
+      "heels": {
+        "from": 0.08,
+        "to": 0.2,
+        "flagged_good": 0.18,
+        "flagged_bad": 0.32,
+        "auc": 0.58,
+        "status": "capped",
+        "why": "good sets would need more than one tolerance: review with a coach"
+      },
+      "lockout": {
+        "from": 170.0,
+        "to": 161.329,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.05,
+        "auc": 0.49,
+        "status": "calibrated"
+      },
+      "tempo": {
+        "from": 1.0,
+        "to": 0.78,
+        "flagged_good": 0.06,
+        "flagged_bad": 0.18,
+        "auc": 0.66,
+        "status": "calibrated"
+      }
+    }
+  },
+  "calibrated_from": {
+    "version": 1,
+    "criteria": [
+      {
+        "id": "depth",
+        "metric": "depth",
+        "ideal_min": 0.0,
+        "tolerance": 0.15,
+        "weight": 0.45,
+        "severity": "invalidates",
+        "points": ["hip", "knee"],
+        "unit": "scale",
+        "scale": ["hip", "knee"]
+      },
+      {
+        "id": "hips_first",
+        "metric": "hips_first",
+        "ideal_max": 5.0,
+        "tolerance": 12.0,
+        "weight": 0.25,
+        "severity": "technique",
+        "points": ["hip", "shoulder"],
+        "unit": "deg"
+      },
+      {
+        "id": "heels",
+        "metric": "heel_lift",
+        "ideal_max": 0.08,
+        "tolerance": 0.12,
+        "weight": 0.1,
+        "severity": "technique",
+        "points": ["heel", "foot_index"],
+        "unit": "scale",
+        "scale": ["heel", "foot_index"]
+      },
+      {
+        "id": "lockout",
+        "metric": "lockout",
+        "ideal_min": 170.0,
+        "tolerance": 15.0,
+        "weight": 0.1,
+        "severity": "detail",
+        "points": ["hip", "knee", "ankle"],
+        "unit": "deg"
+      },
+      {
+        "id": "tempo",
+        "metric": "descent_time",
+        "ideal_min": 1.0,
+        "tolerance": 0.6,
+        "weight": 0.1,
+        "severity": "detail",
+        "points": ["hip", "knee", "ankle"],
+        "unit": "s"
+      }
+    ]
+  }
+}
