@@ -35,4 +35,4 @@ not establish native gesture, keyboard or provider behavior.
 
 The main screens share `ScreenHeader` and `screenContentStyle`, using the Nutrition title typography, theme ink color, 16-unit side padding and 32-unit top padding.
 
-Profile uses the shared tokens in both themes, compact grouped rows, concise copy and accessible touch targets. Home and Profile share the account/objective query cache; saved edits update both. The profile editor shows existing details in a compact single-page form with direct Save; the guided wizard is reserved for onboarding. Editors retain draft input across tab switches and failed saves. Required onboarding remains outside the tab shell.
+Profile uses the shared tokens in the dark theme, compact grouped rows, concise copy and accessible touch targets. Home and Profile share the account/objective query cache; saved edits update both. The profile editor shows existing details in a compact single-page form with direct Save; the guided wizard is reserved for onboarding. Editors retain draft input across tab switches and failed saves. Required onboarding remains outside the tab shell.
