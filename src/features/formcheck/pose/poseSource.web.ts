@@ -14,6 +14,11 @@ const MODEL_URL =
 const SAMPLE_FPS = 15;
 
 let landmarker: Promise<Vision.PoseLandmarker> | null = null;
+/**
+ * The landmarker is reused across recordings and, in video mode, requires timestamps that keep
+ * increasing for its whole life: each recording continues from where the previous one ended.
+ */
+let clockMs = 0;
 
 /**
  * Metro cannot bundle tasks-vision (it contains `import(url)`), so the pinned version is loaded as
@@ -103,13 +108,15 @@ export function createPoseSource(): PoseSource {
         height: video.videoHeight,
       };
       const frames = Math.floor(video.duration * SAMPLE_FPS);
-      let lastMs = -1;
+      const startMs = clockMs;
+      let lastMs = clockMs - 1;
       for (let i = 0; i <= frames; i++) {
         signal?.throwIfAborted();
         const time = i / SAMPLE_FPS;
         await seek(video, Math.min(time, video.duration), signal);
-        const ms = Math.max(Math.round(time * 1000), lastMs + 1); // must strictly increase
+        const ms = Math.max(startMs + Math.round(time * 1000), lastMs + 1); // must strictly increase
         lastMs = ms;
+        clockMs = ms + 1;
         const result = model.detectForVideo(video, ms);
         const pose = result.landmarks[0];
         const world = result.worldLandmarks[0];
