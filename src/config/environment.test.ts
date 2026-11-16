@@ -1,4 +1,9 @@
-import { resolveApiBaseUrl, resolveAuthMode, resolveClerkPublishableKey } from './environment';
+import {
+  resolveApiBaseUrl,
+  resolveAuthMode,
+  resolveClerkPublishableKey,
+  resolveFormCheckAnalyzer,
+} from './environment';
 
 describe('public API URL configuration', () => {
   test.each([undefined, '', '   '])('allows an unset URL for the standalone starter', (value) => {
@@ -75,5 +80,19 @@ describe('authentication configuration', () => {
 
   test('rejects obsolete mode names', () => {
     expect(() => resolveAuthMode('dev_basic', true)).toThrow('must be basic or clerk');
+  });
+});
+
+describe('form check analyzer configuration', () => {
+  test.each([undefined, '', '  '])('defaults to the engine: %s', (value) => {
+    expect(resolveFormCheckAnalyzer(value)).toBe('engine');
+  });
+
+  test.each(['engine', ' demo '])('accepts %s', (value) => {
+    expect(resolveFormCheckAnalyzer(value)).toBe(value.trim());
+  });
+
+  test('rejects anything else', () => {
+    expect(() => resolveFormCheckAnalyzer('remote')).toThrow('engine or demo');
   });
 });
