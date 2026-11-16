@@ -9,6 +9,8 @@ import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { nutritionApi } from '../api';
 import type { Food, Recipe } from '../schemas';
 
+type QueuedFood = { food: Food; quantityGrams: number };
+
 const mealTypeFor = (meal: string) =>
   ({ Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' })[meal] as
     'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -39,6 +41,8 @@ export function AddFoodScreen({
   const [editingRecipe, setEditingRecipe] = React.useState<Recipe | null>(null);
   const [amount, setAmount] = React.useState('');
   const [previewAmount, setPreviewAmount] = React.useState('');
+  const [queuedFoods, setQueuedFoods] = React.useState<QueuedFood[]>([]);
+  const [reviewingFoods, setReviewingFoods] = React.useState(false);
   const toggleFoodSelection = (food: Food) => {
     setSelected((current) => (current?.id === food.id ? null : food));
     setAmount('');
@@ -49,7 +53,7 @@ export function AddFoodScreen({
     return () => clearTimeout(timer);
   }, [search]);
   React.useEffect(() => {
-    const timer = setTimeout(() => setPreviewAmount(amount), 500);
+    const timer = setTimeout(() => setPreviewAmount(amount), 250);
     return () => clearTimeout(timer);
   }, [amount]);
   const results = useQuery({
@@ -60,21 +64,49 @@ export function AddFoodScreen({
         : nutritionApi.foods(signal),
     placeholderData: keepPreviousData,
   });
-  const save = useMutation({
-    mutationFn: () => {
-      if (!selected) throw new Error('Select a food first.');
-      return nutritionApi.addMealItem({
-        date,
-        meal_type: mealTypeFor(meal),
-        food_id: selected.id,
-        quantity_grams: Math.round(Number(amount) * 100) / 100,
-      });
+  const saveQueue = useMutation({
+    mutationFn: async () => {
+      const queue = queuedFoods;
+      const results = await Promise.allSettled(
+        queue.map((item) =>
+          nutritionApi.addMealItem({
+            date,
+            meal_type: mealTypeFor(meal),
+            food_id: item.food.id,
+            quantity_grams: item.quantityGrams,
+          }),
+        ),
+      );
+      const savedIds = new Set(
+        queue
+          .filter((_, index) => results[index].status === 'fulfilled')
+          .map((item) => item.food.id),
+      );
+      if (savedIds.size) {
+        setQueuedFoods((current) => current.filter((item) => !savedIds.has(item.food.id)));
+        onSaved();
+      }
+      if (results.some((result) => result.status === 'rejected')) {
+        throw new Error('Some foods could not be added.');
+      }
     },
-    onSuccess: () => {
-      onSaved();
-      onClose();
-    },
+    onSuccess: onClose,
   });
+  const queueSelectedFood = () => {
+    if (!selected || Number(amount) <= 0) return;
+    const queued = {
+      food: selected,
+      quantityGrams: Math.round(Number(amount) * 100) / 100,
+    };
+    setQueuedFoods((current) => {
+      const existing = current.findIndex((item) => item.food.id === selected.id);
+      if (existing < 0) return [...current, queued];
+      return current.map((item, index) => (index === existing ? queued : item));
+    });
+    setSelected(null);
+    setAmount('');
+    setPreviewAmount('');
+  };
   const removeFood = useMutation({
     mutationFn: (foodId: number) => nutritionApi.deleteFood(foodId),
     onSuccess: (_, foodId) => {
@@ -85,12 +117,27 @@ export function AddFoodScreen({
   });
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={{ flex: 1, minHeight: 0 }}
+        scrollEnabled={!(tab === 'Food' && !showFoodEditor && !reviewingFoods)}
+        contentContainerStyle={[
+          styles.content,
+          tab === 'Food' && !showFoodEditor && !reviewingFoods && styles.foodPickerContent,
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Back to nutrition"
-            onPress={onClose}
+            accessibilityLabel={reviewingFoods ? 'Back to add food' : 'Back to nutrition'}
+            onPress={() => {
+              if (reviewingFoods) {
+                saveQueue.reset();
+                setReviewingFoods(false);
+                return;
+              }
+              onClose();
+            }}
             style={[styles.back, { backgroundColor: p['surface-300'] }]}
           >
             <Feather name="arrow-left" size={24} color={p.ink} />
@@ -120,7 +167,7 @@ export function AddFoodScreen({
             </Pressable>
           ))}
         </View>
-        {tab === 'Food' && showFoodEditor ? (
+        {tab === 'Food' && showFoodEditor && !reviewingFoods ? (
           <FoodEditor
             key={editingFood?.id ?? 'new-food'}
             food={editingFood}
@@ -131,7 +178,7 @@ export function AddFoodScreen({
             }}
           />
         ) : null}
-        {tab === 'Food' && !showFoodEditor ? (
+        {tab === 'Food' && !showFoodEditor && !reviewingFoods ? (
           <>
             <Pressable
               accessibilityRole="button"
@@ -183,48 +230,92 @@ export function AddFoodScreen({
             />
           </View>
         ) : null}
-        {tab === 'Food' && !showFoodEditor ? (
-          <FoodContent
+        {tab === 'Food' && reviewingFoods ? (
+          <FoodQueueReview
             meal={meal}
-            foods={results.data ?? []}
-            isPending={results.isPending}
-            search={debouncedSearch}
-            selected={selected}
-            onSelect={toggleFoodSelection}
-            accountId={accountId}
-            onEdit={(food) => {
-              setEditingFood(food);
-              setShowFoodEditor(true);
+            foods={queuedFoods}
+            pending={saveQueue.isPending}
+            error={saveQueue.isError}
+            onBack={() => {
+              saveQueue.reset();
+              setReviewingFoods(false);
             }}
-            foodToDelete={foodToDelete}
-            onRequestDelete={(food) => {
-              removeFood.reset();
-              setFoodToDelete(food);
+            onRemove={(foodId) => {
+              const remaining = queuedFoods.filter((item) => item.food.id !== foodId);
+              setQueuedFoods(remaining);
+              if (!remaining.length) setReviewingFoods(false);
             }}
-            onCancelDelete={() => setFoodToDelete(null)}
-            removeFoodError={removeFood.isError}
-            removeFoodPending={removeFood.isPending}
-            onConfirmDelete={() => {
-              if (foodToDelete) removeFood.mutate(foodToDelete.id);
-            }}
-            amount={amount}
-            previewAmount={previewAmount}
-            onAmountChange={setAmount}
-            savePending={save.isPending}
-            onSave={() => save.mutate()}
+            onUpdateQuantity={(foodId, quantityGrams) =>
+              setQueuedFoods((current) =>
+                current.map((item) =>
+                  item.food.id === foodId ? { ...item, quantityGrams } : item,
+                ),
+              )
+            }
+            onConfirm={() => saveQueue.mutate()}
           />
         ) : null}
+        {tab === 'Food' && !showFoodEditor && !reviewingFoods ? (
+          <ScrollView
+            style={styles.foodListScroll}
+            contentContainerStyle={styles.foodListContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            <FoodContent
+              foods={results.data ?? []}
+              isPending={results.isPending}
+              search={debouncedSearch}
+              selected={selected}
+              queuedFoodIds={queuedFoods.map((item) => item.food.id)}
+              onSelect={toggleFoodSelection}
+              accountId={accountId}
+              onEdit={(food) => {
+                setEditingFood(food);
+                setShowFoodEditor(true);
+              }}
+              foodToDelete={foodToDelete}
+              onRequestDelete={(food) => {
+                removeFood.reset();
+                setFoodToDelete(food);
+              }}
+              onCancelDelete={() => setFoodToDelete(null)}
+              removeFoodError={removeFood.isError}
+              removeFoodPending={removeFood.isPending}
+              onConfirmDelete={() => {
+                if (foodToDelete) removeFood.mutate(foodToDelete.id);
+              }}
+              amount={amount}
+              previewAmount={previewAmount}
+              onAmountChange={setAmount}
+              onQueue={queueSelectedFood}
+            />
+          </ScrollView>
+        ) : null}
       </ScrollView>
+      {tab === 'Food' && !showFoodEditor && !reviewingFoods && queuedFoods.length > 0 ? (
+        <View style={[styles.reviewFooter, { backgroundColor: p['surface-100'] }]}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setReviewingFoods(true)}
+            style={[styles.add, { marginTop: 0, backgroundColor: p.brand }]}
+          >
+            <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+              Review {queuedFoods.length} {queuedFoods.length === 1 ? 'food' : 'foods'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 function FoodContent({
-  meal,
   foods,
   isPending,
   search,
   selected,
+  queuedFoodIds,
   onSelect,
   accountId,
   onEdit,
@@ -237,14 +328,13 @@ function FoodContent({
   amount,
   previewAmount,
   onAmountChange,
-  savePending,
-  onSave,
+  onQueue,
 }: Readonly<{
-  meal: string;
   foods: Food[];
   isPending: boolean;
   search: string;
   selected: Food | null;
+  queuedFoodIds: number[];
   onSelect: (food: Food) => void;
   accountId: number;
   onEdit: (food: Food) => void;
@@ -257,8 +347,7 @@ function FoodContent({
   amount: string;
   previewAmount: string;
   onAmountChange: (amount: string) => void;
-  savePending: boolean;
-  onSave: () => void;
+  onQueue: () => void;
 }>) {
   return (
     <>
@@ -267,6 +356,7 @@ function FoodContent({
         isPending={isPending}
         search={search}
         selected={selected}
+        queuedFoodIds={queuedFoodIds}
         onSelect={onSelect}
         accountId={accountId}
         onEdit={onEdit}
@@ -283,12 +373,10 @@ function FoodContent({
         <>
           <SelectedFoodPreview food={selected} amount={previewAmount} />
           <FoodAmount
-            meal={meal}
             selected={selected}
             amount={amount}
             onAmountChange={onAmountChange}
-            savePending={savePending}
-            onSave={onSave}
+            onQueue={onQueue}
           />
         </>
       ) : null}
@@ -301,6 +389,7 @@ function FoodResults({
   isPending,
   search,
   selected,
+  queuedFoodIds,
   onSelect,
   accountId,
   onEdit,
@@ -310,6 +399,7 @@ function FoodResults({
   isPending: boolean;
   search: string;
   selected: Food | null;
+  queuedFoodIds: number[];
   onSelect: (food: Food) => void;
   accountId: number;
   onEdit: (food: Food) => void;
@@ -320,13 +410,15 @@ function FoodResults({
   const visibleFoods = selectedIndex >= 0 ? foods.slice(0, selectedIndex + 1) : foods;
   return (
     <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-      {visibleFoods.map((food) => (
-        <React.Fragment key={food.name}>
-          <View style={styles.recipeRow}>
+      {visibleFoods.map((food) => {
+        const isQueued = queuedFoodIds.includes(food.id);
+        const isSelected = selected?.id === food.id || isQueued;
+        return (
+          <View key={food.name} style={styles.recipeRow}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Select ${food.name}`}
-              accessibilityState={{ selected: selected?.id === food.id }}
+              accessibilityState={{ selected: isSelected }}
               onPress={() => onSelect(food)}
               style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
             >
@@ -335,7 +427,7 @@ function FoodResults({
                   styles.foodIcon,
                   {
                     backgroundColor: p['surface-300'],
-                    borderColor: selected?.id === food.id ? p['brand-ink'] : 'transparent',
+                    borderColor: isSelected ? p['brand-ink'] : 'transparent',
                     borderWidth: 2,
                   },
                 ]}
@@ -372,8 +464,8 @@ function FoodResults({
               </View>
             ) : null}
           </View>
-        </React.Fragment>
-      ))}
+        );
+      })}
       {search && !isPending && !foods.length ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
       ) : null}
@@ -435,25 +527,194 @@ function DeleteFoodConfirmation({
   );
 }
 
-function FoodAmount({
+function FoodQueueReview({
   meal,
+  foods,
+  pending,
+  error,
+  onBack,
+  onRemove,
+  onUpdateQuantity,
+  onConfirm,
+}: Readonly<{
+  meal: string;
+  foods: QueuedFood[];
+  pending: boolean;
+  error: boolean;
+  onBack: () => void;
+  onRemove: (foodId: number) => void;
+  onUpdateQuantity: (foodId: number, quantityGrams: number) => void;
+  onConfirm: () => void;
+}>) {
+  const p = usePalette();
+  const [editingFood, setEditingFood] = React.useState<QueuedFood | null>(null);
+  const [draftQuantity, setDraftQuantity] = React.useState('');
+  const totals = foods.reduce(
+    (current, item) => {
+      const multiplier = item.quantityGrams / 100;
+      return {
+        calories: current.calories + item.food.calories * multiplier,
+        protein: current.protein + item.food.protein * multiplier,
+        carbohydrates: current.carbohydrates + item.food.carbohydrates * multiplier,
+        fats: current.fats + item.food.fats * multiplier,
+      };
+    },
+    { calories: 0, protein: 0, carbohydrates: 0, fats: 0 },
+  );
+  const summary = [
+    ['C', totals.carbohydrates],
+    ['P', totals.protein],
+    ['F', totals.fats],
+  ] as const;
+  const editingIndex = editingFood
+    ? foods.findIndex((item) => item.food.id === editingFood.food.id)
+    : -1;
+  const visibleFoods = editingIndex >= 0 ? foods.slice(0, editingIndex + 1) : foods;
+  return (
+    <View style={styles.recipeForm}>
+      <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
+        Review foods
+      </Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        Check your selection before adding it to {meal}.
+      </Text>
+      <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
+        {visibleFoods.map((item) => {
+          return (
+            <View key={item.food.id} style={styles.queueRow}>
+              <View style={styles.flex}>
+                <Text style={[textStyles.body, { color: p.ink }]}>{item.food.name}</Text>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                  {item.quantityGrams} g ·{' '}
+                  {Math.round((item.food.calories * item.quantityGrams) / 100)} kcal
+                </Text>
+              </View>
+              <View style={styles.itemActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${item.food.name} quantity`}
+                  disabled={pending}
+                  onPress={() => {
+                    if (editingFood?.food.id === item.food.id) {
+                      setEditingFood(null);
+                      setDraftQuantity('');
+                      return;
+                    }
+                    setEditingFood(item);
+                    setDraftQuantity(String(item.quantityGrams));
+                  }}
+                  style={styles.editItem}
+                >
+                  <Feather name="edit-2" size={19} color={p['brand-ink']} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${item.food.name} from selection`}
+                  disabled={pending}
+                  onPress={() => {
+                    if (editingFood?.food.id === item.food.id) {
+                      setEditingFood(null);
+                      setDraftQuantity('');
+                    }
+                    onRemove(item.food.id);
+                  }}
+                  style={styles.deleteRecipe}
+                >
+                  <Feather name="trash-2" size={20} color={p.danger} />
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+      {editingFood ? (
+        <>
+          <SelectedFoodPreview food={editingFood.food} amount={draftQuantity} />
+          <FoodAmount
+            selected={editingFood.food}
+            amount={draftQuantity}
+            onAmountChange={setDraftQuantity}
+            actionLabel="Save changes"
+            onQueue={() => {
+              if (Number(draftQuantity) <= 0) return;
+              onUpdateQuantity(editingFood.food.id, Math.round(Number(draftQuantity) * 100) / 100);
+              setEditingFood(null);
+              setDraftQuantity('');
+            }}
+          />
+        </>
+      ) : null}
+      <View
+        accessible
+        accessibilityLabel={`Nutrition summary: ${Math.round(totals.calories)} calories, ${formatGrams(totals.carbohydrates)} grams carbohydrates, ${formatGrams(totals.protein)} grams protein, ${formatGrams(totals.fats)} grams fat`}
+        style={[styles.preview, { backgroundColor: p['brand-soft'] }]}
+      >
+        <View style={styles.reviewSummary}>
+          <Text style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}>
+            {Math.round(totals.calories)} KCAL
+          </Text>
+          {summary.map(([label, value]) => (
+            <View key={label} style={styles.reviewMacro}>
+              <Text style={[textStyles.overline, { color: p.ink }]}>{label}</Text>
+              <Text style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}>
+                {formatGrams(value)}g
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      {error ? (
+        <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+          Some foods could not be added. Review the remaining selection and try again.
+        </Text>
+      ) : null}
+      <View style={styles.confirmationActions}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={pending}
+          onPress={onBack}
+          style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
+        >
+          <Text style={[textStyles.label, { color: p.ink }]}>Back</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: pending || !foods.length }}
+          disabled={pending || !foods.length}
+          onPress={onConfirm}
+          style={[
+            styles.confirmButton,
+            { backgroundColor: p.brand, opacity: pending || !foods.length ? 0.55 : 1 },
+          ]}
+        >
+          <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+            {pending
+              ? 'Adding…'
+              : `Add ${foods.length} ${foods.length === 1 ? 'food' : 'foods'} to ${meal}`}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function FoodAmount({
   selected,
   amount,
   onAmountChange,
-  savePending,
-  onSave,
+  onQueue,
+  actionLabel = 'Add food',
 }: Readonly<{
-  meal: string;
   selected: Food | null;
   amount: string;
   onAmountChange: (amount: string) => void;
-  savePending: boolean;
-  onSave: () => void;
+  onQueue: () => void;
+  actionLabel?: string;
 }>) {
   const p = usePalette();
   const total =
     selected && Number(amount) ? ((selected.calories * Number(amount)) / 100).toFixed(0) : '—';
-  const disabled = !selected || Number(amount) <= 0 || savePending;
+  const disabled = !selected || Number(amount) <= 0;
   return (
     <>
       <Text style={[textStyles.label, { color: p.ink }]}>Amount</Text>
@@ -469,12 +730,10 @@ function FoodAmount({
         accessibilityRole="button"
         accessibilityState={{ disabled }}
         disabled={disabled}
-        onPress={onSave}
+        onPress={onQueue}
         style={[styles.add, { backgroundColor: p.brand, opacity: disabled ? 0.55 : 1 }]}
       >
-        <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {savePending ? 'Adding…' : `Add to ${meal}`}
-        </Text>
+        <Text style={[textStyles.label, { color: p['on-brand'] }]}>{actionLabel}</Text>
       </Pressable>
     </>
   );
@@ -485,7 +744,11 @@ function numericAmount(value: string) {
   return fraction.length ? `${integer}.${fraction.join('')}` : integer;
 }
 
-function SelectedFoodPreview({ food, amount }: Readonly<{ food: Food; amount: string }>) {
+function SelectedFoodPreview({
+  food,
+  amount,
+  title = food.name,
+}: Readonly<{ food: Food; amount: string; title?: string }>) {
   const p = usePalette();
   const grams = Number(amount) > 0 ? Number(amount) : 100;
   const multiplier = grams / 100;
@@ -496,7 +759,7 @@ function SelectedFoodPreview({ food, amount }: Readonly<{ food: Food; amount: st
   ];
   return (
     <View style={[styles.preview, { backgroundColor: p['brand-soft'] }]}>
-      <Text style={[textStyles['title-md'], { color: p.ink }]}>{food.name}</Text>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>{title}</Text>
       <View style={styles.macroRow}>
         {macros.map(([value, label]) => (
           <View key={label} style={styles.flex}>
@@ -1003,6 +1266,10 @@ function RecipeEditor({
 const styles = StyleSheet.create({
   hidden: { display: 'none' },
   screen: { flex: 1 },
+  foodPickerContent: { flex: 1, minHeight: 0, paddingBottom: 0 },
+  foodListScroll: { flex: 1, minHeight: 0 },
+  foodListContent: { gap: spacing['space-3'], paddingBottom: spacing['space-4'] },
+  reviewFooter: { padding: spacing['space-4'] },
   content: {
     padding: spacing['space-4'],
     gap: spacing['space-3'],
@@ -1109,6 +1376,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['space-3'],
   },
   results: { borderRadius: radii['radius-lg'], paddingHorizontal: spacing['space-4'] },
+  queueRow: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['space-3'],
+  },
   emptyRecipes: {
     minHeight: 128,
     alignItems: 'center',
@@ -1130,6 +1403,9 @@ const styles = StyleSheet.create({
     gap: spacing['space-3'],
   },
   macroRow: { flexDirection: 'row', gap: spacing['space-2'] },
+  reviewSummary: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  reviewMacro: { flexDirection: 'row', alignItems: 'baseline', gap: spacing['space-1'] },
+  tabular: { fontVariant: ['tabular-nums'] },
   add: {
     minHeight: sizes['control-height'],
     marginTop: spacing['space-3'],

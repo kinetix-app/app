@@ -203,7 +203,7 @@ export function NutritionDiaryScreen({
               <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                 {selected.isToday
                   ? 'Today'
-                  : `${selected.weekday}, ${selected.month} ${selected.day}`}
+                  : `${selected.weekday}, ${selected.month} ${selected.day}, ${dateFromId(selectedDay).getFullYear()}`}
               </Text>
               <Feather name="calendar" size={18} color={p['ink-muted']} />
             </Pressable>
@@ -262,12 +262,16 @@ export function NutritionDiaryScreen({
                       <View
                         style={[
                           styles.dayNumber,
-                          isSelected && { backgroundColor: p['brand-soft'] },
-                          day.isToday && !isSelected && { borderColor: p.brand, borderWidth: 1 },
+                          isSelected && { borderColor: p.brand, borderWidth: 2 },
+                          day.isToday &&
+                            !isSelected && { borderColor: `${p.brand}66`, borderWidth: 2 },
                         ]}
                       >
                         <Text
-                          style={[textStyles.label, { color: isSelected ? p['brand-ink'] : p.ink }]}
+                          style={[
+                            textStyles.label,
+                            { color: isSelected || day.isToday ? p['brand-ink'] : p.ink },
+                          ]}
                         >
                           {day.day}
                         </Text>
@@ -510,20 +514,22 @@ export function NutritionDiaryScreen({
                     </Text>
                   ) : null}
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Add food to ${meal}`}
-                  onPress={() => {
-                    setSelectedMeal(meal);
-                    onAddFoodOpenChange?.(true);
-                  }}
-                  style={({ pressed }) => [
-                    styles.mealAddButton,
-                    { backgroundColor: p['brand-soft'], opacity: pressed ? 0.65 : 1 },
-                  ]}
-                >
-                  <Feather name="plus" size={20} color={p['brand-ink']} />
-                </Pressable>
+                {editingMeal !== meal ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add food to ${meal}`}
+                    onPress={() => {
+                      setSelectedMeal(meal);
+                      onAddFoodOpenChange?.(true);
+                    }}
+                    style={({ pressed }) => [
+                      styles.mealAddButton,
+                      { backgroundColor: p['brand-soft'], opacity: pressed ? 0.65 : 1 },
+                    ]}
+                  >
+                    <Feather name="plus" size={20} color={p['brand-ink']} />
+                  </Pressable>
+                ) : null}
               </View>
             </View>
           ))}
@@ -603,29 +609,35 @@ function CalendarModal({
             {days.map((date) => {
               const id = localDateId(date);
               const isSelected = id === selectedDay;
+              const isToday = id === localDateId(new Date());
               const isCurrentMonth = date.getMonth() === month.getMonth();
               return (
                 <Pressable
                   key={id}
                   accessibilityRole="button"
-                  accessibilityLabel={`Select ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(date)}`}
+                  accessibilityLabel={`Select ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(date)}${isToday ? ', today' : ''}`}
                   accessibilityState={{ selected: isSelected }}
                   onPress={() => onSelect(date)}
                   style={styles.calendarCell}
                 >
                   <View
-                    style={[styles.calendarDay, isSelected && { backgroundColor: p['brand-soft'] }]}
+                    style={[
+                      styles.calendarDay,
+                      isSelected && { borderColor: p.brand, borderWidth: 2 },
+                      isToday && !isSelected && { borderColor: `${p.brand}66`, borderWidth: 2 },
+                    ]}
                   >
                     <Text
                       style={[
                         textStyles.label,
                         {
-                          color: isSelected
-                            ? p['brand-ink']
-                            : isCurrentMonth
-                              ? p.ink
-                              : p['ink-muted'],
-                          opacity: isCurrentMonth || isSelected ? 1 : 0.45,
+                          color:
+                            isSelected || isToday
+                              ? p['brand-ink']
+                              : isCurrentMonth
+                                ? p.ink
+                                : p['ink-muted'],
+                          opacity: isCurrentMonth || isSelected || isToday ? 1 : 0.45,
                         },
                       ]}
                     >

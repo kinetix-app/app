@@ -81,7 +81,7 @@ afterEach(() => {
 });
 test('searches trimmed input, previews calories and logs rounded grams for the selected meal', async () => {
   const { onSaved, onClose } = open();
-  expect(screen.queryByRole('button', { name: 'Add to Lunch' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Add food' })).toBeNull();
   expect(screen.queryByLabelText('Food amount')).toBeNull();
   fireEvent.changeText(screen.getByLabelText('Search food'), ' Rice ');
   await act(async () => {
@@ -92,7 +92,7 @@ test('searches trimmed input, previews calories and logs rounded grams for the s
   );
   fireEvent.press(await screen.findByLabelText('Select Rice'));
   expect(screen.getByLabelText('Food amount').props.value).toBe('');
-  expect(screen.getByRole('button', { name: 'Add to Lunch' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Add food' })).toBeDisabled();
   fireEvent.changeText(screen.getByLabelText('Food amount'), '12g.5');
   expect(screen.getByLabelText('Food amount').props.value).toBe('12.5');
   fireEvent.press(screen.getByLabelText('Select Rice'));
@@ -106,7 +106,11 @@ test('searches trimmed input, previews calories and logs rounded grams for the s
   expect(screen.getByText('3.8 g')).toBeTruthy();
   expect(screen.getByText('25.1 g')).toBeTruthy();
   expect(screen.getByText('Values per 125.555 g')).toBeTruthy();
-  fireEvent.press(screen.getByText('Add to Lunch'));
+  fireEvent.press(screen.getByRole('button', { name: 'Add food' }));
+  expect(nutritionApi.addMealItem).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Review 1 food'));
+  expect(screen.getByText('Review foods')).toBeTruthy();
+  fireEvent.press(screen.getByText('Add 1 food to Lunch'));
   await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
   expect(nutritionApi.addMealItem).toHaveBeenCalledWith({
     date: '2026-10-28',
@@ -115,6 +119,69 @@ test('searches trimmed input, previews calories and logs rounded grams for the s
     quantity_grams: 125.56,
   });
   expect(onClose).toHaveBeenCalledTimes(1);
+});
+test('queues multiple foods and confirms them with separate hidden requests', async () => {
+  const { onSaved, onClose } = open();
+  fireEvent.press(await screen.findByLabelText('Select Rice'));
+  fireEvent.changeText(screen.getByLabelText('Food amount'), '100');
+  fireEvent.press(screen.getByRole('button', { name: 'Add food' }));
+  expect(screen.getByLabelText('Select Rice').props.accessibilityState.selected).toBe(true);
+  fireEvent.press(screen.getByLabelText('Select Beans'));
+  fireEvent.changeText(screen.getByLabelText('Food amount'), '50');
+  fireEvent.press(screen.getByRole('button', { name: 'Add food' }));
+  expect(screen.getByLabelText('Select Rice').props.accessibilityState.selected).toBe(true);
+  expect(screen.getByLabelText('Select Beans').props.accessibilityState.selected).toBe(true);
+  fireEvent.press(screen.getByText('Review 2 foods'));
+  expect(
+    screen.getByLabelText(
+      'Nutrition summary: 150 calories, 30 grams carbohydrates, 4.5 grams protein, 1.5 grams fat',
+    ),
+  ).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Back to add food'));
+  expect(onClose).not.toHaveBeenCalled();
+  expect(screen.getByText('Review 2 foods')).toBeTruthy();
+  fireEvent.press(screen.getByText('Review 2 foods'));
+  fireEvent.press(screen.getByText('Add 2 foods to Lunch'));
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(nutritionApi.addMealItem).toHaveBeenCalledTimes(2);
+  expect(nutritionApi.addMealItem).toHaveBeenNthCalledWith(1, {
+    date: '2026-10-28',
+    meal_type: 'lunch',
+    food_id: 1,
+    quantity_grams: 100,
+  });
+  expect(nutritionApi.addMealItem).toHaveBeenNthCalledWith(2, {
+    date: '2026-10-28',
+    meal_type: 'lunch',
+    food_id: 3,
+    quantity_grams: 50,
+  });
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+test('edits a queued food quantity from the review before adding it', async () => {
+  open();
+  fireEvent.press(await screen.findByLabelText('Select Rice'));
+  fireEvent.changeText(screen.getByLabelText('Food amount'), '100');
+  fireEvent.press(screen.getByRole('button', { name: 'Add food' }));
+  fireEvent.press(screen.getByText('Review 1 food'));
+  fireEvent.press(screen.getByLabelText('Edit Rice quantity'));
+  expect(screen.getByText('Values per 100 g')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Edit Rice quantity'));
+  expect(screen.queryByLabelText('Food amount')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Edit Rice quantity'));
+  expect(screen.getByLabelText('Food amount').props.value).toBe('100');
+  fireEvent.changeText(screen.getByLabelText('Food amount'), '150');
+  fireEvent.press(screen.getByText('Save changes'));
+  expect(screen.getByText('150 g · 150 kcal')).toBeTruthy();
+  fireEvent.press(screen.getByText('Add 1 food to Lunch'));
+  await waitFor(() =>
+    expect(nutritionApi.addMealItem).toHaveBeenCalledWith({
+      date: '2026-10-28',
+      meal_type: 'lunch',
+      food_id: 1,
+      quantity_grams: 150,
+    }),
+  );
 });
 test('shows no search results and supports returning to the diary', async () => {
   jest.mocked(nutritionApi.searchFoods).mockResolvedValue([]);
@@ -151,9 +218,9 @@ test('cancels deletion, explains a referenced food failure, then removes a selec
   jest.mocked(nutritionApi.foods).mockResolvedValue([]);
   fireEvent.press(screen.getByLabelText('Delete Rice'));
   fireEvent.press(screen.getByText('Delete'));
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Add to Lunch' })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Add food' })).toBeNull());
   expect(nutritionApi.deleteFood).toHaveBeenCalledTimes(2);
-  expect(screen.queryByRole('button', { name: 'Add to Lunch' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Add food' })).toBeNull();
 });
 test('creates a food with a macro estimate and refreshes the catalogue', async () => {
   jest.mocked(nutritionApi.createFood).mockResolvedValue(food);
