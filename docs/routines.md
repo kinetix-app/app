@@ -238,3 +238,7 @@ The filter dialog groups All/Gym/Cardio in a compact activity selector above the
 body-part checkboxes. All and Gym combine with body-part filters. Cardio hides
 body-part controls and clears applied body parts on Save. Activity and body-part
 changes apply together only on Save; closing or Cancel preserves applied filters.
+
+Applied Gym/Cardio activity filters appear as removable badges beside body-part
+badges. Removing the activity badge returns to All, preserving the name search,
+body-part filters and staged exercise selection.
