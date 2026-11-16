@@ -6,6 +6,7 @@ import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { FormCheckProfile } from '../profiles';
 import type { Recording } from '../schemas';
+import { createCameraRecorder, type CameraRecorder } from '../webRecorder';
 import { FormCheckScreen } from './FormCheckScreen';
 
 const MAX_SECONDS = 180;
@@ -31,12 +32,27 @@ export function RecordScreen({
 }>) {
   const p = usePalette();
   const camera = useRef<CameraView>(null);
+  const frame = useRef<View>(null);
+  const [webRecorder, setWebRecorder] = useState<CameraRecorder | null>(null);
   const capture = useRef<Promise<{ uri: string } | undefined> | null>(null);
   const cancelled = useRef(false);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [failed, setFailed] = useState(false);
-  const canKeepVideo = Platform.OS !== 'web';
+  // expo-camera cannot record on the web: there the preview's stream is recorded by the browser.
+  const isWeb = Platform.OS === 'web';
+  const canKeepVideo = !isWeb || webRecorder !== null;
+
+  useEffect(() => {
+    if (!isWeb) return;
+    const recorder = createCameraRecorder(frame.current);
+    setWebRecorder(recorder);
+    return () => {
+      void recorder?.stop().then((uri) => {
+        if (uri) URL.revokeObjectURL(uri);
+      });
+    };
+  }, [isWeb]);
 
   useEffect(() => {
     if (!recording) return;
@@ -57,6 +73,10 @@ export function RecordScreen({
     setSeconds(0);
     setRecording(true);
     if (!canKeepVideo) return;
+    if (isWeb) {
+      webRecorder?.start();
+      return;
+    }
     // Audio is not recorded: the form check only needs the picture.
     capture.current = (
       camera.current?.recordAsync({ maxDuration: MAX_SECONDS }) ?? Promise.resolve(undefined)
@@ -67,6 +87,16 @@ export function RecordScreen({
     setRecording(false);
     if (!canKeepVideo) {
       onFinish({ uri: null, durationSeconds: duration });
+      return;
+    }
+    if (isWeb) {
+      const uri = (await webRecorder?.stop()) ?? null;
+      if (cancelled.current) return;
+      if (!uri) {
+        setFailed(true);
+        return;
+      }
+      onFinish({ uri, durationSeconds: duration });
       return;
     }
     camera.current?.stopRecording();
@@ -127,6 +157,7 @@ export function RecordScreen({
       }
     >
       <View
+        ref={frame}
         style={{
           flex: 1,
           borderRadius: radii['radius-xl'],
