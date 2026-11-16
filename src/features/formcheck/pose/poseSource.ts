@@ -1,4 +1,6 @@
+import { File } from 'expo-file-system';
 import type { PoseSeries } from '../engine';
+import { createWebViewPoseSource, webViewPose } from './webViewPose';
 
 export type PoseProgress = (fraction: number) => void;
 
@@ -12,9 +14,10 @@ export interface PoseSource {
 }
 
 /**
- * Native apps have no pose source yet: it needs a native MediaPipe module and a development build
- * (see docs/form-check.md). Until then the app keeps the demo analyzer on Android and iOS.
+ * Android and iOS: the shared browser extractor in a hidden WebView (needs PoseWebViewHost
+ * mounted, which FormCheckProvider does). A native MediaPipe module can replace it later without
+ * touching anything else.
  */
 export function createPoseSource(): PoseSource | null {
-  return null;
+  return createWebViewPoseSource(webViewPose, (uri) => new File(uri).base64());
 }
