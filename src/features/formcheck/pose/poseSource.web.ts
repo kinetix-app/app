@@ -1,21 +1,32 @@
-import type { PoseLandmarker } from '@mediapipe/tasks-vision';
+// Types only: the library itself is loaded at runtime (see loadVision).
+import type * as Vision from '@mediapipe/tasks-vision';
 
 import type { PoseSeries } from '../engine';
 import type { PoseSource } from './poseSource';
 
 /** Same model as the Python reference; downloaded once by the browser, no user data is sent. */
 const TASKS_VERSION = '1.2.0';
-const WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/wasm`;
+const CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}`;
+const WASM_URL = `${CDN}/wasm`;
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task';
 /** 15 fps is enough for the engine (validated on the Mendeley dataset) and halves the work. */
 const SAMPLE_FPS = 15;
 
-let landmarker: Promise<PoseLandmarker> | null = null;
+let landmarker: Promise<Vision.PoseLandmarker> | null = null;
 
-function loadLandmarker(): Promise<PoseLandmarker> {
+/**
+ * Metro cannot bundle tasks-vision (it contains `import(url)`), so the pinned version is loaded as
+ * an ES module from the same CDN as its WebAssembly. `new Function` keeps Metro from rewriting it.
+ */
+const importModule = new Function('url', 'return import(url)') as (url: string) => Promise<unknown>;
+function loadVision(): Promise<typeof Vision> {
+  return importModule(`${CDN}/vision_bundle.mjs`) as Promise<typeof Vision>;
+}
+
+function loadLandmarker(): Promise<Vision.PoseLandmarker> {
   landmarker ??= (async () => {
-    const { FilesetResolver, PoseLandmarker } = await import('@mediapipe/tasks-vision');
+    const { FilesetResolver, PoseLandmarker } = await loadVision();
     const fileset = await FilesetResolver.forVisionTasks(WASM_URL);
     const options = (delegate: 'GPU' | 'CPU') => ({
       baseOptions: { modelAssetPath: MODEL_URL, delegate },
