@@ -117,15 +117,14 @@ function Controls() {
     </View>
   );
 }
-function mount(onSignOut = jest.fn()) {
+function mount(
+  onSignOut = jest.fn(),
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
+  }),
+) {
   return render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
-        })
-      }
-    >
+    <QueryClientProvider client={client}>
       <SessionProvider accountId={1} onSignOut={onSignOut}>
         <Controls />
       </SessionProvider>
@@ -205,7 +204,10 @@ test('finish freezes the routine-update decision and retries without another PUT
     .mocked(trainingApi.finishDraft)
     .mockRejectedValueOnce(new Error('lost response'))
     .mockResolvedValueOnce({} as Awaited<ReturnType<typeof trainingApi.finishDraft>>);
-  mount();
+  const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+  client.setQueryData(['leagues', 1, 7, 'standings'], { score: 'old' });
+  client.setQueryData(['leagues', 2, 7, 'standings'], { score: 'other' });
+  mount(jest.fn(), client);
   await start();
   fireEvent.press(screen.getByText('Edit'));
   fireEvent.press(screen.getByText('Tick'));
@@ -214,12 +216,17 @@ test('finish freezes the routine-update decision and retries without another PUT
   await screen.findByText(
     'Could not finish the workout. Your results are retained. Retry Finish safely.',
   );
+  expect(client.getQueryState(['leagues', 1, 7, 'standings'])?.isInvalidated).toBe(false);
   const first = jest.mocked(trainingApi.finishDraft).mock.calls[0].slice(0, 2);
   const writes = jest.mocked(trainingApi.saveDraft).mock.calls.length;
   fireEvent.press(screen.getByText('Finish'));
   await waitFor(() => expect(draft()).toBeNull());
   expect(jest.mocked(trainingApi.finishDraft).mock.calls[1].slice(0, 2)).toEqual(first);
   expect(trainingApi.saveDraft).toHaveBeenCalledTimes(writes);
+  await waitFor(() =>
+    expect(client.getQueryState(['leagues', 1, 7, 'standings'])?.isInvalidated).toBe(true),
+  );
+  expect(client.getQueryState(['leagues', 2, 7, 'standings'])?.isInvalidated).toBe(false);
   expect(jest.mocked(trainingApi.finishDraft).mock.calls.map((call) => call[3])).toEqual([
     true,
     true,
