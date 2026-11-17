@@ -24,6 +24,17 @@ describe('profiles and engine specs', () => {
     },
   );
 
+  it.each(formCheckProfiles.map((p) => [p.id, p] as const))(
+    '%s has praise for every criterion its spec scores',
+    (_, profile) => {
+      const spec = bundledSpecs[profile.specId];
+      for (const c of spec.criteria.filter((c) => !c.disabled)) {
+        const check = profile.checks.find((k) => k.id === c.id);
+        expect(check?.praise ?? spec.cues[c.id]?.good.en).toBeTruthy();
+      }
+    },
+  );
+
   it('finds a profile for the catalogue names of the supported exercises', () => {
     expect(profileForExercise('Squat')?.id).toBe('back-squat');
     expect(profileForExercise('Push-up')?.id).toBe('push-up');
