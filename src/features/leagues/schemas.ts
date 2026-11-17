@@ -1,9 +1,20 @@
 import { z } from 'zod/v4';
 
 const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+export const leaguePicturePathSchema = z
+  .string()
+  .regex(/^\/api\/v1\/leagues\/[1-9]\d*\/picture(?:\?v=[a-zA-Z0-9-]+)?$/);
+export const memberPicturePathSchema = z
+  .string()
+  .regex(/^\/api\/v1\/leagues\/[1-9]\d*\/members\/[1-9]\d*\/picture(?:\?v=[a-zA-Z0-9-]+)?$/);
+export const memberPictureSchema = z.union([
+  memberPicturePathSchema,
+  z.url({ protocol: /^https$/ }).max(2048),
+]);
 export const leagueSchema = z.object({
   id,
   name: z.string(),
+  picture_url: leaguePicturePathSchema.nullable().default(null),
   timezone: z.string().nullable(),
   role: z.string().nullable(),
 });
@@ -13,6 +24,7 @@ export const leagueDetailSchema = leagueSchema.extend({
     z.object({
       user_id: id,
       display_name: z.string().nullable(),
+      picture_url: memberPictureSchema.nullable().default(null),
       role: z.string().nullable(),
       joined_at: z.string().nullable(),
     }),
@@ -54,6 +66,7 @@ const decimalString = z.string().regex(/^\d+(?:\.\d+)?$/);
 export const standingSchema = z.object({
   user_id: id,
   display_name: z.string().nullable(),
+  picture_url: memberPictureSchema.nullable().default(null),
   score: integerString,
   position: z.number().int().positive(),
 });
@@ -99,3 +112,5 @@ export const pendingResultsSchema = z.array(
   }),
 );
 export type PendingResult = z.infer<typeof pendingResultsSchema>[number];
+
+export type LeagueDetail = z.infer<typeof leagueDetailSchema>;

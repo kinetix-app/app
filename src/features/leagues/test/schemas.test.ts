@@ -1,4 +1,10 @@
-import { createSchema, invitationToken, leagueDetailSchema } from '../schemas';
+import {
+  createSchema,
+  invitationToken,
+  leagueDetailSchema,
+  leaguePicturePathSchema,
+  memberPictureSchema,
+} from '../schemas';
 
 describe('league input and responses', () => {
   it('requires a valid timezone and nonempty name', () => {
@@ -24,4 +30,16 @@ describe('league input and responses', () => {
       }).success,
     ).toBe(true);
   });
+});
+
+test('private league and member images only accept their protected relative paths or existing HTTPS member pictures', () => {
+  expect(leaguePicturePathSchema.safeParse('/api/v1/leagues/9/picture?v=abc-123').success).toBe(
+    true,
+  );
+  expect(leaguePicturePathSchema.safeParse('https://example.com/image.jpg').success).toBe(false);
+  expect(memberPictureSchema.safeParse('/api/v1/leagues/9/members/1/picture?v=abc').success).toBe(
+    true,
+  );
+  expect(memberPictureSchema.safeParse('/api/v1/me/profile/picture').success).toBe(false);
+  expect(memberPictureSchema.safeParse('http://example.com/image.jpg').success).toBe(false);
 });

@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LeagueAvatar } from './LeagueAvatar';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 export function LeagueCard({ children }: React.PropsWithChildren) {
@@ -54,8 +55,15 @@ export function LeagueAction({
 export function LeagueRankingRow({
   row,
   current = false,
+  accountId,
 }: Readonly<{
-  row: { position: number; display_name: string | null; score: string };
+  row: {
+    position: number;
+    display_name: string | null;
+    score: string;
+    picture_url?: string | null;
+  };
+  accountId: number;
   current?: boolean;
 }>) {
   const p = usePalette();
@@ -73,6 +81,13 @@ export function LeagueRankingRow({
       >
         #{row.position}
       </Text>
+      <LeagueAvatar
+        accountId={accountId}
+        path={row.picture_url}
+        name={row.display_name ?? 'Member'}
+        member
+        size={36}
+      />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[textStyles.label, { color: p.ink }]}>{row.display_name ?? 'Member'}</Text>
         {current ? (

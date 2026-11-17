@@ -13,8 +13,8 @@ const results = [1, 2].map((id) => ({
   start_at: `2026-11-${id === 1 ? '02' : '09'}T00:00:00Z`,
   end_at: `2026-11-${id === 1 ? '09' : '16'}T00:00:00Z`,
   standings: [
-    { user_id: 1, display_name: 'Alice', score: '0', position: 1 },
-    { user_id: 2, display_name: 'Bob', score: '0', position: 1 },
+    { user_id: 1, display_name: 'Alice', picture_url: null, score: '0', position: 1 },
+    { user_id: 2, display_name: 'Bob', picture_url: null, score: '0', position: 1 },
   ],
   loser_user_ids: [1, 2],
 }));

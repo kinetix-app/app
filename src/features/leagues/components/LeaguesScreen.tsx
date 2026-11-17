@@ -11,7 +11,9 @@ import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
 import { createSchema, invitationToken, nameSchema } from '../schemas';
 import { LeagueAction, LeagueCard, leagueStyles } from './LeagueUI';
-import { LeagueRules } from './LeagueRules';
+import { LeagueAvatar } from './LeagueAvatar';
+import { LeagueInformation } from './LeagueInformation';
+import { LeaguePictureEditor } from './LeaguePictureEditor';
 import { LeagueResults } from './LeagueResults';
 import { LeagueStandings } from './LeagueStandings';
 
@@ -34,6 +36,8 @@ export function LeaguesScreen({
   const key = ['leagues', accountId];
   const [selected, setSelected] = useState<number | null>(null);
   const [mode, setMode] = useState<'list' | 'create' | 'join'>(initialInvitation ? 'join' : 'list');
+  const [information, setInformation] = useState(false);
+  const [pictureBusy, setPictureBusy] = useState(false);
   const [name, setName] = useState('');
   const [timezone, setTimezone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
@@ -55,6 +59,7 @@ export function LeaguesScreen({
     mutationFn: () => leaguesApi.create(name, timezone),
     onSuccess: (league) => {
       refresh();
+      setInformation(false);
       setSelected(league.id);
       setMode('list');
       setName('');
@@ -91,6 +96,7 @@ export function LeaguesScreen({
     mutationFn: () => leaguesApi.accept(token),
     onSuccess: (league) => {
       refresh();
+      setInformation(false);
       setSelected(league.id);
       setMode('list');
       setInput('');
@@ -105,7 +111,8 @@ export function LeaguesScreen({
     rename.isPending ||
     generate.isPending ||
     preview.isPending ||
-    accept.isPending;
+    accept.isPending ||
+    pictureBusy;
   const button = (
     label: string,
     onPress: () => void,
@@ -126,6 +133,13 @@ export function LeaguesScreen({
     </View>
   );
   function back() {
+    if (information) {
+      setInformation(false);
+      setName('');
+      setError('');
+      setInvite('');
+      return;
+    }
     refresh();
     setSelected(null);
     setMode('list');
@@ -144,39 +158,95 @@ export function LeaguesScreen({
           { paddingBottom: spacing['space-8'], gap: spacing['space-6'] },
         ]}
       >
-        <ScreenHeader
-          title={
-            selected !== null
-              ? 'League'
-              : mode === 'create'
+        {selected !== null ? (
+          <View style={[leagueStyles.row, { alignItems: 'flex-start' }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={information ? 'Back to league' : 'Back to leagues'}
+              onPress={back}
+              disabled={pending}
+              accessibilityState={{ disabled: pending }}
+              style={({ pressed }) => ({
+                minWidth: sizes['tap-min'],
+                minHeight: sizes['tap-min'],
+                borderRadius: radii['radius-pill'],
+                backgroundColor: p['surface-300'],
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed || pending ? 0.5 : 1,
+              })}
+            >
+              <Ionicons name="arrow-back" size={24} color={p.ink} />
+            </Pressable>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={leagueStyles.row}>
+                <LeagueAvatar
+                  accountId={accountId}
+                  path={detail.data?.picture_url}
+                  name={detail.data?.name ?? 'League'}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`View league information for ${detail.data?.name ?? 'league'}`}
+                  accessibilityState={{ disabled: pending || information || !detail.data }}
+                  disabled={pending || information || !detail.data}
+                  onPress={() => setInformation(true)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    minWidth: 0,
+                    minHeight: sizes['tap-min'],
+                    gap: spacing['space-1'],
+                    opacity: pressed ? 0.75 : 1,
+                  })}
+                >
+                  <Text
+                    accessibilityRole="header"
+                    numberOfLines={2}
+                    style={[textStyles['display-lg'], { color: p.ink }]}
+                  >
+                    {detail.data?.name ??
+                      list.data?.find((item) => item.id === selected)?.name ??
+                      'Loading league…'}
+                  </Text>
+                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                    {information ? 'League information' : 'View league information'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <ScreenHeader
+            title={
+              mode === 'create'
                 ? 'Create league'
                 : mode === 'join'
                   ? 'Join a league'
                   : 'FriendsLeague'
-          }
-          leading={
-            selected !== null || mode !== 'list' ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Back to leagues"
-                onPress={back}
-                disabled={pending}
-                accessibilityState={{ disabled: pending }}
-                style={({ pressed }) => ({
-                  minWidth: sizes['tap-min'],
-                  minHeight: sizes['tap-min'],
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: radii['radius-pill'],
-                  backgroundColor: p['surface-300'],
-                  opacity: pressed || pending ? 0.5 : 1,
-                })}
-              >
-                <Ionicons name="arrow-back" size={24} color={p.ink} />
-              </Pressable>
-            ) : undefined
-          }
-        />
+            }
+            leading={
+              mode !== 'list' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to leagues"
+                  onPress={back}
+                  disabled={pending}
+                  accessibilityState={{ disabled: pending }}
+                  style={{
+                    minWidth: sizes['tap-min'],
+                    minHeight: sizes['tap-min'],
+                    borderRadius: radii['radius-pill'],
+                    backgroundColor: p['surface-300'],
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="arrow-back" size={24} color={p.ink} />
+                </Pressable>
+              ) : undefined
+            }
+          />
+        )}
         {selected !== null ? (
           <>
             {detail.isPending ? (
@@ -195,106 +265,81 @@ export function LeaguesScreen({
               </>
             ) : (
               <>
-                <LeagueCard>
-                  <View style={leagueStyles.row}>
-                    <Ionicons name="trophy-outline" size={32} color={p['brand-ink']} />
-                    <Text
-                      accessibilityRole="header"
-                      style={[textStyles['title-lg'], { color: p.ink, flex: 1 }]}
-                    >
-                      {detail.data.name}
-                    </Text>
-                  </View>
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {detail.data.members.length} members ·{' '}
-                    {detail.data.timezone ?? 'Timezone not set'}
-                  </Text>
-                </LeagueCard>
                 <LeagueResults
                   accountId={accountId}
                   leagueId={detail.data.id}
                   active={active}
                   timezone={detail.data.timezone}
                 />
-                <LeagueStandings accountId={accountId} leagueId={detail.data.id} />
-                <LeagueRules timezone={detail.data.timezone} />
-                <LeagueCard>
-                  <Text
-                    accessibilityRole="header"
-                    style={[textStyles['title-md'], { color: p.ink }]}
-                  >
-                    Members
-                  </Text>
-                  {detail.data.members.map((member) => (
-                    <View key={member.user_id} style={leagueStyles.row}>
-                      <Ionicons name="person-circle-outline" size={32} color={p['ink-muted']} />
-                      <Text style={[textStyles.body, { color: p.ink, flex: 1 }]}>
-                        {member.display_name ?? 'Member'}
-                        {member.user_id === accountId ? ' (you)' : ''}
-                      </Text>
-                      <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
-                        {member.role === 'admin' ? 'Admin' : 'Member'}
-                      </Text>
-                    </View>
-                  ))}
-                </LeagueCard>
-                {detail.data.role === 'admin' ? (
-                  <LeagueCard>
-                    <Text
-                      accessibilityRole="header"
-                      style={[textStyles['title-md'], { color: p.ink }]}
-                    >
-                      Manage league
-                    </Text>
-                    {field('New league name', name, setName)}
-                    {error ? (
-                      <Text
-                        accessibilityRole="alert"
-                        style={[textStyles['body-sm'], { color: p.danger }]}
-                      >
-                        {error}
-                      </Text>
-                    ) : null}
-                    {button(
-                      rename.isPending ? 'Saving…' : 'Rename league',
-                      () => {
-                        const result = nameSchema.safeParse(name);
-                        if (!result.success) {
-                          setError(result.error.issues[0].message);
-                          return;
-                        }
-                        rename.mutate();
-                      },
-                      pending,
-                      'primary',
-                    )}
-                    {button(
-                      generate.isPending ? 'Generating…' : 'Generate invitation',
-                      () => generate.mutate(),
-                      pending,
-                      'positive',
-                    )}
-                    {invite ? (
-                      <>
-                        <Text selectable style={[textStyles['body-sm'], { color: p.ink }]}>
-                          {invite}
+                {information ? (
+                  <LeagueInformation accountId={accountId} league={detail.data}>
+                    {detail.data.role === 'admin' ? (
+                      <LeagueCard>
+                        <Text
+                          accessibilityRole="header"
+                          style={[textStyles['title-md'], { color: p.ink }]}
+                        >
+                          Manage league
                         </Text>
-                        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                          Share this link. It expires after 48 hours. Recipients can paste it in
-                          Join a league.
-                        </Text>
+                        <LeaguePictureEditor
+                          accountId={accountId}
+                          league={detail.data}
+                          onBusy={setPictureBusy}
+                          disabled={pending && !pictureBusy}
+                        />
+                        {field('New league name', name, setName)}
+                        {error ? (
+                          <Text
+                            accessibilityRole="alert"
+                            style={[textStyles['body-sm'], { color: p.danger }]}
+                          >
+                            {error}
+                          </Text>
+                        ) : null}
                         {button(
-                          'Share invitation',
+                          rename.isPending ? 'Saving…' : 'Rename league',
                           () => {
-                            void Share.share({ message: invite });
+                            const result = nameSchema.safeParse(name);
+                            if (!result.success) {
+                              setError(result.error.issues[0].message);
+                              return;
+                            }
+                            rename.mutate();
                           },
-                          false,
+                          pending,
                           'primary',
                         )}
-                      </>
+                        {button(
+                          generate.isPending ? 'Generating…' : 'Generate invitation',
+                          () => generate.mutate(),
+                          pending,
+                          'positive',
+                        )}
+                        {invite ? (
+                          <>
+                            <Text selectable style={[textStyles['body-sm'], { color: p.ink }]}>
+                              {invite}
+                            </Text>
+                            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                              Share this link. It expires after 48 hours. Recipients can paste it in
+                              Join a league.
+                            </Text>
+                            {button(
+                              'Share invitation',
+                              () => {
+                                void Share.share({ message: invite });
+                              },
+                              false,
+                              'primary',
+                            )}
+                          </>
+                        ) : null}
+                      </LeagueCard>
                     ) : null}
-                  </LeagueCard>
-                ) : null}
+                  </LeagueInformation>
+                ) : (
+                  <LeagueStandings accountId={accountId} leagueId={detail.data.id} />
+                )}
               </>
             )}
           </>
@@ -418,6 +463,7 @@ export function LeaguesScreen({
                     accessibilityRole="button"
                     accessibilityLabel={league.name}
                     onPress={() => {
+                      setInformation(false);
                       setSelected(league.id);
                       setError('');
                     }}
@@ -425,15 +471,12 @@ export function LeaguesScreen({
                   >
                     <LeagueCard>
                       <View style={leagueStyles.row}>
-                        <View
-                          style={{
-                            padding: spacing['space-3'],
-                            borderRadius: radii['radius-md'],
-                            backgroundColor: p['brand-soft'],
-                          }}
-                        >
-                          <Ionicons name="trophy-outline" size={24} color={p['brand-ink']} />
-                        </View>
+                        <LeagueAvatar
+                          accountId={accountId}
+                          path={league.picture_url}
+                          name={league.name}
+                          size={52}
+                        />
                         <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
                           <Text style={[textStyles['title-md'], { color: p.ink }]}>
                             {league.name}

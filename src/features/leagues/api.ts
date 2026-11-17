@@ -4,6 +4,8 @@ import {
   createdLeagueSchema,
   invitationSchema,
   leagueDetailSchema,
+  leaguePicturePathSchema,
+  memberPicturePathSchema,
   leagueListSchema,
   nameSchema,
   previewSchema,
@@ -16,6 +18,14 @@ export const leaguesApi = {
     apiClient.get('/api/v1/leagues', { schema: leagueListSchema, signal }),
   detail: (id: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/leagues/${id}`, { schema: leagueDetailSchema, signal }),
+  uploadPicture: (id: number, form: FormData) =>
+    apiClient.postMultipart(`/api/v1/leagues/${id}/picture`, form, { schema: leagueDetailSchema }),
+  removePicture: (id: number) =>
+    apiClient.delete(`/api/v1/leagues/${id}/picture`, { schema: leagueDetailSchema }),
+  picture: (path: string, signal?: AbortSignal) => {
+    const result = leaguePicturePathSchema.or(memberPicturePathSchema).parse(path);
+    return apiClient.getBlob(result, { signal });
+  },
   standings: (id: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/leagues/${id}/standings`, { schema: standingsSchema, signal }),
   pendingResults: (id: number, signal?: AbortSignal) =>

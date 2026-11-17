@@ -1,4 +1,5 @@
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StandingsContent } from '../components/LeagueStandings';
 import { standingsSchema } from '../schemas';
@@ -55,7 +56,11 @@ const data = standingsSchema.parse({
 });
 
 test('shows exact scores, tied zero members and only the viewer calculation', () => {
-  render(<StandingsContent data={data} accountId={1} />);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <StandingsContent data={data} accountId={1} />
+    </QueryClientProvider>,
+  );
   expect(screen.getByLabelText('#1 Alice: 9007199254740993 points, you')).toBeTruthy();
   expect(screen.getByLabelText('#2 Bob: 0 points')).toBeTruthy();
   expect(screen.getByLabelText('#2 Member: 0 points')).toBeTruthy();

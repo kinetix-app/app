@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
+import { LeagueAvatar } from './LeagueAvatar';
 import { LeagueAction, LeagueCard, LeagueRankingRow } from './LeagueUI';
 import type { Standings } from '../schemas';
 
@@ -76,7 +77,12 @@ export function StandingsContent({
       </Text>
       {rows.length ? (
         rows.map((row) => (
-          <LeagueRankingRow key={row.user_id} row={row} current={row.user_id === accountId} />
+          <LeagueRankingRow
+            accountId={accountId}
+            key={row.user_id}
+            row={row}
+            current={row.user_id === accountId}
+          />
         ))
       ) : (
         <Text style={[textStyles.body, { color: p.ink }]}>No standings yet.</Text>
@@ -99,9 +105,20 @@ export function StandingsContent({
                     paddingTop: spacing['space-3'],
                   }}
                 >
-                  <Text style={[textStyles.body, { color: p.ink }]}>
-                    {entry.local_day} · {member?.display_name ?? 'Member'}: {entry.score} points
-                  </Text>
+                  <View
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] }}
+                  >
+                    <LeagueAvatar
+                      accountId={accountId}
+                      path={member?.picture_url}
+                      name={member?.display_name ?? 'Member'}
+                      member
+                      size={36}
+                    />
+                    <Text style={[textStyles.body, { color: p.ink, flex: 1 }]}>
+                      {entry.local_day} · {member?.display_name ?? 'Member'}: {entry.score} points
+                    </Text>
+                  </View>
                   {entry.user_id === accountId && entry.calculation ? (
                     <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
                       Workout {entry.calculation.session_id} · Volume{' '}

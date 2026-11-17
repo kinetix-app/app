@@ -101,7 +101,12 @@ export function LeagueResults({
               Final standings
             </Text>
             {result.standings.map((row) => (
-              <LeagueRankingRow key={row.user_id} row={row} current={row.user_id === accountId} />
+              <LeagueRankingRow
+                accountId={accountId}
+                key={row.user_id}
+                row={row}
+                current={row.user_id === accountId}
+              />
             ))}
             {acknowledge.isError ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
