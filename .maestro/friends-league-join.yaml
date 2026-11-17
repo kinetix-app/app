@@ -1,0 +1,36 @@
+appId: cat.udl.kinetix
+---
+# The first native account created the league; switch identities through real logout.
+- tapOn: Home
+- tapOn: Open profile
+- tapOn: Sign out
+- extendedWaitUntil:
+    visible: Email
+    timeout: 20000
+- tapOn: Email
+- inputText: ${MAESTRO_KINETIX_E2E_EMAIL}
+- tapOn: Password
+- inputText: ${MAESTRO_KINETIX_E2E_PASSWORD}
+- hideKeyboard
+- tapOn: Sign in
+- extendedWaitUntil:
+    visible: League
+    timeout: 30000
+- tapOn: League
+- tapOn: Join a league
+- tapOn: Invitation link or token
+- inputText: ${MAESTRO_LEAGUE_INVITATION}
+- hideKeyboard
+- tapOn: Preview invitation
+- assertVisible: Join Acceptance league Android?
+- tapOn: Confirm joining
+- extendedWaitUntil:
+    visible: Standings
+    timeout: 20000
+- scrollUntilVisible:
+    element: League rules
+    direction: DOWN
+- scrollUntilVisible:
+    element: League Bob · member
+    direction: DOWN
+- assertVisible: League Alice · admin

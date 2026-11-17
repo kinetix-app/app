@@ -1,0 +1,41 @@
+appId: cat.udl.kinetix
+---
+# Run only on an isolated test emulator/build; private variables supplied by runner.
+- launchApp
+- tapOn: Email
+- inputText: ${MAESTRO_KINETIX_E2E_EMAIL}
+- tapOn: Password
+- inputText: ${MAESTRO_KINETIX_E2E_PASSWORD}
+- hideKeyboard
+- tapOn: Sign in
+- extendedWaitUntil:
+    visible: League
+    timeout: 30000
+- tapOn: League
+- tapOn: Create league
+- tapOn: League name
+- inputText: ${MAESTRO_LEAGUE_NAME}
+- tapOn: IANA timezone
+- eraseText
+- inputText: Europe/Madrid
+- hideKeyboard
+- tapOn: Create league
+- extendedWaitUntil:
+    visible: Standings
+    timeout: 30000
+- scrollUntilVisible:
+    element: League rules
+    direction: DOWN
+- scrollUntilVisible:
+    element: Generate invitation
+    direction: DOWN
+- tapOn: Generate invitation
+- assertVisible: Share invitation
+- scrollUntilVisible:
+    element: Back to leagues
+    direction: UP
+- tapOn: Back to leagues
+- tapOn: ${MAESTRO_LEAGUE_NAME}
+- extendedWaitUntil:
+    visible: Standings
+    timeout: 20000
