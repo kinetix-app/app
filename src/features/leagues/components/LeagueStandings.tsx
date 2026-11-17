@@ -6,6 +6,11 @@ import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
 import type { Standings } from '../schemas';
 
+function durationHours(microseconds: string) {
+  const thousandths = (BigInt(microseconds) + 1800000n) / 3600000n;
+  return `${thousandths / 1000n}.${String(thousandths % 1000n).padStart(3, '0')}`;
+}
+
 type Round = Standings['rounds'][number];
 
 export function StandingsContent({
@@ -73,9 +78,8 @@ export function StandingsContent({
                     <Text style={{ color: p['ink-muted'] }}>
                       Workout {entry.calculation.session_id} · Volume{' '}
                       {entry.calculation.volume_kg_reps} kg reps · Duration{' '}
-                      {entry.calculation.duration_us} microseconds · Body weight{' '}
-                      {entry.calculation.body_weight_kg} kg · Formula{' '}
-                      {entry.calculation.formula_version}
+                      {durationHours(entry.calculation.duration_us)} hours · Body weight{' '}
+                      {entry.calculation.body_weight_kg} kg
                     </Text>
                   ) : null}
                 </View>

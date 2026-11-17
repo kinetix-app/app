@@ -51,7 +51,7 @@ export function invitationToken(value: string) {
 
 const integerString = z.string().regex(/^\d+$/);
 const decimalString = z.string().regex(/^\d+(?:\.\d+)?$/);
-const standingSchema = z.object({
+export const standingSchema = z.object({
   user_id: id,
   display_name: z.string().nullable(),
   score: integerString,
@@ -87,3 +87,15 @@ export const standingsSchema = z.object({
   general: z.array(standingSchema),
 });
 export type Standings = z.infer<typeof standingsSchema>;
+
+export const pendingResultsSchema = z.array(
+  z.object({
+    id,
+    round_id: id,
+    start_at: z.string(),
+    end_at: z.string(),
+    standings: z.array(standingSchema),
+    loser_user_ids: z.array(id),
+  }),
+);
+export type PendingResult = z.infer<typeof pendingResultsSchema>[number];

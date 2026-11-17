@@ -16,6 +16,7 @@ import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
 import { createSchema, invitationToken, nameSchema } from '../schemas';
 import { LeagueRules } from './LeagueRules';
+import { LeagueResults } from './LeagueResults';
 import { LeagueStandings } from './LeagueStandings';
 
 function message(error: unknown) {
@@ -182,6 +183,7 @@ export function LeaguesScreen({
                 <Text style={{ color: p['ink-muted'] }}>
                   Timezone: {detail.data.timezone ?? 'Not set'}
                 </Text>
+                <LeagueResults accountId={accountId} leagueId={detail.data.id} />
                 <LeagueStandings accountId={accountId} leagueId={detail.data.id} />
                 <LeagueRules timezone={detail.data.timezone} />
                 <Text style={{ color: p.ink }}>Members</Text>
