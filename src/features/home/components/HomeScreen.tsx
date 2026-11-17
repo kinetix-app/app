@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
 import { NutritionDiaryScreen, NutritionGoalEditor } from '@/features/nutrition';
@@ -13,17 +13,19 @@ import {
 } from '@/features/training';
 import { getAccount, type Account } from '@/features/accounts/api';
 import {
+  ProfileAvatar,
   ProfileEditor,
   ObjectiveEditor,
-  ProfileOverview,
   ProfileScreen,
   ProgressScreen,
   type ProfilePanel,
   SetupButton,
 } from '@/features/accounts';
+import { FeedScreen } from '@/features/feed';
+import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
 import { FormCheckProvider } from '@/features/formcheck';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
-import { spacing, usePalette } from '@/theme/tokens';
+import { sizes, spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
 
 /** Keeps recordings only for sets that still exist in the ongoing workout. */
@@ -43,7 +45,7 @@ function FormCheckHost({ accountId, children }: React.PropsWithChildren<{ accoun
 
 type ProfileOrigin = Exclude<HomeTab, 'profile'>;
 const profileBackLabels: Record<ProfileOrigin, string> = {
-  home: 'Back to home',
+  home: 'Back to feed',
   workout: 'Back to workout',
   nutrition: 'Back to nutrition',
 };
@@ -52,9 +54,17 @@ type HomeNavigationProps = Readonly<{
   account: Account;
   initialTab: HomeTab;
   onAccount: (account: Account) => void;
+  finishedSessionId: number | null;
+  onDismissFinished: () => void;
 }>;
 
-function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps) {
+function HomeNavigation({
+  account,
+  initialTab,
+  onAccount,
+  finishedSessionId,
+  onDismissFinished,
+}: HomeNavigationProps) {
   const accountId = account.id;
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
   const [nutritionOrigin, setNutritionOrigin] = useState<'profile' | 'nutrition'>('profile');
@@ -65,6 +75,13 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   const session = useSession();
   const [tab, setTab] = useState<HomeTab>(initialTab);
   const [routineEditing, setRoutineEditing] = useState(false);
+  // Pending requests drive the Profile badge; refreshed periodically while signed in.
+  const requests = useQuery({
+    queryKey: requestsKey(accountId),
+    queryFn: ({ signal }) => friendsApi.requests(signal),
+    refetchInterval: 60000,
+  });
+  const incomingRequests = requests.data?.incoming.length ?? 0;
   const [visited, setVisited] = useState<HomeTab[]>([initialTab]);
   const [profileOrigin, setProfileOrigin] = useState<ProfileOrigin>(
     initialTab === 'profile' ? 'home' : initialTab,
@@ -159,6 +176,15 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
         );
       case 'progress':
         return <ProgressScreen account={account} onClose={closeProfilePanel} />;
+      case 'friends':
+        return (
+          <FriendsScreen
+            accountId={accountId}
+            onClose={closeProfilePanel}
+            active={panelActive}
+            initialTab={incomingRequests ? 'requests' : 'friends'}
+          />
+        );
       default:
         return (
           <ProfileScreen
@@ -171,6 +197,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
             }}
             signingOut={signingOut}
             signOutError={signOutError}
+            friendRequests={incomingRequests}
           />
         );
     }
@@ -178,15 +205,44 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   function renderTabContent(item: HomeTab) {
     if (item === 'home')
       return (
-        <ProfileOverview
-          account={account}
-          onOpenProfile={showProfile}
-          onEditObjective={() => openProfile('objective')}
-          onEditNutrition={() => {
-            openProfile('nutrition');
-            setNutritionOrigin('nutrition');
-          }}
-          onWorkout={() => select('workout')}
+        <FeedScreen
+          accountId={accountId}
+          active={tab === 'home' && (!session.draft || session.draft.minimized)}
+          suggestedSessionId={finishedSessionId}
+          onDismissSuggestion={onDismissFinished}
+          onFindFriends={() => openProfile('friends')}
+          profileButton={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
+              accessibilityHint={
+                incomingRequests
+                  ? `${incomingRequests} new friend ${incomingRequests === 1 ? 'request' : 'requests'}`
+                  : undefined
+              }
+              onPress={showProfile}
+              hitSlop={spacing['space-1']}
+              style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+            >
+              <ProfileAvatar account={account} size={sizes['tap-min']} compact />
+              {incomingRequests ? (
+                <View
+                  testID="friend-request-badge"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    borderWidth: 2,
+                    borderColor: p['surface-100'],
+                    backgroundColor: p.danger,
+                  }}
+                />
+              ) : null}
+            </Pressable>
+          }
         />
       );
     if (item === 'profile') return renderProfilePanel();
@@ -252,6 +308,7 @@ function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: Accou
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData(queryKey, initialAccount);
   }, [accountId, cache, initialAccount]);
+  const [finishedSessionId, setFinishedSessionId] = useState<number | null>(null);
   function saved(account: Account) {
     cache.setQueryData(['accounts', accountId, 'me'], account);
   }
@@ -292,9 +349,15 @@ function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: Accou
       <ObjectiveEditor accountId={accountId} onSaved={saved} />
     );
   return (
-    <SessionProvider accountId={accountId} onSignOut={onSignOut}>
+    <SessionProvider accountId={accountId} onSignOut={onSignOut} onFinished={setFinishedSessionId}>
       <FormCheckHost accountId={accountId}>
-        <HomeNavigation account={account} initialTab={initialTab} onAccount={saved} />
+        <HomeNavigation
+          account={account}
+          initialTab={initialTab}
+          onAccount={saved}
+          finishedSessionId={finishedSessionId}
+          onDismissFinished={() => setFinishedSessionId(null)}
+        />
       </FormCheckHost>
     </SessionProvider>
   );

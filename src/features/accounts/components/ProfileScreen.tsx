@@ -14,7 +14,7 @@ import { ProfileGroup, ProfileRow } from './ProfileRows';
 import { setupStyles as s } from './SetupUI';
 
 export type ProfilePanel =
-  'overview' | 'profile' | 'objective' | 'nutrition' | 'progress' | 'history';
+  'overview' | 'profile' | 'objective' | 'nutrition' | 'progress' | 'history' | 'friends';
 export function ProfileScreen({
   account,
   onOpen,
@@ -23,6 +23,7 @@ export function ProfileScreen({
   onSignOut,
   signingOut,
   signOutError,
+  friendRequests = 0,
 }: Readonly<{
   account: Account;
   onOpen: (panel: ProfilePanel) => void;
@@ -31,6 +32,8 @@ export function ProfileScreen({
   onSignOut: () => void;
   signingOut: boolean;
   signOutError: string;
+  /** Incoming friend requests, shown on the Friends row. */
+  friendRequests?: number;
 }>) {
   const p = usePalette();
   const objective = useQuery({
@@ -105,6 +108,18 @@ export function ProfileScreen({
             title="Edit nutrition goal"
             icon="pie-chart"
             onPress={() => onOpen('nutrition')}
+          />
+        </ProfileGroup>
+        <ProfileGroup title="Social">
+          <ProfileRow
+            title="Friends"
+            detail={
+              friendRequests
+                ? `${friendRequests} new ${friendRequests === 1 ? 'request' : 'requests'}`
+                : 'Your friends, requests and people search'
+            }
+            icon="users"
+            onPress={() => onOpen('friends')}
           />
         </ProfileGroup>
         <ProfileGroup title="Activity">

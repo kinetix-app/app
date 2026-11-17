@@ -120,7 +120,7 @@ test('displays meal quantities and caps progress at the goal; navigation callbac
     now: 100,
   });
   expect(screen.getByLabelText('Carbs: 40 of 0 grams').props.accessibilityValue).toBeUndefined();
-  fireEvent.press(screen.getByLabelText('Back to home'));
+  fireEvent.press(screen.getByLabelText('Back to feed'));
   fireEvent.press(screen.getByLabelText('Edit nutrition goal'));
   expect(onBack).toHaveBeenCalledTimes(1);
   expect(onEditGoal).toHaveBeenCalledTimes(1);
