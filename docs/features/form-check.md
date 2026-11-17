@@ -15,6 +15,7 @@ Record (expo-camera; MediaRecorder on the web)
   → Engine: clean → signals → reps → metrics → score → feedback    engine/
   → FormAnalysis (reps and the checks each failed, or reasons)     engineAnalysis.ts
   → existing result / cannot-assess screens                         components/
+  → replay with the tracked joints drawn on top (faulty joints red) poseTrack.ts, PoseOverlay.tsx
 ```
 
 | Piece              | Where                                                                   | Notes                                                                                                                                                                                                                             |
