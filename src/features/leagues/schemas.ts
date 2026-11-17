@@ -21,7 +21,7 @@ export const leagueDetailSchema = leagueSchema.extend({
 export const createdLeagueSchema = leagueSchema.extend({ created_at: z.string() });
 export const invitationSchema = z.object({ token: z.string().min(1), expires_at: z.string() });
 export const previewSchema = z.object({ league_id: id, name: z.string(), expires_at: z.string() });
-export const nameSchema = z.string().trim().min(1, 'Enter a league name.').max(150);
+export const nameSchema = z.string().trim().min(1, 'Enter a league name.').max(200);
 export const createSchema = z.object({
   name: nameSchema,
   timezone: z

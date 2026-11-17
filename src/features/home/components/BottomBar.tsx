@@ -52,11 +52,8 @@ export function BottomBar({
             <Pressable
               accessibilityRole="tab"
               aria-selected={tab === item.id}
-
               accessibilityLabel={item.label}
-
               accessibilityState={{ selected: tab === item.id }}
-
               onPress={() => {
                 onSelect(item.id);
               }}

@@ -15,6 +15,7 @@ import { ApiError } from '@/services/apiClient';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
 import { createSchema, invitationToken, nameSchema } from '../schemas';
+import { LeagueRules } from './LeagueRules';
 
 function message(error: unknown) {
   if (error instanceof ApiError) {
@@ -180,6 +181,7 @@ export function LeaguesScreen({
                 <Text style={{ color: p['ink-muted'] }}>
                   Timezone: {detail.data.timezone ?? 'Not set'}
                 </Text>
+                <LeagueRules timezone={detail.data.timezone} />
                 <Text style={{ color: p.ink }}>Members</Text>
                 {detail.data.members.map((member) => (
                   <Text key={member.user_id} style={{ color: p.ink }}>
