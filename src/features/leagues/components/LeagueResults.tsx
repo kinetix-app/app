@@ -1,15 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useRef } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { spacing, textStyles, usePalette } from '@/theme/tokens';
+import { ActivityIndicator, Modal, ScrollView, Text, View } from 'react-native';
+import { radii, shadows, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
+import { LeagueAction, LeagueRankingRow } from './LeagueUI';
 import type { PendingResult } from '../schemas';
 
 export function LeagueResults({
   accountId,
   leagueId,
   active = true,
-}: Readonly<{ accountId: number; leagueId: number; active?: boolean }>) {
+  timezone,
+}: Readonly<{ accountId: number; leagueId: number; active?: boolean; timezone?: string | null }>) {
   const p = usePalette();
   const cache = useQueryClient();
   const acknowledging = useRef(false);
@@ -42,17 +44,19 @@ export function LeagueResults({
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
           Could not load league results.
         </Text>
-        <Pressable
-          accessibilityRole="button"
+        <LeagueAction
+          label="Retry results"
           onPress={() => {
             void query.refetch();
           }}
-        >
-          <Text style={{ color: p.brand }}>Retry results</Text>
-        </Pressable>
+        />
       </View>
     );
   if (!result) return null;
+  const date = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    ...(timezone ? { timeZone: timezone } : {}),
+  });
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => {}}>
       <View
@@ -60,57 +64,62 @@ export function LeagueResults({
         style={{
           flex: 1,
           justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: p.scrim,
           padding: spacing['space-5'],
         }}
       >
-        <ScrollView
-          contentContainerStyle={{
-            backgroundColor: p['surface-100'],
-            padding: spacing['space-5'],
-            gap: spacing['space-3'],
+        <View
+          style={{
+            maxHeight: '90%',
+            width: '100%',
+            maxWidth: 640,
+            alignSelf: 'center',
+            borderRadius: radii['radius-xl'],
+            overflow: 'hidden',
+            backgroundColor: p['surface-200'],
+            boxShadow: shadows()['shadow-pop'],
           }}
         >
-          <Text accessibilityRole="header" style={[textStyles.heading, { color: p.ink }]}>
-            Round result
-          </Text>
-          <Text style={{ color: p.ink }}>
-            {result.start_at} – {result.end_at}
-          </Text>
-          <Text style={{ color: p.ink }}>
-            {losers.length
-              ? `Lowest score: ${losers.map((row) => row.display_name ?? 'Member').join(', ')}`
-              : 'No losing outcome for this round.'}
-          </Text>
-          <Text accessibilityRole="header" style={{ color: p.ink }}>
-            Final standings
-          </Text>
-          {result.standings.map((row) => (
-            <Text key={row.user_id} style={{ color: p.ink }}>
-              #{row.position} {row.display_name ?? 'Member'}: {row.score} points
-            </Text>
-          ))}
-          {acknowledge.isError ? (
-            <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              Could not acknowledge this result. Please try again.
-            </Text>
-          ) : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: acknowledge.isPending }}
-            disabled={acknowledge.isPending}
-            onPress={() => {
-              if (acknowledging.current) return;
-              acknowledging.current = true;
-              acknowledge.mutate(result.id);
+          <ScrollView
+            contentContainerStyle={{
+              padding: spacing['space-5'],
+              gap: spacing['space-3'],
             }}
-            style={{ backgroundColor: p.brand, padding: spacing['space-3'] }}
           >
-            <Text style={{ color: p['on-brand'], textAlign: 'center' }}>
-              {acknowledge.isPending ? 'Saving…' : 'Got it'}
+            <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
+              Round result
             </Text>
-          </Pressable>
-        </ScrollView>
+            <Text style={[textStyles.body, { color: p.ink }]}>
+              {date.format(new Date(result.start_at))} – {date.format(new Date(result.end_at))}
+            </Text>
+            <Text style={[textStyles.body, { color: p.ink }]}>
+              {losers.length
+                ? `Lowest score: ${losers.map((row) => row.display_name ?? 'Member').join(', ')}`
+                : 'No losing outcome for this round.'}
+            </Text>
+            <Text accessibilityRole="header" style={[textStyles.body, { color: p.ink }]}>
+              Final standings
+            </Text>
+            {result.standings.map((row) => (
+              <LeagueRankingRow key={row.user_id} row={row} current={row.user_id === accountId} />
+            ))}
+            {acknowledge.isError ? (
+              <Text accessibilityRole="alert" style={{ color: p.danger }}>
+                Could not acknowledge this result. Please try again.
+              </Text>
+            ) : null}
+            <LeagueAction
+              label={acknowledge.isPending ? 'Saving…' : 'Got it'}
+              variant="primary"
+              disabled={acknowledge.isPending}
+              onPress={() => {
+                if (acknowledging.current) return;
+                acknowledging.current = true;
+                acknowledge.mutate(result.id);
+              }}
+            />
+          </ScrollView>
+        </View>
       </View>
     </Modal>
   );

@@ -56,14 +56,14 @@ const data = standingsSchema.parse({
 
 test('shows exact scores, tied zero members and only the viewer calculation', () => {
   render(<StandingsContent data={data} accountId={1} />);
-  expect(screen.getByText('#1 Alice: 9007199254740993 points')).toBeTruthy();
-  expect(screen.getByText('#2 Bob: 0 points')).toBeTruthy();
-  expect(screen.getByText('#2 Member: 0 points')).toBeTruthy();
+  expect(screen.getByLabelText('#1 Alice: 9007199254740993 points, you')).toBeTruthy();
+  expect(screen.getByLabelText('#2 Bob: 0 points')).toBeTruthy();
+  expect(screen.getByLabelText('#2 Member: 0 points')).toBeTruthy();
   expect(screen.getByText(/Body weight 80.00 kg/)).toBeTruthy();
   expect(screen.queryByText(/Body weight 42.00 kg/)).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'General standings' }));
-  expect(screen.getByText('#1 Alice: 9007199254741000 points')).toBeTruthy();
+  expect(screen.getByLabelText('#1 Alice: 9007199254741000 points, you')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: /Past round:/ }));
-  expect(screen.getByText('#1 Alice: 7 points')).toBeTruthy();
+  expect(screen.getByLabelText('#1 Alice: 7 points, you')).toBeTruthy();
   expect(screen.getByText('No daily contributions yet.')).toBeTruthy();
 });

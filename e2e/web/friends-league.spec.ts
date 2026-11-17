@@ -167,9 +167,9 @@ test('private league create/join, persisted scoring, isolation and independent s
   await expect(page.getByRole('heading', { name: 'Round result', exact: true })).toHaveCount(0);
   expect(await (await request(0, `/leagues/${lid}/results/pending`)).json()).toEqual([]);
   expect(await (await request(1, `/leagues/${lid}/results/pending`)).json()).toHaveLength(1);
-  await expect(page.getByText('#1 League Alice: 20 points', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('#1 League Alice: 20 points, you', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'General standings', exact: true }).first().click();
-  await expect(page.getByText('#1 League Alice: 20 points', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('#1 League Alice: 20 points, you', { exact: true })).toBeVisible();
   await page.reload();
   await signIn(page, 0);
   await page.getByRole('tab', { name: 'League', exact: true }).click();

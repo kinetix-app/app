@@ -10,14 +10,18 @@ const acknowledge = jest.mocked(leaguesApi.acknowledge);
 const results = [1, 2].map((id) => ({
   id,
   round_id: id,
-  start_at: `start-${id}`,
-  end_at: `end-${id}`,
+  start_at: `2026-11-${id === 1 ? '02' : '09'}T00:00:00Z`,
+  end_at: `2026-11-${id === 1 ? '09' : '16'}T00:00:00Z`,
   standings: [
     { user_id: 1, display_name: 'Alice', score: '0', position: 1 },
     { user_id: 2, display_name: 'Bob', score: '0', position: 1 },
   ],
   loser_user_ids: [1, 2],
 }));
+const resultRange = (index: number) => {
+  const date = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+  return `${date.format(new Date(results[index].start_at))} – ${date.format(new Date(results[index].end_at))}`;
+};
 const clients: QueryClient[] = [];
 function makeClient() {
   const client = new QueryClient({
@@ -48,14 +52,14 @@ test('displays oldest result without acknowledging, retries failure, then advanc
   pending.mockResolvedValueOnce(results).mockResolvedValue([results[1]]);
   acknowledge.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
   setup();
-  expect(await screen.findByText('start-1 – end-1')).toBeTruthy();
+  expect(await screen.findByText(resultRange(0))).toBeTruthy();
   expect(screen.getByText('Lowest score: Alice, Bob')).toBeTruthy();
   expect(acknowledge).not.toHaveBeenCalled();
   fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
   expect(await screen.findByRole('alert')).toBeTruthy();
-  expect(screen.getByText('start-1 – end-1')).toBeTruthy();
+  expect(screen.getByText(resultRange(0))).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
-  expect(await screen.findByText('start-2 – end-2')).toBeTruthy();
+  expect(await screen.findByText(resultRange(1))).toBeTruthy();
   expect(acknowledge).toHaveBeenCalledWith(9, 1);
   await waitFor(() => expect(pending).toHaveBeenCalledTimes(2));
 });
@@ -89,7 +93,7 @@ test('does not fetch or display results while the league tab is hidden', async (
       <LeagueResults accountId={1} leagueId={9} active />
     </QueryClientProvider>,
   );
-  expect(await screen.findByText('start-1 – end-1')).toBeTruthy();
+  expect(await screen.findByText(resultRange(0))).toBeTruthy();
   view.rerender(
     <QueryClientProvider client={client}>
       <LeagueResults accountId={1} leagueId={9} active={false} />
