@@ -107,3 +107,22 @@ export function containRect(box: { width: number; height: number }, width: numbe
   const h = height * scale;
   return { left: (box.width - w) / 2, top: (box.height - h) / 2, width: w, height: h };
 }
+
+/**
+ * Joint positions at any playback time. The analysis keeps 15 poses per second; in between, each
+ * joint moves in a straight line from one pose to the next so the replay looks smooth. A joint
+ * missing from either pose keeps the earlier pose's position (or stays hidden).
+ */
+export function pointsAt(track: PoseTrack, time: number): (number | null)[] | null {
+  const i = frameAt(track.t, time);
+  if (i < 0) return null;
+  const a = track.frames[i];
+  const j = i + 1;
+  if (j >= track.t.length || track.t[j] <= track.t[i]) return a;
+  const f = Math.min(1, (time - track.t[i]) / (track.t[j] - track.t[i]));
+  const b = track.frames[j];
+  return a.map((v, k) => {
+    const w = b[k];
+    return v === null || w === null ? v : v + (w - v) * f;
+  });
+}

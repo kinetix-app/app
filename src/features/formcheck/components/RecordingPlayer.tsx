@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Text, View } from 'react-native';
@@ -8,9 +8,6 @@ import { containRect } from '../poseTrack';
 import type { PoseTrack } from '../schemas';
 import { FormCheckScreen } from './FormCheckScreen';
 import { PoseOverlay } from './PoseOverlay';
-
-/** Skeleton refresh rate; the analysis samples poses at 15 fps. */
-const OVERLAY_FPS = 15;
 
 /**
  * Plays the user's own recording, with the joints the analysis tracked drawn on top when they
@@ -30,17 +27,25 @@ export function RecordingPlayer({
   const p = usePalette();
   const player = useVideoPlayer(uri, (value) => {
     value.loop = false;
-    value.timeUpdateEventInterval = 1 / OVERLAY_FPS;
   });
   const { status } = useEvent(player, 'statusChange', { status: player.status });
-  const { currentTime } = useEvent(player, 'timeUpdate', {
-    currentTime: 0,
-    currentLiveTimestamp: null,
-    currentOffsetFromLive: null,
-    bufferedPosition: 0,
-  });
   const [box, setBox] = useState({ width: 0, height: 0 });
   const [showJoints, setShowJoints] = useState(true);
+  // The skeleton follows the video on every screen refresh, not only on the player's time events.
+  const [currentTime, setCurrentTime] = useState(0);
+  const tracking = Boolean(pose) && showJoints;
+  useEffect(() => {
+    if (!tracking) return;
+    let frameId = 0;
+    const tick = () => {
+      const time = player.currentTime;
+      if (typeof time === 'number')
+        setCurrentTime((previous) => (previous === time ? previous : time));
+      frameId = requestAnimationFrame(tick);
+    };
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [player, tracking]);
   const frame = pose && box.width && box.height ? containRect(box, pose.width, pose.height) : null;
   const hasFaults = pose?.reps.some((rep) => rep.faultJoints.length > 0) ?? false;
 

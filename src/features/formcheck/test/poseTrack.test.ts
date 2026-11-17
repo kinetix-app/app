@@ -1,6 +1,6 @@
 import { analyze, parseSpec } from '../engine';
 import { load, toSeries } from '../engine/test/loadFixtures';
-import { buildPoseTrack, containRect, failed, frameAt, TRACK_JOINTS } from '../poseTrack';
+import { buildPoseTrack, containRect, failed, frameAt, pointsAt, TRACK_JOINTS } from '../poseTrack';
 import { poseTrackSchema } from '../schemas';
 
 function track(name: string) {
@@ -61,5 +61,24 @@ describe('pose track', () => {
       width: 225,
       height: 400,
     });
+  });
+});
+
+describe('pointsAt', () => {
+  const pose = {
+    width: 100,
+    height: 100,
+    joints: ['a', 'b'],
+    t: [0, 0.1],
+    frames: [
+      [0, 0, 0.5, 0.5],
+      [1, 0.5, null, null],
+    ],
+    reps: [],
+  };
+  it('moves joints in a straight line between analysed poses', () => {
+    expect(pointsAt(pose, 0.05)).toEqual([0.5, 0.25, 0.5, 0.5]);
+    expect(pointsAt(pose, 0.2)).toEqual([1, 0.5, null, null]);
+    expect(pointsAt(pose, -1)).toBeNull();
   });
 });

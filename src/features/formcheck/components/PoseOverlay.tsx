@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { usePalette } from '@/theme/tokens';
-import { BONES, containRect, frameAt } from '../poseTrack';
+import { BONES, containRect, pointsAt } from '../poseTrack';
 import type { PoseTrack } from '../schemas';
 
 const DOT = 8;
@@ -17,9 +17,8 @@ export function PoseOverlay({
   box,
 }: Readonly<{ track: PoseTrack; time: number; box: { width: number; height: number } }>) {
   const p = usePalette();
-  const index = frameAt(track.t, time);
-  if (index < 0 || !box.width || !box.height) return null;
-  const frame = track.frames[index];
+  const frame = pointsAt(track, time);
+  if (!frame || !box.width || !box.height) return null;
   const rect = containRect(box, track.width, track.height);
   const rep = track.reps.find((r) => time >= r.start && time <= r.end);
   const faulty = new Set(rep?.faultJoints ?? []);
