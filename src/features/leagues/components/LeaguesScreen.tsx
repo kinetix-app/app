@@ -145,6 +145,7 @@ export function LeaguesScreen({
     </View>
   );
   function back() {
+    refresh();
     setSelected(null);
     setMode('list');
     setName('');
