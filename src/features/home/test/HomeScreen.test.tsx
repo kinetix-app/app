@@ -125,7 +125,9 @@ test('home shows profile and an optional nutrition entry while keeping one botto
   expect(screen.queryByText('Sign out')).toBeNull();
   expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Open profile' })).toBeTruthy();
-  expect(screen.getByRole('tab', { name: 'League' }).props.accessibilityState.disabled).toBe(true);
+  expect(screen.getByRole('tab', { name: 'League' }).props.accessibilityState.disabled).not.toBe(
+    true,
+  );
   expect(screen.getByText('Change objective')).toBeTruthy();
   expect(screen.getByText('Edit nutrition goal')).toBeTruthy();
   expect(screen.getAllByLabelText('Main navigation')).toHaveLength(1);

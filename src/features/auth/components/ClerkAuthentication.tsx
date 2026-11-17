@@ -11,8 +11,10 @@ import { ClerkSignInScreen } from './ClerkSignInScreen';
 
 export default function ClerkAuthentication({
   initialTab = 'home',
+  initialInvitation,
 }: Readonly<{
-  initialTab?: 'home' | 'nutrition';
+  initialTab?: 'home' | 'nutrition' | 'league';
+  initialInvitation?: string;
 }>) {
   const publishableKey = getClerkPublishableKey();
   if (!publishableKey) {
@@ -26,7 +28,7 @@ export default function ClerkAuthentication({
   }
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkSignInScreen initialTab={initialTab} />
+      <ClerkSignInScreen initialTab={initialTab} initialInvitation={initialInvitation} />
     </ClerkProvider>
   );
 }

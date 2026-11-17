@@ -1,0 +1,50 @@
+import { z } from 'zod/v4';
+
+const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+export const leagueSchema = z.object({
+  id,
+  name: z.string(),
+  timezone: z.string().nullable(),
+  role: z.string().nullable(),
+});
+export const leagueDetailSchema = leagueSchema.extend({
+  created_at: z.string(),
+  members: z.array(
+    z.object({
+      user_id: id,
+      display_name: z.string().nullable(),
+      role: z.string().nullable(),
+      joined_at: z.string().nullable(),
+    }),
+  ),
+});
+export const createdLeagueSchema = leagueSchema.extend({ created_at: z.string() });
+export const invitationSchema = z.object({ token: z.string().min(1), expires_at: z.string() });
+export const previewSchema = z.object({ league_id: id, name: z.string(), expires_at: z.string() });
+export const nameSchema = z.string().trim().min(1, 'Enter a league name.').max(150);
+export const createSchema = z.object({
+  name: nameSchema,
+  timezone: z
+    .string()
+    .trim()
+    .min(1, 'Enter a timezone.')
+    .refine((value) => {
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: value });
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'Enter a valid IANA timezone.'),
+});
+export const leagueListSchema = z.array(leagueSchema);
+export function invitationToken(value: string) {
+  const input = value.trim();
+  if (!input) return '';
+  try {
+    const url = new URL(input);
+    return decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() ?? '');
+  } catch {
+    return input;
+  }
+}

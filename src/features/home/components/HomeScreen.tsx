@@ -21,6 +21,7 @@ import {
   type ProfilePanel,
   SetupButton,
 } from '@/features/accounts';
+import { LeaguesScreen } from '@/features/leagues';
 import { FormCheckProvider } from '@/features/formcheck';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { spacing, usePalette } from '@/theme/tokens';
@@ -46,15 +47,22 @@ const profileBackLabels: Record<ProfileOrigin, string> = {
   home: 'Back to home',
   workout: 'Back to workout',
   nutrition: 'Back to nutrition',
+  league: 'Back to leagues',
 };
 
 type HomeNavigationProps = Readonly<{
   account: Account;
   initialTab: HomeTab;
   onAccount: (account: Account) => void;
+  initialInvitation?: string;
 }>;
 
-function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps) {
+function HomeNavigation({
+  account,
+  initialTab,
+  onAccount,
+  initialInvitation,
+}: HomeNavigationProps) {
   const accountId = account.id;
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
   const [nutritionOrigin, setNutritionOrigin] = useState<'profile' | 'nutrition'>('profile');
@@ -192,6 +200,8 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
         />
       );
     if (item === 'profile') return renderProfilePanel();
+    if (item === 'league')
+      return <LeaguesScreen accountId={accountId} initialInvitation={initialInvitation} />;
     if (item === 'workout')
       return <TrainingWorkspace accountId={accountId} onEditingChange={setRoutineEditing} />;
     return (
@@ -237,9 +247,16 @@ type AccountGateProps = Readonly<{
   onSignOut: () => void;
   initialTab: HomeTab;
   initialAccount?: Account;
+  initialInvitation?: string;
 }>;
 
-function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: AccountGateProps) {
+function AccountGate({
+  accountId,
+  onSignOut,
+  initialTab,
+  initialAccount,
+  initialInvitation,
+}: AccountGateProps) {
   const p = usePalette();
   const cache = useQueryClient();
   const query = useQuery({
@@ -297,7 +314,12 @@ function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: Accou
   return (
     <SessionProvider accountId={accountId} onSignOut={onSignOut}>
       <FormCheckHost accountId={accountId}>
-        <HomeNavigation account={account} initialTab={initialTab} onAccount={saved} />
+        <HomeNavigation
+          account={account}
+          initialTab={initialTab}
+          initialInvitation={initialInvitation}
+          onAccount={saved}
+        />
       </FormCheckHost>
     </SessionProvider>
   );
@@ -307,6 +329,7 @@ type PrivateHomeProps = Readonly<{
   onSignOut: () => void;
   initialTab: HomeTab;
   initialAccount?: Account;
+  initialInvitation?: string;
 }>;
 
 function PrivateHome(props: PrivateHomeProps) {
@@ -324,6 +347,7 @@ type HomeScreenProps = Readonly<{
   onSignOut: () => void;
   initialTab?: HomeTab;
   initialAccount?: Account;
+  initialInvitation?: string;
 }>;
 
 export function HomeScreen({
@@ -331,6 +355,7 @@ export function HomeScreen({
   onSignOut,
   initialTab = 'home',
   initialAccount,
+  initialInvitation,
 }: HomeScreenProps) {
   return (
     <PrivateHome
@@ -339,6 +364,7 @@ export function HomeScreen({
       onSignOut={onSignOut}
       initialTab={initialTab}
       initialAccount={initialAccount}
+      initialInvitation={initialInvitation}
     />
   );
 }
