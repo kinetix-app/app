@@ -94,3 +94,17 @@ describe('toFormAnalysis', () => {
     expect(genericReasons.low_confidence.fixes.length).toBeGreaterThan(0);
   });
 });
+
+describe('strengths', () => {
+  it('are the measured criteria that no rep failed', () => {
+    const result = analyzeFixture('synthetic-push_up');
+    const analysis = toFormAnalysis(result, profileById('push-up')!, recording, new Date(0));
+    if (analysis.status !== 'assessed' || !result.assessable) throw new Error('expected assessed');
+    const failedSomewhere = new Set(analysis.reps.flatMap((rep) => rep.issues));
+    expect(analysis.strengths?.length).toBeGreaterThan(0);
+    for (const id of analysis.strengths ?? []) {
+      expect(failedSomewhere.has(id)).toBe(false);
+      expect(result.reps.some((rep) => rep.criteria[id].sub !== null)).toBe(true);
+    }
+  });
+});

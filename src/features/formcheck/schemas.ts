@@ -51,6 +51,8 @@ export const formAnalysisSchema = z.discriminatedUnion('status', [
     reps: z.array(repResultSchema).min(1),
     /** 0–100 set score from the technique engine; absent in demo and older results. */
     score: z.number().min(0).max(100).optional(),
+    /** Checks that were measured and passed on every rep, to praise; absent in older results. */
+    strengths: z.array(z.string()).optional(),
   }),
   z.object({
     ...analysisBase,

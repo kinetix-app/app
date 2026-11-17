@@ -1,3 +1,4 @@
+import { bundledSpecs } from './engine';
 import type { FormCheckProfile } from './profiles';
 import { genericReasons, unknownReason, type NotAssessableReason } from './reasons';
 import type { FormAnalysis } from './schemas';
@@ -18,8 +19,17 @@ export type AnalysisView =
       issues: IssueView[];
       /** Advice for the next set, taken from the check affecting most repetitions. */
       tip: string | null;
+      /** 0–100 technique score, when the engine produced one. */
+      score: number | null;
+      /** What went well: checks passed on every rep (at most three). */
+      praise: string[];
+      /** Headline when no rep had an issue. */
+      verdict: string;
     }
   | { kind: 'not_assessable'; reasons: (NotAssessableReason & { id: string })[] };
+
+const MAX_PRAISE = 3;
+const GREAT_SCORE = 90;
 
 /** "4", "4 and 5", "1, 3 and 4". */
 export function listReps(reps: number[]): string {
@@ -55,6 +65,12 @@ export function buildAnalysisView(profile: FormCheckProfile, analysis: FormAnaly
       };
     })
     .sort((a, b) => b.reps.length - a.reps.length);
+  const cues = bundledSpecs[profile.specId]?.cues ?? {};
+  const praise = (analysis.strengths ?? [])
+    .map((id) => checks.get(id)?.praise ?? cues[id]?.good.en)
+    .filter((text): text is string => Boolean(text))
+    .slice(0, MAX_PRAISE);
+  const score = analysis.score ?? null;
   const first = (rep: { issues: string[] }) => checks.get(rep.issues[0])?.repLabel ?? 'Check';
   return {
     kind: 'assessed',
@@ -62,9 +78,12 @@ export function buildAnalysisView(profile: FormCheckProfile, analysis: FormAnaly
     reps: analysis.reps.map((rep) => ({
       index: rep.index,
       ok: rep.issues.length === 0,
-      label: rep.issues.length === 0 ? 'OK' : first(rep),
+      label: rep.issues.length === 0 ? 'Good' : first(rep),
     })),
     issues,
     tip: issues.length ? (checks.get(issues[0].id)?.tip ?? null) : null,
+    score,
+    praise,
+    verdict: score !== null && score >= GREAT_SCORE ? 'Great set' : 'Solid set',
   };
 }

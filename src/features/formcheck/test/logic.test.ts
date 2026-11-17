@@ -37,7 +37,7 @@ test('groups failed checks, orders them by reach and offers the tip of the main 
   expect(view.issues.map((issue) => issue.id)).toEqual(['hips_first', 'depth']);
   expect(view.issues[0].title).toBe('Reps 2, 3 and 5 leaned too far forward');
   expect(view.issues[1].title).toBe('Reps 3 and 4 stopped above parallel');
-  expect(view.reps.map((rep) => rep.label)).toEqual(['OK', 'Lean', 'High', 'High', 'Lean']);
+  expect(view.reps.map((rep) => rep.label)).toEqual(['Good', 'Lean', 'High', 'High', 'Lean']);
   expect(view.tip).toBe(squat.checks[1].tip);
 });
 
@@ -116,4 +116,30 @@ test('demo analyzer cycles scenarios and returns valid results', async () => {
   expect(await run()).toBeInstanceOf(Error);
   expect(analyzer.isDemo).toBe(true);
   jest.useRealTimers();
+});
+
+test('praises what passed on every rep and calls a clean high-scoring set great', () => {
+  const analysis: FormAnalysis = {
+    ...base,
+    status: 'assessed',
+    score: 96,
+    strengths: ['depth', 'lockout', 'tempo', 'heels'],
+    reps: [
+      { index: 1, issues: [] },
+      { index: 2, issues: [] },
+    ],
+  };
+  const view = buildAnalysisView(squat, analysis);
+  if (view.kind !== 'assessed') throw new Error('expected an assessed view');
+  expect(view.verdict).toBe('Great set');
+  expect(view.score).toBe(96);
+  expect(view.praise).toEqual([
+    'You hit parallel on every rep.',
+    'You stood all the way up on every rep.',
+    'You lowered with control on every rep.',
+  ]);
+  const solid = buildAnalysisView(squat, { ...analysis, score: 80, strengths: undefined });
+  if (solid.kind !== 'assessed') throw new Error('expected an assessed view');
+  expect(solid.verdict).toBe('Solid set');
+  expect(solid.praise).toEqual([]);
 });

@@ -24,6 +24,21 @@ export function DemoNotice() {
   );
 }
 
+/** Things the user did well, each with a check mark. */
+function PraiseList({ items }: Readonly<{ items: string[] }>) {
+  const p = usePalette();
+  return (
+    <View style={{ gap: spacing['space-2'] }}>
+      {items.map((item) => (
+        <View key={item} style={[ui.row, { alignItems: 'flex-start' }]}>
+          <Feather name="check" size={16} color={p.success} style={{ marginTop: 2 }} />
+          <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>{item}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 /** Reps, findings and advice for an assessed set. Nothing here is specific to one exercise. */
 export function ResultScreen({
   view,
@@ -71,6 +86,15 @@ export function ResultScreen({
           {view.repCount === 1 ? 'rep detected' : 'reps detected'}
         </Text>
       </View>
+      {view.score !== null ? (
+        <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+          Technique score{' '}
+          <Text style={{ color: p.ink, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
+            {Math.round(view.score)}
+          </Text>{' '}
+          / 100
+        </Text>
+      ) : null}
       <View style={ui.gap}>
         <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>REP BY REP</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
@@ -99,28 +123,40 @@ export function ResultScreen({
         </View>
       </View>
       {view.issues.length ? (
-        view.issues.map((issue) => (
-          <View key={issue.id} style={[ui.card, { backgroundColor: p['surface-200'] }]}>
-            <Text style={[textStyles.overline, { color: p.warning }]}>
-              ISSUE · {issue.label.toUpperCase()}
-            </Text>
-            <Text style={[textStyles['title-md'], { color: p.ink }]}>{issue.title}</Text>
-            {issue.explanation ? (
-              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                {issue.explanation}
+        <>
+          {view.praise.length ? (
+            <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
+              <Text style={[textStyles.overline, { color: p.success }]}>WHAT WENT WELL</Text>
+              <PraiseList items={view.praise} />
+            </View>
+          ) : null}
+          {view.issues.map((issue) => (
+            <View key={issue.id} style={[ui.card, { backgroundColor: p['surface-200'] }]}>
+              <Text style={[textStyles.overline, { color: p.warning }]}>
+                ISSUE · {issue.label.toUpperCase()}
               </Text>
-            ) : null}
-          </View>
-        ))
+              <Text style={[textStyles['title-md'], { color: p.ink }]}>{issue.title}</Text>
+              {issue.explanation ? (
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                  {issue.explanation}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+        </>
       ) : (
         <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
           <View style={ui.row}>
             <Feather name="check-circle" size={20} color={p.success} />
-            <Text style={[textStyles['title-md'], { color: p.ink }]}>No issues found</Text>
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>{view.verdict}</Text>
           </View>
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            Every rep looked fine. Keep it up.
-          </Text>
+          {view.praise.length ? (
+            <PraiseList items={view.praise} />
+          ) : (
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+              Every rep looked good. Keep it up.
+            </Text>
+          )}
         </View>
       )}
       {view.tip ? (

@@ -17,6 +17,15 @@ function reasonIds(result: Extract<EngineResult, { assessable: false }>): string
   return [map[result.reason]];
 }
 
+/** Criteria measured on at least one rep and failed on none, in spec order. */
+function strengths(result: Extract<EngineResult, { assessable: true }>): string[] {
+  const ids = Object.keys(result.reps[0]?.criteria ?? {});
+  return ids.filter((id) => {
+    const per = result.reps.map((rep) => rep.criteria[id]);
+    return per.every((c) => !c?.disabled && !failed(c)) && per.some((c) => c && c.sub !== null);
+  });
+}
+
 /**
  * Turns a technique-engine result into the app's FormAnalysis. A rep's issues are the criteria it
  * failed (sub-score below the fault line); disabled criteria never appear.
@@ -40,6 +49,7 @@ export function toFormAnalysis(
     source: { engine: ENGINE_VERSION, spec: result.exercise, specVersion: result.spec_version },
     status: 'assessed',
     score: result.feedback.score,
+    strengths: strengths(result),
     reps: result.reps.map((rep) => ({
       index: rep.rep,
       issues: Object.entries(rep.criteria)

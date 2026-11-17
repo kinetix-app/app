@@ -15,6 +15,8 @@ export type FormCheck = {
   repLabel: string;
   /** Advice for the next set. */
   tip: string;
+  /** Said when the check passed on every rep; defaults to the spec's positive cue. */
+  praise?: string;
 };
 
 export type FormCheckProfile = {
