@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
@@ -109,6 +110,13 @@ export function RecordScreen({
     }
     onFinish({ uri: video.uri, durationSeconds: duration });
   }
+  /** Development only: analyze an existing video instead of recording one. */
+  async function pickVideo() {
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'] });
+    const asset = picked.canceled ? undefined : picked.assets[0];
+    if (!asset || cancelled.current) return;
+    onFinish({ uri: asset.uri, durationSeconds: Math.round((asset.duration ?? 0) / 1000) });
+  }
   const chip = {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -152,6 +160,15 @@ export function RecordScreen({
               </Text>
             ) : null}
             <Button title="Start recording" icon="video" onPress={start} />
+            {__DEV__ ? (
+              <Button
+                title="Use a video"
+                icon="upload"
+                secondary
+                accessibilityLabel="Analyze a video file (development only)"
+                onPress={() => void pickVideo()}
+              />
+            ) : null}
           </>
         )
       }
