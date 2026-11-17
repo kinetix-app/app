@@ -1,7 +1,7 @@
 import { ENGINE_VERSION, type EngineResult, type UnassessableReason } from './engine';
-import { FAULT_BELOW } from './engine/scoring';
+import { failed } from './poseTrack';
 import type { FormCheckProfile } from './profiles';
-import type { FormAnalysis, Recording } from './schemas';
+import type { FormAnalysis, PoseTrack, Recording } from './schemas';
 
 /** Engine reasons → the app's not-assessable reason ids (wording lives in reasons.ts). */
 function reasonIds(result: Extract<EngineResult, { assessable: false }>): string[] {
@@ -26,11 +26,13 @@ export function toFormAnalysis(
   profile: FormCheckProfile,
   recording: Recording,
   analyzedAt: Date = new Date(),
+  pose?: PoseTrack,
 ): FormAnalysis {
   const base = {
     profileId: profile.id,
     analyzedAt: analyzedAt.toISOString(),
     durationSeconds: recording.durationSeconds,
+    ...(pose ? { pose } : {}),
   };
   if (!result.assessable) return { ...base, status: 'not_assessable', reasons: reasonIds(result) };
   return {
@@ -41,7 +43,7 @@ export function toFormAnalysis(
     reps: result.reps.map((rep) => ({
       index: rep.rep,
       issues: Object.entries(rep.criteria)
-        .filter(([, c]) => !c.disabled && c.sub !== null && c.sub < FAULT_BELOW)
+        .filter(([, c]) => failed(c))
         .map(([id]) => id),
     })),
   };

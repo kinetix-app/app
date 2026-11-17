@@ -14,6 +14,21 @@ export const repResultSchema = z.object({
 });
 export type RepResult = z.infer<typeof repResultSchema>;
 
+/**
+ * Landmarks of the analysed set, kept so the replay can draw the skeleton. Coordinates are 0–1 of
+ * the video frame; `frames[i]` holds x, y for each of `joints` (null where the joint was not seen).
+ */
+export const poseTrackSchema = z.object({
+  width: z.number().positive(),
+  height: z.number().positive(),
+  joints: z.array(z.string()),
+  t: z.array(z.number()),
+  frames: z.array(z.array(z.number().nullable())),
+  /** Each rep's time window and the joints involved in its faults (empty: no fault). */
+  reps: z.array(z.object({ start: z.number(), end: z.number(), faultJoints: z.array(z.string()) })),
+});
+export type PoseTrack = z.infer<typeof poseTrackSchema>;
+
 const analysisBase = {
   profileId: z.string(),
   analyzedAt: z.iso.datetime({ offset: true }),
@@ -22,6 +37,8 @@ const analysisBase = {
   source: z
     .object({ engine: z.string(), spec: z.string(), specVersion: z.number().int() })
     .optional(),
+  /** Absent in demo and older results. */
+  pose: poseTrackSchema.optional(),
 };
 /**
  * Result of analysing one recorded set. Ids refer to a form-check profile: the analyzer says

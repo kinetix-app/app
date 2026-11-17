@@ -4,6 +4,7 @@ import { createDemoAnalyzer } from './demoAnalyzer';
 import { analyze, bundledSpecs } from './engine';
 import { toFormAnalysis } from './engineAnalysis';
 import { createPoseSource, type PoseSource } from './pose/poseSource';
+import { buildPoseTrack } from './poseTrack';
 
 /**
  * Real form analysis on the device: MediaPipe landmarks from the recording, then the technique
@@ -31,7 +32,10 @@ export function createOnDeviceAnalyzer({
       const series = await poseSource.extract({ uri: recording.uri, signal });
       signal?.throwIfAborted();
       // The app's copy is English; the engine's own texts are not shown.
-      return toFormAnalysis(analyze(series, specs[profile.specId], 'en'), profile, recording);
+      const spec = specs[profile.specId];
+      const result = analyze(series, spec, 'en');
+      const pose = buildPoseTrack(series, result, spec);
+      return toFormAnalysis(result, profile, recording, new Date(), pose);
     },
   };
 }
