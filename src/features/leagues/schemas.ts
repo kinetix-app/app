@@ -48,3 +48,42 @@ export function invitationToken(value: string) {
     return input;
   }
 }
+
+const integerString = z.string().regex(/^\d+$/);
+const decimalString = z.string().regex(/^\d+(?:\.\d+)?$/);
+const standingSchema = z.object({
+  user_id: id,
+  display_name: z.string().nullable(),
+  score: integerString,
+  position: z.number().int().positive(),
+});
+export const standingsSchema = z.object({
+  timezone: z.string(),
+  current_round_id: id,
+  rounds: z.array(
+    z.object({
+      id,
+      start_at: z.string(),
+      end_at: z.string(),
+      standings: z.array(standingSchema),
+      contributions: z.array(
+        z.object({
+          user_id: id,
+          local_day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          score: integerString,
+          calculation: z
+            .object({
+              session_id: id,
+              volume_kg_reps: decimalString,
+              duration_us: integerString,
+              body_weight_kg: decimalString,
+              formula_version: z.string(),
+            })
+            .optional(),
+        }),
+      ),
+    }),
+  ),
+  general: z.array(standingSchema),
+});
+export type Standings = z.infer<typeof standingsSchema>;

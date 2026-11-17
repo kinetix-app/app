@@ -7,6 +7,7 @@ import {
   leagueListSchema,
   nameSchema,
   previewSchema,
+  standingsSchema,
 } from './schemas';
 
 export const leaguesApi = {
@@ -14,6 +15,8 @@ export const leaguesApi = {
     apiClient.get('/api/v1/leagues', { schema: leagueListSchema, signal }),
   detail: (id: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/leagues/${id}`, { schema: leagueDetailSchema, signal }),
+  standings: (id: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/leagues/${id}/standings`, { schema: standingsSchema, signal }),
   create: (name: string, timezone: string) =>
     apiClient.post('/api/v1/leagues', createSchema.parse({ name, timezone }), {
       schema: createdLeagueSchema,

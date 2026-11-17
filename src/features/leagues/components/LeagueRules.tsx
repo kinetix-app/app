@@ -16,14 +16,15 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
         Missing or non-positive inputs earn no credit.
       </Text>
       <Text style={{ color: p.ink }}>
-        A workout must start at or after you join and end and be submitted while its round is open.
-        Each day only your highest rounded score counts. Ties choose the earliest completion, then
-        the lowest workout ID. The same workout can count in more than one league.
+        Only gym workouts count. A workout must start at or after you join and end and be submitted
+        while its round is open. Each day only your highest rounded score counts. Ties choose the
+        earliest completion, then the lowest workout ID. The same workout can count in more than one
+        league.
       </Text>
       <Text style={{ color: p.ink }}>
-        Days and rounds use this league’s timezone: {timezone ?? 'not set for this older league'}. A
-        round runs from Monday 00:00 inclusive to the next Monday 00:00 exclusive, including
-        daylight-saving changes.
+        The workout start determines its day in this league’s timezone:{' '}
+        {timezone ?? 'not set for this older league'}. A round runs from Monday 00:00 inclusive to
+        the next Monday 00:00 exclusive, including daylight-saving changes.
       </Text>
       <Text style={{ color: p.ink }}>
         General standings sum all rounds, including the current round. Equal totals share a rank.
