@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { leaguesApi } from '../api';
 import { LeagueResults } from '../components/LeagueResults';
@@ -18,18 +18,28 @@ const results = [1, 2].map((id) => ({
   ],
   loser_user_ids: [1, 2],
 }));
-function setup(
-  accountId = 1,
-  client = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
-  }),
-) {
+const clients: QueryClient[] = [];
+function makeClient() {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { retry: false, gcTime: Infinity },
+    },
+  });
+  clients.push(client);
+  return client;
+}
+function setup(accountId = 1, client = makeClient()) {
   return render(
     <QueryClientProvider client={client}>
       <LeagueResults accountId={accountId} leagueId={9} />
     </QueryClientProvider>,
   );
 }
+afterEach(() => {
+  cleanup();
+  clients.splice(0).forEach((client) => client.clear());
+});
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -47,18 +57,20 @@ test('displays oldest result without acknowledging, retries failure, then advanc
   fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
   expect(await screen.findByText('start-2 – end-2')).toBeTruthy();
   expect(acknowledge).toHaveBeenCalledWith(9, 1);
+  await waitFor(() => expect(pending).toHaveBeenCalledTimes(2));
 });
 
 test('uses separate account keys and shows a round with no loser', async () => {
   pending.mockResolvedValueOnce([{ ...results[0], loser_user_ids: [] }]).mockResolvedValueOnce([]);
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
-  });
+  const client = makeClient();
   const first = setup(1, client);
   expect(await screen.findByText('No losing outcome for this round.')).toBeTruthy();
   first.unmount();
   setup(2, client);
-  await waitFor(() => expect(pending).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(client.getQueryState(['leagues', 2, 9, 'results', 'pending'])?.status).toBe('success'),
+  );
+  expect(pending).toHaveBeenCalledTimes(2);
   expect(screen.queryByText('Round result')).toBeNull();
   expect(acknowledge).not.toHaveBeenCalled();
 });
