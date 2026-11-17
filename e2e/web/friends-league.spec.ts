@@ -243,7 +243,14 @@ test('private league create/join, persisted scoring, isolation and independent s
   prepare(lid, true);
   await page.getByRole('button', { name: 'Back to league', exact: true }).click();
   await page.getByRole('button', { name: 'Back to leagues' }).click();
-  await page.getByRole('button', { name: `${name} renamed`, exact: true }).click();
+  const aliceCard = page.getByRole('button', { name: `${name} renamed`, exact: true });
+  await expect(aliceCard.getByText('#1 this week', { exact: true })).toBeVisible();
+  await expect(aliceCard.getByText('2 members', { exact: true })).toBeVisible();
+  await expect(
+    aliceCard.getByRole('img', { name: `${name} renamed league picture`, exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: '.codex/artifacts/previews/league-list.png' });
+  await aliceCard.click();
   await expect(page.getByRole('heading', { name: 'Round result', exact: true })).toBeVisible();
   const pendingA = await (await request(0, `/leagues/${lid}/results/pending`)).json();
   expect(pendingA).toHaveLength(1);
@@ -258,7 +265,10 @@ test('private league create/join, persisted scoring, isolation and independent s
   await page.reload();
   await signIn(page, 0);
   await page.getByRole('tab', { name: 'League', exact: true }).click();
-  await page.getByRole('button', { name: `${name} renamed`, exact: true }).click();
+  const reloadedCard = page.getByRole('button', { name: `${name} renamed`, exact: true });
+  await expect(reloadedCard.getByText('#1 this week', { exact: true })).toBeVisible();
+  await expect(reloadedCard.getByText('2 members', { exact: true })).toBeVisible();
+  await reloadedCard.click();
   await expect(page.getByRole('heading', { name: 'Standings', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Round result', exact: true })).toHaveCount(0);
   await expect(
@@ -295,7 +305,10 @@ test('private league create/join, persisted scoring, isolation and independent s
   expect((await (await request(0, `/leagues/${lid}`)).json()).picture_url).toBeNull();
   await bob.getByRole('button', { name: 'Back to league', exact: true }).click();
   await bob.getByRole('button', { name: 'Back to leagues' }).click();
-  await bob.getByRole('button', { name: `${name} renamed`, exact: true }).click();
+  const bobCard = bob.getByRole('button', { name: `${name} renamed`, exact: true });
+  await expect(bobCard.getByText('#2 this week', { exact: true })).toBeVisible();
+  await expect(bobCard.getByText('2 members', { exact: true })).toBeVisible();
+  await bobCard.click();
   await expect(bob.getByRole('heading', { name: 'Round result', exact: true })).toBeVisible();
   await bob.getByRole('button', { name: 'Got it', exact: true }).click();
   await expect(bob.getByRole('heading', { name: 'Round result', exact: true })).toHaveCount(0);

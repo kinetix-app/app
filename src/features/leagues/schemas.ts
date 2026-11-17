@@ -49,7 +49,11 @@ export const createSchema = z.object({
       }
     }, 'Enter a valid IANA timezone.'),
 });
-export const leagueListSchema = z.array(leagueSchema);
+export const leagueListItemSchema = leagueSchema.extend({
+  member_count: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  current_week_position: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
+});
+export const leagueListSchema = z.array(leagueListItemSchema);
 export function invitationToken(value: string) {
   const input = value.trim();
   if (!input) return '';

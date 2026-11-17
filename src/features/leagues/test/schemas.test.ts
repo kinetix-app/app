@@ -4,6 +4,7 @@ import {
   leagueDetailSchema,
   leaguePicturePathSchema,
   memberPictureSchema,
+  leagueListItemSchema,
 } from '../schemas';
 
 describe('league input and responses', () => {
@@ -42,4 +43,27 @@ test('private league and member images only accept their protected relative path
   );
   expect(memberPictureSchema.safeParse('/api/v1/me/profile/picture').success).toBe(false);
   expect(memberPictureSchema.safeParse('http://example.com/image.jpg').success).toBe(false);
+});
+
+test('list summaries require valid weekly rank and member count without changing detail responses', () => {
+  const summary = {
+    id: 1,
+    name: 'Friends',
+    timezone: 'Europe/Madrid',
+    role: 'member',
+    picture_url: null,
+    member_count: 8,
+    current_week_position: 2,
+  };
+  expect(leagueListItemSchema.parse(summary).current_week_position).toBe(2);
+  expect(leagueListItemSchema.safeParse({ ...summary, current_week_position: null }).success).toBe(
+    true,
+  );
+  expect(leagueListItemSchema.safeParse({ ...summary, current_week_position: 0 }).success).toBe(
+    false,
+  );
+  expect(leagueListItemSchema.safeParse({ ...summary, member_count: -1 }).success).toBe(false);
+  expect(leagueListItemSchema.safeParse({ ...summary, member_count: undefined }).success).toBe(
+    false,
+  );
 });

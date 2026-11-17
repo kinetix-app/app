@@ -46,7 +46,11 @@ export function LeaguesScreen({
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [invite, setInvite] = useState('');
-  const list = useQuery({ queryKey: key, queryFn: ({ signal }) => leaguesApi.list(signal) });
+  const list = useQuery({
+    queryKey: key,
+    queryFn: ({ signal }) => leaguesApi.list(signal),
+    enabled: active,
+  });
   const detail = useQuery({
     queryKey: [...key, selected],
     queryFn: ({ signal }) => leaguesApi.detail(selected!, signal),
@@ -462,6 +466,7 @@ export function LeaguesScreen({
                     key={league.id}
                     accessibilityRole="button"
                     accessibilityLabel={league.name}
+                    accessibilityHint={`${league.current_week_position === null ? 'Weekly rank unavailable' : `Your position this week is ${league.current_week_position}`}, ${league.member_count} ${league.member_count === 1 ? 'member' : 'members'}. Opens league standings.`}
                     onPress={() => {
                       setInformation(false);
                       setSelected(league.id);
@@ -481,10 +486,40 @@ export function LeaguesScreen({
                           <Text style={[textStyles['title-md'], { color: p.ink }]}>
                             {league.name}
                           </Text>
-                          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                            {league.role === 'admin' ? 'Admin' : 'Member'} ·{' '}
-                            {league.timezone ?? 'Timezone not set'}
-                          </Text>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              flexWrap: 'wrap',
+                              columnGap: spacing['space-3'],
+                              rowGap: spacing['space-1'],
+                            }}
+                          >
+                            <Text
+                              style={[
+                                textStyles['body-sm'],
+                                {
+                                  color:
+                                    league.current_week_position === null
+                                      ? p['ink-muted']
+                                      : p['brand-ink'],
+                                  fontVariant: ['tabular-nums'],
+                                },
+                              ]}
+                            >
+                              {league.current_week_position === null
+                                ? 'Weekly rank unavailable'
+                                : `#${league.current_week_position} this week`}
+                            </Text>
+                            <Text
+                              style={[
+                                textStyles['body-sm'],
+                                { color: p['ink-muted'], fontVariant: ['tabular-nums'] },
+                              ]}
+                            >
+                              {league.member_count}{' '}
+                              {league.member_count === 1 ? 'member' : 'members'}
+                            </Text>
+                          </View>
                         </View>
                         <Ionicons name="chevron-forward" size={20} color={p['ink-muted']} />
                       </View>

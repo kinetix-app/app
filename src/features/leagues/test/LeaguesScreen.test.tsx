@@ -12,7 +12,7 @@ jest.mock('../components/LeagueStandings', () => ({
   LeagueStandings: () => <MockText>Standings content</MockText>,
 }));
 const clients: QueryClient[] = [];
-function setup(role: 'admin' | 'member') {
+function setup(role: 'admin' | 'member', position: number | null = 2, memberCount = 2) {
   const league = leagueDetailSchema.parse({
     id: 9,
     name: 'Early birds',
@@ -25,7 +25,9 @@ function setup(role: 'admin' | 'member') {
       { user_id: 2, display_name: 'Sam', role: 'member', joined_at: null },
     ],
   });
-  jest.mocked(leaguesApi.list).mockResolvedValue([league]);
+  jest
+    .mocked(leaguesApi.list)
+    .mockResolvedValue([{ ...league, member_count: memberCount, current_week_position: position }]);
   jest.mocked(leaguesApi.detail).mockResolvedValue(league);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity } },
@@ -75,4 +77,21 @@ test('members can view concise rules and identities without admin controls', asy
   expect(screen.queryByRole('button', { name: 'Choose league picture' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Rename league' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Generate invitation' })).toBeNull();
+});
+
+test('league list cards show the picture, weekly position and total members', async () => {
+  setup('member', 2, 8);
+  const card = await screen.findByRole('button', { name: 'Early birds' });
+  expect(screen.getByLabelText('Default league picture')).toBeTruthy();
+  expect(screen.getByText('#2 this week')).toBeTruthy();
+  expect(screen.getByText('8 members')).toBeTruthy();
+  expect(card.props.accessibilityHint).toContain('Your position this week is 2, 8 members');
+});
+
+test('unconfigured weekly rankings show an unavailable state and singular member count', async () => {
+  setup('admin', null, 1);
+  await screen.findByRole('button', { name: 'Early birds' });
+  expect(screen.getByText('Weekly rank unavailable')).toBeTruthy();
+  expect(screen.getByText('1 member')).toBeTruthy();
+  expect(screen.queryByText(/#.*this week/)).toBeNull();
 });
