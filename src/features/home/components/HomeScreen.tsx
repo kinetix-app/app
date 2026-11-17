@@ -64,6 +64,7 @@ function HomeNavigation({
   initialInvitation,
 }: HomeNavigationProps) {
   const accountId = account.id;
+  const cache = useQueryClient();
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
   const [nutritionOrigin, setNutritionOrigin] = useState<'profile' | 'nutrition'>('profile');
   const [addingFood, setAddingFood] = useState(false);
@@ -79,6 +80,7 @@ function HomeNavigation({
     initialTab === 'profile' ? 'home' : initialTab,
   );
   function select(next: HomeTab) {
+    if (next === 'league') void cache.invalidateQueries({ queryKey: ['leagues', accountId] });
     setAddingFood(false);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
@@ -201,7 +203,13 @@ function HomeNavigation({
       );
     if (item === 'profile') return renderProfilePanel();
     if (item === 'league')
-      return <LeaguesScreen accountId={accountId} initialInvitation={initialInvitation} />;
+      return (
+        <LeaguesScreen
+          accountId={accountId}
+          initialInvitation={initialInvitation}
+          active={tab === 'league'}
+        />
+      );
     if (item === 'workout')
       return <TrainingWorkspace accountId={accountId} onEditingChange={setRoutineEditing} />;
     return (

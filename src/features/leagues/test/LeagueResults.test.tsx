@@ -74,3 +74,27 @@ test('uses separate account keys and shows a round with no loser', async () => {
   expect(screen.queryByText('Round result')).toBeNull();
   expect(acknowledge).not.toHaveBeenCalled();
 });
+
+test('does not fetch or display results while the league tab is hidden', async () => {
+  pending.mockResolvedValue(results);
+  const client = makeClient();
+  const view = render(
+    <QueryClientProvider client={client}>
+      <LeagueResults accountId={1} leagueId={9} active={false} />
+    </QueryClientProvider>,
+  );
+  expect(pending).not.toHaveBeenCalled();
+  view.rerender(
+    <QueryClientProvider client={client}>
+      <LeagueResults accountId={1} leagueId={9} active />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText('start-1 – end-1')).toBeTruthy();
+  view.rerender(
+    <QueryClientProvider client={client}>
+      <LeagueResults accountId={1} leagueId={9} active={false} />
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByText('Round result')).toBeNull();
+  expect(acknowledge).not.toHaveBeenCalled();
+});

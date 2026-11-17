@@ -8,13 +8,15 @@ import type { PendingResult } from '../schemas';
 export function LeagueResults({
   accountId,
   leagueId,
-}: Readonly<{ accountId: number; leagueId: number }>) {
+  active = true,
+}: Readonly<{ accountId: number; leagueId: number; active?: boolean }>) {
   const p = usePalette();
   const cache = useQueryClient();
   const acknowledging = useRef(false);
   const key = ['leagues', accountId, leagueId, 'results', 'pending'];
   const query = useQuery({
     queryKey: key,
+    enabled: active,
     queryFn: ({ signal }) => leaguesApi.pendingResults(leagueId, signal),
   });
   const acknowledge = useMutation({
@@ -32,6 +34,7 @@ export function LeagueResults({
   const result = query.data?.[0];
   const losers =
     result?.standings.filter((row) => result.loser_user_ids.includes(row.user_id)) ?? [];
+  if (!active) return null;
   if (query.isPending) return <ActivityIndicator accessibilityLabel="Loading league results" />;
   if (query.isError && !result)
     return (

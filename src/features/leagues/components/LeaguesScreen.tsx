@@ -31,7 +31,8 @@ function message(error: unknown) {
 export function LeaguesScreen({
   accountId,
   initialInvitation,
-}: Readonly<{ accountId: number; initialInvitation?: string }>) {
+  active = true,
+}: Readonly<{ accountId: number; initialInvitation?: string; active?: boolean }>) {
   const p = usePalette();
   const cache = useQueryClient();
   const key = ['leagues', accountId];
@@ -183,7 +184,7 @@ export function LeaguesScreen({
                 <Text style={{ color: p['ink-muted'] }}>
                   Timezone: {detail.data.timezone ?? 'Not set'}
                 </Text>
-                <LeagueResults accountId={accountId} leagueId={detail.data.id} />
+                <LeagueResults accountId={accountId} leagueId={detail.data.id} active={active} />
                 <LeagueStandings accountId={accountId} leagueId={detail.data.id} />
                 <LeagueRules timezone={detail.data.timezone} />
                 <Text style={{ color: p.ink }}>Members</Text>
@@ -300,12 +301,14 @@ export function LeaguesScreen({
                 </Text>
               </>
             ) : list.data?.length ? (
-              list.data.map((league) =>
-                button(league.name, () => {
-                  setSelected(league.id);
-                  setError('');
-                }),
-              )
+              list.data.map((league) => (
+                <React.Fragment key={league.id}>
+                  {button(league.name, () => {
+                    setSelected(league.id);
+                    setError('');
+                  })}
+                </React.Fragment>
+              ))
             ) : (
               <Text style={{ color: p.ink }}>You have no leagues yet.</Text>
             )}
