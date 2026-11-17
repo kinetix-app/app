@@ -30,7 +30,13 @@ jest.mock('expo-video', () => ({
   useVideoPlayer: () => ({ status: 'readyToPlay' }),
   VideoView: jest.requireActual('react-native').View,
 }));
-jest.mock('expo', () => ({ useEvent: () => ({ status: 'readyToPlay' }) }));
+jest.mock('expo', () => ({
+  useEvent: (_player: unknown, _event: string, initial: object) => ({
+    ...initial,
+    status: 'readyToPlay',
+  }),
+}));
+jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 declare global {
   var finishRecording: ((value: { uri: string }) => void) | undefined;
 }
