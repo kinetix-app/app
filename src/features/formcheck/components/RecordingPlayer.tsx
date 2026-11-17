@@ -4,6 +4,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { Text, View } from 'react-native';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button } from '@/features/training/components/ui';
+import { containRect } from '../poseTrack';
 import type { PoseTrack } from '../schemas';
 import { FormCheckScreen } from './FormCheckScreen';
 import { PoseOverlay } from './PoseOverlay';
@@ -40,6 +41,7 @@ export function RecordingPlayer({
   });
   const [box, setBox] = useState({ width: 0, height: 0 });
   const [showJoints, setShowJoints] = useState(true);
+  const frame = pose && box.width && box.height ? containRect(box, pose.width, pose.height) : null;
   const hasFaults = pose?.reps.some((rep) => rep.faultJoints.length > 0) ?? false;
 
   return (
@@ -79,20 +81,34 @@ export function RecordingPlayer({
           }}
           style={{
             flex: 1,
+            minHeight: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
             borderRadius: radii['radius-xl'],
             overflow: 'hidden',
             backgroundColor: p['surface-300'],
             marginBottom: pose ? spacing['space-2'] : 0,
           }}
         >
-          <VideoView
-            player={player}
-            style={{ flex: 1 }}
-            contentFit="contain"
-            nativeControls
-            accessibilityLabel="Recorded set"
-          />
-          {pose && showJoints ? <PoseOverlay track={pose} time={currentTime} box={box} /> : null}
+          {/* With poses, the video gets a box of its exact shape so the joints share its frame. */}
+          <View
+            style={
+              frame
+                ? { width: frame.width, height: frame.height }
+                : { flex: 1, alignSelf: 'stretch' }
+            }
+          >
+            <VideoView
+              player={player}
+              style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }}
+              contentFit="contain"
+              nativeControls
+              accessibilityLabel="Recorded set"
+            />
+            {pose && frame && showJoints ? (
+              <PoseOverlay track={pose} time={currentTime} box={frame} />
+            ) : null}
+          </View>
         </View>
       )}
     </FormCheckScreen>
