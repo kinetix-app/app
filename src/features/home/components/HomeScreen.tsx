@@ -58,6 +58,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   const accountId = account.id;
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
   const [nutritionOrigin, setNutritionOrigin] = useState<'profile' | 'nutrition'>('profile');
+  const [addingFood, setAddingFood] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState('');
   const loggingOut = useRef(false);
@@ -70,6 +71,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
     initialTab === 'profile' ? 'home' : initialTab,
   );
   function select(next: HomeTab) {
+    setAddingFood(false);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
@@ -195,6 +197,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
     return (
       <NutritionDiaryScreen
         accountId={accountId}
+        onAddFoodOpenChange={setAddingFood}
         onEditGoal={() => {
           openProfile('nutrition');
           setNutritionOrigin('nutrition');
@@ -217,7 +220,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
           </View>
         ))}
       </SessionHost>
-      {tab !== 'workout' || !routineEditing ? (
+      {!addingFood && (tab !== 'workout' || !routineEditing) ? (
         <BottomBar
           tab={tab}
           onSelect={select}

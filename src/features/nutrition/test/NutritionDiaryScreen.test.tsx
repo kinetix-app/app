@@ -1,4 +1,5 @@
 import React from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NutritionDiaryScreen } from '../components/NutritionDiaryScreen';
@@ -34,7 +35,12 @@ jest.mock('../components/AddFoodScreen', () => ({
   },
 }));
 jest.mock('../api', () => ({
-  nutritionApi: { goal: jest.fn(), day: jest.fn(), deleteMealItem: jest.fn() },
+  nutritionApi: {
+    goal: jest.fn(),
+    day: jest.fn(),
+    deleteMealItem: jest.fn(),
+    updateMealItem: jest.fn(),
+  },
 }));
 const goal: NutritionGoal = {
   id: 1,
@@ -105,6 +111,11 @@ function open() {
 }
 beforeEach(() => {
   jest.resetAllMocks();
+  jest.spyOn(Animated, 'timing').mockReturnValue({
+    start: (callback?: (result: { finished: boolean }) => void) => callback?.({ finished: true }),
+    stop: jest.fn(),
+    reset: jest.fn(),
+  } as never);
   jest.mocked(nutritionApi.goal).mockResolvedValue(goal);
   jest.mocked(nutritionApi.day).mockResolvedValue(day);
 });
@@ -155,6 +166,29 @@ test('deletes only the chosen logged item and refreshes the day', async () => {
     jest.useRealTimers();
   }
 });
+test('edits food grams and recipe servings from the diary', async () => {
+  open();
+  await screen.findByText('Rice');
+  fireEvent.press(screen.getByLabelText('Edit Breakfast'));
+  expect(screen.getByLabelText('Edit Rice quantity').props.value).toBe('100');
+  fireEvent.changeText(screen.getByLabelText('Edit Rice quantity'), '150');
+  fireEvent.press(screen.getByLabelText('Save Rice quantity'));
+  await waitFor(() =>
+    expect(nutritionApi.updateMealItem).toHaveBeenCalledWith(1, {
+      quantity_grams: 150,
+    }),
+  );
+
+  fireEvent.press(screen.getByLabelText('Edit Snacks'));
+  expect(screen.getByLabelText('Edit Bowl quantity').props.value).toBe('1');
+  fireEvent.changeText(screen.getByLabelText('Edit Bowl quantity'), '1.5');
+  fireEvent.press(screen.getByLabelText('Save Bowl quantity'));
+  await waitFor(() =>
+    expect(nutritionApi.updateMealItem).toHaveBeenCalledWith(2, {
+      servings: 1.5,
+    }),
+  );
+});
 test('changes the queried day and refreshes after adding a meal', async () => {
   open();
   await screen.findByText('Rice');
@@ -168,6 +202,105 @@ test('changes the queried day and refreshes after adding a meal', async () => {
   await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(3));
   fireEvent.press(screen.getByText('Close food'));
   expect(screen.getByText('Nutrition')).toBeTruthy();
+});
+test('distinguishes the selected day and today in the week preview', async () => {
+  open();
+  await screen.findByText('Rice');
+  const todayTab = screen
+    .getAllByRole('tab')
+    .find((item) => String(item.props.accessibilityLabel).endsWith(', today'))!;
+  expect(StyleSheet.flatten(todayTab.findAllByType(View)[0].props.style)).toMatchObject({
+    borderWidth: 2,
+    borderColor: expect.not.stringMatching(/66$/),
+  });
+  const otherTab = screen
+    .getAllByRole('tab')
+    .find((item) => !item.props.accessibilityState.selected)!;
+  fireEvent.press(otherTab);
+  await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(2));
+  const selectedTab = screen
+    .getAllByRole('tab')
+    .find((item) => item.props.accessibilityState.selected)!;
+  expect(StyleSheet.flatten(selectedTab.findAllByType(View)[0].props.style)).toMatchObject({
+    borderWidth: 2,
+    borderColor: expect.not.stringMatching(/66$/),
+  });
+  const unselectedTodayTab = screen
+    .getAllByRole('tab')
+    .find((item) => String(item.props.accessibilityLabel).endsWith(', today'))!;
+  expect(StyleSheet.flatten(unselectedTodayTab.findAllByType(View)[0].props.style)).toMatchObject({
+    borderWidth: 2,
+    borderColor: expect.stringMatching(/66$/),
+  });
+});
+test('navigates to the previous and next week while preserving the weekday', async () => {
+  open();
+  await screen.findByText('Rice');
+  const initialDate = jest.mocked(nutritionApi.day).mock.calls[0][0];
+  fireEvent.press(screen.getByLabelText('Previous week'));
+  await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(2));
+  const previousDate = jest.mocked(nutritionApi.day).mock.calls[1][0];
+  const previousDateValue = new Date(`${previousDate}T12:00:00`);
+  expect(
+    screen.getByText(
+      `${new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(previousDateValue)}, ${new Intl.DateTimeFormat('en-US', { month: 'short' }).format(previousDateValue)} ${previousDateValue.getDate()}, ${previousDateValue.getFullYear()}`,
+    ),
+  ).toBeTruthy();
+  expect(new Date(`${previousDate}T12:00:00`).getDay()).toBe(
+    new Date(`${initialDate}T12:00:00`).getDay(),
+  );
+  fireEvent.press(screen.getByLabelText('Next week'));
+  await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(3));
+  expect(jest.mocked(nutritionApi.day).mock.calls[2][0]).toBe(initialDate);
+});
+test('opens the calendar and loads the week containing the selected day', async () => {
+  open();
+  await screen.findByText('Rice');
+  fireEvent.press(screen.getByLabelText('Open calendar'));
+  expect(screen.getByLabelText('Previous month')).toBeTruthy();
+  const today = new Date();
+  const todayButton = screen.getByLabelText(
+    `Select ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(today)}, today`,
+  );
+  const todayMarker = todayButton.findAllByType(View)[0];
+  expect(StyleSheet.flatten(todayMarker.props.style)).toMatchObject({ borderWidth: 2 });
+  expect(StyleSheet.flatten(todayMarker.props.style).borderColor).not.toMatch(/66$/);
+  expect(StyleSheet.flatten(todayMarker.props.style).backgroundColor).toBeUndefined();
+  fireEvent.press(screen.getByLabelText('Next month'));
+  const target = screen
+    .getAllByRole('button')
+    .find(
+      (button) =>
+        typeof button.props.accessibilityLabel === 'string' &&
+        button.props.accessibilityLabel.startsWith('Select ') &&
+        !button.props.accessibilityState?.selected,
+    )!;
+  fireEvent.press(target);
+  await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(2));
+  expect(screen.queryByLabelText('Previous month')).toBeNull();
+  expect(screen.getByLabelText('Open calendar')).toBeTruthy();
+});
+test('uses a softer ring for today when another date is selected', async () => {
+  open();
+  await screen.findByText('Rice');
+  fireEvent.press(screen.getByLabelText('Open calendar'));
+  const today = new Date();
+  const otherDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() === 1 ? 2 : 1);
+  fireEvent.press(
+    screen.getByLabelText(
+      `Select ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(otherDate)}`,
+    ),
+  );
+  await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(2));
+  fireEvent.press(screen.getByLabelText('Open calendar'));
+  const todayButton = screen.getByLabelText(
+    `Select ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(today)}, today`,
+  );
+  const todayMarker = todayButton.findAllByType(View)[0];
+  expect(StyleSheet.flatten(todayMarker.props.style)).toMatchObject({
+    borderWidth: 2,
+    borderColor: expect.stringMatching(/66$/),
+  });
 });
 test('allows tracking without a target and retries a failed goal request', async () => {
   jest

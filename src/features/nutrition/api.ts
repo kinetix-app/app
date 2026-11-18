@@ -5,6 +5,7 @@ import {
   foodInputSchema,
   foodSchema,
   mealItemInputSchema,
+  mealItemPatchSchema,
   mealItemSchema,
   nutritionDaySchema,
   nutritionGoalInputSchema,
@@ -14,6 +15,7 @@ import {
   recipeMealItemInputSchema,
   recipeSchema,
   type MealItemInput,
+  type MealItemPatch,
   type FoodInput,
   type NutritionGoalInput,
   type RecipeInput,
@@ -45,22 +47,44 @@ export const nutritionApi = {
       schema: foodListSchema,
       signal,
     }),
+  foodPage: (name: string, offset: number, limit: number, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (name.trim()) params.set('name', name.trim());
+    return apiClient.get(`/api/v1/foods?${params.toString()}`, { schema: foodListSchema, signal });
+  },
   foods: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/foods', { schema: foodListSchema, signal }),
+  food: (id: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/foods/${id}`, { schema: foodSchema, signal }),
   createFood: (input: FoodInput) =>
     apiClient.post('/api/v1/foods', foodInputSchema.parse(input), { schema: foodSchema }),
   deleteFood: (foodId: number) => apiClient.delete(`/api/v1/foods/${foodId}`),
+  updateFood: (foodId: number, input: FoodInput) =>
+    apiClient.patch(`/api/v1/foods/${foodId}`, foodInputSchema.parse(input), {
+      schema: foodSchema,
+    }),
   createRecipe: (input: RecipeInput) =>
     apiClient.post('/api/v1/recipes', recipeInputSchema.parse(input), { schema: recipeSchema }),
   recipes: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/recipes', { schema: recipeListSchema, signal }),
+  searchRecipes: (name: string, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/recipes?name=${encodeURIComponent(name.trim())}`, {
+      schema: recipeListSchema,
+      signal,
+    }),
   deleteRecipe: (recipeId: number) => apiClient.delete(`/api/v1/recipes/${recipeId}`),
+  updateRecipe: (recipeId: number, input: RecipeInput) =>
+    apiClient.patch(`/api/v1/recipes/${recipeId}`, recipeInputSchema.parse(input), {
+      schema: recipeSchema,
+    }),
   addMealItem: (input: MealItemInput) =>
     apiClient.post('/api/v1/nutrition/meal-items', mealItemInputSchema.parse(input), {
       schema: mealItemSchema,
     }),
   deleteMealItem: (mealItemId: number) =>
     apiClient.delete(`/api/v1/nutrition/meal-items/${mealItemId}`),
+  updateMealItem: (mealItemId: number, input: MealItemPatch) =>
+    apiClient.patch(`/api/v1/nutrition/meal-items/${mealItemId}`, mealItemPatchSchema.parse(input)),
   addRecipeMealItem: (input: RecipeMealItemInput) =>
     apiClient.post('/api/v1/nutrition/recipe-items', recipeMealItemInputSchema.parse(input), {
       schema: mealItemSchema,
