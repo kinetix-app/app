@@ -47,6 +47,11 @@ export const nutritionApi = {
       schema: foodListSchema,
       signal,
     }),
+  foodPage: (name: string, offset: number, limit: number, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (name.trim()) params.set('name', name.trim());
+    return apiClient.get(`/api/v1/foods?${params.toString()}`, { schema: foodListSchema, signal });
+  },
   foods: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/foods', { schema: foodListSchema, signal }),
   createFood: (input: FoodInput) =>
