@@ -1194,14 +1194,30 @@ function RecipeEditor({
     return () => clearTimeout(timer);
   }, [term]);
   const [ingredients, setIngredients] = React.useState<
-    { food: Pick<Food, 'id' | 'name'>; grams: string; nutrition: NutritionValues | null }[]
+    {
+      key: number;
+      food: Pick<Food, 'id' | 'name'>;
+      grams: string;
+      nutrition: NutritionValues | null;
+    }[]
   >(
-    recipe?.ingredients.map((ingredient) => ({
+    recipe?.ingredients.map((ingredient, index) => ({
+      key: index,
       food: { id: ingredient.food_id, name: ingredient.name },
       grams: ingredient.quantity_grams.toString(),
       nutrition: null,
     })) ?? [],
   );
+  const nextIngredientKey = React.useRef(ingredients.length);
+  const clearIngredientSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
+  };
+  const chooseIngredient = (food: Food) => {
+    const key = nextIngredientKey.current++;
+    setIngredients((current) => [...current, { key, food, grams: '100', nutrition: food }]);
+    clearIngredientSearch();
+  };
   const results = useFoodCatalogue(debouncedSearch, Boolean(term) && term === debouncedSearch);
   const save = useMutation({
     mutationFn: () => {
@@ -1295,15 +1311,29 @@ function RecipeEditor({
         </View>
       </View>
       <View style={styles.recipeFields}>
-        <Text style={[textStyles.label, { color: p.ink }]}>Ingredients</Text>
+        <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
+          Add ingredients
+        </Text>
         <TextField
           accessibilityLabel="Search ingredient"
           maxLength={150}
           leading={<Feather name="search" size={18} color={p['ink-muted']} />}
           value={search}
           onChangeText={setSearch}
-          placeholder="Search foods…"
-          containerStyle={styles.compactField}
+          placeholder="Search for a food"
+          trailing={
+            search ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear ingredient search"
+                onPress={clearIngredientSearch}
+                style={styles.stepperButton}
+              >
+                <Feather name="x" size={18} color={p['ink-muted']} />
+              </Pressable>
+            ) : null
+          }
+          containerStyle={[styles.compactField, styles.ingredientSearchField]}
           inputStyle={styles.compactInput}
         />
       </View>
@@ -1320,18 +1350,17 @@ function RecipeEditor({
                 key={food.id}
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${food.name} as an ingredient`}
-                onPress={() => {
-                  setIngredients((current) => [
-                    ...current,
-                    { food, grams: '100', nutrition: food },
-                  ]);
-                  setSearch('');
-                  setDebouncedSearch('');
-                }}
-                style={[styles.ingredientSearchRow, { borderColor: p.line }]}
+                onPress={() => chooseIngredient(food)}
+                style={({ pressed }) => [
+                  styles.ingredientSearchRow,
+                  { borderColor: p.line, backgroundColor: p['surface-200'] },
+                  pressed && { backgroundColor: p['surface-300'] },
+                ]}
               >
                 <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
-                <Feather name="plus" size={20} color={p['brand-ink']} />
+                <View style={[styles.ingredientAddIcon, { backgroundColor: p['brand-soft'] }]}>
+                  <Feather name="plus" size={18} color={p['brand-ink']} />
+                </View>
               </Pressable>
             ))
           ) : (
@@ -1352,52 +1381,75 @@ function RecipeEditor({
           {term === debouncedSearch ? <FoodPageAction catalogue={results} /> : null}
         </ScrollView>
       ) : null}
-      {ingredients.map(({ food, grams, nutrition }, index) => (
-        <View
-          key={`${food.id}-${index}`}
-          style={[styles.ingredientRow, { backgroundColor: p['surface-200'] }]}
-        >
-          <View style={styles.ingredientControls}>
-            <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
-            <TextField
-              accessibilityLabel={`${food.name} quantity`}
-              keyboardType="decimal-pad"
-              value={grams}
-              onChangeText={(value) =>
-                setIngredients((current) =>
-                  current.map((ingredient, itemIndex) =>
-                    itemIndex === index ? { ...ingredient, grams: value } : ingredient,
-                  ),
-                )
-              }
-              containerStyle={[styles.compactField, styles.ingredientQuantity]}
-              inputStyle={[styles.compactInput, styles.amountInput]}
-              trailing={<Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>g</Text>}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remove ${food.name}`}
-              style={styles.stepperButton}
-              onPress={() =>
-                setIngredients((current) => current.filter((_, itemIndex) => itemIndex !== index))
-              }
-            >
-              <Feather name="x" size={20} color={p['ink-muted']} />
-            </Pressable>
+      {ingredients.length ? (
+        <View style={styles.recipeFields}>
+          <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
+            In this recipe
+          </Text>
+          <View style={[styles.ingredientList, { backgroundColor: p['surface-100'] }]}>
+            {ingredients.map(({ key, food, grams, nutrition }, index) => (
+              <View
+                key={key}
+                style={[
+                  styles.ingredientRow,
+                  index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: p.line },
+                ]}
+              >
+                <View style={styles.ingredientControls}>
+                  <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
+                  <TextField
+                    accessibilityLabel={`${food.name} quantity`}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    value={grams}
+                    onChangeText={(value) =>
+                      setIngredients((current) =>
+                        current.map((ingredient) =>
+                          ingredient.key === key
+                            ? { ...ingredient, grams: numericAmount(value) }
+                            : ingredient,
+                        ),
+                      )
+                    }
+                    containerStyle={[styles.compactField, styles.ingredientQuantity]}
+                    inputStyle={[styles.compactInput, styles.amountInput]}
+                    trailing={
+                      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>g</Text>
+                    }
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${food.name}`}
+                    style={styles.stepperButton}
+                    onPress={() =>
+                      setIngredients((current) => current.filter((item) => item.key !== key))
+                    }
+                  >
+                    <Feather name="x" size={18} color={p['ink-muted']} />
+                  </Pressable>
+                </View>
+                {nutrition && Number.isFinite(Number(grams)) && Number(grams) > 0 ? (
+                  <NutritionSummary
+                    values={nutrition}
+                    factor={Number(grams) / 100}
+                    precision={2}
+                    compact
+                  />
+                ) : null}
+              </View>
+            ))}
           </View>
-          {nutrition && Number.isFinite(Number(grams)) && Number(grams) > 0 ? (
-            <NutritionSummary
-              values={nutrition}
-              factor={Number(grams) / 100}
-              precision={2}
-              compact
-            />
-          ) : null}
         </View>
-      ))}
+      ) : null}
       {showEstimate && (ingredients.length > 1 || servingCount !== 1) ? (
         <View style={[styles.recipeTotal, { backgroundColor: p['surface-300'] }]}>
-          <NutritionSummary values={totals} factor={1 / servingCount} precision={2} perServing />
+          <NutritionSummary
+            values={totals}
+            factor={1 / servingCount}
+            precision={2}
+            perServing
+            compact
+          />
         </View>
       ) : null}
       {save.isError ? (
@@ -1482,8 +1534,9 @@ const styles = StyleSheet.create({
   ingredientQuantity: { width: 88, paddingHorizontal: spacing['space-2'] },
   amountInput: { textAlign: 'right', fontVariant: ['tabular-nums'] },
   recipeTotal: { padding: spacing['space-3'], borderRadius: radii['radius-md'] },
+  ingredientSearchField: { paddingRight: spacing['space-1'] },
   ingredientResults: {
-    maxHeight: 3 * sizes['control-height-sm'],
+    maxHeight: 3 * sizes['control-height'],
     flexGrow: 0,
     flexShrink: 0,
     borderRadius: radii['radius-md'],
@@ -1491,15 +1544,23 @@ const styles = StyleSheet.create({
   ingredientSearchHint: { padding: spacing['space-3'] },
   ingredientSearchRow: {
     paddingHorizontal: spacing['space-3'],
-    minHeight: sizes['control-height-sm'],
+    minHeight: sizes['control-height'],
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
     gap: spacing['space-2'],
   },
+  ingredientAddIcon: {
+    width: spacing['space-8'],
+    height: spacing['space-8'],
+    borderRadius: radii['radius-pill'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ingredientList: { borderRadius: radii['radius-md'] },
   ingredientRow: {
-    borderRadius: radii['radius-md'],
-    padding: spacing['space-3'],
+    paddingHorizontal: spacing['space-3'],
+    paddingVertical: spacing['space-2'],
     gap: spacing['space-1'],
   },
   ingredientControls: {
