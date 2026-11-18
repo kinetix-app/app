@@ -22,6 +22,7 @@ jest.mock('../api', () => ({
   nutritionApi: {
     foods: jest.fn(),
     foodPage: jest.fn(),
+    food: jest.fn(),
     searchFoods: jest.fn(),
     createFood: jest.fn(),
     updateFood: jest.fn(),
@@ -89,6 +90,7 @@ beforeEach(() => {
     >);
   jest.mocked(nutritionApi.foods).mockResolvedValue([food, { ...food, id: 3, name: 'Beans' }]);
   jest.mocked(nutritionApi.searchFoods).mockResolvedValue([food]);
+  jest.mocked(nutritionApi.food).mockResolvedValue(food);
   jest
     .mocked(nutritionApi.foodPage)
     .mockImplementation((term, _offset, _limit, signal) =>
@@ -117,18 +119,22 @@ test('searches trimmed input, previews calories and logs rounded grams for the s
   expect(screen.getByRole('button', { name: 'Add food' })).toBeDisabled();
   fireEvent.changeText(screen.getByLabelText('Food amount'), '12g.5');
   expect(screen.getByLabelText('Food amount').props.value).toBe('12.5');
-  fireEvent.press(screen.getByLabelText('Select Rice'));
+  fireEvent.press(screen.getByLabelText('Close amount selector'));
   expect(screen.queryByLabelText('Food amount')).toBeNull();
   fireEvent.press(screen.getByLabelText('Select Rice'));
+  expect(screen.getByLabelText('Food amount')).toHaveDisplayValue('');
   fireEvent.changeText(screen.getByLabelText('Food amount'), '125.555');
   await act(async () => {
     jest.advanceTimersByTime(1000);
   });
-  expect(screen.getByText('125.6 KCAL')).toBeVisible();
+  expect(screen.getByText('125.6 kcal')).toBeVisible();
   expect(screen.queryByText('Per 100 g · 100 kcal')).toBeNull();
-  expect(screen.getByText('3.8g')).toBeTruthy();
-  expect(screen.getByText('25.1g')).toBeTruthy();
-  expect(screen.getByText('Values per 125.555 g')).toBeTruthy();
+  expect(screen.getByText('Protein')).toBeVisible();
+  expect(screen.getByText('Carbs')).toBeVisible();
+  expect(screen.getByText('Fat')).toBeVisible();
+  expect(screen.getByText('3.8 g')).toBeVisible();
+  expect(screen.getByText('25.1 g')).toBeVisible();
+  expect(screen.getByText('For 125.555 g')).toBeVisible();
   fireEvent.press(screen.getByRole('button', { name: 'Add food' }));
   expect(nutritionApi.addMealItem).not.toHaveBeenCalled();
   fireEvent.press(screen.getByText('Review 1 entry'));
@@ -191,6 +197,12 @@ test('queues multiple foods and confirms them with separate hidden requests', as
   expect(onClose).not.toHaveBeenCalled();
   expect(screen.getByText('Review 2 entries')).toBeTruthy();
   fireEvent.press(screen.getByText('Review 2 entries'));
+  expect(screen.getByText('Review entries')).toBeVisible();
+  expect(screen.queryByRole('button', { name: /^Back$/ })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Edit Rice quantity' }));
+  expect(screen.getByRole('button', { name: 'Edit Beans quantity' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Add 2 entries to Lunch' })).toBeDisabled();
+  fireEvent.press(screen.getByRole('button', { name: 'Cancel editing Rice quantity' }));
   fireEvent.press(screen.getByText('Add 2 entries to Lunch'));
   await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
   expect(nutritionApi.addMealItem).toHaveBeenCalledTimes(2);
@@ -215,13 +227,17 @@ test('edits a queued food quantity from the review before adding it', async () =
   fireEvent.press(screen.getByRole('button', { name: 'Add food' }));
   fireEvent.press(screen.getByText('Review 1 entry'));
   fireEvent.press(screen.getByLabelText('Edit Rice quantity'));
-  expect(screen.getByText('Values per 100 g')).toBeTruthy();
-  fireEvent.press(screen.getByLabelText('Edit Rice quantity'));
+  expect(screen.getByText('100 g · 100 kcal')).toBeVisible();
+  fireEvent.press(screen.getByLabelText('Cancel editing Rice quantity'));
   expect(screen.queryByLabelText('Food amount')).toBeNull();
   fireEvent.press(screen.getByLabelText('Edit Rice quantity'));
   expect(screen.getByLabelText('Food amount').props.value).toBe('100');
+  fireEvent.changeText(screen.getByLabelText('Food amount'), '0');
+  expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   fireEvent.changeText(screen.getByLabelText('Food amount'), '150');
-  fireEvent.press(screen.getByText('Save changes'));
+  expect(screen.getByText('For 150 g')).toBeVisible();
+  expect(screen.getByText('4.5 g')).toBeVisible();
+  fireEvent.press(screen.getByRole('button', { name: 'Save changes' }));
   expect(screen.getByText('150 g · 150 kcal')).toBeTruthy();
   fireEvent.press(screen.getByText('Add 1 entry to Lunch'));
   await waitFor(() =>
@@ -241,15 +257,15 @@ test('shows no search results and supports returning to the diary', async () => 
   fireEvent.press(screen.getByLabelText('Back to nutrition'));
   expect(onClose).toHaveBeenCalledTimes(1);
 });
-test('shows the selected food controls before hiding the following results', async () => {
+test('opens a food amount modal while keeping all catalogue rows mounted', async () => {
   open();
-  await screen.findByLabelText('Select Rice');
-  expect(screen.getByLabelText('Select Beans')).toBeTruthy();
-  fireEvent.press(screen.getByLabelText('Select Rice'));
+  fireEvent.press(await screen.findByLabelText('Select Rice'));
+  expect(screen.getByLabelText('Food amount')).toBeVisible();
   expect(screen.queryByLabelText('Select Beans')).toBeNull();
-  expect(screen.getByLabelText('Food amount')).toBeTruthy();
-  fireEvent.press(screen.getByLabelText('Select Rice'));
-  expect(screen.getByLabelText('Select Beans')).toBeTruthy();
+  expect(screen.getByLabelText('Select Beans', { includeHiddenElements: true })).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Close amount selector'));
+  expect(screen.getByLabelText('Select Beans')).toBeVisible();
+  expect(screen.queryByText('Review 1 entry')).toBeNull();
 });
 test('cancels deletion, explains a referenced food failure, then removes a selected food', async () => {
   jest
@@ -257,8 +273,7 @@ test('cancels deletion, explains a referenced food failure, then removes a selec
     .mockRejectedValueOnce(new Error('conflict'))
     .mockResolvedValueOnce(undefined);
   open();
-  fireEvent.press(await screen.findByLabelText('Select Rice'));
-  fireEvent.press(screen.getByLabelText('Delete Rice'));
+  fireEvent.press(await screen.findByLabelText('Delete Rice'));
   fireEvent.press(screen.getByText('Cancel'));
   expect(nutritionApi.deleteFood).not.toHaveBeenCalled();
   fireEvent.press(screen.getByLabelText('Delete Rice'));
@@ -304,6 +319,8 @@ test('reuses the food form with the existing values when editing', async () => {
   jest.mocked(nutritionApi.updateFood).mockResolvedValue({ ...food, name: 'Brown rice' });
   open();
   fireEvent.press(await screen.findByLabelText('Edit Rice'));
+  expect(screen.getByLabelText('Close editor')).toBeVisible();
+  expect(screen.queryByLabelText('Search food')).toBeNull();
   expect(screen.getByLabelText('Food name').props.value).toBe('Rice');
   expect(screen.getByLabelText('calories').props.value).toBe('100');
   fireEvent.changeText(screen.getByLabelText('Food name'), 'Brown rice');
@@ -351,7 +368,7 @@ test('confirms foods and recipes together and retries only the entry that failed
   expect(onClose).not.toHaveBeenCalled();
   fireEvent.press(screen.getByLabelText('Edit Rice bowl quantity'));
   fireEvent.changeText(screen.getByLabelText('Recipe servings to add'), '2');
-  fireEvent.press(screen.getByText('Save changes'));
+  fireEvent.press(screen.getByRole('button', { name: 'Save changes' }));
   fireEvent.press(screen.getByText('Add 1 entry to Lunch'));
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   expect(onSaved).toHaveBeenCalledTimes(2);
@@ -369,12 +386,26 @@ test('requires positive recipe servings and adds the chosen recipe to the diary'
   fireEvent.press(screen.getByText('Recipe'));
   expect(screen.queryByRole('button', { name: 'Add recipe' })).toBeNull();
   fireEvent.press(await screen.findByLabelText('Select Rice bowl'));
-  expect(screen.getByLabelText('Recipe servings to add').props.value).toBe('');
-  expect(screen.getByRole('button', { name: 'Add recipe' })).toBeDisabled();
+  expect(screen.getByLabelText('Recipe servings to add')).toHaveDisplayValue('1');
+  expect(screen.getByText('Per serving', { exact: true })).toBeVisible();
+  expect(screen.getByText('200 kcal', { exact: true })).toBeVisible();
+  expect(screen.getByText('Add', { exact: true })).toBeVisible();
+  fireEvent.press(screen.getByRole('button', { name: 'Add recipe' }));
+  fireEvent.press(screen.getByText('Review 1 entry'));
+  expect(screen.getByText('1 serving · 200 kcal')).toBeVisible();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to selection' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Select Rice bowl' }));
   fireEvent.changeText(screen.getByLabelText('Recipe servings to add'), '0');
   expect(screen.getByRole('button', { name: 'Add recipe' })).toBeDisabled();
-  fireEvent.changeText(screen.getByLabelText('Recipe servings to add'), '1.5');
-  fireEvent.press(screen.getByText('Add recipe'));
+  fireEvent.press(screen.getByRole('button', { name: 'Increase servings' }));
+  expect(screen.getByLabelText('Recipe servings to add')).toHaveDisplayValue('1');
+  fireEvent.changeText(screen.getByLabelText('Recipe servings to add'), '0.5');
+  fireEvent.press(screen.getByRole('button', { name: 'Increase servings' }));
+  expect(screen.getByLabelText('Recipe servings to add')).toHaveDisplayValue('1.5');
+  expect(screen.getByText('For 1.5 servings')).toBeVisible();
+  expect(screen.getByText('300 kcal', { exact: true })).toBeVisible();
+  for (const value of ['60 g', '9 g', '3 g']) expect(screen.getByText(value)).toBeVisible();
+  fireEvent.press(screen.getByRole('button', { name: 'Add recipe' }));
   expect(nutritionApi.addRecipeMealItem).not.toHaveBeenCalled();
   fireEvent.press(screen.getByText('Review 1 entry'));
   fireEvent.press(screen.getByText('Add 1 entry to Lunch'));
@@ -392,11 +423,16 @@ test('reuses the recipe form with its ingredients when editing', async () => {
   open();
   fireEvent.press(screen.getByText('Recipe'));
   fireEvent.press(await screen.findByLabelText('Edit Rice bowl'));
+  expect(screen.getByLabelText('Close editor')).toBeVisible();
+  expect(screen.queryByLabelText('Search recipe')).toBeNull();
   expect(screen.getByLabelText('Recipe name').props.value).toBe('Rice bowl');
   expect(screen.getByLabelText('Recipe servings').props.value).toBe('2');
   expect(screen.getByLabelText('Rice quantity').props.value).toBe('100');
+  expect(screen.getByText('200 kcal', { exact: true })).toBeVisible();
   fireEvent.changeText(screen.getByLabelText('Recipe name'), 'Brown rice bowl');
   fireEvent.changeText(screen.getByLabelText('Rice quantity'), '150');
+  expect(await screen.findByText('75 kcal', { exact: true })).toBeVisible();
+  expect(nutritionApi.food).toHaveBeenCalledWith(1, expect.anything());
   fireEvent.press(screen.getByText('Save changes'));
   await waitFor(() =>
     expect(nutritionApi.updateRecipe).toHaveBeenCalledWith(2, {
@@ -407,15 +443,14 @@ test('reuses the recipe form with its ingredients when editing', async () => {
   );
   expect(screen.queryByText('Edit recipe')).toBeNull();
 });
-test('recipe deletion can be cancelled, preserves referenced history and clears removed selection', async () => {
+test('recipe deletion can be cancelled and preserves referenced history', async () => {
   jest
     .mocked(nutritionApi.deleteRecipe)
     .mockRejectedValueOnce(new Error('conflict'))
     .mockResolvedValueOnce(undefined);
   open();
   fireEvent.press(screen.getByText('Recipe'));
-  fireEvent.press(await screen.findByLabelText('Select Rice bowl'));
-  fireEvent.press(screen.getByLabelText('Delete Rice bowl'));
+  fireEvent.press(await screen.findByLabelText('Delete Rice bowl'));
   fireEvent.press(screen.getByText('Cancel'));
   expect(nutritionApi.deleteRecipe).not.toHaveBeenCalled();
   fireEvent.press(screen.getByLabelText('Delete Rice bowl'));
@@ -445,7 +480,7 @@ test('builds a recipe from searched ingredients, edits quantities and removes un
   expect(nutritionApi.searchFoods).not.toHaveBeenCalled();
   fireEvent.press(await screen.findByLabelText('Add Rice as an ingredient'));
   expect(screen.queryByLabelText('Ingredient search results')).toBeNull();
-  expect(screen.getAllByText('100 KCAL')).toHaveLength(1);
+  expect(screen.getAllByText('100 kcal', { exact: true })).toHaveLength(2);
   expect(nutritionApi.searchFoods).toHaveBeenCalledTimes(1);
   expect(nutritionApi.searchFoods).toHaveBeenCalledWith('rice', expect.anything());
   fireEvent.changeText(screen.getByLabelText('Recipe servings'), '2');
@@ -453,15 +488,15 @@ test('builds a recipe from searched ingredients, edits quantities and removes un
   fireEvent.press(await screen.findByLabelText('Add Rice as an ingredient'));
   fireEvent.changeText(screen.getAllByLabelText('Rice quantity')[0], '150');
   fireEvent.press(screen.getAllByLabelText('Remove Rice')[1]);
-  expect(screen.getByText('150 KCAL')).toBeVisible();
+  expect(screen.getByText('150 kcal', { exact: true })).toBeVisible();
   expect(screen.getByText('Per serving')).toBeVisible();
-  expect(screen.getByText('75 KCAL')).toBeVisible();
-  expect(screen.getByText('2.25g')).toBeVisible();
-  expect(screen.getByText('15g')).toBeVisible();
-  expect(screen.getByText('0.75g')).toBeVisible();
+  expect(screen.getByText('75 kcal', { exact: true })).toBeVisible();
+  expect(screen.getByText('2.25 g')).toBeVisible();
+  expect(screen.getByText('15 g')).toBeVisible();
+  expect(screen.getByText('0.75 g')).toBeVisible();
   fireEvent.press(screen.getByRole('button', { name: 'Increase servings' }));
   expect(screen.getByLabelText('Recipe servings')).toHaveDisplayValue('3');
-  expect(screen.getByText('50 KCAL')).toBeVisible();
+  expect(screen.getByText('50 kcal', { exact: true })).toBeVisible();
   fireEvent.press(screen.getByRole('button', { name: 'Decrease servings' }));
   fireEvent.press(screen.getByRole('button', { name: 'Create recipe' }));
   await waitFor(() => expect(screen.queryByLabelText('Recipe name')).toBeNull());

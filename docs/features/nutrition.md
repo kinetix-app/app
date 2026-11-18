@@ -11,8 +11,8 @@ calendar date sent to the API as a date-only value.
 Food entry searches shared and personal foods in pages of 20. Users can create a food,
 select a weight in grams and log it to breakfast, lunch, dinner or snacks. Recipe entry
 supports creating and browsing recipes, logging servings, and deleting personal catalogue
-items. Recipe creation searches the same paginated food catalogue and previews ingredient
-nutrition and the per-serving total. Food and recipes share one review for the selected
+items. The recipe form searches the same paginated food catalogue and shows a live per-serving
+nutrition summary during creation and editing. Food and recipes share one review for the selected
 meal and date. If an entry fails to save, the review keeps it available for retry.
 The goal editor creates or updates calorie, protein, carbohydrate and fat targets; its
 macro split is normalized to 100% and uses 4 kcal/g for protein/carbohydrate and 9 kcal/g
@@ -26,6 +26,7 @@ for fat, rounding submitted values to two decimal places.
   `PATCH /api/v1/nutrition-goals/me` for nutrition goals.
 - `/api/v1/foods` for food search/list/create/delete. Search reads use `name`, `offset`
   and `limit`; the app requests one extra match to decide whether to offer another page.
+  `GET /api/v1/foods/{id}` provides nutrition data for existing recipe ingredients.
 - `/api/v1/recipes` for recipe list/create/delete.
 - `/api/v1/nutrition/meal-items` and `/api/v1/nutrition/recipe-items` to log entries,
   `/api/v1/nutrition/meal-items/{id}` to update or delete a diary entry, and
