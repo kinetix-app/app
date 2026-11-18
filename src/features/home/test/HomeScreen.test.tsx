@@ -491,3 +491,25 @@ test('hardware back closes editing and ignores hidden Profile panels', async () 
   expect(screen.getByRole('tab', { name: 'Feed' }).props.accessibilityState.selected).toBe(true);
   listener.mockRestore();
 });
+
+test('a workout from Training history can be shared and opens the Feed composer', async () => {
+  const finished = {
+    id: 5,
+    client_session_id: null,
+    routine_id: null,
+    activity_type: 'gym',
+    state: 'completed' as const,
+    started_at: '2026-11-17T10:00:00Z',
+    ended_at: '2026-11-17T11:00:00Z',
+    exercises: [],
+  };
+  jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [finished], limit: 50, offset: 0 });
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('No posts yet', undefined, { timeout: 10000 });
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
+  fireEvent.press(screen.getByText('Training history'));
+  fireEvent.press(await screen.findByRole('button', { name: 'Share workout 5 to feed' }));
+  expect(screen.getByRole('tab', { name: 'Feed' }).props.accessibilityState.selected).toBe(true);
+  const option = await screen.findByRole('radio', { name: /Workout finished/ });
+  expect(option.props.accessibilityState.checked).toBe(true);
+});

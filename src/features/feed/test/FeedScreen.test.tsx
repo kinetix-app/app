@@ -38,6 +38,7 @@ jest.mock('../api', () => ({
     addComment: jest.fn(),
     removeComment: jest.fn(),
     media: jest.fn(),
+    workout: jest.fn(),
   },
 }));
 
@@ -155,6 +156,54 @@ test('comments open, post a trimmed comment and update the feed count', async ()
   expect(await screen.findByText('1 comment')).toBeTruthy();
 });
 
+test('tapping a shared workout shows every exercise and set', async () => {
+  const summary = makePost().workout!;
+  jest.mocked(feedApi.workout).mockResolvedValue({
+    ...summary,
+    detailed_exercises: [
+      {
+        exercise_id: 3,
+        name: 'Bench press',
+        sets: [
+          {
+            set_number: 1,
+            reps: 8,
+            weight_kg: '100.00',
+            duration_seconds: null,
+            distance_km: null,
+          },
+          { set_number: 2, reps: 5, weight_kg: '62.50', duration_seconds: null, distance_km: null },
+        ],
+      },
+      {
+        exercise_id: 4,
+        name: 'Plank',
+        sets: [
+          { set_number: 1, reps: null, weight_kg: null, duration_seconds: 45, distance_km: null },
+        ],
+      },
+    ],
+  });
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'See Bob’s workout' }));
+  const bench = await screen.findByTestId('workout-exercise-0');
+  expect(within(bench).getByText('Bench press')).toBeTruthy();
+  expect(within(bench).getByText('8 reps × 100 kg')).toBeTruthy();
+  expect(within(bench).getByText('5 reps × 62.5 kg')).toBeTruthy();
+  expect(within(screen.getByTestId('workout-exercise-1')).getByText('45 s')).toBeTruthy();
+  expect(screen.getByText('23')).toBeTruthy();
+  expect(feedApi.workout).toHaveBeenCalledWith(10, expect.any(AbortSignal));
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(await screen.findByText('Leg day done')).toBeTruthy();
+});
+
+test('a workout that is no longer available says so', async () => {
+  jest.mocked(feedApi.workout).mockRejectedValue(new ApiError(404));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'See Bob’s workout' }));
+  expect(await screen.findByText('This workout is no longer available.')).toBeTruthy();
+});
+
 test('failed comment keeps the text', async () => {
   jest.mocked(feedApi.addComment).mockRejectedValue(new Error('offline'));
   renderFeed();
@@ -209,15 +258,14 @@ test('an already shared workout keeps the caption and explains the conflict', as
   expect(screen.getByLabelText('Caption').props.value).toBe('Keep me');
 });
 
-test('a finished-workout suggestion opens sharing for that workout and can be dismissed', async () => {
-  const onDismiss = jest.fn();
-  renderFeed({ suggestedSessionId: 7, onDismissSuggestion: onDismiss });
-  expect(await screen.findByText('Workout saved')).toBeTruthy();
-  fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
-  expect(onDismiss).toHaveBeenCalledTimes(1);
-  fireEvent.press(screen.getByRole('button', { name: 'Share your finished workout' }));
+test('a share request opens the new post screen with that workout selected', async () => {
+  const onComposeClosed = jest.fn();
+  renderFeed({ composeSessionId: 7, onComposeClosed });
   const option = await screen.findByRole('radio', { name: /Workout finished/ });
   expect(option.props.accessibilityState.checked).toBe(true);
+  expect(screen.queryByText('Workout saved')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(onComposeClosed).toHaveBeenCalledTimes(1);
 });
 
 test('deleting your post asks first and removes it after confirmation', async () => {

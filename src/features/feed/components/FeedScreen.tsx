@@ -14,10 +14,12 @@ import type { Post } from '../schemas';
 import { CommentsScreen } from './CommentsScreen';
 import { PostCard } from './PostCard';
 import { ShareWorkoutScreen } from './ShareWorkoutScreen';
+import { WorkoutDetailScreen } from './WorkoutDetailScreen';
 
 type Panel =
   | { kind: 'feed' }
   | { kind: 'comments'; post: Post }
+  | { kind: 'workout'; post: Post }
   | { kind: 'share'; sessionId?: number | null }
   | { kind: 'person'; id: number; name: string | null };
 
@@ -26,9 +28,9 @@ type FeedScreenProps = Readonly<{
   active?: boolean;
   /** Header control supplied by the shell, e.g. the profile avatar button. */
   profileButton?: React.ReactNode;
-  /** A just-finished workout the person may want to share. */
-  suggestedSessionId?: number | null;
-  onDismissSuggestion?: () => void;
+  /** Opens the new-post screen with this completed workout selected (e.g. from history). */
+  composeSessionId?: number | null;
+  onComposeClosed?: () => void;
   /** Opens the shell's friends screen. */
   onFindFriends?: () => void;
 }>;
@@ -37,8 +39,8 @@ export function FeedScreen({
   accountId,
   active = true,
   profileButton,
-  suggestedSessionId = null,
-  onDismissSuggestion,
+  composeSessionId = null,
+  onComposeClosed,
   onFindFriends,
 }: FeedScreenProps) {
   const p = usePalette();
@@ -54,12 +56,18 @@ export function FeedScreen({
     queryFn: ({ pageParam, signal }) => feedApi.posts(pageParam, signal, 'friends'),
     getNextPageParam: (page) => page.next_before_id ?? undefined,
   });
-  const closePanel = useCallback(() => setPanel({ kind: 'feed' }), []);
+  // A share request from the shell takes over until the composer closes.
+  const view: Panel =
+    composeSessionId !== null ? { kind: 'share', sessionId: composeSessionId } : panel;
+  const closePanel = useCallback(() => {
+    setPanel({ kind: 'feed' });
+    onComposeClosed?.();
+  }, [onComposeClosed]);
   const onBack = useCallback(() => {
     closePanel();
     return true;
   }, [closePanel]);
-  useHardwareBack(onBack, active && panel.kind !== 'feed' && !deleting);
+  useHardwareBack(onBack, active && view.kind !== 'feed' && !deleting);
 
   async function toggleLike(post: Post) {
     if (liking.has(post.id)) return;
@@ -109,25 +117,6 @@ export function FeedScreen({
           {profileButton}
         </View>
       </ScreenHeader>
-      {suggestedSessionId !== null ? (
-        <View
-          style={[ui.card, { backgroundColor: p['brand-soft'] }]}
-          accessibilityLabel="Workout saved"
-        >
-          <Text style={[textStyles['title-md'], { color: p['brand-ink'] }]}>Workout saved</Text>
-          <Text style={[textStyles.body, { color: p['brand-ink'] }]}>
-            Share it with your feed so others can cheer you on.
-          </Text>
-          <View style={[ui.row, { flexWrap: 'wrap' }]}>
-            <Button
-              title="Share"
-              accessibilityLabel="Share your finished workout"
-              onPress={() => setPanel({ kind: 'share', sessionId: suggestedSessionId })}
-            />
-            <Button title="Not now" secondary onPress={() => onDismissSuggestion?.()} />
-          </View>
-        </View>
-      ) : null}
       {feed.isPending ? <Loading /> : null}
       {feed.isError && !feed.data ? (
         <View style={ui.gap}>
@@ -146,12 +135,12 @@ export function FeedScreen({
         edges={['top', 'left', 'right']}
         style={[
           ui.screen,
-          { backgroundColor: p['surface-100'], display: panel.kind === 'feed' ? 'flex' : 'none' },
+          { backgroundColor: p['surface-100'], display: view.kind === 'feed' ? 'flex' : 'none' },
         ]}
-        aria-hidden={panel.kind !== 'feed' || Boolean(deleting)}
-        accessibilityElementsHidden={panel.kind !== 'feed' || Boolean(deleting)}
+        aria-hidden={view.kind !== 'feed' || Boolean(deleting)}
+        accessibilityElementsHidden={view.kind !== 'feed' || Boolean(deleting)}
         importantForAccessibility={
-          panel.kind !== 'feed' || deleting ? 'no-hide-descendants' : 'auto'
+          view.kind !== 'feed' || deleting ? 'no-hide-descendants' : 'auto'
         }
       >
         <FlatList
@@ -192,6 +181,7 @@ export function FeedScreen({
                 void toggleLike(post);
               }}
               onComments={(post) => setPanel({ kind: 'comments', post })}
+              onWorkout={(post) => setPanel({ kind: 'workout', post })}
               onDelete={setDeleting}
               onAuthor={(post) =>
                 setPanel({ kind: 'person', id: post.author.id, name: post.author.display_name })
@@ -214,27 +204,30 @@ export function FeedScreen({
           ListFooterComponent={footer}
         />
       </SafeAreaView>
-      {panel.kind === 'person' ? (
+      {view.kind === 'person' ? (
         <PersonScreen
           accountId={accountId}
-          personId={panel.id}
-          fallbackName={panel.name}
+          personId={view.id}
+          fallbackName={view.name}
           onBack={closePanel}
           backLabel="Back to feed"
         />
       ) : null}
-      {panel.kind === 'comments' ? (
-        <CommentsScreen accountId={accountId} post={panel.post} onBack={closePanel} />
+      {view.kind === 'comments' ? (
+        <CommentsScreen accountId={accountId} post={view.post} onBack={closePanel} />
       ) : null}
-      {panel.kind === 'share' ? (
+      {view.kind === 'workout' ? (
+        <WorkoutDetailScreen accountId={accountId} post={view.post} onBack={closePanel} />
+      ) : null}
+      {view.kind === 'share' ? (
         <ShareWorkoutScreen
+          key={`share-${view.sessionId ?? 'new'}`}
           accountId={accountId}
-          initialSessionId={panel.sessionId}
+          initialSessionId={view.sessionId}
           onClose={closePanel}
           onShared={(post) => {
             prependPost(cache, accountId, post);
             if (!feed.data) void feed.refetch();
-            if (post.workout?.session_id === suggestedSessionId) onDismissSuggestion?.();
             closePanel();
           }}
         />

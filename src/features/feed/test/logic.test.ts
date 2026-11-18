@@ -1,5 +1,5 @@
 import { buildPostForm } from '../api';
-import { duration, exerciseLine, relativeTime, volume, authorName } from '../format';
+import { duration, exerciseLine, relativeTime, setLine, volume, authorName } from '../format';
 import { mediaPathSchema, postPageSchema } from '../schemas';
 import { makePost } from './fixtures';
 
@@ -63,4 +63,14 @@ test('a post without a workout omits the workout field', () => {
   });
   expect(form.get('training_session_id')).toBeNull();
   expect(form.get('text')).toBe('Hi');
+});
+
+test('set lines show what was recorded without float rounding', () => {
+  const set = { reps: null, weight_kg: null, duration_seconds: null, distance_km: null };
+  expect(setLine({ ...set, reps: 8, weight_kg: '100.000000' })).toBe('8 reps × 100 kg');
+  expect(setLine({ ...set, reps: 1, weight_kg: '62.50' })).toBe('1 rep × 62.5 kg');
+  expect(setLine({ ...set, reps: 12, weight_kg: '0.00' })).toBe('12 reps');
+  expect(setLine({ ...set, duration_seconds: 45 })).toBe('45 s');
+  expect(setLine({ ...set, distance_km: '2.50', duration_seconds: 720 })).toBe('2.5 km in 12 min');
+  expect(setLine(set)).toBe('Done');
 });

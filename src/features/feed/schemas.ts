@@ -32,6 +32,26 @@ export const workoutSummarySchema = z.object({
   exercises: z.array(z.string()),
 });
 
+const decimalText = z.string().regex(/^\d+(\.\d+)?$/);
+
+export const workoutDetailSchema = workoutSummarySchema.extend({
+  detailed_exercises: z.array(
+    z.object({
+      exercise_id: entityId,
+      name: z.string(),
+      sets: z.array(
+        z.object({
+          set_number: z.number().int(),
+          reps: count.nullable(),
+          weight_kg: decimalText.nullable(),
+          duration_seconds: count.nullable(),
+          distance_km: decimalText.nullable(),
+        }),
+      ),
+    }),
+  ),
+});
+
 export const postSchema = z.object({
   id: entityId,
   text: z.string(),
@@ -82,6 +102,8 @@ export const commentInputSchema = z.object({
 export type Post = z.infer<typeof postSchema>;
 export type PostPage = z.infer<typeof postPageSchema>;
 export type WorkoutSummary = z.infer<typeof workoutSummarySchema>;
+export type WorkoutDetail = z.infer<typeof workoutDetailSchema>;
+export type WorkoutSet = WorkoutDetail['detailed_exercises'][number]['sets'][number];
 export type Comment = z.infer<typeof commentSchema>;
 export type CommentPage = z.infer<typeof commentPageSchema>;
 export type PostVisibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';

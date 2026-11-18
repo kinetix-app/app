@@ -157,6 +157,7 @@ export function ShareWorkoutScreen({
                 accessibilityRole="radio"
                 accessibilityLabel="No workout. Post only a caption or photos"
                 accessibilityState={{ checked: selected === null, disabled: pending }}
+                aria-checked={selected === null}
                 disabled={pending}
                 onPress={() => setSelected('none')}
                 style={[
@@ -189,6 +190,7 @@ export function ShareWorkoutScreen({
                   accessibilityRole="radio"
                   accessibilityLabel={`Workout finished ${when}`}
                   accessibilityState={{ checked, disabled: pending }}
+                  aria-checked={checked}
                   disabled={pending}
                   onPress={() => setSelected(workout.id)}
                   style={[

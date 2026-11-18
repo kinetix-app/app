@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
 import { NutritionDiaryScreen, NutritionGoalEditor } from '@/features/nutrition';
@@ -24,6 +24,7 @@ import {
 import { FeedScreen } from '@/features/feed';
 import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
 import { FormCheckProvider } from '@/features/formcheck';
+import { Button, ui } from '@/features/training/components/ui';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { sizes, spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
@@ -89,6 +90,12 @@ function HomeNavigation({
   function select(next: HomeTab) {
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
+  }
+  const [composeSessionId, setComposeSessionId] = useState<number | null>(null);
+  /** Opens the Feed's new-post screen with a completed workout selected. */
+  function shareWorkout(sessionId: number) {
+    setComposeSessionId(sessionId);
+    select('home');
   }
   /** Resumes Profile on its current panel, so unsaved edits survive leaving it. */
   function showProfile() {
@@ -172,6 +179,7 @@ function HomeNavigation({
             onClose={closeProfilePanel}
             backLabel="Back to profile"
             active={panelActive}
+            onShare={shareWorkout}
           />
         );
       case 'progress':
@@ -208,8 +216,8 @@ function HomeNavigation({
         <FeedScreen
           accountId={accountId}
           active={tab === 'home' && (!session.draft || session.draft.minimized)}
-          suggestedSessionId={finishedSessionId}
-          onDismissSuggestion={onDismissFinished}
+          composeSessionId={composeSessionId}
+          onComposeClosed={() => setComposeSessionId(null)}
           onFindFriends={() => openProfile('friends')}
           profileButton={
             <Pressable
@@ -281,6 +289,43 @@ function HomeNavigation({
           onStart={() => session.start()}
         />
       ) : null}
+      <Modal
+        visible={finishedSessionId !== null && !session.draft}
+        transparent
+        animationType="fade"
+        onRequestClose={onDismissFinished}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: spacing['space-6'],
+            backgroundColor: p.scrim,
+          }}
+        >
+          <View
+            accessibilityViewIsModal
+            style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
+          >
+            <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
+              Workout saved
+            </Text>
+            <Text style={{ color: p['ink-muted'] }}>
+              Share it to your feed so your friends can cheer you on.
+            </Text>
+            <Button
+              title="Share to feed"
+              icon="share"
+              onPress={() => {
+                if (finishedSessionId !== null) shareWorkout(finishedSessionId);
+                onDismissFinished();
+              }}
+            />
+            <Button title="Not now" secondary onPress={onDismissFinished} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -17,6 +17,7 @@ type PostCardProps = Readonly<{
   onComments: (post: Post) => void;
   onDelete: (post: Post) => void;
   onAuthor: (post: Post) => void;
+  onWorkout?: (post: Post) => void;
 }>;
 
 export function PostCard({
@@ -28,6 +29,7 @@ export function PostCard({
   onComments,
   onDelete,
   onAuthor,
+  onWorkout,
 }: PostCardProps) {
   const p = usePalette();
   const name = authorName(post.author.display_name);
@@ -60,7 +62,13 @@ export function PostCard({
       </View>
       <MediaCarousel accountId={accountId} post={post} name={name} />
       {post.text ? <Text style={[textStyles.body, { color: p.ink }]}>{post.text}</Text> : null}
-      {post.workout ? <WorkoutBlock workout={post.workout} /> : null}
+      {post.workout ? (
+        <WorkoutBlock
+          workout={post.workout}
+          label={`See ${name}’s workout`}
+          onPress={onWorkout ? () => onWorkout(post) : undefined}
+        />
+      ) : null}
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
@@ -159,7 +167,11 @@ function MediaCarousel({
   );
 }
 
-function WorkoutBlock({ workout }: Readonly<{ workout: WorkoutSummary }>) {
+function WorkoutBlock({
+  workout,
+  label,
+  onPress,
+}: Readonly<{ workout: WorkoutSummary; label: string; onPress?: () => void }>) {
   const p = usePalette();
   const metrics = [
     ['Duration', duration(workout.duration_seconds)],
@@ -167,12 +179,28 @@ function WorkoutBlock({ workout }: Readonly<{ workout: WorkoutSummary }>) {
     ['Sets', String(workout.set_count)],
   ] as const;
   return (
-    <View style={[styles.workout, { backgroundColor: p['surface-300'] }]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint="Shows every exercise and set"
+      disabled={!onPress}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.workout,
+        { backgroundColor: p['surface-300'], opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
       <View style={styles.workoutTitle}>
         <Feather name="activity" size={18} color={p['brand-ink']} />
-        <Text style={[textStyles.label, { color: p.ink }]}>
+        <Text style={[textStyles.label, { color: p.ink, flex: 1 }]}>
           Workout · {countLabel(workout.exercise_count, 'exercise')}
         </Text>
+        {onPress ? (
+          <View style={styles.workoutTitle}>
+            <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>See details</Text>
+            <Feather name="chevron-right" size={18} color={p['brand-ink']} />
+          </View>
+        ) : null}
       </View>
       <View style={styles.metrics}>
         {metrics.map(([label, value]) => (
@@ -193,7 +221,7 @@ function WorkoutBlock({ workout }: Readonly<{ workout: WorkoutSummary }>) {
           {exerciseLine(workout.exercises)}
         </Text>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 

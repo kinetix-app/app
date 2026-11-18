@@ -7,6 +7,7 @@ import {
   mediaPathSchema,
   postPageSchema,
   postSchema,
+  workoutDetailSchema,
   type PostVisibility,
 } from './schemas';
 
@@ -59,6 +60,8 @@ export const feedApi = {
     ),
   create: (input: PostInput, signal?: AbortSignal) =>
     apiClient.postMultipart('/api/v1/posts', buildPostForm(input), { schema: postSchema, signal }),
+  workout: (postId: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/posts/${postId}/workout`, { schema: workoutDetailSchema, signal }),
   remove: (postId: number) => apiClient.delete(`/api/v1/posts/${postId}`),
   like: (postId: number, liked: boolean) =>
     liked
