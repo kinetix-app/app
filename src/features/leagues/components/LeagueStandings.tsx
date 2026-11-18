@@ -153,9 +153,7 @@ export function LeagueStandings({
           </Text>
           <LeagueAction
             label={showingRankings ? 'Retry standings' : 'Retry points breakdown'}
-            onPress={() => {
-              void (rounds.isError ? rounds.refetch() : page.refetch());
-            }}
+            onPress={() => (rounds.isError ? rounds.refetch() : page.refetch())}
           />
         </>
       );

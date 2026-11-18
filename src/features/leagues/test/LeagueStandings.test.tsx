@@ -163,3 +163,43 @@ test('one round still offers all-time standings and the breakdown pages match th
   expect(await screen.findByText(/Workout #39/)).toBeTruthy();
   expect(screen.queryByText(/Workout #38/)).toBeNull();
 });
+
+test('retries the failed rounds request before loading the standings', async () => {
+  jest.mocked(leaguesApi.rounds).mockRejectedValueOnce(new Error('Offline'));
+  jest.mocked(leaguesApi.rounds).mockResolvedValue({
+    timezone: 'Europe/Madrid',
+    current_round_id: currentRound.id,
+    rounds: [currentRound],
+  });
+  jest.mocked(leaguesApi.standingsPage).mockResolvedValue({ items: [alice], next_offset: null });
+  render(
+    <QueryClientProvider client={client}>
+      <LeagueStandings leagueId={9} accountId={1} />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not load standings.');
+  expect(leaguesApi.standingsPage).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Retry standings' }));
+  expect(await screen.findByRole('button', { name: /#1 Alice:/ })).toBeVisible();
+  expect(leaguesApi.rounds).toHaveBeenCalledTimes(2);
+  expect(leaguesApi.standingsPage).toHaveBeenCalledTimes(1);
+});
+
+test('retries the standings page without refetching available rounds', async () => {
+  jest.mocked(leaguesApi.rounds).mockResolvedValue({
+    timezone: 'Europe/Madrid',
+    current_round_id: currentRound.id,
+    rounds: [currentRound],
+  });
+  jest.mocked(leaguesApi.standingsPage).mockRejectedValueOnce(new Error('Offline'));
+  jest.mocked(leaguesApi.standingsPage).mockResolvedValue({ items: [alice], next_offset: null });
+  render(
+    <QueryClientProvider client={client}>
+      <LeagueStandings leagueId={9} accountId={1} />
+    </QueryClientProvider>,
+  );
+  fireEvent.press(await screen.findByRole('button', { name: 'Retry standings' }));
+  expect(await screen.findByRole('button', { name: /#1 Alice:/ })).toBeVisible();
+  expect(leaguesApi.rounds).toHaveBeenCalledTimes(1);
+  expect(leaguesApi.standingsPage).toHaveBeenCalledTimes(2);
+});
