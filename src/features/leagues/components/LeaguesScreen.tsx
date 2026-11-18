@@ -1,19 +1,26 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import * as Linking from 'expo-linking';
-import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
+import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { TextField } from '@/components/TextField';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
-import { createSchema, invitationToken, nameSchema } from '../schemas';
-import { LeagueAction, LeagueCard, leagueStyles } from './LeagueUI';
+import { createSchema, descriptionLimit, invitationToken, nameSchema } from '../schemas';
+import { LeagueAction, LeagueCard, LeagueIconButton, leagueStyles } from './LeagueUI';
 import { LeagueAvatar } from './LeagueAvatar';
+import { LeagueDialog } from './LeagueDialog';
+import { LeagueInvitationCard } from './LeagueInvitationCard';
+import { LeagueShareInvitation } from './LeagueShareInvitation';
 import { LeagueInformation } from './LeagueInformation';
-import { LeaguePictureEditor } from './LeaguePictureEditor';
+import { LeaguePageHeader } from './LeaguePageHeader';
+import { LeagueTimezonePicker } from './LeagueTimezonePicker';
+import { leagueConfigurationForm } from './leaguePicture';
+import { LeaguePictureEditor, type LeaguePictureDraft } from './LeaguePictureEditor';
 import { LeagueResults } from './LeagueResults';
 import { LeagueStandings } from './LeagueStandings';
 
@@ -30,20 +37,34 @@ export function LeaguesScreen({
   accountId,
   initialInvitation,
   active = true,
-}: Readonly<{ accountId: number; initialInvitation?: string; active?: boolean }>) {
+  onDetailOpenChange,
+}: Readonly<{
+  accountId: number;
+  initialInvitation?: string;
+  active?: boolean;
+  onDetailOpenChange?: (open: boolean) => void;
+}>) {
   const p = usePalette();
   const cache = useQueryClient();
   const key = ['leagues', accountId];
   const [selected, setSelected] = useState<number | null>(null);
-  const [mode, setMode] = useState<'list' | 'create' | 'join'>(initialInvitation ? 'join' : 'list');
+  const [mode, setMode] = useState<'list' | 'create'>('list');
+  const [joinOpen, setJoinOpen] = useState(false);
   const [information, setInformation] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [picture, setPicture] = useState<LeaguePictureDraft>();
+  const detailOpen = selected !== null;
+  useEffect(() => {
+    onDetailOpenChange?.(detailOpen);
+  }, [detailOpen, onDetailOpenChange]);
   const [pictureBusy, setPictureBusy] = useState(false);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState<string | null>(null);
   const [timezone, setTimezone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
   );
-  const [input, setInput] = useState(initialInvitation ?? '');
-  const [token, setToken] = useState('');
+  const [input, setInput] = useState('');
+  const [token, setToken] = useState(initialInvitation ?? '');
   const [error, setError] = useState('');
   const [invite, setInvite] = useState('');
   const list = useQuery({
@@ -60,22 +81,47 @@ export function LeaguesScreen({
     void cache.invalidateQueries({ queryKey: key });
   };
   const create = useMutation({
-    mutationFn: () => leaguesApi.create(name, timezone),
+    mutationFn: () =>
+      leaguesApi.createConfiguration(
+        leagueConfigurationForm(
+          {
+            name,
+            timezone,
+            description: description?.trim() || null,
+          },
+          picture ?? undefined,
+        ),
+      ),
     onSuccess: (league) => {
       refresh();
       setInformation(false);
       setSelected(league.id);
       setMode('list');
       setName('');
+      setDescription(null);
+      setPicture(undefined);
       setError('');
     },
     onError: (e) => setError(message(e)),
   });
-  const rename = useMutation({
-    mutationFn: () => leaguesApi.rename(selected!, name),
-    onSuccess: () => {
+  const save = useMutation({
+    mutationFn: (leagueId: number) =>
+      leaguesApi.saveConfiguration(
+        leagueId,
+        leagueConfigurationForm(
+          {
+            name,
+            description: description?.trim() || null,
+            remove_picture: picture === null,
+          },
+          picture ?? undefined,
+        ),
+      ),
+    onSuccess: (league) => {
+      cache.setQueryData([...key, league.id], league);
       refresh();
-      setName('');
+      setEditing(false);
+      setPicture(undefined);
       setError('');
     },
     onError: (e) => setError(message(e)),
@@ -88,35 +134,29 @@ export function LeaguesScreen({
     },
     onError: (e) => setError(message(e)),
   });
-  const preview = useMutation({
-    mutationFn: (value: string) => leaguesApi.preview(value),
-    onSuccess: (_, value) => {
-      setToken(value);
-      setError('');
-    },
-    onError: (e) => setError(message(e)),
+  const preview = useQuery({
+    queryKey: [...key, 'invitation', token],
+    queryFn: ({ signal }) => leaguesApi.preview(token, signal),
+    enabled: active && Boolean(token),
+    retry: false,
+    gcTime: 0,
   });
+  function openInvitedLeague(id: number) {
+    refresh();
+    setInformation(false);
+    setSelected(id);
+    setMode('list');
+    setInput('');
+    setToken('');
+    setError('');
+  }
   const accept = useMutation({
     mutationFn: () => leaguesApi.accept(token),
-    onSuccess: (league) => {
-      refresh();
-      setInformation(false);
-      setSelected(league.id);
-      setMode('list');
-      setInput('');
-      setToken('');
-      preview.reset();
-      setError('');
-    },
+    onSuccess: (league) => openInvitedLeague(league.id),
     onError: (e) => setError(message(e)),
   });
   const pending =
-    create.isPending ||
-    rename.isPending ||
-    generate.isPending ||
-    preview.isPending ||
-    accept.isPending ||
-    pictureBusy;
+    create.isPending || save.isPending || generate.isPending || accept.isPending || pictureBusy;
   const button = (
     label: string,
     onPress: () => void,
@@ -136,7 +176,30 @@ export function LeaguesScreen({
       />
     </View>
   );
+  const descriptionField = (value: string) => (
+    <View style={{ gap: spacing['space-2'] }}>
+      <Text style={[textStyles.label, { color: p.ink }]}>League description</Text>
+      <TextField
+        accessibilityLabel="League description"
+        value={value}
+        onChangeText={setDescription}
+        multiline
+        maxLength={descriptionLimit}
+        editable={!pending}
+        placeholder="What is your league about?"
+        inputStyle={{ minHeight: 88, textAlignVertical: 'top' }}
+      />
+    </View>
+  );
   function back() {
+    if (pending) return;
+    setPicture(undefined);
+    setDescription(null);
+    setError('');
+    if (editing) {
+      setEditing(false);
+      return;
+    }
     if (information) {
       setInformation(false);
       setName('');
@@ -151,106 +214,119 @@ export function LeaguesScreen({
     setError('');
     setInvite('');
     setToken('');
-    preview.reset();
   }
-  return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: p['surface-100'] }}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[
-          screenContentStyle,
-          { paddingBottom: spacing['space-8'], gap: spacing['space-6'] },
-        ]}
-      >
-        {selected !== null ? (
-          <View style={[leagueStyles.row, { alignItems: 'flex-start' }]}>
+  useHardwareBack(
+    () => {
+      back();
+      return true;
+    },
+    active && detailOpen && (information || !detail.data || detail.isError),
+  );
+  const leagueTitle =
+    detail.data?.name ?? list.data?.find((item) => item.id === selected)?.name ?? 'League';
+  const beginEdit = () => {
+    if (detail.data?.role !== 'admin') return;
+    setName(detail.data.name);
+    setDescription(detail.data.description ?? '');
+    setPicture(undefined);
+    setError('');
+    setEditing(true);
+  };
+  const header =
+    selected !== null ? (
+      <LeaguePageHeader
+        accountId={accountId}
+        title={leagueTitle}
+        picture={detail.data?.picture_url}
+        subtitle={editing ? 'Edit league' : information ? 'League information' : undefined}
+        backLabel={editing ? 'Cancel editing' : information ? 'Back to league' : 'Back to leagues'}
+        onBack={back}
+        disabled={pending}
+        onOpen={
+          !information && detail.data
+            ? () => {
+                setInformation(true);
+                void detail.refetch();
+              }
+            : undefined
+        }
+        action={
+          information && !editing && detail.data?.role === 'admin' ? (
+            <LeagueIconButton
+              label="Edit league"
+              icon="pencil-outline"
+              onPress={beginEdit}
+              disabled={pending}
+            />
+          ) : undefined
+        }
+      />
+    ) : (
+      <ScreenHeader
+        title={mode === 'create' ? 'Create league' : 'FriendsLeague'}
+        leading={
+          mode !== 'list' ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={information ? 'Back to league' : 'Back to leagues'}
+              accessibilityLabel="Back to leagues"
               onPress={back}
               disabled={pending}
               accessibilityState={{ disabled: pending }}
-              style={({ pressed }) => ({
+              style={{
                 minWidth: sizes['tap-min'],
                 minHeight: sizes['tap-min'],
                 borderRadius: radii['radius-pill'],
                 backgroundColor: p['surface-300'],
                 alignItems: 'center',
                 justifyContent: 'center',
-                opacity: pressed || pending ? 0.5 : 1,
-              })}
+              }}
             >
               <Ionicons name="arrow-back" size={24} color={p.ink} />
             </Pressable>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={leagueStyles.row}>
-                <LeagueAvatar
-                  accountId={accountId}
-                  path={detail.data?.picture_url}
-                  name={detail.data?.name ?? 'League'}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`View league information for ${detail.data?.name ?? 'league'}`}
-                  accessibilityState={{ disabled: pending || information || !detail.data }}
-                  disabled={pending || information || !detail.data}
-                  onPress={() => setInformation(true)}
-                  style={({ pressed }) => ({
-                    flex: 1,
-                    minWidth: 0,
-                    minHeight: sizes['tap-min'],
-                    gap: spacing['space-1'],
-                    opacity: pressed ? 0.75 : 1,
-                  })}
-                >
-                  <Text
-                    accessibilityRole="header"
-                    numberOfLines={2}
-                    style={[textStyles['display-lg'], { color: p.ink }]}
-                  >
-                    {detail.data?.name ??
-                      list.data?.find((item) => item.id === selected)?.name ??
-                      'Loading league…'}
-                  </Text>
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {information ? 'League information' : 'View league information'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <ScreenHeader
-            title={
-              mode === 'create'
-                ? 'Create league'
-                : mode === 'join'
-                  ? 'Join a league'
-                  : 'FriendsLeague'
-            }
-            leading={
-              mode !== 'list' ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Back to leagues"
-                  onPress={back}
-                  disabled={pending}
-                  accessibilityState={{ disabled: pending }}
-                  style={{
-                    minWidth: sizes['tap-min'],
-                    minHeight: sizes['tap-min'],
-                    borderRadius: radii['radius-pill'],
-                    backgroundColor: p['surface-300'],
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="arrow-back" size={24} color={p.ink} />
-                </Pressable>
-              ) : undefined
-            }
-          />
-        )}
+          ) : undefined
+        }
+      />
+    );
+  if (selected !== null && detail.data && !detail.isError && !information) {
+    return (
+      <SafeAreaView
+        edges={['top', 'bottom', 'left', 'right']}
+        style={{ flex: 1, backgroundColor: p['surface-100'] }}
+      >
+        <LeagueResults
+          accountId={accountId}
+          leagueId={detail.data.id}
+          active={active}
+          timezone={detail.data.timezone}
+        />
+        <LeagueStandings
+          key={detail.data.id}
+          accountId={accountId}
+          leagueId={detail.data.id}
+          active={active}
+          header={header}
+          onBack={back}
+        />
+      </SafeAreaView>
+    );
+  }
+  return (
+    <SafeAreaView
+      edges={detailOpen ? ['top', 'bottom', 'left', 'right'] : ['top']}
+      style={{ flex: 1, backgroundColor: p['surface-100'] }}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        accessibilityElementsHidden={active && Boolean(token || invite || joinOpen)}
+        importantForAccessibility={
+          active && (token || invite || joinOpen) ? 'no-hide-descendants' : 'auto'
+        }
+        contentContainerStyle={[
+          screenContentStyle,
+          { paddingBottom: spacing['space-8'], gap: spacing['space-6'] },
+        ]}
+      >
+        {header}
         {selected !== null ? (
           <>
             {detail.isPending ? (
@@ -275,85 +351,95 @@ export function LeaguesScreen({
                   active={active}
                   timezone={detail.data.timezone}
                 />
-                {information ? (
-                  <LeagueInformation accountId={accountId} league={detail.data}>
-                    {detail.data.role === 'admin' ? (
-                      <LeagueCard>
-                        <Text
-                          accessibilityRole="header"
-                          style={[textStyles['title-md'], { color: p.ink }]}
-                        >
-                          Manage league
-                        </Text>
-                        <LeaguePictureEditor
-                          accountId={accountId}
-                          league={detail.data}
-                          onBusy={setPictureBusy}
-                          disabled={pending && !pictureBusy}
+                {editing && detail.data.role === 'admin' ? (
+                  <LeagueCard>
+                    <LeaguePictureEditor
+                      accountId={accountId}
+                      name={name}
+                      path={detail.data.picture_url}
+                      draft={picture}
+                      onChange={setPicture}
+                      onBusy={setPictureBusy}
+                      disabled={pending}
+                    />
+                    {field('League name', name, setName)}
+                    {descriptionField(description ?? '')}
+                    {error ? (
+                      <Text
+                        accessibilityRole="alert"
+                        style={[textStyles['body-sm'], { color: p.danger }]}
+                      >
+                        {error}
+                      </Text>
+                    ) : null}
+                    {button(
+                      save.isPending ? 'Saving…' : 'Save',
+                      () => {
+                        const result = nameSchema.safeParse(name);
+                        if (!result.success) {
+                          setError(result.error.issues[0].message);
+                          return;
+                        }
+                        if (selected !== null) save.mutate(selected);
+                      },
+                      pending,
+                      'primary',
+                    )}
+                  </LeagueCard>
+                ) : (
+                  <LeagueInformation
+                    accountId={accountId}
+                    league={detail.data}
+                    onRoleChange={
+                      detail.data.role === 'admin'
+                        ? async (memberId, role) => {
+                            const updated = await leaguesApi.changeRole(
+                              detail.data.id,
+                              memberId,
+                              role,
+                            );
+                            cache.setQueryData([...key, updated.id], updated);
+                            void cache.invalidateQueries({ queryKey: [...key, updated.id] });
+                          }
+                        : undefined
+                    }
+                    inviteAction={
+                      detail.data.role === 'admin' ? (
+                        <LeagueIconButton
+                          label="Generate invitation"
+                          icon="link-outline"
+                          disabled={pending}
+                          onPress={() => generate.mutate()}
                         />
-                        {field('New league name', name, setName)}
-                        {error ? (
-                          <Text
-                            accessibilityRole="alert"
-                            style={[textStyles['body-sm'], { color: p.danger }]}
-                          >
-                            {error}
-                          </Text>
-                        ) : null}
-                        {button(
-                          rename.isPending ? 'Saving…' : 'Rename league',
-                          () => {
-                            const result = nameSchema.safeParse(name);
-                            if (!result.success) {
-                              setError(result.error.issues[0].message);
-                              return;
-                            }
-                            rename.mutate();
-                          },
-                          pending,
-                          'primary',
-                        )}
-                        {button(
-                          generate.isPending ? 'Generating…' : 'Generate invitation',
-                          () => generate.mutate(),
-                          pending,
-                          'positive',
-                        )}
-                        {invite ? (
-                          <>
-                            <Text selectable style={[textStyles['body-sm'], { color: p.ink }]}>
-                              {invite}
-                            </Text>
-                            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                              Share this link. It expires after 48 hours. Recipients can paste it in
-                              Join a league.
-                            </Text>
-                            {button(
-                              'Share invitation',
-                              () => {
-                                void Share.share({ message: invite });
-                              },
-                              false,
-                              'primary',
-                            )}
-                          </>
-                        ) : null}
-                      </LeagueCard>
+                      ) : undefined
+                    }
+                  >
+                    {error ? (
+                      <Text
+                        accessibilityRole="alert"
+                        style={[textStyles['body-sm'], { color: p.danger }]}
+                      >
+                        {error}
+                      </Text>
                     ) : null}
                   </LeagueInformation>
-                ) : (
-                  <LeagueStandings accountId={accountId} leagueId={detail.data.id} />
                 )}
               </>
             )}
           </>
         ) : mode === 'create' ? (
           <LeagueCard>
-            <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              Bring your friends together and make every workout count.
-            </Text>
+            <LeaguePictureEditor
+              accountId={accountId}
+              name={name}
+              draft={picture}
+              onChange={setPicture}
+              onBusy={setPictureBusy}
+              disabled={pending}
+            />
             {field('League name', name, setName)}
-            {field('IANA timezone', timezone, setTimezone)}
+            {descriptionField(description ?? '')}
+            <LeagueTimezonePicker value={timezone} onChange={setTimezone} disabled={pending} />
             {error ? (
               <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
                 {error}
@@ -365,7 +451,11 @@ export function LeaguesScreen({
             {button(
               create.isPending ? 'Creating…' : 'Create league',
               () => {
-                const result = createSchema.safeParse({ name, timezone });
+                const result = createSchema.safeParse({
+                  name,
+                  timezone,
+                  description: description?.trim() || null,
+                });
                 if (!result.success) {
                   setError(result.error.issues[0].message);
                   return;
@@ -376,71 +466,30 @@ export function LeaguesScreen({
               'primary',
             )}
           </LeagueCard>
-        ) : mode === 'join' ? (
-          <LeagueCard>
-            <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              Have an invite? Preview the league before joining.
-            </Text>
-            {field('Invitation link or token', input, (value) => {
-              setInput(value);
-              setToken('');
-              preview.reset();
-            })}
-            {error ? (
-              <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-                {error}
-              </Text>
-            ) : null}
-            {button(
-              preview.isPending ? 'Loading…' : 'Preview invitation',
-              () => {
-                const value = invitationToken(input);
-                if (!value) {
-                  setError('Enter an invitation link or token.');
-                  return;
-                }
-                preview.mutate(value);
-              },
-              pending,
-            )}
-            {token && preview.data ? (
-              <>
-                <Text style={[textStyles.body, { color: p.ink }]}>Join {preview.data.name}?</Text>
-                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  Expires {new Date(preview.data.expires_at).toLocaleString()}
-                </Text>
-                {button(
-                  accept.isPending ? 'Joining…' : 'Confirm joining',
-                  () => accept.mutate(),
-                  pending,
-                  'primary',
-                )}
-              </>
-            ) : null}
-          </LeagueCard>
         ) : (
           <>
-            <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              Train together. Keep each other going.
-            </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] }}>
-              <LeagueAction
-                label="Create league"
-                icon="add"
-                variant="positive"
-                onPress={() => {
-                  setMode('create');
-                  setError('');
-                }}
-              />
-              <LeagueAction
-                label="Join a league"
-                icon="link-outline"
-                onPress={() => {
-                  setMode('join');
-                  setError('');
-                }}
-              />
+              <View style={{ flexGrow: 1, flexBasis: 148 }}>
+                <LeagueAction
+                  label="Create league"
+                  icon="add"
+                  variant="primary"
+                  onPress={() => {
+                    setMode('create');
+                    setError('');
+                  }}
+                />
+              </View>
+              <View style={{ flexGrow: 1, flexBasis: 148 }}>
+                <LeagueAction
+                  label="Join a league"
+                  icon="link-outline"
+                  onPress={() => {
+                    setJoinOpen(true);
+                    setError('');
+                  }}
+                />
+              </View>
             </View>
             <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
               Your leagues
@@ -541,6 +590,69 @@ export function LeaguesScreen({
           </>
         )}
       </ScrollView>
+      {active && joinOpen && !token ? (
+        <LeagueDialog
+          title="Join a league"
+          onClose={() => {
+            setJoinOpen(false);
+            setError('');
+          }}
+        >
+          {field('Invitation link or token', input, (value) => {
+            setInput(value);
+            setError('');
+          })}
+          {error ? (
+            <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+              {error}
+            </Text>
+          ) : null}
+          <LeagueAction
+            label="Preview invitation"
+            variant="primary"
+            onPress={() => {
+              const value = invitationToken(input);
+              if (!value) {
+                setError('Enter an invitation link or token.');
+                return;
+              }
+              setError('');
+              setJoinOpen(false);
+              setToken(value);
+            }}
+          />
+        </LeagueDialog>
+      ) : null}
+      {active && invite ? (
+        <LeagueShareInvitation link={invite} onClose={() => setInvite('')} />
+      ) : null}
+      {active && token ? (
+        <LeagueInvitationCard
+          accountId={accountId}
+          token={token}
+          invitation={preview.data}
+          loading={preview.isFetching && !preview.data}
+          joining={accept.isPending}
+          error={preview.isError ? message(preview.error) : error || undefined}
+          retry={
+            preview.isError &&
+            (!(preview.error instanceof ApiError) || ![404, 410].includes(preview.error.status))
+              ? () => {
+                  void preview.refetch();
+                }
+              : undefined
+          }
+          onJoin={() => {
+            setError('');
+            if (preview.data?.already_member) openInvitedLeague(preview.data.league_id);
+            else accept.mutate();
+          }}
+          onClose={() => {
+            setToken('');
+            setError('');
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

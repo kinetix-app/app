@@ -92,7 +92,35 @@ test('private league create/join, persisted scoring, isolation and independent s
   await page.getByRole('tab', { name: 'League', exact: true }).click();
   await page.getByRole('button', { name: 'Create league', exact: true }).click();
   await page.getByLabel('League name', { exact: true }).fill(name);
-  await page.getByLabel('IANA timezone').fill('Europe/Madrid');
+  const description = 'A friendly weekly challenge for consistent lifters.';
+  await page.getByLabel('League description', { exact: true }).fill(description);
+  async function chooseLeagueImage(filename: string, replace = false) {
+    const picker = page.waitForEvent('filechooser');
+    await page
+      .getByRole('button', {
+        name: replace ? 'Replace league picture' : 'Choose league picture',
+        exact: true,
+      })
+      .click();
+    await (await picker).setFiles(path.resolve('assets/images', filename));
+    await expect(
+      page.getByRole('button', { name: 'Replace league picture', exact: true }),
+    ).toBeVisible();
+  }
+  const timezone = 'Europe/Paris';
+  await page.getByRole('button', { name: /^Timezone:/ }).click();
+  await page.getByLabel('Search timezones').fill('Paris');
+  const timezoneOption = page.getByRole('button', { name: timezone, exact: true });
+  await expect(timezoneOption).toBeVisible();
+  await timezoneOption.click();
+  await expect(
+    page.getByRole('button', { name: `Timezone: ${timezone}`, exact: true }),
+  ).toBeVisible();
+  await chooseLeagueImage('icon.png');
+  await page.screenshot({
+    path: '.codex/artifacts/previews/league-create.png',
+    animations: 'disabled',
+  });
   await page.getByRole('button', { name: 'Create league', exact: true }).click();
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   const lid = (await (await request(0, '/leagues')).json()).find(
@@ -100,29 +128,115 @@ test('private league create/join, persisted scoring, isolation and independent s
   ).id;
   expect((await request(2, `/leagues/${lid}`)).status).toBe(404);
   await page.getByRole('button', { name: `View league information for ${name}` }).click();
+  const imagePath = `/api/v1/leagues/${lid}/picture`;
+  const configPath = `/api/v1/leagues/${lid}/configuration`;
+  expect((await (await request(0, `/leagues/${lid}`)).json()).timezone).toBe(timezone);
+  await expect(page.getByRole('tab', { name: 'League', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('img', { name: `${name} league picture` })).toBeVisible();
+
   await page.getByRole('button', { name: 'Generate invitation' }).click();
-  const link = await page
-    .getByText(/league-invitation\//)
-    .first()
-    .textContent();
-  expect(link).toBeTruthy();
-  const token = link!.trim().split('/').pop()!;
+  await expect(page.getByRole('heading', { name: 'Invitation link', exact: true })).toBeVisible();
+  const linkText = page.getByText(/league-invitation\//).first();
+  const link = (await linkText.textContent())?.trim();
+  expect(Boolean(link)).toBe(true);
+  const token = link!.split('/').pop()!;
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await linkText.click();
+  await expect(page.getByText('Link copied', { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      async (expected) => (await navigator.clipboard.readText()) === expected,
+      link,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: '.codex/artifacts/previews/league-share-invitation.png',
+    mask: [linkText],
+    maskColor: '#1d2720',
+    animations: 'disabled',
+  });
+  await page.evaluate((expected) => {
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async (data: ShareData) => {
+        document.documentElement.dataset.expectedInvitationShared = String(data.url === expected);
+      },
+    });
+  }, link);
+  await page.getByRole('button', { name: 'Share invitation', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-expected-invitation-shared', 'true');
+  await page.getByRole('button', { name: 'Close invitation link', exact: true }).click();
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const bob = await context.newPage();
   await signIn(bob, 1, `/league-invitation/${token}`);
-  await expect(bob.getByLabel('Invitation link or token')).toHaveValue(token);
-  await bob.getByRole('button', { name: 'Preview invitation' }).click();
-  await expect(bob.getByText(`Join ${name}?`, { exact: true })).toBeVisible();
+  await expect(bob.getByRole('heading', { name, exact: true })).toBeVisible();
+  await expect(bob.getByText(description, { exact: true })).toBeVisible();
+  await expect(bob.getByText('Members', { exact: true })).toBeVisible();
+  await expect(bob.getByText('1', { exact: true })).toBeVisible();
+  const preview = await (await request(1, `/league-invitations/${token}`)).json();
+  const created = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeZone: timezone,
+  }).format(new Date(preview.created_at));
+  await expect(bob.getByText(created, { exact: true })).toBeVisible();
+  await expect(bob.getByRole('img', { name: `${name} league picture`, exact: true })).toBeVisible();
+  await bob.screenshot({ path: '.codex/artifacts/previews/league-invitation.png' });
   expect(
     (await (await request(1, '/leagues')).json()).some((item: { id: number }) => item.id === lid),
   ).toBe(false);
-  await bob.getByRole('button', { name: 'Confirm joining' }).click();
+  await expect(bob.getByRole('button', { name: 'Cancel', exact: true })).toHaveCount(0);
+  await bob.getByRole('button', { name: 'Close invitation', exact: true }).click();
+  await expect(bob.getByRole('heading', { name: 'Your leagues', exact: true })).toBeVisible();
+  await bob.getByRole('button', { name: 'Join a league', exact: true }).click();
+  await expect(bob.getByRole('heading', { name: 'Join a league', exact: true })).toBeVisible();
+  await expect(bob.getByRole('button', { name: 'Close join a league', exact: true })).toBeVisible();
+  await bob.getByLabel('Invitation link or token').fill(token);
+  await bob.getByRole('button', { name: 'Preview invitation' }).click();
+  await expect(bob.getByRole('heading', { name, exact: true })).toBeVisible();
+  await bob.getByRole('button', { name: 'Join league' }).click();
+  await bob.getByRole('button', { name: 'Back to leagues', exact: true }).click();
+  await bob.getByRole('button', { name: 'Join a league', exact: true }).click();
+  await bob.getByLabel('Invitation link or token').fill(token);
+  await bob.getByRole('button', { name: 'Preview invitation' }).click();
+  await expect(
+    bob.getByText('You’re already a member of this league.', { exact: true }),
+  ).toBeVisible();
+  await expect(bob.getByRole('button', { name: 'Join league', exact: true })).toHaveCount(0);
+  await bob.screenshot({
+    path: '.codex/artifacts/previews/league-already-member.png',
+    animations: 'disabled',
+  });
+  await bob.getByRole('button', { name: 'Open league', exact: true }).click();
+
   await bob.getByRole('button', { name: `View league information for ${name}` }).click();
   await expect(bob.getByText('League Alice', { exact: true })).toBeVisible();
   await expect(bob.getByText('League Bob (you)', { exact: true })).toBeVisible();
   await expect(bob.getByText('Admin', { exact: true })).toBeVisible();
   await expect(bob.getByText('Member', { exact: true })).toBeVisible();
   await expect(bob.getByRole('button', { name: 'Generate invitation' })).toHaveCount(0);
+  await expect(
+    bob.getByRole('button', { name: 'Change role for League Alice', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back to league', exact: true }).click();
+  await page
+    .getByRole('button', { name: `View league information for ${name}`, exact: true })
+    .click();
+  const roleControl = page.getByRole('button', { name: 'Change role for League Bob', exact: true });
+  await expect(roleControl).toBeVisible();
+  await roleControl.click();
+  await page.getByRole('button', { name: 'Make admin', exact: true }).click();
+  await expect
+    .poll(async () => (await (await request(1, `/leagues/${lid}`)).json()).role)
+    .toBe('admin');
+  await page.getByRole('button', { name: 'Change role for League Bob', exact: true }).click();
+  await page.getByRole('button', { name: 'Make member', exact: true }).click();
+  await expect
+    .poll(async () => (await (await request(1, `/leagues/${lid}`)).json()).role)
+    .toBe('member');
+  await page.getByRole('button', { name: 'About score', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Dismiss rule tip', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Dismiss rule tip', exact: true }).click();
+
   expect((await request(1, `/leagues/${lid}`, 'PATCH', { name: 'forbidden' })).status).toBe(403);
   expect((await request(1, `/leagues/${lid}/invitations`, 'POST')).status).toBe(403);
   expect((await request(1, `/league-invitations/${token}/accept`, 'POST')).status).toBe(200);
@@ -143,26 +257,6 @@ test('private league create/join, persisted scoring, isolation and independent s
   });
   expect(profileUpload.status).toBe(200);
   const aliceId = (await profileUpload.json()).id;
-  const imagePath = `/api/v1/leagues/${lid}/picture`;
-  async function chooseLeagueImage(filename: string, replace = false) {
-    const picker = page.waitForEvent('filechooser');
-    await page
-      .getByRole('button', {
-        name: replace ? 'Replace league picture' : 'Choose league picture',
-        exact: true,
-      })
-      .click();
-    await (await picker).setFiles(path.resolve('assets/images', filename));
-    await expect(page.getByText('New picture · Save to apply')).toBeVisible();
-  }
-  await chooseLeagueImage('icon.png');
-  expect((await request(0, `/leagues/${lid}/picture`)).status).toBe(404);
-  const uploadedPicture = page.waitForResponse(
-    (response) => response.url().endsWith(imagePath) && response.request().method() === 'POST',
-  );
-  await page.getByRole('button', { name: 'Save picture', exact: true }).click();
-  expect((await uploadedPicture).status()).toBe(200);
-  await expect(page.getByText('New picture · Save to apply')).toHaveCount(0);
   const firstPhoto = await request(1, `/leagues/${lid}/picture`);
   expect(firstPhoto.status).toBe(200);
   expect(firstPhoto.headers.get('cache-control')).toContain('no-store');
@@ -185,30 +279,33 @@ test('private league create/join, persisted scoring, isolation and independent s
     ).status,
   ).toBe(200);
   expect((await request(2, `/leagues/${lid}/members/${aliceId}/picture`)).status).toBe(404);
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Edit league', exact: true }).click();
+  await page.getByLabel('League name', { exact: true }).fill(`${name} renamed`);
+  await page.getByLabel('League description', { exact: true }).fill('Ready for another week.');
   await chooseLeagueImage('android-icon-background.png', true);
-  await page.route(`**${imagePath}`, async (route) => {
-    if (route.request().method() === 'POST') await route.abort('failed');
-    else await route.continue();
+  await page.screenshot({
+    path: '.codex/artifacts/previews/league-edit.png',
+    animations: 'disabled',
   });
-  await page.getByRole('button', { name: 'Save picture', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Could not save the league picture');
-  await expect(page.getByText('New picture · Save to apply')).toBeVisible();
+  await page.route(`**${configPath}`, async (route) => {
+    await route.abort('failed');
+  });
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Please try again');
+  expect((await (await request(0, `/leagues/${lid}`)).json()).name).toBe(name);
   expect(Buffer.from(await (await request(0, `/leagues/${lid}/picture`)).arrayBuffer())).toEqual(
     firstBytes,
   );
-  await page.unroute(`**${imagePath}`);
-  const replacedPicture = page.waitForResponse(
-    (response) => response.url().endsWith(imagePath) && response.request().method() === 'POST',
-  );
-  await page.getByRole('button', { name: 'Save picture', exact: true }).click();
-  expect((await replacedPicture).status()).toBe(200);
-  await expect(page.getByText('New picture · Save to apply')).toHaveCount(0);
+  await page.unroute(`**${configPath}`);
+  const updated = page.waitForResponse((response) => response.url().endsWith(configPath));
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  expect((await updated).status()).toBe(200);
+  await expect(page.getByRole('heading', { name: `${name} renamed`, exact: true })).toBeVisible();
+  await expect(page.getByText('Ready for another week.', { exact: true })).toBeVisible();
   expect(
     Buffer.from(await (await request(0, `/leagues/${lid}/picture`)).arrayBuffer()),
   ).not.toEqual(firstBytes);
-  await page.getByLabel('New league name').fill(`${name} renamed`);
-  await page.getByRole('button', { name: 'Rename league' }).click();
-  await expect(page.getByRole('heading', { name: `${name} renamed`, exact: true })).toBeVisible();
   // Historical membership/creation fixture only: real scoring still uses completed-session API.
   prepare(lid);
   const catalogue = await (await request(0, '/exercises?name=League%20acceptance%20press')).json();
@@ -243,6 +340,7 @@ test('private league create/join, persisted scoring, isolation and independent s
   prepare(lid, true);
   await page.getByRole('button', { name: 'Back to league', exact: true }).click();
   await page.getByRole('button', { name: 'Back to leagues' }).click();
+  await expect(page.getByRole('tab', { name: 'League', exact: true })).toBeVisible();
   const aliceCard = page.getByRole('button', { name: `${name} renamed`, exact: true });
   await expect(aliceCard.getByText('#1 this week', { exact: true })).toBeVisible();
   await expect(aliceCard.getByText('2 members', { exact: true })).toBeVisible();
@@ -260,8 +358,37 @@ test('private league create/join, persisted scoring, isolation and independent s
   expect(await (await request(0, `/leagues/${lid}/results/pending`)).json()).toEqual([]);
   expect(await (await request(1, `/leagues/${lid}/results/pending`)).json()).toHaveLength(1);
   await expect(page.getByLabel('#1 League Alice: 20 points, you', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'General standings', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Select round: Current round', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Current round', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Close select round', exact: true }).click();
+  await page.getByRole('tab', { name: 'General', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Select round:/ })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Points breakdown', exact: true }).click();
+  await expect(page.getByText(/Workout #/)).toBeVisible();
+  await expect(page.getByText(/Body weight/)).toBeVisible();
+  await expect(
+    page.getByRole('img', { name: 'League Alice profile picture', exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: '.codex/artifacts/previews/league-points-breakdown.png',
+    animations: 'disabled',
+  });
+  await page.getByRole('tab', { name: 'Rankings', exact: true }).click();
+
   await expect(page.getByLabel('#1 League Alice: 20 points, you', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '#1 League Alice: 20 points, you', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Score history' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'League', exact: true })).toHaveCount(0);
+  await expect(page.getByText(/^Workout #/)).toBeVisible();
+  await expect(page.getByText(/Body weight/)).toBeVisible();
+  await page.getByRole('button', { name: 'Back to standings' }).click();
+  await expect(page.getByRole('tab', { name: 'General', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await page.reload();
   await signIn(page, 0);
   await page.getByRole('tab', { name: 'League', exact: true }).click();
@@ -271,6 +398,45 @@ test('private league create/join, persisted scoring, isolation and independent s
   await reloadedCard.click();
   await expect(page.getByRole('heading', { name: 'Standings', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Round result', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Select round: Current round', exact: true }).click();
+  const catalog = await (await request(0, `/leagues/${lid}/standings/rounds`)).json();
+  const past = catalog.rounds.find(
+    (round: { id: number }) => round.id !== catalog.current_round_id,
+  );
+  const emptyContributions = await request(
+    0,
+    `/leagues/${lid}/standings/contributions?round_id=${past.id}`,
+  );
+  expect(emptyContributions.status).toBe(200);
+  expect(await emptyContributions.json()).toEqual({ items: [], next_offset: null });
+  const generalContributions = await request(0, `/leagues/${lid}/standings/contributions`);
+  expect(generalContributions.status).toBe(200);
+  expect((await generalContributions.json()).items).toHaveLength(1);
+  const formatRound = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: timezone,
+  });
+  const historicalRound = `${formatRound.format(new Date(past.start_at))} – ${formatRound.format(new Date(Date.parse(past.end_at) - 1))}`;
+  await page.getByRole('button', { name: historicalRound, exact: true }).click();
+  await page.getByRole('tab', { name: 'Points breakdown', exact: true }).click();
+  await expect(
+    page.getByText('No credited workouts in this period.', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('tab', { name: 'General', exact: true }).click();
+  await expect(page.getByText(/^Workout #/)).toBeVisible();
+  await page.getByRole('tab', { name: 'Round', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Select round: ${historicalRound}`, exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('No credited workouts in this period.', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: `Select round: ${historicalRound}`, exact: true }).click();
+  await page.getByRole('button', { name: 'Current round', exact: true }).click();
+  await page.getByRole('tab', { name: 'Rankings', exact: true }).click();
+
   await expect(
     page.getByRole('img', { name: `${name} renamed league picture`, exact: true }),
   ).toBeVisible();
@@ -279,9 +445,8 @@ test('private league create/join, persisted scoring, isolation and independent s
   ).toBeVisible();
   await page.screenshot({ path: '.codex/artifacts/previews/league-standings.png' });
   await page.getByRole('button', { name: `View league information for ${name} renamed` }).click();
-  await expect(
-    page.getByRole('heading', { name: 'League information', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'League', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'About', exact: true })).toBeVisible();
   await expect(
     page.getByRole('img', { name: 'League Alice profile picture', exact: true }),
   ).toBeVisible();
@@ -293,14 +458,13 @@ test('private league create/join, persisted scoring, isolation and independent s
   });
   await page.getByRole('heading', { name: 'Members', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: '.codex/artifacts/previews/league-members.png' });
-  const removedPicture = page.waitForResponse(
-    (response) => response.url().endsWith(imagePath) && response.request().method() === 'DELETE',
-  );
+  await page.getByRole('button', { name: 'Edit league', exact: true }).click();
   await page.getByRole('button', { name: 'Remove league picture', exact: true }).click();
+  expect((await request(0, `/leagues/${lid}/picture`)).status).toBe(200);
+  const removedPicture = page.waitForResponse((response) => response.url().endsWith(configPath));
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   expect((await removedPicture).status()).toBe(200);
-  await expect(
-    page.getByRole('button', { name: 'Choose league picture', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit league', exact: true })).toBeVisible();
   expect((await request(0, `/leagues/${lid}/picture`)).status).toBe(404);
   expect((await (await request(0, `/leagues/${lid}`)).json()).picture_url).toBeNull();
   await bob.getByRole('button', { name: 'Back to league', exact: true }).click();
@@ -313,5 +477,13 @@ test('private league create/join, persisted scoring, isolation and independent s
   await bob.getByRole('button', { name: 'Got it', exact: true }).click();
   await expect(bob.getByRole('heading', { name: 'Round result', exact: true })).toHaveCount(0);
   expect(await (await request(1, `/leagues/${lid}/results/pending`)).json()).toEqual([]);
+  await bob.getByRole('button', { name: '#1 League Alice: 20 points', exact: true }).click();
+  await expect(bob.getByRole('heading', { name: 'Score history' })).toBeVisible();
+  await expect(bob.getByText(/^Workout #/)).toBeVisible();
+  await expect(bob.getByText(/Body weight/)).toHaveCount(0);
+  await bob.screenshot({
+    path: '.codex/artifacts/previews/league-score-history.png',
+    animations: 'disabled',
+  });
   await context.close();
 });

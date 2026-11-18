@@ -1,33 +1,62 @@
 import { apiClient } from '@/services/apiClient';
 import {
-  createSchema,
   createdLeagueSchema,
   invitationSchema,
   leagueDetailSchema,
   leaguePicturePathSchema,
   memberPicturePathSchema,
   leagueListSchema,
-  nameSchema,
+  timezonesSchema,
   previewSchema,
   pendingResultsSchema,
-  standingsSchema,
+  roundsSchema,
+  contributionsPageSchema,
+  standingsPageSchema,
+  scoreHistoryPageSchema,
 } from './schemas';
+
+function standingsQuery(roundId: number | null, offset: number) {
+  return `offset=${offset}${roundId === null ? '' : `&round_id=${roundId}`}`;
+}
 
 export const leaguesApi = {
   list: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/leagues', { schema: leagueListSchema, signal }),
   detail: (id: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/leagues/${id}`, { schema: leagueDetailSchema, signal }),
-  uploadPicture: (id: number, form: FormData) =>
-    apiClient.postMultipart(`/api/v1/leagues/${id}/picture`, form, { schema: leagueDetailSchema }),
-  removePicture: (id: number) =>
-    apiClient.delete(`/api/v1/leagues/${id}/picture`, { schema: leagueDetailSchema }),
   picture: (path: string, signal?: AbortSignal) => {
     const result = leaguePicturePathSchema.or(memberPicturePathSchema).parse(path);
     return apiClient.getBlob(result, { signal });
   },
-  standings: (id: number, signal?: AbortSignal) =>
-    apiClient.get(`/api/v1/leagues/${id}/standings`, { schema: standingsSchema, signal }),
+  rounds: (id: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/leagues/${id}/standings/rounds`, { schema: roundsSchema, signal }),
+  standingsPage: (id: number, roundId: number | null, offset: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/leagues/${id}/standings/page?${standingsQuery(roundId, offset)}`, {
+      schema: standingsPageSchema,
+      signal,
+    }),
+  contributions: (id: number, roundId: number | null, offset: number, signal?: AbortSignal) =>
+    apiClient.get(
+      `/api/v1/leagues/${id}/standings/contributions?${standingsQuery(roundId, offset)}`,
+      {
+        schema: contributionsPageSchema,
+        signal,
+      },
+    ),
+  changeRole: (leagueId: number, memberId: number, role: 'admin' | 'member') =>
+    apiClient.patch(
+      `/api/v1/leagues/${leagueId}/members/${memberId}/role`,
+      { role },
+      { schema: leagueDetailSchema },
+    ),
+  scoreHistory: (leagueId: number, memberId: number, before: string | null, signal?: AbortSignal) =>
+    apiClient.get(
+      `/api/v1/leagues/${leagueId}/members/${memberId}/score-history${before ? `?before=${before}` : ''}`,
+      {
+        schema: scoreHistoryPageSchema,
+        signal,
+      },
+    ),
   pendingResults: (id: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/leagues/${id}/results/pending`, {
       schema: pendingResultsSchema,
@@ -35,21 +64,24 @@ export const leaguesApi = {
     }),
   acknowledge: (leagueId: number, resultId: number) =>
     apiClient.post(`/api/v1/leagues/${leagueId}/results/${resultId}/acknowledge`),
-  create: (name: string, timezone: string) =>
-    apiClient.post('/api/v1/leagues', createSchema.parse({ name, timezone }), {
-      schema: createdLeagueSchema,
+  timezones: (signal?: AbortSignal) =>
+    apiClient.get('/api/v1/leagues/timezones', { schema: timezonesSchema, signal }),
+  createConfiguration: (form: FormData) =>
+    apiClient.postMultipart('/api/v1/leagues/configuration', form, { schema: createdLeagueSchema }),
+  saveConfiguration: (id: number, form: FormData) =>
+    apiClient.postMultipart(`/api/v1/leagues/${id}/configuration`, form, {
+      schema: leagueDetailSchema,
     }),
-  rename: (id: number, name: string) =>
-    apiClient.patch(
-      `/api/v1/leagues/${id}`,
-      { name: nameSchema.parse(name) },
-      { schema: leagueDetailSchema },
-    ),
   invite: (id: number) =>
     apiClient.post(`/api/v1/leagues/${id}/invitations`, undefined, { schema: invitationSchema }),
-  preview: (token: string) =>
+  invitationPicture: (token: string, signal?: AbortSignal) =>
+    apiClient.getBlob(`/api/v1/league-invitations/${encodeURIComponent(token)}/picture`, {
+      signal,
+    }),
+  preview: (token: string, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/league-invitations/${encodeURIComponent(token)}`, {
       schema: previewSchema,
+      signal,
     }),
   accept: (token: string) =>
     apiClient.post(`/api/v1/league-invitations/${encodeURIComponent(token)}/accept`, undefined, {

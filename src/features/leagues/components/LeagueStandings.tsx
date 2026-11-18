@@ -1,169 +1,264 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
+import { screenContentStyle } from '@/components/ScreenHeader';
+import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ApiError } from '@/services/apiClient';
-import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
-import { LeagueAvatar } from './LeagueAvatar';
-import { LeagueAction, LeagueCard, LeagueRankingRow } from './LeagueUI';
-import type { Standings } from '../schemas';
-
-function durationHours(microseconds: string) {
-  const thousandths = (BigInt(microseconds) + 1800000n) / 3600000n;
-  return `${thousandths / 1000n}.${String(thousandths % 1000n).padStart(3, '0')}`;
-}
-
-type Round = Standings['rounds'][number];
-
-export function StandingsContent({
-  data,
-  accountId,
-}: Readonly<{ data: Standings; accountId: number }>) {
-  const p = usePalette();
-  const [selection, setSelection] = useState<'general' | number>(data.current_round_id);
-  const round = data.rounds.find((item) => item.id === selection);
-  const rows = selection === 'general' ? data.general : (round?.standings ?? []);
-  const select = (label: string, value: 'general' | number) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: selection === value }}
-      onPress={() => setSelection(value)}
-      style={{
-        minHeight: sizes['tap-min'],
-        justifyContent: 'center',
-        paddingHorizontal: spacing['space-4'],
-        paddingVertical: spacing['space-2'],
-        borderRadius: radii['radius-pill'],
-        backgroundColor: selection === value ? p['brand-soft'] : p['surface-300'],
-        borderWidth: 1,
-        borderColor: selection === value ? p.brand : p['line-strong'],
-      }}
-    >
-      <Text style={[textStyles.label, { color: selection === value ? p['brand-ink'] : p.ink }]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-  const date = (value: string) =>
-    new Date(value).toLocaleDateString(undefined, {
-      timeZone: data.timezone,
-      month: 'short',
-      day: 'numeric',
-    });
-  const label = (item: Round) =>
-    item.id === data.current_round_id
-      ? 'Current round'
-      : `Past round: ${date(item.start_at)} – ${date(item.end_at)}`;
-  return (
-    <LeagueCard>
-      <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-        Standings
-      </Text>
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        Timezone: {data.timezone}
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: spacing['space-2'] }}
-      >
-        {select('General standings', 'general')}
-        {data.rounds.map((item) => (
-          <React.Fragment key={item.id}>{select(label(item), item.id)}</React.Fragment>
-        ))}
-      </ScrollView>
-      <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-        {selection === 'general' ? 'General standings' : round ? label(round) : 'Round unavailable'}
-      </Text>
-      {rows.length ? (
-        rows.map((row) => (
-          <LeagueRankingRow
-            accountId={accountId}
-            key={row.user_id}
-            row={row}
-            current={row.user_id === accountId}
-          />
-        ))
-      ) : (
-        <Text style={[textStyles.body, { color: p.ink }]}>No standings yet.</Text>
-      )}
-      {round ? (
-        <>
-          <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-            Daily contributions
-          </Text>
-          {round.contributions.length ? (
-            round.contributions.map((entry) => {
-              const member = round.standings.find((row) => row.user_id === entry.user_id);
-              return (
-                <View
-                  key={`${entry.user_id}-${entry.local_day}`}
-                  style={{
-                    gap: spacing['space-2'],
-                    borderTopWidth: 1,
-                    borderColor: p.line,
-                    paddingTop: spacing['space-3'],
-                  }}
-                >
-                  <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] }}
-                  >
-                    <LeagueAvatar
-                      accountId={accountId}
-                      path={member?.picture_url}
-                      name={member?.display_name ?? 'Member'}
-                      member
-                      size={36}
-                    />
-                    <Text style={[textStyles.body, { color: p.ink, flex: 1 }]}>
-                      {entry.local_day} · {member?.display_name ?? 'Member'}: {entry.score} points
-                    </Text>
-                  </View>
-                  {entry.user_id === accountId && entry.calculation ? (
-                    <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                      Workout {entry.calculation.session_id} · Volume{' '}
-                      {entry.calculation.volume_kg_reps} kg reps · Duration{' '}
-                      {durationHours(entry.calculation.duration_us)} hours · Body weight{' '}
-                      {entry.calculation.body_weight_kg} kg
-                    </Text>
-                  ) : null}
-                </View>
-              );
-            })
-          ) : (
-            <Text style={[textStyles.body, { color: p.ink }]}>No daily contributions yet.</Text>
-          )}
-        </>
-      ) : null}
-    </LeagueCard>
-  );
-}
+import type { LeagueContribution, StandingRow } from '../schemas';
+import { LeagueContributionRow } from './LeagueContributionRow';
+import { LeagueRoundPicker, type RoundSelection } from './LeagueRoundPicker';
+import { LeagueScoreHistory, roundRange } from './LeagueScoreHistory';
+import { LeagueAction, LeagueRankingRow, leagueStyles } from './LeagueUI';
 
 export function LeagueStandings({
   accountId,
   leagueId,
-}: Readonly<{ accountId: number; leagueId: number }>) {
+  header,
+  active = true,
+  onBack,
+}: Readonly<{
+  accountId: number;
+  leagueId: number;
+  header?: React.ReactNode;
+  active?: boolean;
+  onBack?: () => void;
+}>) {
   const p = usePalette();
-  const query = useQuery({
-    queryKey: ['leagues', accountId, leagueId, 'standings'],
-    queryFn: ({ signal }) => leaguesApi.standings(leagueId, signal),
+  const [view, setView] = useState<'rankings' | 'breakdown'>('rankings');
+  const [period, setPeriod] = useState<'round' | 'general'>('round');
+  const [roundSelection, setRoundSelection] = useState<RoundSelection>('current');
+  const [member, setMember] = useState<StandingRow | null>(null);
+  const rounds = useQuery({
+    queryKey: ['leagues', accountId, leagueId, 'rounds'],
+    queryFn: ({ signal }) => leaguesApi.rounds(leagueId, signal),
+    enabled: active,
   });
-  if (query.isPending) return <ActivityIndicator accessibilityLabel="Loading standings" />;
-  if (query.isError)
+  const selectedRoundId =
+    roundSelection === 'current' ? rounds.data?.current_round_id : roundSelection;
+  const roundId = period === 'general' ? null : selectedRoundId;
+  const rankings = useInfiniteQuery({
+    queryKey: ['leagues', accountId, leagueId, 'rankings', roundId],
+    initialPageParam: 0,
+    enabled: active && view === 'rankings' && roundId !== undefined && rounds.isSuccess,
+    queryFn: ({ pageParam, signal }) =>
+      leaguesApi.standingsPage(leagueId, roundId ?? null, pageParam, signal),
+    getNextPageParam: (page) => page.next_offset ?? undefined,
+  });
+  const contributions = useInfiniteQuery({
+    queryKey: ['leagues', accountId, leagueId, 'contributions', roundId],
+    initialPageParam: 0,
+    enabled: active && view === 'breakdown' && roundId !== undefined && rounds.isSuccess,
+    queryFn: ({ pageParam, signal }) =>
+      leaguesApi.contributions(leagueId, roundId ?? null, pageParam, signal),
+    getNextPageParam: (page) => page.next_offset ?? undefined,
+  });
+  useHardwareBack(() => {
+    if (member) {
+      setMember(null);
+      return true;
+    }
+    if (!onBack) return false;
+    onBack();
+    return true;
+  }, active);
+  if (member && rounds.data) {
     return (
-      <View style={{ gap: spacing['space-2'] }}>
-        <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {query.error instanceof ApiError && query.error.status === 409
-            ? 'Standings are unavailable because this older league has no calendar.'
-            : 'Could not load standings.'}
-        </Text>
-        <LeagueAction
-          label="Retry standings"
-          onPress={() => {
-            void query.refetch();
-          }}
-        />
-      </View>
+      <LeagueScoreHistory
+        accountId={accountId}
+        leagueId={leagueId}
+        member={member}
+        timezone={rounds.data.timezone}
+        active={active}
+        onBack={() => setMember(null)}
+      />
     );
-  return <StandingsContent data={query.data} accountId={accountId} />;
+  }
+  const options: { value: RoundSelection; label: string; detail?: string }[] = [];
+  if (rounds.data) {
+    const { timezone, current_round_id } = rounds.data;
+    const current = rounds.data.rounds.find((round) => round.id === current_round_id);
+    options.push({
+      value: 'current',
+      label: 'Current round',
+      detail: current ? roundRange(current.start_at, current.end_at, timezone) : undefined,
+    });
+    for (const round of rounds.data.rounds) {
+      if (round.id !== current_round_id)
+        options.push({
+          value: round.id,
+          label: roundRange(round.start_at, round.end_at, timezone),
+        });
+    }
+  }
+  const showingRankings = view === 'rankings';
+  const page = showingRankings ? rankings : contributions;
+  const next = () => {
+    void page.fetchNextPage({ cancelRefetch: false });
+  };
+  const initialError = rounds.error ?? (page.data ? null : page.error);
+  const rows: (StandingRow | LeagueContribution)[] = showingRankings
+    ? Array.from(
+        new Map(
+          rankings.data?.pages
+            .flatMap((page) => page.items)
+            .map((row) => [row.user_id, row] as const),
+        ).values(),
+      )
+    : Array.from(
+        new Map(
+          contributions.data?.pages
+            .flatMap((page) => page.items)
+            .map((row) => [`${row.user_id}:${row.local_day}`, row] as const),
+        ).values(),
+      );
+  return (
+    <FlatList
+      key={view}
+      data={rows}
+      keyExtractor={(item) =>
+        'position' in item ? String(item.user_id) : `${item.user_id}:${item.local_day}`
+      }
+      contentContainerStyle={[
+        screenContentStyle,
+        { paddingBottom: spacing['space-8'], gap: spacing['space-3'] },
+      ]}
+      ListHeaderComponent={
+        <View style={leagueStyles.section}>
+          {header}
+          <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
+            Standings
+          </Text>
+          {rounds.data ? (
+            <>
+              <View
+                accessibilityRole="tablist"
+                accessibilityLabel="Standings period"
+                style={{
+                  flexDirection: 'row',
+                  borderRadius: radii['radius-md'],
+                  backgroundColor: p['surface-200'],
+                  overflow: 'hidden',
+                }}
+              >
+                <AnimatedTextSelector
+                  role="tab"
+                  label="Round"
+                  selected={period === 'round'}
+                  reduceMotion
+                  equalWidth
+                  onPress={() => setPeriod('round')}
+                />
+                <AnimatedTextSelector
+                  role="tab"
+                  label="General"
+                  selected={period === 'general'}
+                  reduceMotion
+                  equalWidth
+                  onPress={() => setPeriod('general')}
+                />
+              </View>
+              {period === 'round' ? (
+                <LeagueRoundPicker
+                  selection={roundSelection}
+                  options={options}
+                  onSelect={setRoundSelection}
+                />
+              ) : null}
+              <View
+                accessibilityRole="tablist"
+                accessibilityLabel="Standings views"
+                style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: p.line }}
+              >
+                <AnimatedTextSelector
+                  role="tab"
+                  label="Rankings"
+                  selected={showingRankings}
+                  reduceMotion
+                  equalWidth
+                  onPress={() => setView('rankings')}
+                />
+                <AnimatedTextSelector
+                  role="tab"
+                  label="Points breakdown"
+                  selected={!showingRankings}
+                  reduceMotion
+                  equalWidth
+                  onPress={() => setView('breakdown')}
+                />
+              </View>
+            </>
+          ) : null}
+          {initialError ? (
+            <>
+              <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
+                {initialError instanceof ApiError && initialError.status === 409
+                  ? 'Standings are unavailable because this older league has no calendar.'
+                  : showingRankings
+                    ? 'Could not load standings.'
+                    : 'Could not load the points breakdown.'}
+              </Text>
+              <LeagueAction
+                label={showingRankings ? 'Retry standings' : 'Retry points breakdown'}
+                onPress={() => {
+                  void (rounds.isError ? rounds.refetch() : page.refetch());
+                }}
+              />
+            </>
+          ) : page.isPending ? (
+            <ActivityIndicator
+              color={p.brand}
+              accessibilityLabel={
+                showingRankings ? 'Loading standings' : 'Loading points breakdown'
+              }
+            />
+          ) : null}
+        </View>
+      }
+      ListEmptyComponent={
+        page.isSuccess ? (
+          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+            {showingRankings ? 'No standings yet.' : 'No credited workouts in this period.'}
+          </Text>
+        ) : null
+      }
+      renderItem={({ item }) =>
+        'position' in item ? (
+          <LeagueRankingRow
+            row={item}
+            accountId={accountId}
+            current={item.user_id === accountId}
+            onPress={() => setMember(item)}
+          />
+        ) : (
+          <LeagueContributionRow
+            item={item}
+            accountId={accountId}
+            timezone={rounds.data?.timezone ?? 'UTC'}
+          />
+        )
+      }
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (active && page.hasNextPage && !page.isFetching && !page.isFetchNextPageError) next();
+      }}
+      ListFooterComponent={
+        page.isFetchingNextPage ? (
+          <ActivityIndicator
+            color={p.brand}
+            accessibilityLabel={
+              showingRankings ? 'Loading more standings' : 'Loading more contributions'
+            }
+          />
+        ) : page.isFetchNextPageError ? (
+          <LeagueAction
+            label={showingRankings ? 'Retry more standings' : 'Retry more contributions'}
+            onPress={next}
+          />
+        ) : null
+      }
+    />
+  );
 }

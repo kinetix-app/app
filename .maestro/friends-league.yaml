@@ -15,25 +15,18 @@ appId: cat.udl.kinetix
 - tapOn: Create league
 - tapOn: League name
 - inputText: ${MAESTRO_LEAGUE_NAME}
-- tapOn: IANA timezone
-- eraseText
-- inputText: Europe/Madrid
-- hideKeyboard
+- tapOn: 'Timezone:.*'
+- tapOn: Search timezones
+- inputText: Madrid
+- tapOn: Europe/Madrid
 - tapOn: Create league
 - extendedWaitUntil:
     visible: Standings
     timeout: 30000
-- scrollUntilVisible:
-    element: League rules
-    direction: DOWN
-- scrollUntilVisible:
-    element: Generate invitation
-    direction: DOWN
+- tapOn: 'View league information for .*'
 - tapOn: Generate invitation
 - assertVisible: Share invitation
-- scrollUntilVisible:
-    element: Back to leagues
-    direction: UP
+- tapOn: Back to league
 - tapOn: Back to leagues
 - tapOn: ${MAESTRO_LEAGUE_NAME}
 - extendedWaitUntil:

@@ -22,15 +22,11 @@ appId: cat.udl.kinetix
 - inputText: ${MAESTRO_LEAGUE_INVITATION}
 - hideKeyboard
 - tapOn: Preview invitation
-- assertVisible: Join Acceptance league Android?
-- tapOn: Confirm joining
+- extendedWaitUntil:
+    visible: Acceptance league Android
+    timeout: 20000
+- assertVisible: Created
+- tapOn: Join league
 - extendedWaitUntil:
     visible: Standings
     timeout: 20000
-- scrollUntilVisible:
-    element: League rules
-    direction: DOWN
-- scrollUntilVisible:
-    element: League Bob · member
-    direction: DOWN
-- assertVisible: League Alice · admin

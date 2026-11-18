@@ -9,6 +9,41 @@ export function LeagueCard({ children }: React.PropsWithChildren) {
   return <View style={[leagueStyles.card, { backgroundColor: p['surface-200'] }]}>{children}</View>;
 }
 
+export function LeagueIconButton({
+  label,
+  icon,
+  onPress,
+  disabled = false,
+}: Readonly<{
+  label: string;
+  icon: ComponentProps<typeof Ionicons>['name'];
+  onPress: () => void;
+  disabled?: boolean;
+}>) {
+  const p = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      accessibilityState={{ disabled }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: sizes['tap-min'],
+        height: sizes['tap-min'],
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: radii['radius-pill'],
+        backgroundColor: p['surface-300'],
+        opacity: pressed || disabled ? 0.55 : 1,
+        flexShrink: 0,
+      })}
+    >
+      <Ionicons name={icon} size={22} color={p.ink} />
+    </Pressable>
+  );
+}
+
 export function LeagueAction({
   label,
   onPress,
@@ -56,6 +91,7 @@ export function LeagueRankingRow({
   row,
   current = false,
   accountId,
+  onPress,
 }: Readonly<{
   row: {
     position: number;
@@ -65,10 +101,15 @@ export function LeagueRankingRow({
   };
   accountId: number;
   current?: boolean;
+  onPress?: () => void;
 }>) {
   const p = usePalette();
+  const Row = onPress ? Pressable : View;
   return (
-    <View
+    <Row
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityHint={onPress ? 'Opens member score history' : undefined}
       accessible
       accessibilityLabel={`#${row.position} ${row.display_name ?? 'Member'}: ${row.score} points${current ? ', you' : ''}`}
       style={[
@@ -105,7 +146,8 @@ export function LeagueRankingRow({
         </Text>
         <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>points</Text>
       </View>
-    </View>
+      {onPress ? <Ionicons name="chevron-forward" size={16} color={p['ink-muted']} /> : null}
+    </Row>
   );
 }
 
@@ -132,3 +174,52 @@ export const leagueStyles = StyleSheet.create({
     borderRadius: radii['radius-md'],
   },
 });
+
+export function LeagueDropdownTrigger({
+  label,
+  value,
+  detail,
+  icon,
+  expanded,
+  disabled,
+  onPress,
+}: Readonly<{
+  label: string;
+  value: string;
+  detail?: string;
+  icon?: ComponentProps<typeof Ionicons>['name'];
+  expanded: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ expanded, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={[
+        leagueStyles.row,
+        {
+          minHeight: sizes['control-height'],
+          padding: spacing['space-3'],
+          borderRadius: radii['radius-md'],
+          backgroundColor: p['surface-300'],
+          borderWidth: 1,
+          borderColor: p['line-strong'],
+        },
+      ]}
+    >
+      {icon ? <Ionicons name={icon} size={20} color={p['brand-ink']} /> : null}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[textStyles.label, { color: p.ink }]}>{value}</Text>
+        {detail ? (
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{detail}</Text>
+        ) : null}
+      </View>
+      <Ionicons name="chevron-down" size={18} color={p['ink-muted']} />
+    </Pressable>
+  );
+}

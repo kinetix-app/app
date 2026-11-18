@@ -1,139 +1,88 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ImagePickerAsset } from 'expo-image-picker';
 import React, { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
-import type { ImagePickerAsset } from 'expo-image-picker';
-import { ApiError } from '@/services/apiClient';
 import { textStyles, usePalette } from '@/theme/tokens';
-import { leaguesApi } from '../api';
-import type { LeagueDetail } from '../schemas';
 import { LeagueAvatar } from './LeagueAvatar';
-import { LeagueAction, leagueStyles } from './LeagueUI';
-import { leaguePictureForm, pickLeaguePicture } from './leaguePicture';
+import { LeagueIconButton, leagueStyles } from './LeagueUI';
+import { pickLeaguePicture } from './leaguePicture';
+
+export type LeaguePictureDraft = ImagePickerAsset | null | undefined;
 
 export function LeaguePictureEditor({
   accountId,
-  league,
+  name,
+  path,
+  draft,
+  onChange,
   onBusy,
   disabled = false,
 }: Readonly<{
   accountId: number;
-  league: LeagueDetail;
+  name: string;
+  path?: string | null;
+  draft: LeaguePictureDraft;
+  onChange: (draft: LeaguePictureDraft) => void;
   onBusy: (busy: boolean) => void;
   disabled?: boolean;
 }>) {
   const p = usePalette();
-  const cache = useQueryClient();
-  const [asset, setAsset] = useState<ImagePickerAsset>();
+  const choosing = useRef(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [choosing, setChoosing] = useState(false);
-  const locked = useRef(false);
-  const save = useMutation({
-    mutationFn: (operation: 'save' | 'remove') =>
-      operation === 'remove'
-        ? leaguesApi.removePicture(league.id)
-        : leaguesApi.uploadPicture(league.id, leaguePictureForm(asset!)),
-    onSuccess: (updated) => {
-      cache.setQueryData(['leagues', accountId, league.id], updated);
-      void cache.invalidateQueries({ queryKey: ['leagues', accountId] });
-      setAsset(undefined);
-      setError('');
-    },
-    onError: (e) =>
-      setError(
-        e instanceof ApiError && e.status === 413
-          ? 'Choose a picture smaller than 5 MB.'
-          : e instanceof ApiError && [415, 422].includes(e.status)
-            ? 'Choose a valid JPEG, PNG or WebP picture.'
-            : 'Could not save the league picture. Please try again.',
-      ),
-    onSettled: () => {
-      locked.current = false;
-      onBusy(false);
-    },
-  });
+  const visiblePath = draft === null ? null : path;
+  const hasPicture = Boolean(draft || visiblePath);
   async function choose() {
-    if (locked.current || disabled) return;
-    locked.current = true;
-    setChoosing(true);
+    if (choosing.current || disabled) return;
+    choosing.current = true;
+    setBusy(true);
     onBusy(true);
     setError('');
     try {
       const result = await pickLeaguePicture();
       if (result && 'error' in result) setError(result.error);
-      else if (result) setAsset(result.asset);
+      else if (result) onChange(result.asset);
     } finally {
-      locked.current = false;
-      setChoosing(false);
+      choosing.current = false;
+      setBusy(false);
       onBusy(false);
     }
   }
-  function apply(operation: 'save' | 'remove') {
-    if (locked.current || disabled || (operation === 'save' && !asset)) return;
-    locked.current = true;
-    onBusy(true);
-    save.mutate(operation);
-  }
-  const busy = disabled || choosing || save.isPending;
   return (
     <View style={leagueStyles.section}>
-      <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-        League picture
-      </Text>
-      <View style={{ alignItems: 'center' }}>
+      <View style={leagueStyles.row}>
         <LeagueAvatar
           accountId={accountId}
-          path={league.picture_url}
-          preview={asset?.uri}
-          name={league.name}
-          size={112}
-          retryable
+          name={name || 'League'}
+          path={visiblePath}
+          preview={draft?.uri}
+          size={64}
         />
-      </View>
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        JPEG, PNG or WebP · up to 5 MB
-      </Text>
-      <LeagueAction
-        label={
-          choosing
-            ? 'Opening photos…'
-            : asset || league.picture_url
-              ? 'Replace league picture'
-              : 'Choose league picture'
-        }
-        icon="image-outline"
-        variant="positive"
-        disabled={busy}
-        onPress={() => {
-          void choose();
-        }}
-      />
-      {asset ? (
-        <>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[textStyles.label, { color: p.ink }]}>League picture</Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            New picture · Save to apply
+            {busy ? 'Opening photos…' : 'JPEG, PNG or WebP · up to 5 MB'}
           </Text>
-          <LeagueAction
-            label={save.isPending ? 'Saving…' : 'Save picture'}
-            variant="primary"
-            disabled={busy}
-            onPress={() => apply('save')}
-          />
-          <LeagueAction
-            label="Cancel picture change"
-            disabled={busy}
+        </View>
+        {hasPicture ? (
+          <LeagueIconButton
+            label="Remove league picture"
+            icon="trash-outline"
+            disabled={busy || disabled}
             onPress={() => {
-              setAsset(undefined);
               setError('');
+              onChange(null);
             }}
           />
-        </>
-      ) : league.picture_url ? (
-        <LeagueAction
-          label={save.isPending ? 'Removing…' : 'Remove league picture'}
-          disabled={busy}
-          onPress={() => apply('remove')}
+        ) : null}
+        <LeagueIconButton
+          label={hasPicture ? 'Replace league picture' : 'Choose league picture'}
+          icon="image-outline"
+          disabled={busy || disabled}
+          onPress={() => {
+            void choose();
+          }}
         />
-      ) : null}
+      </View>
       {error ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
           {error}

@@ -9,12 +9,18 @@ import { LeaguesScreen } from '../components/LeaguesScreen';
 jest.mock('../api', () => ({ leaguesApi: { list: jest.fn(), detail: jest.fn() } }));
 jest.mock('../components/LeagueResults', () => ({ LeagueResults: () => null }));
 jest.mock('../components/LeagueStandings', () => ({
-  LeagueStandings: () => <MockText>Standings content</MockText>,
+  LeagueStandings: ({ header }: { header: React.ReactNode }) => (
+    <>
+      {header}
+      <MockText>Standings content</MockText>
+    </>
+  ),
 }));
 const clients: QueryClient[] = [];
 function setup(role: 'admin' | 'member', position: number | null = 2, memberCount = 2) {
   const league = leagueDetailSchema.parse({
     id: 9,
+    creator_id: 1,
     name: 'Early birds',
     picture_url: null,
     timezone: 'Europe/Madrid',
@@ -51,11 +57,15 @@ test('league identity opens information with admin configuration and back return
   expect(await screen.findByRole('header', { name: 'Early birds' })).toBeTruthy();
   expect(screen.queryByRole('header', { name: 'League' })).toBeNull();
   expect(await screen.findByText('Standings content')).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Rename league' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Edit league' })).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'View league information for Early birds' }));
-  expect(screen.getByRole('header', { name: 'League information' })).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'About' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Choose league picture' })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Edit league' }));
   expect(screen.getByRole('button', { name: 'Choose league picture' })).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Rename league' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+  expect(screen.getByLabelText('League name').props.value).toBe('Early birds');
+  fireEvent.press(screen.getByRole('button', { name: 'Cancel editing' }));
   expect(screen.getByRole('button', { name: 'Generate invitation' })).toBeTruthy();
   expect(screen.getByText('Daily credit')).toBeTruthy();
   expect(screen.getByLabelText('Alex profile picture unavailable')).toBeTruthy();
@@ -75,7 +85,7 @@ test('members can view concise rules and identities without admin controls', asy
   fireEvent.press(screen.getByRole('button', { name: 'View league information for Early birds' }));
   expect(screen.getByRole('header', { name: 'Members' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Choose league picture' })).toBeNull();
-  expect(screen.queryByRole('button', { name: 'Rename league' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Edit league' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Generate invitation' })).toBeNull();
 });
 

@@ -13,6 +13,7 @@ export function LeagueAvatar({
   size = 44,
   preview,
   retryable = false,
+  invitationToken,
 }: Readonly<{
   accountId: number;
   path?: string | null;
@@ -21,14 +22,18 @@ export function LeagueAvatar({
   size?: number;
   preview?: string;
   retryable?: boolean;
+  invitationToken?: string;
 }>) {
   const p = usePalette();
   const [decoded, setDecoded] = useState<{ blob: Blob; uri?: string; failed?: boolean }>();
   const [failedUri, setFailedUri] = useState<string>();
-  const privatePhoto = Boolean(path?.startsWith('/api/v1/leagues/'));
+  const privatePhoto = Boolean(invitationToken || path?.startsWith('/api/v1/leagues/'));
   const photo = useQuery({
-    queryKey: ['leagues', accountId, 'picture', path],
-    queryFn: ({ signal }) => leaguesApi.picture(path!, signal),
+    queryKey: ['leagues', accountId, 'picture', path, invitationToken],
+    queryFn: ({ signal }) =>
+      invitationToken
+        ? leaguesApi.invitationPicture(invitationToken, signal)
+        : leaguesApi.picture(path!, signal),
     enabled: privatePhoto && !preview,
     gcTime: 0,
     retry: false,
@@ -55,8 +60,7 @@ export function LeagueAvatar({
         : undefined
       : (path ?? undefined));
   const failed =
-    photo.isError ||
-    (decoded?.blob === photo.data && decoded?.failed) ||
+    (!preview && (photo.isError || (decoded?.blob === photo.data && decoded?.failed))) ||
     (uri && failedUri === uri);
   const label = `${name} ${member ? 'profile' : 'league'} picture`;
   return (

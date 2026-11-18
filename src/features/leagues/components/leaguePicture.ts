@@ -43,3 +43,9 @@ export function leaguePictureForm(asset: ImagePicker.ImagePickerAsset) {
     } as unknown as Blob);
   return form;
 }
+
+export function leagueConfigurationForm(data: object, asset?: ImagePicker.ImagePickerAsset) {
+  const form = asset ? leaguePictureForm(asset) : new FormData();
+  form.append('data', JSON.stringify(data));
+  return form;
+}

@@ -23,6 +23,7 @@ describe('league input and responses', () => {
     expect(
       leagueDetailSchema.safeParse({
         id: 1,
+        creator_id: 1,
         name: 'Friends',
         timezone: null,
         role: null,

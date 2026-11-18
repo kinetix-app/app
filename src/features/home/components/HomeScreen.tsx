@@ -75,6 +75,7 @@ function HomeNavigation({
   const session = useSession();
   const [tab, setTab] = useState<HomeTab>(initialTab);
   const [routineEditing, setRoutineEditing] = useState(false);
+  const [leagueDetailOpen, setLeagueDetailOpen] = useState(false);
   const [visited, setVisited] = useState<HomeTab[]>([initialTab]);
   const [profileOrigin, setProfileOrigin] = useState<ProfileOrigin>(
     initialTab === 'profile' ? 'home' : initialTab,
@@ -208,6 +209,7 @@ function HomeNavigation({
           accountId={accountId}
           initialInvitation={initialInvitation}
           active={tab === 'league'}
+          onDetailOpenChange={setLeagueDetailOpen}
         />
       );
     if (item === 'workout')
@@ -238,7 +240,9 @@ function HomeNavigation({
           </View>
         ))}
       </SessionHost>
-      {!addingFood && (tab !== 'workout' || !routineEditing) ? (
+      {!addingFood &&
+      (tab !== 'workout' || !routineEditing) &&
+      (tab !== 'league' || !leagueDetailOpen) ? (
         <BottomBar
           tab={tab}
           onSelect={select}
