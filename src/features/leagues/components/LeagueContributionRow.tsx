@@ -7,7 +7,11 @@ import { durationHours, roundRange } from './LeagueScoreHistory';
 import { LeagueCard, leagueStyles } from './LeagueUI';
 
 function compactDecimal(value: string) {
-  return value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
+  const decimalPoint = value.indexOf('.');
+  if (decimalPoint < 0) return value;
+  let end = value.length;
+  while (end > decimalPoint + 1 && value[end - 1] === '0') end--;
+  return value.slice(0, end === decimalPoint + 1 ? decimalPoint : end);
 }
 
 export function LeagueContributionRow({

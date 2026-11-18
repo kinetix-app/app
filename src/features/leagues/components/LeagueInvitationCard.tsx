@@ -51,6 +51,7 @@ export function LeagueInvitationCard({
       ]
     : [];
 
+  const joinLabel = joining ? 'Joining…' : 'Join league';
   return (
     <Modal visible transparent animationType="fade" onRequestClose={close}>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing['space-4'] }}>
@@ -182,9 +183,7 @@ export function LeagueInvitationCard({
             <View style={{ gap: spacing['space-2'] }}>
               {invitation ? (
                 <LeagueAction
-                  label={
-                    invitation.already_member ? 'Open league' : joining ? 'Joining…' : 'Join league'
-                  }
+                  label={invitation.already_member ? 'Open league' : joinLabel}
                   variant="primary"
                   disabled={joining}
                   onPress={onJoin}

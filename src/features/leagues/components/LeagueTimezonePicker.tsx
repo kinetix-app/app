@@ -41,6 +41,49 @@ export function LeagueTimezonePicker({
     setOpen(false);
     setSearch('');
   }
+  function renderTimezones() {
+    if (zones.isPending)
+      return <ActivityIndicator accessibilityLabel="Loading timezones" color={p.brand} />;
+    if (zones.isError)
+      return (
+        <LeagueAction
+          label="Retry timezones"
+          onPress={() => {
+            void zones.refetch();
+          }}
+        />
+      );
+    return (
+      <FlatList
+        keyboardShouldPersistTaps="handled"
+        data={filtered}
+        keyExtractor={(zone) => zone}
+        ListEmptyComponent={
+          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No matching timezones.</Text>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={item}
+            accessibilityState={{ selected: value === item }}
+            aria-selected={value === item}
+            onPress={() => {
+              onChange(item);
+              close();
+            }}
+            style={[
+              leagueStyles.row,
+              { minHeight: sizes['tap-min'], paddingHorizontal: spacing['space-2'] },
+            ]}
+          >
+            <Text style={[textStyles.body, { color: p.ink, flex: 1 }]}>{item}</Text>
+            {value === item ? <Ionicons name="checkmark" size={20} color={p.brand} /> : null}
+          </Pressable>
+        )}
+      />
+    );
+  }
+
   return (
     <View style={{ gap: spacing['space-2'] }}>
       <Text style={[textStyles.label, { color: p.ink }]}>Timezone</Text>
@@ -87,48 +130,7 @@ export function LeagueTimezonePicker({
                 onChangeText={setSearch}
                 autoCorrect={false}
               />
-              {zones.isPending ? (
-                <ActivityIndicator accessibilityLabel="Loading timezones" color={p.brand} />
-              ) : zones.isError ? (
-                <LeagueAction
-                  label="Retry timezones"
-                  onPress={() => {
-                    void zones.refetch();
-                  }}
-                />
-              ) : (
-                <FlatList
-                  keyboardShouldPersistTaps="handled"
-                  data={filtered}
-                  keyExtractor={(zone) => zone}
-                  ListEmptyComponent={
-                    <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                      No matching timezones.
-                    </Text>
-                  }
-                  renderItem={({ item }) => (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={item}
-                      accessibilityState={{ selected: value === item }}
-                      aria-selected={value === item}
-                      onPress={() => {
-                        onChange(item);
-                        close();
-                      }}
-                      style={[
-                        leagueStyles.row,
-                        { minHeight: sizes['tap-min'], paddingHorizontal: spacing['space-2'] },
-                      ]}
-                    >
-                      <Text style={[textStyles.body, { color: p.ink, flex: 1 }]}>{item}</Text>
-                      {value === item ? (
-                        <Ionicons name="checkmark" size={20} color={p.brand} />
-                      ) : null}
-                    </Pressable>
-                  )}
-                />
-              )}
+              {renderTimezones()}
             </View>
           </SafeAreaView>
         </Modal>

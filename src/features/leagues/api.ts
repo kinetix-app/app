@@ -16,7 +16,8 @@ import {
 } from './schemas';
 
 function standingsQuery(roundId: number | null, offset: number) {
-  return `offset=${offset}${roundId === null ? '' : `&round_id=${roundId}`}`;
+  const query = `offset=${offset}`;
+  return roundId === null ? query : `${query}&round_id=${roundId}`;
 }
 
 export const leaguesApi = {
@@ -49,14 +50,18 @@ export const leaguesApi = {
       { role },
       { schema: leagueDetailSchema },
     ),
-  scoreHistory: (leagueId: number, memberId: number, before: string | null, signal?: AbortSignal) =>
-    apiClient.get(
-      `/api/v1/leagues/${leagueId}/members/${memberId}/score-history${before ? `?before=${before}` : ''}`,
-      {
-        schema: scoreHistoryPageSchema,
-        signal,
-      },
-    ),
+  scoreHistory: (
+    leagueId: number,
+    memberId: number,
+    before: string | null,
+    signal?: AbortSignal,
+  ) => {
+    const query = before ? `?before=${before}` : '';
+    return apiClient.get(`/api/v1/leagues/${leagueId}/members/${memberId}/score-history${query}`, {
+      schema: scoreHistoryPageSchema,
+      signal,
+    });
+  },
   pendingResults: (id: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/leagues/${id}/results/pending`, {
       schema: pendingResultsSchema,

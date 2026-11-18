@@ -77,7 +77,7 @@ export function invitationToken(value: string) {
   if (!input) return '';
   try {
     const url = new URL(input);
-    return decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() ?? '');
+    return decodeURIComponent(url.pathname.split('/').findLast(Boolean) ?? '');
   } catch {
     return input;
   }

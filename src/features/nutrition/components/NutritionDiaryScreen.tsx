@@ -611,6 +611,7 @@ function CalendarModal({
               const isSelected = id === selectedDay;
               const isToday = id === localDateId(new Date());
               const isCurrentMonth = date.getMonth() === month.getMonth();
+              const dayColor = isCurrentMonth ? p.ink : p['ink-muted'];
               return (
                 <Pressable
                   key={id}
@@ -631,12 +632,7 @@ function CalendarModal({
                       style={[
                         textStyles.label,
                         {
-                          color:
-                            isSelected || isToday
-                              ? p['brand-ink']
-                              : isCurrentMonth
-                                ? p.ink
-                                : p['ink-muted'],
+                          color: isSelected || isToday ? p['brand-ink'] : dayColor,
                           opacity: isCurrentMonth || isSelected || isToday ? 1 : 0.45,
                         },
                       ]}

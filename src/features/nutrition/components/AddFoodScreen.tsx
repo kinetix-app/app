@@ -115,15 +115,33 @@ export function AddFoodScreen({
       void queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods'] });
     },
   });
+  const foodTab = tab === 'Food';
+  const showingFoodPicker = foodTab && !showFoodEditor && !reviewingFoods;
+  const editingFoodOnTab = foodTab && showFoodEditor && !reviewingFoods;
+  const reviewingFoodOnTab = foodTab && reviewingFoods;
+  const editingRecipeOnTab = tab === 'Recipe' && showRecipeEditor;
+  const showingReviewButton = showingFoodPicker && queuedFoods.length > 0;
+  function renderReviewButton() {
+    return showingReviewButton ? (
+      <View style={[styles.reviewFooter, { backgroundColor: p['surface-100'] }]}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setReviewingFoods(true)}
+          style={[styles.add, { marginTop: 0, backgroundColor: p.brand }]}
+        >
+          <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+            Review {queuedFoods.length} {queuedFoods.length === 1 ? 'food' : 'foods'}
+          </Text>
+        </Pressable>
+      </View>
+    ) : null;
+  }
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView
         style={{ flex: 1, minHeight: 0 }}
-        scrollEnabled={!(tab === 'Food' && !showFoodEditor && !reviewingFoods)}
-        contentContainerStyle={[
-          styles.content,
-          tab === 'Food' && !showFoodEditor && !reviewingFoods && styles.foodPickerContent,
-        ]}
+        scrollEnabled={!showingFoodPicker}
+        contentContainerStyle={[styles.content, showingFoodPicker && styles.foodPickerContent]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
@@ -167,7 +185,7 @@ export function AddFoodScreen({
             </Pressable>
           ))}
         </View>
-        {tab === 'Food' && showFoodEditor && !reviewingFoods ? (
+        {editingFoodOnTab ? (
           <FoodEditor
             key={editingFood?.id ?? 'new-food'}
             food={editingFood}
@@ -178,7 +196,7 @@ export function AddFoodScreen({
             }}
           />
         ) : null}
-        {tab === 'Food' && !showFoodEditor && !reviewingFoods ? (
+        {showingFoodPicker ? (
           <>
             <Pressable
               accessibilityRole="button"
@@ -201,7 +219,7 @@ export function AddFoodScreen({
             />
           </>
         ) : null}
-        {tab === 'Recipe' && showRecipeEditor ? (
+        {editingRecipeOnTab ? (
           <RecipeEditor
             key={editingRecipe?.id ?? 'new-recipe'}
             recipe={editingRecipe}
@@ -230,7 +248,7 @@ export function AddFoodScreen({
             />
           </View>
         ) : null}
-        {tab === 'Food' && reviewingFoods ? (
+        {reviewingFoodOnTab ? (
           <FoodQueueReview
             meal={meal}
             foods={queuedFoods}
@@ -255,7 +273,7 @@ export function AddFoodScreen({
             onConfirm={() => saveQueue.mutate()}
           />
         ) : null}
-        {tab === 'Food' && !showFoodEditor && !reviewingFoods ? (
+        {showingFoodPicker ? (
           <ScrollView
             style={styles.foodListScroll}
             contentContainerStyle={styles.foodListContent}
@@ -293,19 +311,7 @@ export function AddFoodScreen({
           </ScrollView>
         ) : null}
       </ScrollView>
-      {tab === 'Food' && !showFoodEditor && !reviewingFoods && queuedFoods.length > 0 ? (
-        <View style={[styles.reviewFooter, { backgroundColor: p['surface-100'] }]}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setReviewingFoods(true)}
-            style={[styles.add, { marginTop: 0, backgroundColor: p.brand }]}
-          >
-            <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-              Review {queuedFoods.length} {queuedFoods.length === 1 ? 'food' : 'foods'}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
+      {renderReviewButton()}
     </SafeAreaView>
   );
 }
@@ -570,6 +576,8 @@ function FoodQueueReview({
     ? foods.findIndex((item) => item.food.id === editingFood.food.id)
     : -1;
   const visibleFoods = editingIndex >= 0 ? foods.slice(0, editingIndex + 1) : foods;
+  const foodNoun = foods.length === 1 ? 'food' : 'foods';
+  const addLabel = `Add ${foods.length} ${foodNoun} to ${meal}`;
   return (
     <View style={styles.recipeForm}>
       <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
@@ -688,9 +696,7 @@ function FoodQueueReview({
           ]}
         >
           <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-            {pending
-              ? 'Adding…'
-              : `Add ${foods.length} ${foods.length === 1 ? 'food' : 'foods'} to ${meal}`}
+            {pending ? 'Adding…' : addLabel}
           </Text>
         </Pressable>
       </View>
@@ -1056,6 +1062,7 @@ function FoodEditor({ food, onSaved }: Readonly<{ food: Food | null; onSaved: ()
     Number(values.carbohydrates || 0) * 4 +
     Number(values.fats || 0) * 9;
 
+  const saveLabel = food ? 'Save changes' : 'Save food';
   return (
     <View style={styles.recipeForm}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>
@@ -1113,7 +1120,7 @@ function FoodEditor({ food, onSaved }: Readonly<{ food: Food | null; onSaved: ()
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Saving…' : food ? 'Save changes' : 'Save food'}
+          {save.isPending ? 'Saving…' : saveLabel}
         </Text>
       </Pressable>
     </View>
@@ -1168,6 +1175,7 @@ function RecipeEditor({
     ingredients.length > 0 &&
     ingredients.every(({ grams }) => Number(grams) > 0);
 
+  const saveLabel = recipe ? 'Save changes' : 'Create recipe';
   return (
     <View style={styles.recipeForm}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>
@@ -1256,7 +1264,7 @@ function RecipeEditor({
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Saving…' : recipe ? 'Save changes' : 'Create recipe'}
+          {save.isPending ? 'Saving…' : saveLabel}
         </Text>
       </Pressable>
     </View>

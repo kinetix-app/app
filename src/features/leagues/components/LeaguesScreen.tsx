@@ -232,36 +232,44 @@ export function LeaguesScreen({
     setError('');
     setEditing(true);
   };
-  const header =
-    selected !== null ? (
-      <LeaguePageHeader
-        accountId={accountId}
-        title={leagueTitle}
-        picture={detail.data?.picture_url}
-        subtitle={editing ? 'Edit league' : information ? 'League information' : undefined}
-        backLabel={editing ? 'Cancel editing' : information ? 'Back to league' : 'Back to leagues'}
-        onBack={back}
-        disabled={pending}
-        onOpen={
-          !information && detail.data
-            ? () => {
-                setInformation(true);
-                void detail.refetch();
-              }
-            : undefined
-        }
-        action={
-          information && !editing && detail.data?.role === 'admin' ? (
-            <LeagueIconButton
-              label="Edit league"
-              icon="pencil-outline"
-              onPress={beginEdit}
-              disabled={pending}
-            />
-          ) : undefined
-        }
-      />
-    ) : (
+  function renderHeader() {
+    const informationSubtitle = information ? 'League information' : undefined;
+    const informationBackLabel = information ? 'Back to league' : 'Back to leagues';
+    if (selected !== null)
+      return (
+        <LeaguePageHeader
+          accountId={accountId}
+          title={leagueTitle}
+          picture={detail.data?.picture_url}
+          subtitle={editing ? 'Edit league' : informationSubtitle}
+          backLabel={editing ? 'Cancel editing' : informationBackLabel}
+          onBack={back}
+          disabled={pending}
+          onOpen={
+            !information && detail.data
+              ? () => {
+                  setInformation(true);
+                  void detail.refetch();
+                }
+              : undefined
+          }
+          action={
+            information && !editing && detail.data?.role === 'admin' ? (
+              <LeagueIconButton
+                label="Edit league"
+                icon="pencil-outline"
+                onPress={beginEdit}
+                disabled={pending}
+              />
+            ) : undefined
+          }
+        />
+      );
+    return renderListHeader();
+  }
+
+  function renderListHeader() {
+    return (
       <ScreenHeader
         title={mode === 'create' ? 'Create league' : 'FriendsLeague'}
         leading={
@@ -287,6 +295,9 @@ export function LeaguesScreen({
         }
       />
     );
+  }
+
+  const header = renderHeader();
   if (selected !== null && detail.data && !detail.isError && !information) {
     return (
       <SafeAreaView
@@ -310,6 +321,345 @@ export function LeaguesScreen({
       </SafeAreaView>
     );
   }
+  function renderLeagueList() {
+    if (list.isPending) return <ActivityIndicator accessibilityLabel="Loading leagues" />;
+    if (list.isError)
+      return (
+        <>
+          {button('Retry', () => {
+            void list.refetch();
+          })}
+          <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+            Could not load leagues.
+          </Text>
+        </>
+      );
+    if (list.data?.length)
+      return (
+        <View style={leagueStyles.section}>
+          {list.data.map((league) => {
+            const position = league.current_week_position;
+            const rankHint =
+              position === null
+                ? 'Weekly rank unavailable'
+                : `Your position this week is ${position}`;
+            const memberLabel = league.member_count === 1 ? 'member' : 'members';
+            return (
+              <Pressable
+                key={league.id}
+                accessibilityRole="button"
+                accessibilityLabel={league.name}
+                accessibilityHint={`${rankHint}, ${league.member_count} ${memberLabel}. Opens league standings.`}
+                onPress={() => {
+                  setInformation(false);
+                  setSelected(league.id);
+                  setError('');
+                }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+              >
+                <LeagueCard>
+                  <View style={leagueStyles.row}>
+                    <LeagueAvatar
+                      accountId={accountId}
+                      path={league.picture_url}
+                      name={league.name}
+                      size={52}
+                    />
+                    <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
+                      <Text style={[textStyles['title-md'], { color: p.ink }]}>{league.name}</Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          columnGap: spacing['space-3'],
+                          rowGap: spacing['space-1'],
+                        }}
+                      >
+                        <Text
+                          style={[
+                            textStyles['body-sm'],
+                            {
+                              color:
+                                league.current_week_position === null
+                                  ? p['ink-muted']
+                                  : p['brand-ink'],
+                              fontVariant: ['tabular-nums'],
+                            },
+                          ]}
+                        >
+                          {league.current_week_position === null
+                            ? 'Weekly rank unavailable'
+                            : `#${league.current_week_position} this week`}
+                        </Text>
+                        <Text
+                          style={[
+                            textStyles['body-sm'],
+                            { color: p['ink-muted'], fontVariant: ['tabular-nums'] },
+                          ]}
+                        >
+                          {league.member_count} {league.member_count === 1 ? 'member' : 'members'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={p['ink-muted']} />
+                  </View>
+                </LeagueCard>
+              </Pressable>
+            );
+          })}
+        </View>
+      );
+    return (
+      <LeagueCard>
+        <Ionicons name="people-outline" size={40} color={p['brand-ink']} />
+        <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
+          You have no leagues yet.
+        </Text>
+        <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+          Create a league for your friends or join one with an invitation link.
+        </Text>
+      </LeagueCard>
+    );
+  }
+
+  function renderDetailError() {
+    if (!error) return null;
+    return (
+      <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+        {error}
+      </Text>
+    );
+  }
+
+  function renderLeagueDetails() {
+    if (detail.isPending) return <ActivityIndicator accessibilityLabel="Loading league" />;
+    if (detail.isError || !detail.data)
+      return (
+        <>
+          {button('Retry', () => {
+            void detail.refetch();
+          })}
+          <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+            Could not load league.
+          </Text>
+        </>
+      );
+    const league = detail.data;
+    const isAdmin = league.role === 'admin';
+    const canEdit = editing && isAdmin;
+    return (
+      <>
+        <LeagueResults
+          accountId={accountId}
+          leagueId={league.id}
+          active={active}
+          timezone={league.timezone}
+        />
+        {canEdit ? (
+          <LeagueCard>
+            <LeaguePictureEditor
+              accountId={accountId}
+              name={name}
+              path={league.picture_url}
+              draft={picture}
+              onChange={setPicture}
+              onBusy={setPictureBusy}
+              disabled={pending}
+            />
+            {field('League name', name, setName)}
+            {descriptionField(description ?? '')}
+            {renderDetailError()}
+            {button(
+              save.isPending ? 'Saving…' : 'Save',
+              () => {
+                const result = nameSchema.safeParse(name);
+                if (!result.success) {
+                  setError(result.error.issues[0].message);
+                  return;
+                }
+                if (selected !== null) save.mutate(selected);
+              },
+              pending,
+              'primary',
+            )}
+          </LeagueCard>
+        ) : (
+          <LeagueInformation
+            accountId={accountId}
+            league={league}
+            onRoleChange={
+              isAdmin
+                ? async (memberId, role) => {
+                    const updated = await leaguesApi.changeRole(league.id, memberId, role);
+                    cache.setQueryData([...key, updated.id], updated);
+                    void cache.invalidateQueries({ queryKey: [...key, updated.id] });
+                  }
+                : undefined
+            }
+            inviteAction={
+              isAdmin ? (
+                <LeagueIconButton
+                  label="Generate invitation"
+                  icon="link-outline"
+                  disabled={pending}
+                  onPress={() => generate.mutate()}
+                />
+              ) : undefined
+            }
+          >
+            {renderDetailError()}
+          </LeagueInformation>
+        )}
+      </>
+    );
+  }
+
+  function renderContent() {
+    if (selected !== null) return <>{renderLeagueDetails()}</>;
+    if (mode === 'create')
+      return (
+        <LeagueCard>
+          <LeaguePictureEditor
+            accountId={accountId}
+            name={name}
+            draft={picture}
+            onChange={setPicture}
+            onBusy={setPictureBusy}
+            disabled={pending}
+          />
+          {field('League name', name, setName)}
+          {descriptionField(description ?? '')}
+          <LeagueTimezonePicker value={timezone} onChange={setTimezone} disabled={pending} />
+          {error ? (
+            <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+              {error}
+            </Text>
+          ) : null}
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+            The timezone cannot be changed after creation.
+          </Text>
+          {button(
+            create.isPending ? 'Creating…' : 'Create league',
+            () => {
+              const result = createSchema.safeParse({
+                name,
+                timezone,
+                description: description?.trim() || null,
+              });
+              if (!result.success) {
+                setError(result.error.issues[0].message);
+                return;
+              }
+              create.mutate();
+            },
+            pending,
+            'primary',
+          )}
+        </LeagueCard>
+      );
+    return (
+      <>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] }}>
+          <View style={{ flexGrow: 1, flexBasis: 148 }}>
+            <LeagueAction
+              label="Create league"
+              icon="add"
+              variant="primary"
+              onPress={() => {
+                setMode('create');
+                setError('');
+              }}
+            />
+          </View>
+          <View style={{ flexGrow: 1, flexBasis: 148 }}>
+            <LeagueAction
+              label="Join a league"
+              icon="link-outline"
+              onPress={() => {
+                setJoinOpen(true);
+                setError('');
+              }}
+            />
+          </View>
+        </View>
+        <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
+          Your leagues
+        </Text>
+        {renderLeagueList()}
+      </>
+    );
+  }
+
+  function renderDialogs() {
+    return (
+      <>
+        {active && joinOpen && !token ? (
+          <LeagueDialog
+            title="Join a league"
+            onClose={() => {
+              setJoinOpen(false);
+              setError('');
+            }}
+          >
+            {field('Invitation link or token', input, (value) => {
+              setInput(value);
+              setError('');
+            })}
+            {error ? (
+              <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+                {error}
+              </Text>
+            ) : null}
+            <LeagueAction
+              label="Preview invitation"
+              variant="primary"
+              onPress={() => {
+                const value = invitationToken(input);
+                if (!value) {
+                  setError('Enter an invitation link or token.');
+                  return;
+                }
+                setError('');
+                setJoinOpen(false);
+                setToken(value);
+              }}
+            />
+          </LeagueDialog>
+        ) : null}
+        {active && invite ? (
+          <LeagueShareInvitation link={invite} onClose={() => setInvite('')} />
+        ) : null}
+        {active && token ? (
+          <LeagueInvitationCard
+            accountId={accountId}
+            token={token}
+            invitation={preview.data}
+            loading={preview.isFetching && !preview.data}
+            joining={accept.isPending}
+            error={preview.isError ? message(preview.error) : error || undefined}
+            retry={
+              preview.isError &&
+              (!(preview.error instanceof ApiError) || ![404, 410].includes(preview.error.status))
+                ? () => {
+                    void preview.refetch();
+                  }
+                : undefined
+            }
+            onJoin={() => {
+              setError('');
+              if (preview.data?.already_member) openInvitedLeague(preview.data.league_id);
+              else accept.mutate();
+            }}
+            onClose={() => {
+              setToken('');
+              setError('');
+            }}
+          />
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <SafeAreaView
       edges={detailOpen ? ['top', 'bottom', 'left', 'right'] : ['top']}
@@ -327,332 +677,9 @@ export function LeaguesScreen({
         ]}
       >
         {header}
-        {selected !== null ? (
-          <>
-            {detail.isPending ? (
-              <ActivityIndicator accessibilityLabel="Loading league" />
-            ) : detail.isError || !detail.data ? (
-              <>
-                {button('Retry', () => {
-                  void detail.refetch();
-                })}
-                <Text
-                  accessibilityRole="alert"
-                  style={[textStyles['body-sm'], { color: p.danger }]}
-                >
-                  Could not load league.
-                </Text>
-              </>
-            ) : (
-              <>
-                <LeagueResults
-                  accountId={accountId}
-                  leagueId={detail.data.id}
-                  active={active}
-                  timezone={detail.data.timezone}
-                />
-                {editing && detail.data.role === 'admin' ? (
-                  <LeagueCard>
-                    <LeaguePictureEditor
-                      accountId={accountId}
-                      name={name}
-                      path={detail.data.picture_url}
-                      draft={picture}
-                      onChange={setPicture}
-                      onBusy={setPictureBusy}
-                      disabled={pending}
-                    />
-                    {field('League name', name, setName)}
-                    {descriptionField(description ?? '')}
-                    {error ? (
-                      <Text
-                        accessibilityRole="alert"
-                        style={[textStyles['body-sm'], { color: p.danger }]}
-                      >
-                        {error}
-                      </Text>
-                    ) : null}
-                    {button(
-                      save.isPending ? 'Saving…' : 'Save',
-                      () => {
-                        const result = nameSchema.safeParse(name);
-                        if (!result.success) {
-                          setError(result.error.issues[0].message);
-                          return;
-                        }
-                        if (selected !== null) save.mutate(selected);
-                      },
-                      pending,
-                      'primary',
-                    )}
-                  </LeagueCard>
-                ) : (
-                  <LeagueInformation
-                    accountId={accountId}
-                    league={detail.data}
-                    onRoleChange={
-                      detail.data.role === 'admin'
-                        ? async (memberId, role) => {
-                            const updated = await leaguesApi.changeRole(
-                              detail.data.id,
-                              memberId,
-                              role,
-                            );
-                            cache.setQueryData([...key, updated.id], updated);
-                            void cache.invalidateQueries({ queryKey: [...key, updated.id] });
-                          }
-                        : undefined
-                    }
-                    inviteAction={
-                      detail.data.role === 'admin' ? (
-                        <LeagueIconButton
-                          label="Generate invitation"
-                          icon="link-outline"
-                          disabled={pending}
-                          onPress={() => generate.mutate()}
-                        />
-                      ) : undefined
-                    }
-                  >
-                    {error ? (
-                      <Text
-                        accessibilityRole="alert"
-                        style={[textStyles['body-sm'], { color: p.danger }]}
-                      >
-                        {error}
-                      </Text>
-                    ) : null}
-                  </LeagueInformation>
-                )}
-              </>
-            )}
-          </>
-        ) : mode === 'create' ? (
-          <LeagueCard>
-            <LeaguePictureEditor
-              accountId={accountId}
-              name={name}
-              draft={picture}
-              onChange={setPicture}
-              onBusy={setPictureBusy}
-              disabled={pending}
-            />
-            {field('League name', name, setName)}
-            {descriptionField(description ?? '')}
-            <LeagueTimezonePicker value={timezone} onChange={setTimezone} disabled={pending} />
-            {error ? (
-              <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-                {error}
-              </Text>
-            ) : null}
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              The timezone cannot be changed after creation.
-            </Text>
-            {button(
-              create.isPending ? 'Creating…' : 'Create league',
-              () => {
-                const result = createSchema.safeParse({
-                  name,
-                  timezone,
-                  description: description?.trim() || null,
-                });
-                if (!result.success) {
-                  setError(result.error.issues[0].message);
-                  return;
-                }
-                create.mutate();
-              },
-              pending,
-              'primary',
-            )}
-          </LeagueCard>
-        ) : (
-          <>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] }}>
-              <View style={{ flexGrow: 1, flexBasis: 148 }}>
-                <LeagueAction
-                  label="Create league"
-                  icon="add"
-                  variant="primary"
-                  onPress={() => {
-                    setMode('create');
-                    setError('');
-                  }}
-                />
-              </View>
-              <View style={{ flexGrow: 1, flexBasis: 148 }}>
-                <LeagueAction
-                  label="Join a league"
-                  icon="link-outline"
-                  onPress={() => {
-                    setJoinOpen(true);
-                    setError('');
-                  }}
-                />
-              </View>
-            </View>
-            <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-              Your leagues
-            </Text>
-            {list.isPending ? (
-              <ActivityIndicator accessibilityLabel="Loading leagues" />
-            ) : list.isError ? (
-              <>
-                {button('Retry', () => {
-                  void list.refetch();
-                })}
-                <Text
-                  accessibilityRole="alert"
-                  style={[textStyles['body-sm'], { color: p.danger }]}
-                >
-                  Could not load leagues.
-                </Text>
-              </>
-            ) : list.data?.length ? (
-              <View style={leagueStyles.section}>
-                {list.data.map((league) => (
-                  <Pressable
-                    key={league.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={league.name}
-                    accessibilityHint={`${league.current_week_position === null ? 'Weekly rank unavailable' : `Your position this week is ${league.current_week_position}`}, ${league.member_count} ${league.member_count === 1 ? 'member' : 'members'}. Opens league standings.`}
-                    onPress={() => {
-                      setInformation(false);
-                      setSelected(league.id);
-                      setError('');
-                    }}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
-                  >
-                    <LeagueCard>
-                      <View style={leagueStyles.row}>
-                        <LeagueAvatar
-                          accountId={accountId}
-                          path={league.picture_url}
-                          name={league.name}
-                          size={52}
-                        />
-                        <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
-                          <Text style={[textStyles['title-md'], { color: p.ink }]}>
-                            {league.name}
-                          </Text>
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              flexWrap: 'wrap',
-                              columnGap: spacing['space-3'],
-                              rowGap: spacing['space-1'],
-                            }}
-                          >
-                            <Text
-                              style={[
-                                textStyles['body-sm'],
-                                {
-                                  color:
-                                    league.current_week_position === null
-                                      ? p['ink-muted']
-                                      : p['brand-ink'],
-                                  fontVariant: ['tabular-nums'],
-                                },
-                              ]}
-                            >
-                              {league.current_week_position === null
-                                ? 'Weekly rank unavailable'
-                                : `#${league.current_week_position} this week`}
-                            </Text>
-                            <Text
-                              style={[
-                                textStyles['body-sm'],
-                                { color: p['ink-muted'], fontVariant: ['tabular-nums'] },
-                              ]}
-                            >
-                              {league.member_count}{' '}
-                              {league.member_count === 1 ? 'member' : 'members'}
-                            </Text>
-                          </View>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color={p['ink-muted']} />
-                      </View>
-                    </LeagueCard>
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <LeagueCard>
-                <Ionicons name="people-outline" size={40} color={p['brand-ink']} />
-                <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  You have no leagues yet.
-                </Text>
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                  Create a league for your friends or join one with an invitation link.
-                </Text>
-              </LeagueCard>
-            )}
-          </>
-        )}
+        {renderContent()}
       </ScrollView>
-      {active && joinOpen && !token ? (
-        <LeagueDialog
-          title="Join a league"
-          onClose={() => {
-            setJoinOpen(false);
-            setError('');
-          }}
-        >
-          {field('Invitation link or token', input, (value) => {
-            setInput(value);
-            setError('');
-          })}
-          {error ? (
-            <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-              {error}
-            </Text>
-          ) : null}
-          <LeagueAction
-            label="Preview invitation"
-            variant="primary"
-            onPress={() => {
-              const value = invitationToken(input);
-              if (!value) {
-                setError('Enter an invitation link or token.');
-                return;
-              }
-              setError('');
-              setJoinOpen(false);
-              setToken(value);
-            }}
-          />
-        </LeagueDialog>
-      ) : null}
-      {active && invite ? (
-        <LeagueShareInvitation link={invite} onClose={() => setInvite('')} />
-      ) : null}
-      {active && token ? (
-        <LeagueInvitationCard
-          accountId={accountId}
-          token={token}
-          invitation={preview.data}
-          loading={preview.isFetching && !preview.data}
-          joining={accept.isPending}
-          error={preview.isError ? message(preview.error) : error || undefined}
-          retry={
-            preview.isError &&
-            (!(preview.error instanceof ApiError) || ![404, 410].includes(preview.error.status))
-              ? () => {
-                  void preview.refetch();
-                }
-              : undefined
-          }
-          onJoin={() => {
-            setError('');
-            if (preview.data?.already_member) openInvitedLeague(preview.data.league_id);
-            else accept.mutate();
-          }}
-          onClose={() => {
-            setToken('');
-            setError('');
-          }}
-        />
-      ) : null}
+      {renderDialogs()}
     </SafeAreaView>
   );
 }

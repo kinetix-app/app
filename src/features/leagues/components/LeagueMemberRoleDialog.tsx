@@ -42,6 +42,7 @@ export function LeagueMemberRoleDialog({
     }
   }
 
+  const actionLabel = promoting ? 'Make admin' : 'Make member';
   return (
     <Modal visible transparent animationType="fade" onRequestClose={close}>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing['space-4'] }}>
@@ -90,7 +91,7 @@ export function LeagueMemberRoleDialog({
               </Text>
             ) : null}
             <LeagueAction
-              label={busy ? 'Saving…' : promoting ? 'Make admin' : 'Make member'}
+              label={busy ? 'Saving…' : actionLabel}
               disabled={busy}
               variant="primary"
               onPress={() => {

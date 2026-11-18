@@ -5,26 +5,12 @@ import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
 
-export function LeagueAvatar({
-  accountId,
-  path,
-  name,
-  member = false,
-  size = 44,
-  preview,
-  retryable = false,
-  invitationToken,
-}: Readonly<{
-  accountId: number;
-  path?: string | null;
-  name: string;
-  member?: boolean;
-  size?: number;
-  preview?: string;
-  retryable?: boolean;
-  invitationToken?: string;
-}>) {
-  const p = usePalette();
+function useLeaguePhoto(
+  accountId: number,
+  path?: string | null,
+  preview?: string,
+  invitationToken?: string,
+) {
   const [decoded, setDecoded] = useState<{ blob: Blob; uri?: string; failed?: boolean }>();
   const [failedUri, setFailedUri] = useState<string>();
   const privatePhoto = Boolean(invitationToken || path?.startsWith('/api/v1/leagues/'));
@@ -52,17 +38,76 @@ export function LeagueAvatar({
       if (reader.readyState === FileReader.LOADING) reader.abort();
     };
   }, [photo.data, privatePhoto, preview, accountId, path]);
-  const uri =
-    preview ??
-    (privatePhoto
-      ? decoded?.blob === photo.data
-        ? decoded?.uri
-        : undefined
-      : (path ?? undefined));
-  const failed =
-    (!preview && (photo.isError || (decoded?.blob === photo.data && decoded?.failed))) ||
-    (uri && failedUri === uri);
+  const decodedUri = decoded?.blob === photo.data ? decoded?.uri : undefined;
+  const uri = preview ?? (privatePhoto ? decodedUri : (path ?? undefined));
+  const fileFailed = decoded?.blob === photo.data && decoded?.failed;
+  const privatePhotoFailed = !preview && (photo.isError || fileFailed);
+  const failed = privatePhotoFailed || (uri && failedUri === uri);
+  const retry = () => {
+    setFailedUri(undefined);
+    void photo.refetch();
+  };
+  return { uri, failed, loading: privatePhoto && !preview && !failed, setFailedUri, retry };
+}
+
+export function LeagueAvatar({
+  accountId,
+  path,
+  name,
+  member = false,
+  size = 44,
+  preview,
+  retryable = false,
+  invitationToken,
+}: Readonly<{
+  accountId: number;
+  path?: string | null;
+  name: string;
+  member?: boolean;
+  size?: number;
+  preview?: string;
+  retryable?: boolean;
+  invitationToken?: string;
+}>) {
+  const p = usePalette();
+  const { uri, failed, loading, setFailedUri, retry } = useLeaguePhoto(
+    accountId,
+    path,
+    preview,
+    invitationToken,
+  );
   const label = `${name} ${member ? 'profile' : 'league'} picture`;
+  let picture;
+  if (uri && !failed) {
+    picture = (
+      <Image
+        accessibilityLabel={label}
+        source={{ uri }}
+        onError={() => setFailedUri(uri)}
+        style={{ width: '100%', height: '100%' }}
+      />
+    );
+  } else if (loading) {
+    picture = <ActivityIndicator accessibilityLabel={`Loading ${label}`} color={p['brand-ink']} />;
+  } else if (member) {
+    picture = (
+      <Text
+        accessibilityLabel={`${name} profile picture unavailable`}
+        style={[textStyles.label, { color: p['brand-ink'] }]}
+      >
+        {name.slice(0, 1).toUpperCase()}
+      </Text>
+    );
+  } else {
+    picture = (
+      <Ionicons
+        accessibilityLabel="Default league picture"
+        name="trophy-outline"
+        size={size > 64 ? 40 : 24}
+        color={p['brand-ink']}
+      />
+    );
+  }
   return (
     <View style={{ alignItems: 'center', gap: spacing['space-2'], flexShrink: 0 }}>
       <View
@@ -76,39 +121,13 @@ export function LeagueAvatar({
           justifyContent: 'center',
         }}
       >
-        {uri && !failed ? (
-          <Image
-            accessibilityLabel={label}
-            source={{ uri }}
-            onError={() => setFailedUri(uri)}
-            style={{ width: '100%', height: '100%' }}
-          />
-        ) : privatePhoto && !preview && !failed ? (
-          <ActivityIndicator accessibilityLabel={`Loading ${label}`} color={p['brand-ink']} />
-        ) : member ? (
-          <Text
-            accessibilityLabel={`${name} profile picture unavailable`}
-            style={[textStyles.label, { color: p['brand-ink'] }]}
-          >
-            {name.slice(0, 1).toUpperCase()}
-          </Text>
-        ) : (
-          <Ionicons
-            accessibilityLabel="Default league picture"
-            name="trophy-outline"
-            size={size > 64 ? 40 : 24}
-            color={p['brand-ink']}
-          />
-        )}
+        {picture}
       </View>
       {failed && retryable && path ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Retry ${label}`}
-          onPress={() => {
-            setFailedUri(undefined);
-            void photo.refetch();
-          }}
+          onPress={retry}
           style={{ minHeight: 44, justifyContent: 'center' }}
         >
           <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry picture</Text>

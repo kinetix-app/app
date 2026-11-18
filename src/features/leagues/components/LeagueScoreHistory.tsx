@@ -52,6 +52,14 @@ export function LeagueScoreHistory({
   const following = () => {
     void history.fetchNextPage({ cancelRefetch: false });
   };
+  function renderPagination() {
+    if (history.isFetchingNextPage)
+      return <ActivityIndicator color={p.brand} accessibilityLabel="Loading more scores" />;
+    if (history.isFetchNextPageError)
+      return <LeagueAction label="Retry more scores" onPress={following} />;
+    return null;
+  }
+
   return (
     <FlatList
       contentContainerStyle={[
@@ -134,13 +142,7 @@ export function LeagueScoreHistory({
         if (history.hasNextPage && !history.isFetching && !history.isFetchNextPageError)
           following();
       }}
-      ListFooterComponent={
-        history.isFetchingNextPage ? (
-          <ActivityIndicator color={p.brand} accessibilityLabel="Loading more scores" />
-        ) : history.isFetchNextPageError ? (
-          <LeagueAction label="Retry more scores" onPress={following} />
-        ) : null
-      }
+      ListFooterComponent={renderPagination()}
     />
   );
 }

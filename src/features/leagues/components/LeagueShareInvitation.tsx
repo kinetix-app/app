@@ -22,7 +22,8 @@ export function LeagueShareInvitation({
   async function copy() {
     setError('');
     try {
-      if (!(await Clipboard.setStringAsync(link))) throw new Error();
+      if (!(await Clipboard.setStringAsync(link)))
+        throw new Error('Could not copy the invitation link');
       setCopiedAt(Date.now());
     } catch {
       setCopiedAt(null);
