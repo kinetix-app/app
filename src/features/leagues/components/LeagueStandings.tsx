@@ -5,16 +5,19 @@ import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import { screenContentStyle } from '@/components/ScreenHeader';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ApiError } from '@/services/apiClient';
-import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { leaguesApi } from '../api';
-import type { LeagueContribution, StandingRow } from '../schemas';
+import { spacing, textStyles, usePalette } from '@/theme/tokens';
+import { leaguesApi, leagueViewGcTime } from '../api';
+import type { LeagueContribution, ScoreHistoryMember, StandingRow } from '../schemas';
 import { LeagueContributionRow } from './LeagueContributionRow';
 import { LeagueRoundPicker, type RoundSelection } from './LeagueRoundPicker';
-import { LeagueScoreHistory, roundRange } from './LeagueScoreHistory';
+import { roundRange } from '../scoreDisplay';
+import { LeagueScoreHistory } from './LeagueScoreHistory';
 import { LeagueAction, LeagueRankingRow, leagueStyles } from './LeagueUI';
 
 function roundOptions(catalog: Awaited<ReturnType<typeof leaguesApi.rounds>> | undefined) {
-  const options: { value: RoundSelection; label: string; detail?: string }[] = [];
+  const options: { value: RoundSelection; label: string; detail?: string }[] = [
+    { value: null, label: 'All rounds' },
+  ];
   if (catalog) {
     const { timezone, current_round_id } = catalog;
     const current = catalog.rounds.find((round) => round.id === current_round_id);
@@ -49,18 +52,17 @@ export function LeagueStandings({
 }>) {
   const p = usePalette();
   const [view, setView] = useState<'rankings' | 'breakdown'>('rankings');
-  const [period, setPeriod] = useState<'round' | 'general'>('round');
   const [roundSelection, setRoundSelection] = useState<RoundSelection>('current');
-  const [member, setMember] = useState<StandingRow | null>(null);
+  const [member, setMember] = useState<ScoreHistoryMember | null>(null);
   const rounds = useQuery({
+    gcTime: leagueViewGcTime,
     queryKey: ['leagues', accountId, leagueId, 'rounds'],
     queryFn: ({ signal }) => leaguesApi.rounds(leagueId, signal),
     enabled: active,
   });
-  const selectedRoundId =
-    roundSelection === 'current' ? rounds.data?.current_round_id : roundSelection;
-  const roundId = period === 'general' ? null : selectedRoundId;
+  const roundId = roundSelection === 'current' ? rounds.data?.current_round_id : roundSelection;
   const rankings = useInfiniteQuery({
+    gcTime: leagueViewGcTime,
     queryKey: ['leagues', accountId, leagueId, 'rankings', roundId],
     initialPageParam: 0,
     enabled: active && view === 'rankings' && roundId !== undefined && rounds.isSuccess,
@@ -69,6 +71,7 @@ export function LeagueStandings({
     getNextPageParam: (page) => page.next_offset ?? undefined,
   });
   const contributions = useInfiniteQuery({
+    gcTime: leagueViewGcTime,
     queryKey: ['leagues', accountId, leagueId, 'contributions', roundId],
     initialPageParam: 0,
     enabled: active && view === 'breakdown' && roundId !== undefined && rounds.isSuccess,
@@ -176,7 +179,11 @@ export function LeagueStandings({
       }
       contentContainerStyle={[
         screenContentStyle,
-        { paddingBottom: spacing['space-8'], gap: spacing['space-3'] },
+        {
+          paddingTop: spacing['space-3'],
+          paddingBottom: spacing['space-8'],
+          gap: spacing['space-3'],
+        },
       ]}
       ListHeaderComponent={
         <View style={leagueStyles.section}>
@@ -186,40 +193,11 @@ export function LeagueStandings({
           </Text>
           {rounds.data ? (
             <>
-              <View
-                accessibilityRole="tablist"
-                accessibilityLabel="Standings period"
-                style={{
-                  flexDirection: 'row',
-                  borderRadius: radii['radius-md'],
-                  backgroundColor: p['surface-200'],
-                  overflow: 'hidden',
-                }}
-              >
-                <AnimatedTextSelector
-                  role="tab"
-                  label="Round"
-                  selected={period === 'round'}
-                  reduceMotion
-                  equalWidth
-                  onPress={() => setPeriod('round')}
-                />
-                <AnimatedTextSelector
-                  role="tab"
-                  label="General"
-                  selected={period === 'general'}
-                  reduceMotion
-                  equalWidth
-                  onPress={() => setPeriod('general')}
-                />
-              </View>
-              {period === 'round' ? (
-                <LeagueRoundPicker
-                  selection={roundSelection}
-                  options={options}
-                  onSelect={setRoundSelection}
-                />
-              ) : null}
+              <LeagueRoundPicker
+                selection={roundSelection}
+                options={options}
+                onSelect={setRoundSelection}
+              />
               <View
                 accessibilityRole="tablist"
                 accessibilityLabel="Standings views"
@@ -265,6 +243,8 @@ export function LeagueStandings({
         ) : (
           <LeagueContributionRow
             item={item}
+            member={item}
+            onOpen={() => setMember(item)}
             accountId={accountId}
             timezone={rounds.data?.timezone ?? 'UTC'}
           />

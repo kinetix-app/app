@@ -171,6 +171,8 @@ export const scoreHistoryPageSchema = z.object({
   next_before: z.iso.date().nullable(),
 });
 export type StandingRow = z.infer<typeof standingSchema>;
+export type ScoreHistoryItem = z.infer<typeof scoreHistoryItemSchema>;
+export type ScoreHistoryMember = Pick<StandingRow, 'user_id' | 'display_name' | 'picture_url'>;
 
 export const timezonesSchema = z.array(z.string().min(1));
 

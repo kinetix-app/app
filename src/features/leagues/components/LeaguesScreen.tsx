@@ -10,7 +10,13 @@ import { TextField } from '@/components/TextField';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi } from '../api';
-import { createSchema, descriptionLimit, invitationToken, nameSchema } from '../schemas';
+import {
+  createSchema,
+  descriptionLimit,
+  invitationToken,
+  nameSchema,
+  type ScoreHistoryMember,
+} from '../schemas';
 import { LeagueAction, LeagueCard, LeagueIconButton, leagueStyles } from './LeagueUI';
 import { LeagueAvatar } from './LeagueAvatar';
 import { LeagueDialog } from './LeagueDialog';
@@ -22,6 +28,7 @@ import { LeagueTimezonePicker } from './LeagueTimezonePicker';
 import { leagueConfigurationForm } from './leaguePicture';
 import { LeaguePictureEditor, type LeaguePictureDraft } from './LeaguePictureEditor';
 import { LeagueResults } from './LeagueResults';
+import { LeagueScoreHistory } from './LeagueScoreHistory';
 import { LeagueStandings } from './LeagueStandings';
 
 function message(error: unknown) {
@@ -51,6 +58,7 @@ export function LeaguesScreen({
   const [mode, setMode] = useState<'list' | 'create'>('list');
   const [joinOpen, setJoinOpen] = useState(false);
   const [information, setInformation] = useState(false);
+  const [historyMember, setHistoryMember] = useState<ScoreHistoryMember | null>(null);
   const [editing, setEditing] = useState(false);
   const [picture, setPicture] = useState<LeaguePictureDraft>();
   const detailOpen = selected !== null;
@@ -192,6 +200,10 @@ export function LeaguesScreen({
     </View>
   );
   function back() {
+    if (historyMember) {
+      setHistoryMember(null);
+      return;
+    }
     if (pending) return;
     setPicture(undefined);
     setDescription(null);
@@ -249,20 +261,12 @@ export function LeaguesScreen({
             !information && detail.data
               ? () => {
                   setInformation(true);
-                  void detail.refetch();
+                  if (detail.isStale) void detail.refetch();
                 }
               : undefined
           }
-          action={
-            information && !editing && detail.data?.role === 'admin' ? (
-              <LeagueIconButton
-                label="Edit league"
-                icon="pencil-outline"
-                onPress={beginEdit}
-                disabled={pending}
-              />
-            ) : undefined
-          }
+          navigationLabel={editing ? 'Cancel' : information ? 'Standings' : 'Leagues'}
+          onEdit={information && !editing && detail.data?.role === 'admin' ? beginEdit : undefined}
         />
       );
     return renderListHeader();
@@ -297,30 +301,6 @@ export function LeaguesScreen({
     );
   }
 
-  const header = renderHeader();
-  if (selected !== null && detail.data && !detail.isError && !information) {
-    return (
-      <SafeAreaView
-        edges={['top', 'bottom', 'left', 'right']}
-        style={{ flex: 1, backgroundColor: p['surface-100'] }}
-      >
-        <LeagueResults
-          accountId={accountId}
-          leagueId={detail.data.id}
-          active={active}
-          timezone={detail.data.timezone}
-        />
-        <LeagueStandings
-          key={detail.data.id}
-          accountId={accountId}
-          leagueId={detail.data.id}
-          active={active}
-          header={header}
-          onBack={back}
-        />
-      </SafeAreaView>
-    );
-  }
   function renderLeagueList() {
     if (list.isPending) return <ActivityIndicator accessibilityLabel="Loading leagues" />;
     if (list.isError)
@@ -449,12 +429,6 @@ export function LeaguesScreen({
     const canEdit = editing && isAdmin;
     return (
       <>
-        <LeagueResults
-          accountId={accountId}
-          leagueId={league.id}
-          active={active}
-          timezone={league.timezone}
-        />
         {canEdit ? (
           <LeagueCard>
             <LeaguePictureEditor
@@ -487,6 +461,7 @@ export function LeaguesScreen({
           <LeagueInformation
             accountId={accountId}
             league={league}
+            onOpenScoreHistory={setHistoryMember}
             onRoleChange={
               isAdmin
                 ? async (memberId, role) => {
@@ -660,26 +635,63 @@ export function LeaguesScreen({
     );
   }
 
+  const header = renderHeader();
+  const league = selected !== null && !detail.isError ? detail.data : undefined;
   return (
     <SafeAreaView
       edges={detailOpen ? ['top', 'bottom', 'left', 'right'] : ['top']}
       style={{ flex: 1, backgroundColor: p['surface-100'] }}
     >
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        accessibilityElementsHidden={active && Boolean(token || invite || joinOpen)}
-        importantForAccessibility={
-          active && (token || invite || joinOpen) ? 'no-hide-descendants' : 'auto'
-        }
-        contentContainerStyle={[
-          screenContentStyle,
-          { paddingBottom: spacing['space-8'], gap: spacing['space-6'] },
-        ]}
-      >
-        {header}
-        {renderContent()}
-      </ScrollView>
-      {renderDialogs()}
+      {league ? (
+        <LeagueResults
+          key={`results-${league.id}`}
+          accountId={accountId}
+          leagueId={league.id}
+          active={active}
+          timezone={league.timezone}
+        />
+      ) : null}
+      {league && (historyMember || !information) ? (
+        historyMember ? (
+          <LeagueScoreHistory
+            accountId={accountId}
+            leagueId={league.id}
+            member={historyMember}
+            timezone={league.timezone ?? 'UTC'}
+            active={active}
+            backTo="League information"
+            onBack={back}
+          />
+        ) : (
+          <LeagueStandings
+            key={league.id}
+            accountId={accountId}
+            leagueId={league.id}
+            active={active}
+            header={header}
+            onBack={back}
+          />
+        )
+      ) : (
+        <>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            accessibilityElementsHidden={active && Boolean(token || invite || joinOpen)}
+            importantForAccessibility={
+              active && (token || invite || joinOpen) ? 'no-hide-descendants' : 'auto'
+            }
+            contentContainerStyle={[
+              screenContentStyle,
+              selected !== null && { paddingTop: spacing['space-3'] },
+              { paddingBottom: spacing['space-8'], gap: spacing['space-6'] },
+            ]}
+          >
+            {header}
+            {renderContent()}
+          </ScrollView>
+          {renderDialogs()}
+        </>
+      )}
     </SafeAreaView>
   );
 }

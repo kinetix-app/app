@@ -20,6 +20,9 @@ function standingsQuery(roundId: number | null, offset: number) {
   return roundId === null ? query : `${query}&round_id=${roundId}`;
 }
 
+// Keep recently viewed league data available during in-app navigation.
+export const leagueViewGcTime = 60_000;
+
 export const leaguesApi = {
   list: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/leagues', { schema: leagueListSchema, signal }),

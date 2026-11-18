@@ -221,6 +221,7 @@ test('private league create/join, persisted scoring, isolation and independent s
   await page
     .getByRole('button', { name: `View league information for ${name}`, exact: true })
     .click();
+  await expect(page.getByRole('button', { name: 'League Alice role: Admin' })).toBeDisabled();
   const roleControl = page.getByRole('button', { name: 'Change role for League Bob', exact: true });
   await expect(roleControl).toBeVisible();
   await roleControl.click();
@@ -233,6 +234,8 @@ test('private league create/join, persisted scoring, isolation and independent s
   await expect
     .poll(async () => (await (await request(1, `/leagues/${lid}`)).json()).role)
     .toBe('member');
+  await page.getByRole('tab', { name: 'League rules', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Members', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'About score', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Dismiss rule tip', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Dismiss rule tip', exact: true }).click();
@@ -358,14 +361,30 @@ test('private league create/join, persisted scoring, isolation and independent s
   expect(await (await request(0, `/leagues/${lid}/results/pending`)).json()).toEqual([]);
   expect(await (await request(1, `/leagues/${lid}/results/pending`)).json()).toHaveLength(1);
   await expect(page.getByLabel('#1 League Alice: 20 points, you', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Select round: Current round', exact: true }).click();
+  const currentPicker = page.getByRole('button', {
+    name: 'Select round: Current round',
+    exact: true,
+  });
+  const rankingsTab = page.getByRole('tab', { name: 'Rankings', exact: true, includeHidden: true });
+  const rankingsTop = await rankingsTab.evaluate((tab) => tab.getBoundingClientRect().top);
+  await currentPicker.click();
+  await expect(currentPicker).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByRole('button', { name: 'Current round', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await page.getByRole('button', { name: 'Close select round', exact: true }).click();
-  await page.getByRole('tab', { name: 'General', exact: true }).click();
-  await expect(page.getByRole('button', { name: /^Select round:/ })).toHaveCount(0);
+  expect(await rankingsTab.evaluate((tab) => tab.getBoundingClientRect().top)).toBe(rankingsTop);
+  await expect(page.getByTestId('league-round-menu')).toHaveCSS('opacity', '1');
+  await page.screenshot({
+    path: '.codex/artifacts/previews/league-round-dropdown.png',
+    animations: 'disabled',
+  });
+  await page.keyboard.press('Escape');
+  await expect(currentPicker).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('league-round-menu')).toHaveCount(0);
+  await currentPicker.click();
+  await page.getByRole('button', { name: 'All rounds', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Select round: All rounds' })).toBeVisible();
   await page.getByRole('tab', { name: 'Points breakdown', exact: true }).click();
   await expect(page.getByText(/Workout #/)).toBeVisible();
   await expect(page.getByText(/Body weight/)).toBeVisible();
@@ -376,6 +395,13 @@ test('private league create/join, persisted scoring, isolation and independent s
     path: '.codex/artifacts/previews/league-points-breakdown.png',
     animations: 'disabled',
   });
+  await page.getByRole('button', { name: 'View score history for League Alice' }).click();
+  await expect(page.getByRole('heading', { name: 'Score history' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to standings' }).click();
+  await expect(page.getByRole('tab', { name: 'Points breakdown' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await page.getByRole('tab', { name: 'Rankings', exact: true }).click();
 
   await expect(page.getByLabel('#1 League Alice: 20 points, you', { exact: true })).toBeVisible();
@@ -385,10 +411,7 @@ test('private league create/join, persisted scoring, isolation and independent s
   await expect(page.getByText(/^Workout #/)).toBeVisible();
   await expect(page.getByText(/Body weight/)).toBeVisible();
   await page.getByRole('button', { name: 'Back to standings' }).click();
-  await expect(page.getByRole('tab', { name: 'General', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(page.getByRole('button', { name: 'Select round: All rounds' })).toBeVisible();
   await page.reload();
   await signIn(page, 0);
   await page.getByRole('tab', { name: 'League', exact: true }).click();
@@ -424,12 +447,15 @@ test('private league create/join, persisted scoring, isolation and independent s
   await expect(
     page.getByText('No credited workouts in this period.', { exact: true }),
   ).toBeVisible();
-  await page.getByRole('tab', { name: 'General', exact: true }).click();
+  const historicalPicker = page.getByRole('button', {
+    name: `Select round: ${historicalRound}`,
+    exact: true,
+  });
+  await historicalPicker.click();
+  await page.getByRole('button', { name: 'All rounds', exact: true }).click();
   await expect(page.getByText(/^Workout #/)).toBeVisible();
-  await page.getByRole('tab', { name: 'Round', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: `Select round: ${historicalRound}`, exact: true }),
-  ).toBeVisible();
+  await page.getByRole('button', { name: 'Select round: All rounds', exact: true }).click();
+  await page.getByRole('button', { name: historicalRound, exact: true }).click();
   await expect(
     page.getByText('No credited workouts in this period.', { exact: true }),
   ).toBeVisible();
@@ -450,7 +476,10 @@ test('private league create/join, persisted scoring, isolation and independent s
   await expect(
     page.getByRole('img', { name: 'League Alice profile picture', exact: true }),
   ).toBeVisible();
+  await expect(page.getByText('Daily credit', { exact: true })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'League rules', exact: true }).click();
   await expect(page.getByText('Daily credit', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'About', exact: true }).click();
   await page.getByRole('button', { name: 'Back to league', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({
     path: '.codex/artifacts/previews/league-information.png',
@@ -458,6 +487,13 @@ test('private league create/join, persisted scoring, isolation and independent s
   });
   await page.getByRole('heading', { name: 'Members', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: '.codex/artifacts/previews/league-members.png' });
+  await page.getByRole('button', { name: 'View score history for League Alice' }).click();
+  await expect(page.getByRole('heading', { name: 'League Alice' })).toBeVisible();
+  await expect(
+    page.getByText('Volume 1600 kg reps · Duration 1 h · Body weight 80 kg'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Back to league information' }).click();
+  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible();
   await page.getByRole('button', { name: 'Edit league', exact: true }).click();
   await page.getByRole('button', { name: 'Remove league picture', exact: true }).click();
   expect((await request(0, `/leagues/${lid}/picture`)).status).toBe(200);
@@ -467,8 +503,9 @@ test('private league create/join, persisted scoring, isolation and independent s
   await expect(page.getByRole('button', { name: 'Edit league', exact: true })).toBeVisible();
   expect((await request(0, `/leagues/${lid}/picture`)).status).toBe(404);
   expect((await (await request(0, `/leagues/${lid}`)).json()).picture_url).toBeNull();
-  await bob.getByRole('button', { name: 'Back to league', exact: true }).click();
-  await bob.getByRole('button', { name: 'Back to leagues' }).click();
+  await bob.reload();
+  await signIn(bob, 1);
+  await bob.getByRole('tab', { name: 'League', exact: true }).click();
   const bobCard = bob.getByRole('button', { name: `${name} renamed`, exact: true });
   await expect(bobCard.getByText('#2 this week', { exact: true })).toBeVisible();
   await expect(bobCard.getByText('2 members', { exact: true })).toBeVisible();

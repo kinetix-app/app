@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { LeagueDetail } from '../schemas';
 import { LeagueAvatar } from './LeagueAvatar';
@@ -16,14 +17,50 @@ export function LeagueInformation({
   children,
   inviteAction,
   onRoleChange,
+  onOpenScoreHistory,
 }: React.PropsWithChildren<{
   accountId: number;
   league: LeagueDetail;
   inviteAction?: React.ReactNode;
   onRoleChange?: (memberId: number, role: 'admin' | 'member') => Promise<void>;
+  onOpenScoreHistory: (member: Member) => void;
 }>) {
   const p = usePalette();
+  const [tab, setTab] = useState<'about' | 'rules'>('about');
   const [target, setTarget] = useState<Member | null>(null);
+  const tabs = (
+    <View
+      accessibilityRole="tablist"
+      accessibilityLabel="League information"
+      style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: p.line }}
+    >
+      <AnimatedTextSelector
+        role="tab"
+        label="About"
+        selected={tab === 'about'}
+        reduceMotion
+        equalWidth
+        onPress={() => setTab('about')}
+      />
+      <AnimatedTextSelector
+        role="tab"
+        label="League rules"
+        selected={tab === 'rules'}
+        reduceMotion
+        equalWidth
+        onPress={() => setTab('rules')}
+      />
+    </View>
+  );
+
+  if (tab === 'rules')
+    return (
+      <>
+        {tabs}
+        <LeagueRules timezone={league.timezone} />
+      </>
+    );
+
   const nextRole = target?.role === 'admin' ? 'member' : 'admin';
   const memberCount = league.members.length;
   const created = new Date(league.created_at).toLocaleDateString(undefined, {
@@ -31,8 +68,10 @@ export function LeagueInformation({
     ...(league.timezone ? { timeZone: league.timezone } : {}),
   });
 
+  const showRoleControl = league.role === 'admin' && Boolean(onRoleChange);
   return (
     <>
+      {tabs}
       <LeagueCard>
         <View style={[leagueStyles.row, { justifyContent: 'space-between' }]}>
           <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
@@ -79,7 +118,6 @@ export function LeagueInformation({
         </View>
         {children}
       </LeagueCard>
-      <LeagueRules timezone={league.timezone} />
       <LeagueCard>
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
           Members
@@ -90,7 +128,7 @@ export function LeagueInformation({
             const creator = member.user_id === league.creator_id;
             const admin = creator || member.role === 'admin';
             const own = member.user_id === accountId;
-            const canChange = Boolean(onRoleChange && league.role === 'admin' && !creator && !own);
+            const roleLocked = creator || own;
             const label = admin ? 'Admin' : 'Member';
             const role = (
               <Text style={[textStyles.label, { color: admin ? p['brand-ink'] : p.ink }]}>
@@ -103,8 +141,9 @@ export function LeagueInformation({
                 gap: spacing['space-1'],
                 paddingHorizontal: spacing['space-2'],
                 paddingVertical: spacing['space-1'],
-                borderRadius: radii['radius-pill'],
-                backgroundColor: admin ? p['brand-soft'] : p['surface-300'],
+                borderRadius: radii['radius-md'],
+                backgroundColor:
+                  admin && !(showRoleControl && roleLocked) ? p['brand-soft'] : p['surface-300'],
               },
             ];
             return (
@@ -119,40 +158,65 @@ export function LeagueInformation({
                   },
                 ]}
               >
-                <LeagueAvatar
-                  accountId={accountId}
-                  path={member.picture_url}
-                  name={name}
-                  member
-                  size={40}
-                />
-                <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
-                  <Text style={[textStyles.body, { color: p.ink }]}>
-                    {name}
-                    {own ? ' (you)' : ''}
-                  </Text>
-                  {creator ? (
-                    <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Creator</Text>
-                  ) : null}
-                </View>
-                {canChange ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`View score history for ${name}`}
+                  onPress={() => onOpenScoreHistory(member)}
+                  style={({ pressed }) => [
+                    leagueStyles.row,
+                    {
+                      flex: 1,
+                      minWidth: 0,
+                      minHeight: sizes['tap-min'],
+                      opacity: pressed ? 0.65 : 1,
+                    },
+                  ]}
+                >
+                  <LeagueAvatar
+                    accountId={accountId}
+                    path={member.picture_url}
+                    name={name}
+                    member
+                    size={40}
+                  />
+                  <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
+                    <Text style={[textStyles.body, { color: p.ink }]}>
+                      {name}
+                      {own ? ' (you)' : ''}
+                    </Text>
+                    {creator ? (
+                      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                        Creator
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+                {showRoleControl ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Change role for ${name}`}
-                    accessibilityHint={`Current role: ${label}`}
+                    accessibilityLabel={
+                      roleLocked ? `${name} role: ${label}` : `Change role for ${name}`
+                    }
+                    accessibilityState={{ disabled: roleLocked }}
+                    disabled={roleLocked}
+                    accessibilityHint={roleLocked ? 'Role is protected' : `Current role: ${label}`}
                     onPress={() => setTarget(member)}
                     style={({ pressed }) => [
                       ...badge,
                       {
                         minHeight: sizes['tap-min'],
                         borderWidth: 1,
-                        borderColor: p['line-strong'],
+                        borderColor: roleLocked ? p.line : p['line-strong'],
                         opacity: pressed ? 0.65 : 1,
                       },
                     ]}
                   >
                     {role}
-                    <Ionicons name="chevron-down" size={14} color={p['ink-muted']} />
+                    <Ionicons
+                      name={roleLocked ? 'lock-closed-outline' : 'chevron-down'}
+                      size={14}
+                      color={p['ink-muted']}
+                    />
                   </Pressable>
                 ) : (
                   <View style={badge}>{role}</View>

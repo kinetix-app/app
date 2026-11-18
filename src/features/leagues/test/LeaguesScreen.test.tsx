@@ -13,9 +13,12 @@ jest.mock('expo-linking', () => ({
 }));
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }));
 jest.mock('../api', () => ({
+  ...jest.requireActual('../api'),
   leaguesApi: {
     list: jest.fn(),
     detail: jest.fn(),
+    scoreHistory: jest.fn(),
+    pendingResults: jest.fn(),
     timezones: jest.fn(),
     createConfiguration: jest.fn(),
     saveConfiguration: jest.fn(),
@@ -25,7 +28,6 @@ jest.mock('../api', () => ({
     changeRole: jest.fn(),
   },
 }));
-jest.mock('../components/LeagueResults', () => ({ LeagueResults: () => null }));
 jest.mock('../components/LeagueStandings', () => ({
   LeagueStandings: ({ header }: { header: React.ReactNode }) => (
     <>
@@ -53,9 +55,10 @@ function setup(role: 'admin' | 'member', position: number | null = 2, memberCoun
     .mocked(leaguesApi.list)
     .mockResolvedValue([{ ...league, member_count: memberCount, current_week_position: position }]);
   jest.mocked(leaguesApi.detail).mockResolvedValue(league);
+  jest.mocked(leaguesApi.pendingResults).mockResolvedValue([]);
   const client = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: Infinity },
+      queries: { retry: false, gcTime: 0, staleTime: 30000 },
       mutations: { gcTime: Infinity },
     },
   });
@@ -90,11 +93,21 @@ test('league identity opens information with admin configuration and back return
   expect(screen.getByLabelText('League name').props.value).toBe('Early birds');
   fireEvent.press(screen.getByRole('button', { name: 'Cancel editing' }));
   expect(screen.getByRole('button', { name: 'Generate invitation' })).toBeTruthy();
-  expect(screen.getByText('Daily credit')).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'About', selected: true })).toBeTruthy();
+  expect(screen.queryByText('Daily credit')).toBeNull();
+  const creatorRole = screen.getByRole('button', { name: 'Alex role: Admin', disabled: true });
+  fireEvent.press(creatorRole);
+  expect(screen.queryByRole('button', { name: 'Make member' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Change role for Sam', disabled: false })).toBeTruthy();
   expect(screen.getByLabelText('Alex profile picture unavailable')).toBeTruthy();
   expect(screen.getByLabelText('Sam profile picture unavailable')).toBeTruthy();
   expect(screen.getByText('Admin')).toBeTruthy();
   expect(screen.getByText('Member')).toBeTruthy();
+  fireEvent.press(screen.getByRole('tab', { name: 'League rules' }));
+  expect(screen.getByText('Daily credit')).toBeTruthy();
+  expect(screen.queryByRole('header', { name: 'Members' })).toBeNull();
+  fireEvent.press(screen.getByRole('tab', { name: 'About' }));
+  expect(screen.getByRole('header', { name: 'Members' })).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Back to league' }));
   expect(screen.getByText('Standings content')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Back to leagues' }));
@@ -110,6 +123,26 @@ test('members can view concise rules and identities without admin controls', asy
   expect(screen.queryByRole('button', { name: 'Choose league picture' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Edit league' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Generate invitation' })).toBeNull();
+});
+
+test('opens a member score history from About and returns to the member list', async () => {
+  jest.mocked(leaguesApi.scoreHistory).mockResolvedValue({ items: [], next_before: null });
+  setup('member');
+  fireEvent.press(await screen.findByRole('button', { name: 'Early birds' }));
+  fireEvent.press(
+    await screen.findByRole('button', { name: 'View league information for Early birds' }),
+  );
+  fireEvent.press(screen.getByText('Alex'));
+  expect(screen.getByRole('header', { name: 'Alex' })).toBeTruthy();
+  expect(await screen.findByText('No credited scores yet.')).toBeTruthy();
+  expect(leaguesApi.scoreHistory).toHaveBeenCalledWith(9, 1, null, expect.anything());
+  fireEvent.press(screen.getByRole('button', { name: 'Back to league information' }));
+  expect(screen.getByRole('header', { name: 'Members' })).toBeTruthy();
+  fireEvent.press(screen.getByText('Alex'));
+  expect(screen.getByText('No credited scores yet.')).toBeTruthy();
+  expect(leaguesApi.scoreHistory).toHaveBeenCalledTimes(1);
+  expect(leaguesApi.pendingResults).toHaveBeenCalledTimes(1);
+  expect(leaguesApi.detail).toHaveBeenCalledTimes(1);
 });
 
 test('league list cards show the picture, weekly position and total members', async () => {
