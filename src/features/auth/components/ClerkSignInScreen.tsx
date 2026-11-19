@@ -33,7 +33,10 @@ import { AccountConnectionScreen } from './AccountConnectionScreen';
 import { authStyles as styles } from './authStyles';
 
 /** Private state is mounted per Clerk session and discarded on expiry/account change. */
-function ConnectedAccount({ initialTab }: Readonly<{ initialTab: 'home' | 'nutrition' }>) {
+function ConnectedAccount({
+  initialTab,
+  initialInvitation,
+}: Readonly<{ initialTab: 'home' | 'nutrition' | 'league'; initialInvitation?: string }>) {
   const { getToken } = useAuth();
   const { signOut } = useClerk();
   const [account, setAccount] = useState<Account | null>(null);
@@ -85,6 +88,7 @@ function ConnectedAccount({ initialTab }: Readonly<{ initialTab: 'home' | 'nutri
     return (
       <HomeScreen
         initialTab={initialTab}
+        initialInvitation={initialInvitation}
         accountId={account.id}
         initialAccount={account}
         onSignOut={() => {
@@ -349,9 +353,17 @@ function SignInForm() {
 
 export function ClerkSignInScreen({
   initialTab = 'home',
-}: Readonly<{ initialTab?: 'home' | 'nutrition' }>) {
+  initialInvitation,
+}: Readonly<{ initialTab?: 'home' | 'nutrition' | 'league'; initialInvitation?: string }>) {
   const { isLoaded, isSignedIn, sessionId } = useAuth();
-  if (isLoaded && isSignedIn) return <ConnectedAccount initialTab={initialTab} key={sessionId} />;
+  if (isLoaded && isSignedIn)
+    return (
+      <ConnectedAccount
+        initialTab={initialTab}
+        initialInvitation={initialInvitation}
+        key={sessionId}
+      />
+    );
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView

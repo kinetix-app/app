@@ -24,10 +24,12 @@ for fat, rounding submitted values to two decimal places.
 
 - `/api/v1/nutrition-goals/me`, `/api/v1/nutrition-goals`, and
   `PATCH /api/v1/nutrition-goals/me` for nutrition goals.
-- `/api/v1/foods` for food search/list/create/delete. Search reads use `name`, `offset`
-  and `limit`; the app requests one extra match to decide whether to offer another page.
+- `/api/v1/foods` for food search/list/create/delete.
   `GET /api/v1/foods/{id}` provides nutrition data for existing recipe ingredients.
-- `/api/v1/recipes` for recipe list/create/delete.
+- `/api/v1/recipes` for recipe search/list/create/delete.
+- Both catalogue endpoints accept an optional `name` filter, `offset` and `limit`.
+  The pickers request 21 rows at a time, display 20 and fetch the next page when
+  users scroll near the end. The extra result indicates whether another page exists.
 - `/api/v1/nutrition/meal-items` and `/api/v1/nutrition/recipe-items` to log entries,
   `/api/v1/nutrition/meal-items/{id}` to update or delete a diary entry, and
   `/api/v1/nutrition/days/{date}` to load totals and entries.

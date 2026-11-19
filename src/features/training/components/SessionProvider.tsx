@@ -457,7 +457,10 @@ export function SessionProvider({
         await sessionStorage.clear(accountId);
         if (!alive.current) return;
         install(null);
-        await cache.invalidateQueries({ queryKey: ['training', accountId] });
+        await Promise.all([
+          cache.invalidateQueries({ queryKey: ['training', accountId] }),
+          cache.invalidateQueries({ queryKey: ['leagues', accountId] }),
+        ]);
       } catch {
         if (alive.current && !closing.current)
           setError('Could not finish the workout. Your results are retained. Retry Finish safely.');

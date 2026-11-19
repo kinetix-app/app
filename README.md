@@ -268,5 +268,5 @@ for AsyncStorage. Sprint 2 measurement formats remain outside this increment.
 
 The authenticated [Home shell](docs/home.md) shows profile and objective information after setup.
 Nutrition-goal editing is optional and available from Home and Nutrition.
-Its shared bottom bar connects Home, Workout, blank workout start (+), Nutrition and a disabled League placeholder; the Home header's profile picture opens Profile. Profile groups account editing, sign-out, completed training history and a prepared Progress screen.
+Its shared bottom bar connects Home, Workout, blank workout start (+), Nutrition and the FriendsLeague tab (see [league behavior](docs/leagues.md)); the Home header's profile picture opens Profile. Profile groups account editing, sign-out, completed training history and a prepared Progress screen.
 Feature components live in `components/`; tests and fixtures live in `test/`.

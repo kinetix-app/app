@@ -16,12 +16,21 @@ test('encodes food searches and passes cancellation through catalogue and diary 
   const signal = new AbortController().signal;
   await nutritionApi.searchFoods(' Rice & beans ', signal);
   await nutritionApi.foods(signal);
+  await nutritionApi.foodPage(' Rice & beans ', 20, 21, signal);
+  await nutritionApi.foodPage('', 0, 21, signal);
   await nutritionApi.recipes(signal);
+  await nutritionApi.recipePage(' Rice & beans ', 20, 21, signal);
   await nutritionApi.day('2026-10-28', signal);
   expect(get.mock.calls).toEqual([
     ['/api/v1/foods?name=Rice%20%26%20beans', { schema: foodListSchema, signal }],
     ['/api/v1/foods', { schema: foodListSchema, signal }],
+    ['/api/v1/foods?offset=20&limit=21&name=Rice+%26+beans', { schema: foodListSchema, signal }],
+    ['/api/v1/foods?offset=0&limit=21', { schema: foodListSchema, signal }],
     ['/api/v1/recipes', { schema: recipeListSchema, signal }],
+    [
+      '/api/v1/recipes?offset=20&limit=21&name=Rice+%26+beans',
+      { schema: recipeListSchema, signal },
+    ],
     ['/api/v1/nutrition/days/2026-10-28', { schema: nutritionDaySchema, signal }],
   ]);
 });

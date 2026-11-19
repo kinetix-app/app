@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 /** Profile is a shell destination opened from the Home header, not a bottom-bar tab. */
-export type HomeTab = 'home' | 'workout' | 'nutrition' | 'profile';
+export type HomeTab = 'home' | 'workout' | 'nutrition' | 'league' | 'profile';
 
 export function BottomBar({
   tab,
@@ -23,7 +23,6 @@ export function BottomBar({
     { id: 'home', icon: 'home', label: 'Home' },
     { id: 'workout', icon: 'activity', label: 'Workout' },
     { id: 'nutrition', icon: 'coffee', label: 'Nutrition' },
-    // Disabled placeholder until FriendsLeague is built.
     { id: 'league', icon: 'award', label: 'League' },
   ] as const;
   return (
@@ -53,18 +52,12 @@ export function BottomBar({
             <Pressable
               accessibilityRole="tab"
               aria-selected={tab === item.id}
-              aria-disabled={item.id === 'league'}
               accessibilityLabel={item.label}
-              accessibilityHint={item.id === 'league' ? 'Coming soon' : undefined}
-              accessibilityState={{ selected: tab === item.id, disabled: item.id === 'league' }}
-              disabled={item.id === 'league'}
+              accessibilityState={{ selected: tab === item.id }}
               onPress={() => {
-                if (item.id !== 'league') onSelect(item.id);
+                onSelect(item.id);
               }}
-              style={({ pressed }) => [
-                styles.tab,
-                { opacity: tabOpacity(item.id === 'league', pressed) },
-              ]}
+              style={({ pressed }) => [styles.tab, { opacity: tabOpacity(false, pressed) }]}
             >
               <View style={[styles.icon, tab === item.id && { backgroundColor: p['brand-soft'] }]}>
                 <Feather

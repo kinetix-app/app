@@ -67,7 +67,7 @@ jest.mock('@/features/nutrition/api', () => ({
     createGoal: jest.fn(),
     updateGoal: jest.fn(),
     day: jest.fn(),
-    foods: jest.fn(),
+    foodPage: jest.fn(),
   },
 }));
 jest.mock('@/features/training/api', () => ({
@@ -105,7 +105,7 @@ beforeEach(() => {
     fats: 0,
     items: [],
   });
-  jest.mocked(nutritionApi.foods).mockResolvedValue([]);
+  jest.mocked(nutritionApi.foodPage).mockResolvedValue([]);
   jest.mocked(trainingApi.draft).mockResolvedValue(null);
   jest.mocked(trainingApi.saveDraft).mockImplementation(async (id, snapshot) => ({
     ...snapshot,
@@ -125,7 +125,9 @@ test('home shows profile and an optional nutrition entry while keeping one botto
   expect(screen.queryByText('Sign out')).toBeNull();
   expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Open profile' })).toBeTruthy();
-  expect(screen.getByRole('tab', { name: 'League' }).props.accessibilityState.disabled).toBe(true);
+  expect(screen.getByRole('tab', { name: 'League' }).props.accessibilityState.disabled).not.toBe(
+    true,
+  );
   expect(screen.getByText('Change objective')).toBeTruthy();
   expect(screen.getByText('Edit nutrition goal')).toBeTruthy();
   expect(screen.getAllByLabelText('Main navigation')).toHaveLength(1);
