@@ -10,6 +10,7 @@ import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 import { nutritionApi } from '../api';
 import { AddFoodScreen } from './AddFoodScreen';
+import { NutritionSummary } from './NutritionSummary';
 
 const macros = [
   { label: 'Protein', field: 'protein', color: 'macro-protein' },
@@ -380,45 +381,19 @@ export function NutritionDiaryScreen({
                 </Text>
                 <View style={styles.mealHeaderActions}>
                   {consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
-                    <>
-                      <Text
-                        style={[textStyles.overline, styles.tabular, { color: p['ink-muted'] }]}
-                      >
-                        {formatNumber(
-                          consumed.items
-                            .filter((item) => item.meal_type === mealTypeId(meal))
-                            .reduce((total, item) => total + item.calories, 0),
-                        )}{' '}
-                        KCAL
-                      </Text>
-                      <View style={styles.mealMacroSummary}>
-                        {(
-                          [
-                            ['C', 'carbohydrates'],
-                            ['P', 'protein'],
-                            ['F', 'fats'],
-                          ] as const
-                        ).map(([label, macro]) => (
-                          <View key={label} style={styles.mealMacro}>
-                            <Text style={[textStyles.overline, { color: p.ink }]}>{label}</Text>
-                            <Text
-                              style={[
-                                textStyles.overline,
-                                styles.tabular,
-                                { color: p['ink-muted'] },
-                              ]}
-                            >
-                              {formatNumber(
-                                consumed.items
-                                  .filter((item) => item.meal_type === mealTypeId(meal))
-                                  .reduce((total, item) => total + item[macro], 0),
-                              )}
-                              g
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    </>
+                    <NutritionSummary
+                      values={consumed.items
+                        .filter((item) => item.meal_type === mealTypeId(meal))
+                        .reduce(
+                          (total, item) => ({
+                            calories: total.calories + item.calories,
+                            carbohydrates: total.carbohydrates + item.carbohydrates,
+                            protein: total.protein + item.protein,
+                            fats: total.fats + item.fats,
+                          }),
+                          { calories: 0, carbohydrates: 0, protein: 0, fats: 0 },
+                        )}
+                    />
                   ) : null}
                   <Pressable
                     accessibilityRole="button"
@@ -437,67 +412,86 @@ export function NutritionDiaryScreen({
                     .filter((item) => item.meal_type === mealTypeId(meal))
                     .map((item) => (
                       <View key={item.id} style={styles.loggedItem}>
-                        <View style={styles.itemCopy}>
-                          <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
-                          {editingMeal === meal ? (
-                            <TextField
-                              accessibilityLabel={`Edit ${item.name} quantity`}
-                              keyboardType="decimal-pad"
-                              value={draftAmounts[item.id] ?? ''}
-                              onChangeText={(value) =>
-                                setDraftAmounts((current) => ({ ...current, [item.id]: value }))
-                              }
-                              containerStyle={styles.quantityField}
-                              inputStyle={styles.quantityInput}
-                              trailing={
-                                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                                  {item.recipe_id ? 'servings' : 'g'}
-                                </Text>
-                              }
-                            />
-                          ) : (
-                            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                              {item.recipe_id
-                                ? servingLabel(item.servings)
-                                : `${item.quantity_grams} g`}
-                            </Text>
-                          )}
-                        </View>
-                        <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                          {formatNumber(item.calories)} kcal
-                        </Text>
                         {editingMeal === meal ? (
-                          <View style={styles.itemEditActions}>
-                            <Pressable
-                              accessibilityRole="button"
-                              accessibilityLabel={`Save ${item.name} quantity`}
-                              accessibilityState={{
-                                disabled:
-                                  updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
-                              }}
-                              disabled={updateItem.isPending || Number(draftAmounts[item.id]) <= 0}
-                              onPress={() =>
-                                updateItem.mutate({
-                                  id: item.id,
-                                  value: Number(draftAmounts[item.id]),
-                                  isRecipe: Boolean(item.recipe_id),
-                                })
-                              }
-                              style={styles.deleteItem}
+                          <>
+                            <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
+                            <View style={styles.itemLine}>
+                              <TextField
+                                accessibilityLabel={`Edit ${item.name} quantity`}
+                                keyboardType="decimal-pad"
+                                value={draftAmounts[item.id] ?? ''}
+                                onChangeText={(value) =>
+                                  setDraftAmounts((current) => ({ ...current, [item.id]: value }))
+                                }
+                                containerStyle={styles.quantityField}
+                                inputStyle={styles.quantityInput}
+                                trailing={
+                                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                                    {item.recipe_id ? 'servings' : 'g'}
+                                  </Text>
+                                }
+                              />
+                              <Text
+                                style={[
+                                  textStyles['body-sm'],
+                                  styles.itemCalories,
+                                  styles.tabular,
+                                  { color: p['ink-muted'] },
+                                ]}
+                              >
+                                {formatNumber(item.calories)} kcal
+                              </Text>
+                              <View style={styles.itemEditActions}>
+                                <Pressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`Save ${item.name} quantity`}
+                                  accessibilityState={{
+                                    disabled:
+                                      updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
+                                  }}
+                                  disabled={
+                                    updateItem.isPending || Number(draftAmounts[item.id]) <= 0
+                                  }
+                                  onPress={() =>
+                                    updateItem.mutate({
+                                      id: item.id,
+                                      value: Number(draftAmounts[item.id]),
+                                      isRecipe: Boolean(item.recipe_id),
+                                    })
+                                  }
+                                  style={styles.deleteItem}
+                                >
+                                  <Feather name="check" size={19} color={p['brand-ink']} />
+                                </Pressable>
+                                <Pressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`Delete ${item.name}`}
+                                  disabled={removeItem.isPending}
+                                  onPress={() => removeItem.mutate(item.id)}
+                                  style={styles.deleteItem}
+                                >
+                                  <Feather name="trash-2" size={18} color={p.danger} />
+                                </Pressable>
+                              </View>
+                            </View>
+                          </>
+                        ) : (
+                          <View style={styles.itemLine}>
+                            <View style={styles.itemCopy}>
+                              <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
+                              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                                {item.recipe_id
+                                  ? servingLabel(item.servings)
+                                  : `${item.quantity_grams} g`}
+                              </Text>
+                            </View>
+                            <Text
+                              style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}
                             >
-                              <Feather name="check" size={19} color={p['brand-ink']} />
-                            </Pressable>
-                            <Pressable
-                              accessibilityRole="button"
-                              accessibilityLabel={`Delete ${item.name}`}
-                              disabled={removeItem.isPending}
-                              onPress={() => removeItem.mutate(item.id)}
-                              style={styles.deleteItem}
-                            >
-                              <Feather name="trash-2" size={18} color={p.danger} />
-                            </Pressable>
+                              {formatNumber(item.calories)} kcal
+                            </Text>
                           </View>
-                        ) : null}
+                        )}
                       </View>
                     ))}
                   {editingMeal === meal && updateItem.isError ? (
@@ -611,7 +605,6 @@ function CalendarModal({
               const isSelected = id === selectedDay;
               const isToday = id === localDateId(new Date());
               const isCurrentMonth = date.getMonth() === month.getMonth();
-              const dayColor = isCurrentMonth ? p.ink : p['ink-muted'];
               return (
                 <Pressable
                   key={id}
@@ -632,7 +625,12 @@ function CalendarModal({
                       style={[
                         textStyles.label,
                         {
-                          color: isSelected || isToday ? p['brand-ink'] : dayColor,
+                          color:
+                            isSelected || isToday
+                              ? p['brand-ink']
+                              : isCurrentMonth
+                                ? p.ink
+                                : p['ink-muted'],
                           opacity: isCurrentMonth || isSelected || isToday ? 1 : 0.45,
                         },
                       ]}
@@ -724,8 +722,6 @@ const styles = StyleSheet.create({
   mealGroup: { gap: spacing['space-2'] },
   mealHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   mealHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
-  mealMacroSummary: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] },
-  mealMacro: { flexDirection: 'row', alignItems: 'baseline', gap: spacing['space-1'] },
   mealCard: {
     borderRadius: radii['radius-lg'],
     padding: spacing['space-4'],
@@ -734,7 +730,8 @@ const styles = StyleSheet.create({
     gap: spacing['space-3'],
   },
   mealCardContent: { flex: 1, gap: spacing['space-3'] },
-  loggedItem: {
+  loggedItem: { gap: spacing['space-1'] },
+  itemLine: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -747,8 +744,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itemEditActions: { flexDirection: 'row', alignItems: 'center' },
-  quantityField: { width: 132, minHeight: sizes['control-height-sm'] },
-  quantityInput: { textAlign: 'right' },
+  quantityField: { width: 116, minHeight: sizes['control-height-sm'] },
+  itemCalories: { flex: 1, textAlign: 'right' },
+  quantityInput: {
+    minHeight: sizes['control-height-sm'] - 2,
+    paddingVertical: 0,
+    textAlign: 'right',
+  },
   itemCopy: { flex: 1, gap: spacing['space-1'] },
   mealAddButton: {
     width: sizes['tap-min'],

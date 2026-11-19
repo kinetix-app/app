@@ -49,6 +49,8 @@ export const nutritionApi = {
     }),
   foods: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/foods', { schema: foodListSchema, signal }),
+  food: (id: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/foods/${id}`, { schema: foodSchema, signal }),
   createFood: (input: FoodInput) =>
     apiClient.post('/api/v1/foods', foodInputSchema.parse(input), { schema: foodSchema }),
   deleteFood: (foodId: number) => apiClient.delete(`/api/v1/foods/${foodId}`),
