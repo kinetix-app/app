@@ -218,6 +218,10 @@ test('private league create/join, persisted scoring, isolation and independent s
     bob.getByRole('button', { name: 'Change role for League Alice', exact: true }),
   ).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to league', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to leagues', exact: true }).click();
+  await page.getByRole('tab', { name: 'Nutrition', exact: true }).click();
+  await page.getByRole('tab', { name: 'League', exact: true }).click();
+  await page.getByRole('button', { name, exact: true }).click();
   await page
     .getByRole('button', { name: `View league information for ${name}`, exact: true })
     .click();
