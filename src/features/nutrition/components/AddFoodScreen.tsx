@@ -1,14 +1,10 @@
 import { Feather } from '@expo/vector-icons';
-import {
-  keepPreviousData,
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import {
   AccessibilityInfo,
+  ActivityIndicator,
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -27,7 +23,7 @@ import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { nutritionApi } from '../api';
 import type { Food, Recipe } from '../schemas';
-import { useFoodCatalogue } from '../useFoodCatalogue';
+import { useFoodCatalogue, useRecipeCatalogue } from '../useNutritionCatalogue';
 import {
   NutritionSummary,
   PortionNutritionPreview,
@@ -95,9 +91,12 @@ export function AddFoodScreen({
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
-  const results = useFoodCatalogue(debouncedSearch, tab === 'Food');
-  const foodList = React.useRef<ScrollView>(null);
   const visibleFoodSearch = search.trim() === debouncedSearch;
+  const results = useFoodCatalogue(
+    debouncedSearch,
+    tab === 'Food' && !reviewingEntries && visibleFoodSearch,
+  );
+  const foodList = React.useRef<FlatList<Food>>(null);
   const saveQueue = useMutation({
     mutationFn: async () => {
       const context = { date, meal_type: mealTypeFor(meal) };
@@ -145,16 +144,7 @@ export function AddFoodScreen({
         importantForAccessibility={modalOpen ? 'no-hide-descendants' : 'auto'}
         style={styles.screen}
       >
-        <ScrollView
-          style={{ flex: 1, minHeight: 0 }}
-          scrollEnabled={tab !== 'Food' || reviewingEntries}
-          contentContainerStyle={[
-            styles.content,
-            reviewingEntries && styles.reviewContent,
-            tab === 'Food' && !reviewingEntries && styles.foodPickerContent,
-          ]}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.content}>
           <View style={styles.header}>
             <Pressable
               accessibilityRole="button"
@@ -219,14 +209,15 @@ export function AddFoodScreen({
                 value={search}
                 onChangeText={(value) => {
                   setSearch(value);
-                  foodList.current?.scrollTo({ y: 0, animated: false });
+                  foodList.current?.scrollToOffset({ offset: 0, animated: false });
                 }}
                 placeholder="Chicken, rice, yogurt…"
               />
             </>
           ) : null}
-          <View style={tab === 'Recipe' && !reviewingEntries ? undefined : styles.hidden}>
+          <View style={tab === 'Recipe' && !reviewingEntries ? styles.list : styles.hidden}>
             <RecipePicker
+              active={tab === 'Recipe' && !reviewingEntries}
               queuedRecipeIds={queuedEntries
                 .filter((item) => item.kind === 'recipe')
                 .map((item) => item.source.id)}
@@ -238,51 +229,73 @@ export function AddFoodScreen({
             />
           </View>
           {reviewingEntries ? (
-            <EntryQueueReview
-              meal={meal}
-              entries={queuedEntries}
-              pending={saveQueue.isPending}
-              error={saveQueue.isError}
-              onRemove={(key) => {
-                const remaining = queuedEntries.filter((item) => entryKey(item) !== key);
-                setQueuedEntries(remaining);
-                if (!remaining.length) setReviewingEntries(false);
-              }}
-              onUpdateAmount={(key, amount) =>
-                setQueuedEntries((current) =>
-                  current.map((item) => (entryKey(item) === key ? { ...item, amount } : item)),
-                )
-              }
-              onConfirm={() => saveQueue.mutate()}
-            />
-          ) : null}
-          {tab === 'Food' && !reviewingEntries ? (
             <ScrollView
-              ref={foodList}
-              style={styles.foodListScroll}
-              contentContainerStyle={styles.foodListContent}
+              style={styles.list}
               keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
+              contentContainerStyle={styles.reviewContent}
             >
-              <FoodResults
-                foods={visibleFoodSearch ? results.foods : []}
-                isPending={!visibleFoodSearch || results.isPending}
-                search={debouncedSearch}
-                queuedFoodIds={queuedEntries
-                  .filter((item) => item.kind === 'food')
-                  .map((item) => item.source.id)}
-                onSelect={(food) => openPortion({ kind: 'food', source: food })}
-                accountId={accountId}
-                onEdit={(food) => openForm({ kind: 'edit', entry: { kind: 'food', source: food } })}
-                onRequestDelete={(food) => {
-                  removeFood.reset();
-                  setFoodToDelete(food);
+              <EntryQueueReview
+                meal={meal}
+                entries={queuedEntries}
+                pending={saveQueue.isPending}
+                error={saveQueue.isError}
+                onRemove={(key) => {
+                  const remaining = queuedEntries.filter((item) => entryKey(item) !== key);
+                  setQueuedEntries(remaining);
+                  if (!remaining.length) setReviewingEntries(false);
                 }}
+                onUpdateAmount={(key, amount) =>
+                  setQueuedEntries((current) =>
+                    current.map((item) => (entryKey(item) === key ? { ...item, amount } : item)),
+                  )
+                }
+                onConfirm={() => saveQueue.mutate()}
               />
-              {visibleFoodSearch ? <FoodPageAction catalogue={results} /> : null}
             </ScrollView>
           ) : null}
-        </ScrollView>
+          {tab === 'Food' && !reviewingEntries ? (
+            <FlatList
+              ref={foodList}
+              testID="food-catalogue"
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              data={visibleFoodSearch ? results.items : []}
+              initialNumToRender={20}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <FoodRow
+                  food={item}
+                  isQueued={queuedEntries.some(
+                    (entry) => entry.kind === 'food' && entry.source.id === item.id,
+                  )}
+                  onSelect={(food) => openPortion({ kind: 'food', source: food })}
+                  accountId={accountId}
+                  onEdit={(food) =>
+                    openForm({ kind: 'edit', entry: { kind: 'food', source: food } })
+                  }
+                  onRequestDelete={(food) => {
+                    removeFood.reset();
+                    setFoodToDelete(food);
+                  }}
+                />
+              )}
+              ListEmptyComponent={
+                visibleFoodSearch && debouncedSearch && !results.isPending && !results.isError ? (
+                  <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
+                ) : null
+              }
+              ListFooterComponent={
+                visibleFoodSearch ? (
+                  <CatalogueStatus catalogue={results} collection="foods" />
+                ) : null
+              }
+              onEndReachedThreshold={0.5}
+              onEndReached={results.loadMore}
+            />
+          ) : null}
+        </View>
         {!reviewingEntries && queuedEntries.length > 0 ? (
           <View style={styles.reviewFooter}>
             <Button
@@ -544,40 +557,38 @@ function PortionPicker({
   );
 }
 
-function FoodPageAction({
+function CatalogueStatus({
   catalogue,
-}: Readonly<{ catalogue: ReturnType<typeof useFoodCatalogue> }>) {
+  collection,
+}: Readonly<{
+  catalogue: Pick<ReturnType<typeof useFoodCatalogue>, 'isError' | 'isFetchingNextPage' | 'retry'>;
+  collection: 'foods' | 'recipes';
+}>) {
   const p = usePalette();
-  if (!catalogue.hasNextPage && !catalogue.isError) return null;
-  const retry = catalogue.isError;
+  if (catalogue.isFetchingNextPage)
+    return <ActivityIndicator accessibilityLabel={`Loading ${collection}`} color={p.brand} />;
+  if (!catalogue.isError) return null;
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={catalogue.isFetching}
-      onPress={retry ? () => void catalogue.refetch() : catalogue.showMore}
+      onPress={catalogue.retry}
       style={[styles.pageAction, { backgroundColor: p['surface-300'] }]}
     >
-      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-        {retry ? 'Retry loading foods' : 'Load more foods'}
-      </Text>
+      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry loading {collection}</Text>
     </Pressable>
   );
 }
 
-function FoodResults({
-  foods,
-  isPending,
-  search,
-  queuedFoodIds,
+function FoodRow({
+  food,
+  isQueued,
   onSelect,
   accountId,
   onEdit,
   onRequestDelete,
 }: Readonly<{
-  foods: Food[];
-  isPending: boolean;
-  search: string;
-  queuedFoodIds: number[];
+  food: Food;
+  isQueued: boolean;
   onSelect: (food: Food) => void;
   accountId: number;
   onEdit: (food: Food) => void;
@@ -585,64 +596,54 @@ function FoodResults({
 }>) {
   const p = usePalette();
   return (
-    <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-      {foods.map((food) => {
-        const isQueued = queuedFoodIds.includes(food.id);
-        return (
-          <View key={food.id} style={styles.recipeRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Select ${food.name}`}
-              accessibilityState={{ selected: isQueued }}
-              onPress={() => onSelect(food)}
-              style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
-            >
-              <View
-                style={[
-                  styles.foodIcon,
-                  {
-                    backgroundColor: p['surface-300'],
-                    borderColor: isQueued ? p['brand-ink'] : 'transparent',
-                    borderWidth: 2,
-                  },
-                ]}
-              >
-                <Feather name="coffee" size={22} color={p['brand-ink']} />
-              </View>
-              <View style={styles.flex}>
-                <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
-                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  Per 100 g · {food.calories} kcal
-                </Text>
-              </View>
-            </Pressable>
-            {food.user_id === accountId ? (
-              <View style={styles.itemActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Edit ${food.name}`}
-                  hitSlop={spacing['space-1']}
-                  onPress={() => onEdit(food)}
-                  style={styles.editItem}
-                >
-                  <Feather name="edit-2" size={19} color={p['brand-ink']} />
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${food.name}`}
-                  onPress={() => onRequestDelete(food)}
-                  hitSlop={spacing['space-1']}
-                  style={styles.deleteRecipe}
-                >
-                  <Feather name="trash-2" size={20} color={p.danger} />
-                </Pressable>
-              </View>
-            ) : null}
-          </View>
-        );
-      })}
-      {search && !isPending && !foods.length ? (
-        <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
+    <View style={[styles.catalogueRow, { backgroundColor: p['surface-200'] }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Select ${food.name}`}
+        accessibilityState={{ selected: isQueued }}
+        onPress={() => onSelect(food)}
+        style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
+      >
+        <View
+          style={[
+            styles.foodIcon,
+            {
+              backgroundColor: p['surface-300'],
+              borderColor: isQueued ? p['brand-ink'] : 'transparent',
+              borderWidth: 2,
+            },
+          ]}
+        >
+          <Feather name="coffee" size={22} color={p['brand-ink']} />
+        </View>
+        <View style={styles.flex}>
+          <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+            Per 100 g · {food.calories} kcal
+          </Text>
+        </View>
+      </Pressable>
+      {food.user_id === accountId ? (
+        <View style={styles.itemActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${food.name}`}
+            hitSlop={spacing['space-1']}
+            onPress={() => onEdit(food)}
+            style={styles.editItem}
+          >
+            <Feather name="edit-2" size={19} color={p['brand-ink']} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${food.name}`}
+            onPress={() => onRequestDelete(food)}
+            hitSlop={spacing['space-1']}
+            style={styles.deleteRecipe}
+          >
+            <Feather name="trash-2" size={20} color={p.danger} />
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
@@ -941,11 +942,13 @@ function formatGrams(value: number, maximumFractionDigits = 1) {
 
 function RecipePicker({
   accountId,
+  active,
   queuedRecipeIds,
   onSelect,
   onEdit,
 }: Readonly<{
   accountId: number;
+  active: boolean;
   queuedRecipeIds: number[];
   onSelect: (recipe: Recipe) => void;
   onEdit: (recipe: Recipe) => void;
@@ -959,14 +962,9 @@ function RecipePicker({
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
-  const recipes = useQuery({
-    queryKey: ['nutrition', 'recipes', debouncedSearch],
-    queryFn: ({ signal }) =>
-      debouncedSearch
-        ? nutritionApi.searchRecipes(debouncedSearch, signal)
-        : nutritionApi.recipes(signal),
-    placeholderData: keepPreviousData,
-  });
+  const visibleSearch = search.trim() === debouncedSearch;
+  const list = React.useRef<FlatList<Recipe>>(null);
+  const recipes = useRecipeCatalogue(debouncedSearch, active && visibleSearch);
   const remove = useMutation({
     mutationFn: (recipeId: number) => nutritionApi.deleteRecipe(recipeId),
     onSuccess: () => {
@@ -975,92 +973,111 @@ function RecipePicker({
     },
   });
   return (
-    <View style={styles.recipeForm}>
+    <View style={[styles.list, styles.recipeForm]}>
       <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
       <TextField
         accessibilityLabel="Search recipe"
+        maxLength={150}
         leading={<Feather name="search" size={20} color={p['ink-muted']} />}
         value={search}
-        onChangeText={setSearch}
+        onChangeText={(value) => {
+          setSearch(value);
+          list.current?.scrollToOffset({ offset: 0, animated: false });
+        }}
         placeholder="Chicken rice, pasta…"
       />
-      <View style={[styles.results, { backgroundColor: p['surface-200'] }]}>
-        {recipes.data?.map((recipe) => (
-          <React.Fragment key={recipe.id}>
-            <View style={styles.recipeRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{
-                  selected: queuedRecipeIds.includes(recipe.id),
-                }}
-                accessibilityLabel={`Select ${recipe.name}`}
-                onPress={() => onSelect(recipe)}
-                style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
+      <FlatList
+        ref={list}
+        testID="recipe-catalogue"
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        data={visibleSearch ? recipes.items : []}
+        initialNumToRender={20}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item: recipe }) => (
+          <View style={[styles.catalogueRow, { backgroundColor: p['surface-200'] }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{
+                selected: queuedRecipeIds.includes(recipe.id),
+              }}
+              accessibilityLabel={`Select ${recipe.name}`}
+              onPress={() => onSelect(recipe)}
+              style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
+            >
+              <View
+                style={[
+                  styles.foodIcon,
+                  {
+                    backgroundColor: p['surface-300'],
+                    borderColor: queuedRecipeIds.includes(recipe.id)
+                      ? p['brand-ink']
+                      : 'transparent',
+                    borderWidth: 2,
+                  },
+                ]}
               >
-                <View
-                  style={[
-                    styles.foodIcon,
-                    {
-                      backgroundColor: p['surface-300'],
-                      borderColor: queuedRecipeIds.includes(recipe.id)
-                        ? p['brand-ink']
-                        : 'transparent',
-                      borderWidth: 2,
-                    },
-                  ]}
+                <Feather name="book-open" size={20} color={p['brand-ink']} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                  Per serving · {recipe.calories.toFixed(0)} kcal
+                </Text>
+              </View>
+            </Pressable>
+            {recipe.user_id === accountId ? (
+              <View style={styles.itemActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${recipe.name}`}
+                  hitSlop={spacing['space-1']}
+                  onPress={() => onEdit(recipe)}
+                  style={styles.editItem}
                 >
-                  <Feather name="book-open" size={20} color={p['brand-ink']} />
-                </View>
-                <View style={styles.flex}>
-                  <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    Per serving · {recipe.calories.toFixed(0)} kcal
-                  </Text>
-                </View>
-              </Pressable>
-              {recipe.user_id === accountId ? (
-                <View style={styles.itemActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${recipe.name}`}
-                    hitSlop={spacing['space-1']}
-                    onPress={() => onEdit(recipe)}
-                    style={styles.editItem}
-                  >
-                    <Feather name="edit-2" size={19} color={p['brand-ink']} />
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete ${recipe.name}`}
-                    accessibilityState={{ disabled: remove.isPending }}
-                    disabled={remove.isPending}
-                    onPress={() => {
-                      remove.reset();
-                      setRecipeToDelete(recipe);
-                    }}
-                    hitSlop={spacing['space-2']}
-                    style={styles.deleteRecipe}
-                  >
-                    <Feather name="trash-2" size={20} color={p.danger} />
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
-          </React.Fragment>
-        ))}
-        {debouncedSearch && !recipes.isPending && !recipes.data?.length ? (
-          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes found.</Text>
-        ) : null}
-        {!debouncedSearch && !recipes.isPending && !recipes.data?.length ? (
-          <View style={styles.emptyRecipes}>
-            <Feather name="book-open" size={22} color={p['ink-muted']} />
-            <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              Create one to add its servings to any meal.
-            </Text>
+                  <Feather name="edit-2" size={19} color={p['brand-ink']} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${recipe.name}`}
+                  accessibilityState={{ disabled: remove.isPending }}
+                  disabled={remove.isPending}
+                  onPress={() => {
+                    remove.reset();
+                    setRecipeToDelete(recipe);
+                  }}
+                  hitSlop={spacing['space-2']}
+                  style={styles.deleteRecipe}
+                >
+                  <Feather name="trash-2" size={20} color={p.danger} />
+                </Pressable>
+              </View>
+            ) : null}
           </View>
-        ) : null}
-      </View>
+        )}
+        ListEmptyComponent={
+          visibleSearch && !recipes.isPending && !recipes.isError ? (
+            debouncedSearch ? (
+              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes found.</Text>
+            ) : (
+              <View style={styles.emptyRecipes}>
+                <Feather name="book-open" size={22} color={p['ink-muted']} />
+                <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                  Create one to add its servings to any meal.
+                </Text>
+              </View>
+            )
+          ) : null
+        }
+        ListFooterComponent={
+          visibleSearch ? <CatalogueStatus catalogue={recipes} collection="recipes" /> : null
+        }
+        onEndReachedThreshold={0.5}
+        onEndReached={recipes.loadMore}
+      />
       <Modal
         transparent
         animationType="fade"
@@ -1430,9 +1447,15 @@ function RecipeEditor({
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled
           accessibilityLabel="Ingredient search results"
+          scrollEventThrottle={32}
+          onScroll={({ nativeEvent: { contentSize, contentOffset, layoutMeasurement } }) => {
+            if (contentSize.height - contentOffset.y <= layoutMeasurement.height * 1.5) {
+              results.loadMore();
+            }
+          }}
         >
-          {term === debouncedSearch && results.foods.length ? (
-            results.foods.map((food) => (
+          {term === debouncedSearch && results.items.length ? (
+            results.items.map((food) => (
               <Pressable
                 key={food.id}
                 accessibilityRole="button"
@@ -1465,7 +1488,9 @@ function RecipeEditor({
                   : 'No foods found'}
             </Text>
           )}
-          {term === debouncedSearch ? <FoodPageAction catalogue={results} /> : null}
+          {term === debouncedSearch ? (
+            <CatalogueStatus catalogue={results} collection="foods" />
+          ) : null}
         </ScrollView>
       ) : null}
       {ingredients.length ? (
@@ -1569,14 +1594,15 @@ function RecipeEditor({
 const styles = StyleSheet.create({
   hidden: { display: 'none' },
   screen: { flex: 1 },
-  foodPickerContent: { flex: 1, minHeight: 0, paddingBottom: 0 },
-  foodListScroll: { flex: 1, minHeight: 0 },
-  foodListContent: { gap: spacing['space-3'], paddingBottom: spacing['space-4'] },
+  list: { flex: 1, minHeight: 0 },
+  listContent: { paddingBottom: spacing['space-4'] },
   reviewFooter: { padding: spacing['space-4'] },
   content: {
-    padding: spacing['space-4'],
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: spacing['space-4'],
+    paddingTop: spacing['space-4'],
     gap: spacing['space-3'],
-    paddingBottom: spacing['space-10'],
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
   back: {
@@ -1697,7 +1723,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  recipeRow: { flexDirection: 'row', alignItems: 'center' },
+  catalogueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing['space-4'],
+    borderRadius: radii['radius-lg'],
+  },
   recipeSelect: {
     flex: 1,
     minWidth: 0,
@@ -1756,7 +1787,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing['space-3'],
   },
-  results: { borderRadius: radii['radius-lg'], paddingHorizontal: spacing['space-4'] },
   reviewSections: { gap: spacing['space-5'] },
   reviewList: { borderTopWidth: StyleSheet.hairlineWidth },
   reviewItem: {

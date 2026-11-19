@@ -67,7 +67,7 @@ jest.mock('@/features/nutrition/api', () => ({
     createGoal: jest.fn(),
     updateGoal: jest.fn(),
     day: jest.fn(),
-    foods: jest.fn(),
+    foodPage: jest.fn(),
   },
 }));
 jest.mock('@/features/training/api', () => ({
@@ -105,7 +105,7 @@ beforeEach(() => {
     fats: 0,
     items: [],
   });
-  jest.mocked(nutritionApi.foods).mockResolvedValue([]);
+  jest.mocked(nutritionApi.foodPage).mockResolvedValue([]);
   jest.mocked(trainingApi.draft).mockResolvedValue(null);
   jest.mocked(trainingApi.saveDraft).mockImplementation(async (id, snapshot) => ({
     ...snapshot,

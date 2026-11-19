@@ -22,6 +22,13 @@ import {
   type RecipeMealItemInput,
 } from './schemas';
 
+function catalogueParams(name: string, offset: number, limit: number) {
+  const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+  const term = name.trim();
+  if (term) params.set('name', term);
+  return params;
+}
+
 export const nutritionApi = {
   goal: async (signal?: AbortSignal) => {
     try {
@@ -47,6 +54,12 @@ export const nutritionApi = {
       schema: foodListSchema,
       signal,
     }),
+  foodPage: (name: string, offset: number, limit: number, signal?: AbortSignal) => {
+    return apiClient.get(`/api/v1/foods?${catalogueParams(name, offset, limit)}`, {
+      schema: foodListSchema,
+      signal,
+    });
+  },
   foods: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/foods', { schema: foodListSchema, signal }),
   food: (id: number, signal?: AbortSignal) =>
@@ -62,6 +75,11 @@ export const nutritionApi = {
     apiClient.post('/api/v1/recipes', recipeInputSchema.parse(input), { schema: recipeSchema }),
   recipes: (signal?: AbortSignal) =>
     apiClient.get('/api/v1/recipes', { schema: recipeListSchema, signal }),
+  recipePage: (name: string, offset: number, limit: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/recipes?${catalogueParams(name, offset, limit)}`, {
+      schema: recipeListSchema,
+      signal,
+    }),
   searchRecipes: (name: string, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/recipes?name=${encodeURIComponent(name.trim())}`, {
       schema: recipeListSchema,

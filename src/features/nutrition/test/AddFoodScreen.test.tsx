@@ -1,5 +1,5 @@
 import React from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, FlatList } from 'react-native';
 import {
   act,
   cleanup,
@@ -20,13 +20,12 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@expo/vector-icons', () => ({ Feather: 'Icon' }));
 jest.mock('../api', () => ({
   nutritionApi: {
-    foods: jest.fn(),
+    foodPage: jest.fn(),
     food: jest.fn(),
-    searchFoods: jest.fn(),
     createFood: jest.fn(),
     updateFood: jest.fn(),
     deleteFood: jest.fn(),
-    recipes: jest.fn(),
+    recipePage: jest.fn(),
     createRecipe: jest.fn(),
     updateRecipe: jest.fn(),
     deleteRecipe: jest.fn(),
@@ -87,10 +86,15 @@ beforeEach(() => {
     .mockReturnValue({ remove: jest.fn() } as unknown as ReturnType<
       typeof AccessibilityInfo.addEventListener
     >);
-  jest.mocked(nutritionApi.foods).mockResolvedValue([food, { ...food, id: 3, name: 'Beans' }]);
-  jest.mocked(nutritionApi.searchFoods).mockResolvedValue([food]);
+  jest
+    .mocked(nutritionApi.foodPage)
+    .mockImplementation(async (term) =>
+      term ? [food] : [food, { ...food, id: 3, name: 'Beans' }],
+    );
   jest.mocked(nutritionApi.food).mockResolvedValue(food);
-  jest.mocked(nutritionApi.recipes).mockResolvedValue([recipe, { ...recipe, id: 4, name: 'Soup' }]);
+  jest
+    .mocked(nutritionApi.recipePage)
+    .mockResolvedValue([recipe, { ...recipe, id: 4, name: 'Soup' }]);
 });
 afterEach(() => {
   cleanup();
@@ -106,7 +110,7 @@ test('searches trimmed input, previews calories and logs rounded grams for the s
     jest.advanceTimersByTime(300);
   });
   await waitFor(() =>
-    expect(nutritionApi.searchFoods).toHaveBeenCalledWith('Rice', expect.anything()),
+    expect(nutritionApi.foodPage).toHaveBeenCalledWith('Rice', 0, 21, expect.anything()),
   );
   fireEvent.press(await screen.findByLabelText('Select Rice'));
   expect(screen.getByLabelText('Food amount').props.value).toBe('');
@@ -143,32 +147,81 @@ test('searches trimmed input, previews calories and logs rounded grams for the s
   });
   expect(onClose).toHaveBeenCalledTimes(1);
 });
-test('appends another page and restarts pagination for a new search', async () => {
+test('retries a failed page, appends results, and starts a new search at the first page', async () => {
   const matches = Array.from({ length: 22 }, (_, index) => ({
     ...food,
     id: index + 1,
     name: `Rice ${index + 1}`,
   }));
-  jest.mocked(nutritionApi.searchFoods).mockImplementation(async (term) => {
-    if (term === 'rice') return matches;
-    return matches.map((item, index) => ({ ...item, name: `Beans ${index + 1}` }));
+  let rejectNextPage = true;
+  jest.mocked(nutritionApi.foodPage).mockImplementation(async (term, offset, limit) => {
+    if (term === 'rice' && offset === 20 && rejectNextPage) {
+      rejectNextPage = false;
+      throw new Error('Page temporarily unavailable');
+    }
+    const results =
+      term === 'rice'
+        ? matches
+        : matches.map((item, index) => ({ ...item, name: `Beans ${index + 1}` }));
+    return results.slice(offset, offset + limit);
   });
   open();
   const search = screen.getByLabelText('Search food');
   fireEvent.changeText(search, 'rice');
   expect(await screen.findByLabelText('Select Rice 20')).toBeVisible();
   expect(screen.queryByLabelText('Select Rice 21')).toBeNull();
-  fireEvent.press(screen.getByRole('button', { name: 'Load more foods' }));
-  expect(await screen.findByLabelText('Select Rice 22')).toBeVisible();
+  fireEvent(screen.getByTestId('food-catalogue'), 'onEndReached');
+  const retry = await screen.findByRole('button', { name: 'Retry loading foods' });
   expect(screen.getByLabelText('Select Rice 1')).toBeVisible();
-  expect(screen.queryByRole('button', { name: 'Load more foods' })).toBeNull();
-  expect(nutritionApi.searchFoods).toHaveBeenCalledTimes(1);
+  fireEvent.press(retry);
+  await waitFor(() => {
+    const list = screen
+      .UNSAFE_getAllByType(FlatList)
+      .find(({ props }) => props.testID === 'food-catalogue');
+    expect(list?.props.data).toEqual(matches);
+  });
+  expect(screen.getByLabelText('Select Rice 1')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Retry loading foods' })).toBeNull();
+  expect(nutritionApi.foodPage).toHaveBeenNthCalledWith(2, 'rice', 0, 21, expect.anything());
+  expect(nutritionApi.foodPage).toHaveBeenNthCalledWith(3, 'rice', 20, 21, expect.anything());
+  expect(nutritionApi.foodPage).toHaveBeenNthCalledWith(4, 'rice', 20, 21, expect.anything());
   fireEvent.changeText(search, 'beans');
   expect(await screen.findByLabelText('Select Beans 20')).toBeVisible();
   expect(screen.queryByLabelText('Select Beans 21')).toBeNull();
   expect(screen.queryByLabelText('Select Rice 1')).toBeNull();
-  expect(nutritionApi.searchFoods).toHaveBeenLastCalledWith('beans', expect.anything());
+  expect(nutritionApi.foodPage).toHaveBeenLastCalledWith('beans', 0, 21, expect.anything());
 });
+test('loads the next recipe page on scroll and starts searches at offset zero', async () => {
+  const matches = Array.from({ length: 22 }, (_, index) => ({
+    ...recipe,
+    id: index + 1,
+    name: `Bowl ${index + 1}`,
+  }));
+  jest
+    .mocked(nutritionApi.recipePage)
+    .mockImplementation(async (term, offset, limit) =>
+      (term ? matches.filter(({ name }) => name === term) : matches).slice(offset, offset + limit),
+    );
+  open();
+  fireEvent.press(screen.getByRole('tab', { name: 'Recipe' }));
+  expect(await screen.findByLabelText('Select Bowl 20')).toBeVisible();
+  expect(screen.queryByLabelText('Select Bowl 21')).toBeNull();
+  fireEvent(screen.getByTestId('recipe-catalogue'), 'onEndReached');
+  await waitFor(() => {
+    const list = screen
+      .UNSAFE_getAllByType(FlatList)
+      .find(({ props }) => props.testID === 'recipe-catalogue');
+    expect(list?.props.data).toEqual(matches);
+  });
+  expect(nutritionApi.recipePage).toHaveBeenLastCalledWith('', 20, 21, expect.anything());
+  fireEvent.changeText(screen.getByLabelText('Search recipe'), 'Bowl 22');
+  await waitFor(() => {
+    expect(nutritionApi.recipePage).toHaveBeenLastCalledWith('Bowl 22', 0, 21, expect.anything());
+  });
+  expect(await screen.findByLabelText('Select Bowl 22')).toBeVisible();
+  expect(screen.queryByLabelText('Select Bowl 1')).toBeNull();
+});
+
 test('queues multiple foods and confirms them with separate hidden requests', async () => {
   const { onSaved, onClose } = open();
   fireEvent.press(await screen.findByLabelText('Select Rice'));
@@ -243,7 +296,7 @@ test('edits a queued food quantity from the review before adding it', async () =
   );
 });
 test('shows no search results and supports returning to the diary', async () => {
-  jest.mocked(nutritionApi.searchFoods).mockResolvedValue([]);
+  jest.mocked(nutritionApi.foodPage).mockResolvedValue([]);
   const { onClose } = open();
   fireEvent.changeText(screen.getByLabelText('Search food'), 'unknown');
   expect(await screen.findByText('No foods found.')).toBeTruthy();
@@ -273,7 +326,7 @@ test('cancels deletion, explains a referenced food failure, then removes a selec
   fireEvent.press(screen.getByText('Delete'));
   expect(await screen.findByText('Can’t delete food')).toBeTruthy();
   fireEvent.press(screen.getByText('Close'));
-  jest.mocked(nutritionApi.foods).mockResolvedValue([]);
+  jest.mocked(nutritionApi.foodPage).mockResolvedValue([]);
   fireEvent.press(screen.getByLabelText('Delete Rice'));
   fireEvent.press(screen.getByText('Delete'));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Add food' })).toBeNull());
@@ -306,7 +359,7 @@ test('creates a food with a macro estimate and refreshes the catalogue', async (
     carbohydrates: 20,
     fats: 1,
   });
-  expect(nutritionApi.foods).toHaveBeenCalledTimes(2);
+  expect(nutritionApi.foodPage).toHaveBeenCalledTimes(2);
 });
 test('reuses the food form with the existing values when editing', async () => {
   jest.mocked(nutritionApi.updateFood).mockResolvedValue({ ...food, name: 'Brown rice' });
@@ -332,7 +385,7 @@ test('reuses the food form with the existing values when editing', async () => {
   expect(screen.queryByText('Edit food')).toBeNull();
 });
 test('confirms foods and recipes together and retries only the entry that failed', async () => {
-  jest.mocked(nutritionApi.recipes).mockResolvedValue([
+  jest.mocked(nutritionApi.recipePage).mockResolvedValue([
     { ...recipe, id: food.id },
     { ...recipe, id: 4, name: 'Soup' },
   ]);
@@ -450,7 +503,7 @@ test('recipe deletion can be cancelled and preserves referenced history', async 
   fireEvent.press(screen.getByText('Delete'));
   expect(await screen.findByText('Can’t delete recipe')).toBeTruthy();
   fireEvent.press(screen.getByText('Close'));
-  jest.mocked(nutritionApi.recipes).mockResolvedValue([]);
+  jest.mocked(nutritionApi.recipePage).mockResolvedValue([]);
   fireEvent.press(screen.getByLabelText('Delete Rice bowl'));
   fireEvent.press(screen.getByText('Delete'));
   expect(await screen.findByText('No recipes saved yet')).toBeTruthy();
@@ -470,12 +523,13 @@ test('builds a recipe from searched ingredients, edits quantities and removes un
   expect(screen.getByLabelText('Recipe name')).toHaveDisplayValue(' Rice bowl ');
   fireEvent.changeText(screen.getByLabelText('Search ingredient'), 'r');
   fireEvent.changeText(screen.getByLabelText('Search ingredient'), 'rice');
-  expect(nutritionApi.searchFoods).not.toHaveBeenCalled();
+  expect(nutritionApi.foodPage).toHaveBeenCalledTimes(1);
+  expect(nutritionApi.foodPage).toHaveBeenLastCalledWith('', 0, 21, expect.anything());
   fireEvent.press(await screen.findByLabelText('Add Rice as an ingredient'));
   expect(screen.queryByLabelText('Ingredient search results')).toBeNull();
   expect(screen.getAllByText('100 kcal', { exact: true })).toHaveLength(2);
-  expect(nutritionApi.searchFoods).toHaveBeenCalledTimes(1);
-  expect(nutritionApi.searchFoods).toHaveBeenCalledWith('rice', expect.anything());
+  expect(nutritionApi.foodPage).toHaveBeenCalledTimes(2);
+  expect(nutritionApi.foodPage).toHaveBeenLastCalledWith('rice', 0, 21, expect.anything());
   fireEvent.changeText(screen.getByLabelText('Recipe servings'), '2');
   fireEvent.changeText(screen.getByLabelText('Search ingredient'), 'rice');
   fireEvent.press(await screen.findByLabelText('Add Rice as an ingredient'));
