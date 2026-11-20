@@ -1,4 +1,6 @@
+import { ApiError } from '@/services/apiClient';
 import { buildPostForm } from '../api';
+import { shareErrorMessage } from '../components/ShareWorkoutScreen';
 import { duration, exerciseLine, relativeTime, setLine, volume, authorName } from '../format';
 import { mediaPathSchema, postPageSchema } from '../schemas';
 import { makePost } from './fixtures';
@@ -73,4 +75,16 @@ test('set lines show what was recorded without float rounding', () => {
   expect(setLine({ ...set, duration_seconds: 45 })).toBe('45 s');
   expect(setLine({ ...set, distance_km: '2.50', duration_seconds: 720 })).toBe('2.5 km in 12 min');
   expect(setLine(set)).toBe('Done');
+});
+
+test('share errors explain what to change', () => {
+  const message = (status: number) => shareErrorMessage(new ApiError(status));
+  expect(message(409)).toMatch(/already shared/);
+  expect(message(413)).toMatch(/too large/);
+  expect(message(415)).toMatch(/JPEG, PNG or WebP/);
+  expect(message(422)).toMatch(/caption, a photo or a workout/);
+  expect(message(503)).toMatch(/unavailable/);
+  expect(message(401)).toMatch(/Sign out/);
+  expect(message(500)).toMatch(/Try again/);
+  expect(shareErrorMessage(new Error('offline'))).toMatch(/caption and photos are kept/);
 });

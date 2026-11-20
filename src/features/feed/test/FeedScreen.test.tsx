@@ -6,6 +6,7 @@ import { ApiError } from '@/services/apiClient';
 import { trainingApi } from '@/features/training/api';
 import { friendsApi } from '@/features/friends/api';
 import { feedApi } from '../api';
+import * as ImagePicker from 'expo-image-picker';
 import { FeedScreen } from '../components/FeedScreen';
 import { makePost } from './fixtures';
 
@@ -439,4 +440,92 @@ test('authors without a photo keep their initial and never request one', async (
   // The initial is decorative (hidden from screen readers) because the name is shown beside it.
   expect(screen.getByText('B', { includeHiddenElements: true })).toBeTruthy();
   expect(friendsApi.picture).not.toHaveBeenCalled();
+});
+
+test('photos can be picked, filtered by type and size, removed and shared', async () => {
+  jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue({
+    granted: true,
+  } as never);
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({
+    canceled: false,
+    assets: [
+      { uri: 'file:///a.jpg', fileName: 'a.jpg', mimeType: 'image/jpeg', fileSize: 1000 },
+      { uri: 'file:///b.gif', fileName: 'b.gif', mimeType: 'image/gif', fileSize: 1000 },
+      { uri: 'file:///c.png', mimeType: 'image/png', fileSize: 6 * 1024 * 1024 },
+      { uri: 'file:///d.png', mimeType: 'image/png', fileSize: 2000 },
+    ],
+  } as never);
+  jest.mocked(feedApi.create).mockResolvedValue(makePost({ id: 12, is_mine: true }));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Add photos' }));
+  expect(
+    await screen.findByText('2 photos skipped. Use JPEG, PNG or WebP up to 5 MB each.'),
+  ).toBeTruthy();
+  expect(screen.getByText('Photos · 2/5')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Remove photo 2' }));
+  expect(screen.getByText('Photos · 1/5')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Share' }));
+  await waitFor(() => expect(feedApi.create).toHaveBeenCalled());
+  const input = jest.mocked(feedApi.create).mock.calls[0][0];
+  expect(input.photos).toEqual([
+    { uri: 'file:///a.jpg', name: 'a.jpg', type: 'image/jpeg', file: undefined },
+  ]);
+});
+
+test('photo access denial, cancellation and picker failures are explained', async () => {
+  const permission = jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync);
+  const picker = jest.mocked(ImagePicker.launchImageLibraryAsync);
+  permission.mockResolvedValueOnce({ granted: false } as never);
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Add photos' }));
+  expect(
+    await screen.findByText('Photo access is needed. Allow access in Settings, then try again.'),
+  ).toBeTruthy();
+  permission.mockResolvedValue({ granted: true } as never);
+  picker.mockResolvedValueOnce({ canceled: true, assets: null } as never);
+  fireEvent.press(screen.getByRole('button', { name: 'Add photos' }));
+  await waitFor(() => expect(picker).toHaveBeenCalledTimes(1));
+  expect(screen.getByText('Photos · 0/5')).toBeTruthy();
+  picker.mockRejectedValueOnce(new Error('boom'));
+  fireEvent.press(screen.getByRole('button', { name: 'Add photos' }));
+  expect(await screen.findByText('Could not open your photos. Try again.')).toBeTruthy();
+});
+
+test('your comments can be deleted and older pages load at the end of the list', async () => {
+  const comment = (id: number, mine: boolean) => ({
+    id,
+    post_id: 10,
+    author: { id: mine ? 1 : 2, display_name: mine ? 'Alice' : 'Bob', has_picture: false },
+    comment: `Comment ${id}`,
+    created_at: new Date().toISOString(),
+    is_mine: mine,
+  });
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [makePost({ comment_count: 3 })],
+    next_before_id: null,
+  });
+  jest
+    .mocked(feedApi.comments)
+    .mockResolvedValueOnce({ items: [comment(1, true), comment(2, false)], next_after_id: 2 })
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce({ items: [comment(3, false)], next_after_id: null });
+  jest.mocked(feedApi.removeComment).mockResolvedValue(undefined as never);
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  expect(await screen.findByText('Comment 1')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Delete comment by Bob' })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Delete comment by Alice' }));
+  await waitFor(() => expect(feedApi.removeComment).toHaveBeenCalledWith(10, 1));
+  await waitFor(() => expect(screen.queryByText('Comment 1')).toBeNull());
+
+  const list = screen.UNSAFE_getAllByType(FlatList).at(-1)!;
+  act(() => list.props.onEndReached());
+  expect(await screen.findByText('Could not load more comments.')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+  expect(await screen.findByText('Comment 3')).toBeTruthy();
+  expect(feedApi.comments).toHaveBeenLastCalledWith(10, 2, expect.any(AbortSignal));
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(await screen.findByText('2 comments')).toBeTruthy();
 });
