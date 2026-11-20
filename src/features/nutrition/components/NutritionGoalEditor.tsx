@@ -276,23 +276,12 @@ function AccountNutritionGoalEditor({
   });
   const form = useForm<Values>({ defaultValues: empty });
   const [mode, setMode] = React.useState<MacroMode>('percentages');
-  const drafts = React.useRef<Partial<Record<MacroMode, Values>>>({});
-  const dirty = form.formState.isDirty;
   const hydrated = React.useRef(false);
   React.useEffect(() => {
     if (query.data && !hydrated.current) {
       const percentages = {
         calories: String(query.data.calories),
         ...percentagesFromGoal(query.data),
-      };
-      drafts.current = {
-        percentages,
-        grams: {
-          calories: String(query.data.calories),
-          carbohydrates: String(query.data.carbohydrates),
-          protein: String(query.data.protein),
-          fats: String(query.data.fats),
-        },
       };
       form.reset(percentages);
       hydrated.current = true;
@@ -340,13 +329,7 @@ function AccountNutritionGoalEditor({
       onModeChange={(next) => {
         if (next === mode || busy.current) return;
         const values = form.getValues();
-        const previous = drafts.current[next];
-        drafts.current[mode] = { ...values };
-        const converted =
-          !dirty && previous
-            ? { ...previous, calories: values.calories }
-            : convertMacroDraft(values, mode);
-        form.reset(converted);
+        form.reset(convertMacroDraft(values, mode));
         setValidationError('');
         setMode(next);
       }}

@@ -69,7 +69,7 @@ jest.mock('@/features/nutrition/api', () => ({
     createGoal: jest.fn(),
     updateGoal: jest.fn(),
     day: jest.fn(),
-    foods: jest.fn(),
+    foodPage: jest.fn(),
   },
 }));
 jest.mock('@/features/friends/api', () => ({
@@ -117,7 +117,7 @@ beforeEach(() => {
     fats: 0,
     items: [],
   });
-  jest.mocked(nutritionApi.foods).mockResolvedValue([]);
+  jest.mocked(nutritionApi.foodPage).mockResolvedValue([]);
   jest.mocked(trainingApi.draft).mockResolvedValue(null);
   jest.mocked(trainingApi.saveDraft).mockImplementation(async (id, snapshot) => ({
     ...snapshot,
@@ -165,12 +165,16 @@ test('home shows the feed with profile access while keeping one bottom bar', asy
   expect(screen.queryByText('Sign out')).toBeNull();
   expect(screen.queryByRole('tab', { name: 'Profile' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Open profile' })).toBeTruthy();
-  expect(screen.getByRole('tab', { name: 'League' }).props.accessibilityState.disabled).toBe(true);
+  expect(screen.getByRole('tab', { name: 'League' }).props.accessibilityState.disabled).not.toBe(
+    true,
+  );
   // Plan shortcuts now live only in Profile.
   expect(screen.queryByText('Change objective')).toBeNull();
   expect(screen.getAllByLabelText('Main navigation')).toHaveLength(1);
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   await screen.findByLabelText('Add food to Breakfast');
+  fireEvent.press(screen.getByLabelText('Add food to Breakfast'));
+  expect(screen.queryByLabelText('Main navigation')).toBeNull();
 });
 
 test('home header profile picture opens Profile and its back arrow returns Home', async () => {

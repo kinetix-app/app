@@ -25,7 +25,7 @@ export type NutritionGoalInput = z.infer<typeof nutritionGoalInputSchema>;
 
 export const foodSchema = z.object({
   id: z.number().int().positive(),
-  user_id: z.number().int().positive(),
+  user_id: z.number().int().positive().nullable(),
   name: z.string(),
   brand: z.string().nullable(),
   calories: z.coerce.number(),
@@ -40,13 +40,20 @@ export const foodInputSchema = foodSchema.omit({ id: true, user_id: true });
 export type FoodInput = z.infer<typeof foodInputSchema>;
 export const recipeSchema = z.object({
   id: z.number().int().positive(),
-  user_id: z.number().int().positive(),
+  user_id: z.number().int().positive().nullable(),
   name: z.string(),
   servings: z.number().int().positive(),
   calories: z.coerce.number(),
   protein: z.coerce.number(),
   carbohydrates: z.coerce.number(),
   fats: z.coerce.number(),
+  ingredients: z.array(
+    z.object({
+      food_id: z.number().int().positive(),
+      name: z.string(),
+      quantity_grams: z.coerce.number().positive(),
+    }),
+  ),
 });
 export const recipeListSchema = z.array(recipeSchema);
 export type Recipe = z.infer<typeof recipeSchema>;
@@ -83,6 +90,11 @@ export const mealItemInputSchema = z.object({
   quantity_grams: z.number().positive().max(999999.99),
 });
 export type MealItemInput = z.infer<typeof mealItemInputSchema>;
+export const mealItemPatchSchema = z.union([
+  z.object({ quantity_grams: z.number().positive().max(999999.99) }),
+  z.object({ servings: z.number().positive().max(999999.99) }),
+]);
+export type MealItemPatch = z.infer<typeof mealItemPatchSchema>;
 export const recipeMealItemInputSchema = z.object({
   date: z.string(),
   meal_type: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),

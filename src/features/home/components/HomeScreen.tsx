@@ -23,6 +23,7 @@ import {
 } from '@/features/accounts';
 import { FeedScreen } from '@/features/feed';
 import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
+import { LeaguesScreen } from '@/features/leagues';
 import { FormCheckProvider } from '@/features/formcheck';
 import { Button, ui } from '@/features/training/components/ui';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
@@ -49,6 +50,7 @@ const profileBackLabels: Record<ProfileOrigin, string> = {
   home: 'Back to feed',
   workout: 'Back to workout',
   nutrition: 'Back to nutrition',
+  league: 'Back to leagues',
 };
 
 type HomeNavigationProps = Readonly<{
@@ -57,6 +59,7 @@ type HomeNavigationProps = Readonly<{
   onAccount: (account: Account) => void;
   finishedSessionId: number | null;
   onDismissFinished: () => void;
+  initialInvitation?: string;
 }>;
 
 function HomeNavigation({
@@ -65,10 +68,13 @@ function HomeNavigation({
   onAccount,
   finishedSessionId,
   onDismissFinished,
+  initialInvitation,
 }: HomeNavigationProps) {
   const accountId = account.id;
+  const cache = useQueryClient();
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
   const [nutritionOrigin, setNutritionOrigin] = useState<'profile' | 'nutrition'>('profile');
+  const [addingFood, setAddingFood] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState('');
   const loggingOut = useRef(false);
@@ -83,11 +89,14 @@ function HomeNavigation({
     refetchInterval: 60000,
   });
   const incomingRequests = requests.data?.incoming.length ?? 0;
+  const [leagueDetailOpen, setLeagueDetailOpen] = useState(false);
   const [visited, setVisited] = useState<HomeTab[]>([initialTab]);
   const [profileOrigin, setProfileOrigin] = useState<ProfileOrigin>(
     initialTab === 'profile' ? 'home' : initialTab,
   );
   function select(next: HomeTab) {
+    if (next === 'league') void cache.invalidateQueries({ queryKey: ['leagues', accountId] });
+    setAddingFood(false);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
@@ -254,11 +263,21 @@ function HomeNavigation({
         />
       );
     if (item === 'profile') return renderProfilePanel();
+    if (item === 'league')
+      return (
+        <LeaguesScreen
+          accountId={accountId}
+          initialInvitation={initialInvitation}
+          active={tab === 'league'}
+          onDetailOpenChange={setLeagueDetailOpen}
+        />
+      );
     if (item === 'workout')
       return <TrainingWorkspace accountId={accountId} onEditingChange={setRoutineEditing} />;
     return (
       <NutritionDiaryScreen
         accountId={accountId}
+        onAddFoodOpenChange={setAddingFood}
         onEditGoal={() => {
           openProfile('nutrition');
           setNutritionOrigin('nutrition');
@@ -281,7 +300,9 @@ function HomeNavigation({
           </View>
         ))}
       </SessionHost>
-      {tab !== 'workout' || !routineEditing ? (
+      {!addingFood &&
+      (tab !== 'workout' || !routineEditing) &&
+      (tab !== 'league' || !leagueDetailOpen) ? (
         <BottomBar
           tab={tab}
           onSelect={select}
@@ -335,9 +356,16 @@ type AccountGateProps = Readonly<{
   onSignOut: () => void;
   initialTab: HomeTab;
   initialAccount?: Account;
+  initialInvitation?: string;
 }>;
 
-function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: AccountGateProps) {
+function AccountGate({
+  accountId,
+  onSignOut,
+  initialTab,
+  initialAccount,
+  initialInvitation,
+}: AccountGateProps) {
   const p = usePalette();
   const cache = useQueryClient();
   const query = useQuery({
@@ -399,6 +427,7 @@ function AccountGate({ accountId, onSignOut, initialTab, initialAccount }: Accou
         <HomeNavigation
           account={account}
           initialTab={initialTab}
+          initialInvitation={initialInvitation}
           onAccount={saved}
           finishedSessionId={finishedSessionId}
           onDismissFinished={() => setFinishedSessionId(null)}
@@ -412,6 +441,7 @@ type PrivateHomeProps = Readonly<{
   onSignOut: () => void;
   initialTab: HomeTab;
   initialAccount?: Account;
+  initialInvitation?: string;
 }>;
 
 function PrivateHome(props: PrivateHomeProps) {
@@ -429,6 +459,7 @@ type HomeScreenProps = Readonly<{
   onSignOut: () => void;
   initialTab?: HomeTab;
   initialAccount?: Account;
+  initialInvitation?: string;
 }>;
 
 export function HomeScreen({
@@ -436,6 +467,7 @@ export function HomeScreen({
   onSignOut,
   initialTab = 'home',
   initialAccount,
+  initialInvitation,
 }: HomeScreenProps) {
   return (
     <PrivateHome
@@ -444,6 +476,7 @@ export function HomeScreen({
       onSignOut={onSignOut}
       initialTab={initialTab}
       initialAccount={initialAccount}
+      initialInvitation={initialInvitation}
     />
   );
 }

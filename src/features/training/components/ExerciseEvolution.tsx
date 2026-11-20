@@ -19,7 +19,7 @@ import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import type { EvolutionDay } from '../schemas';
 import { Failure, IconButton, Loading } from './ui';
-import { AnimatedTextSelector } from './AnimatedTextSelector';
+import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 
 // React Native Web supports this CSS property; native ViewStyle does not declare it.
 const gestureHandleStyle: ViewStyle & { touchAction?: 'none' } =

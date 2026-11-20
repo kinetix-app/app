@@ -467,7 +467,10 @@ export function SessionProvider({
         await sessionStorage.clear(accountId);
         if (!alive.current) return;
         install(null);
-        await cache.invalidateQueries({ queryKey: ['training', accountId] });
+        await Promise.all([
+          cache.invalidateQueries({ queryKey: ['training', accountId] }),
+          cache.invalidateQueries({ queryKey: ['leagues', accountId] }),
+        ]);
         if (completed?.id) finishedListener.current?.(completed.id);
       } catch {
         if (alive.current && !closing.current)

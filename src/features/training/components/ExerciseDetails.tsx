@@ -7,7 +7,7 @@ import { trainingApi } from '../api';
 import { ExerciseMedia } from './ExerciseMedia';
 import { ExerciseHistory } from './ExerciseHistory';
 import { ExerciseEvolution } from './ExerciseEvolution';
-import { AnimatedTextSelector } from './AnimatedTextSelector';
+import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import type { Exercise, ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
