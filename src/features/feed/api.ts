@@ -45,19 +45,21 @@ export function buildPostForm(input: PostInput) {
   return form;
 }
 
+/** Optional cursor query parameter, e.g. "&before_id=42"; empty when there is none. */
+function cursor(name: string, value: number | null) {
+  return value ? `&${name}=${value}` : '';
+}
+
 export const feedApi = {
   posts: (
     beforeId: number | null,
     signal?: AbortSignal,
     scope: 'everyone' | 'friends' = 'friends',
   ) =>
-    apiClient.get(
-      `/api/v1/posts?limit=10&scope=${scope}${beforeId ? `&before_id=${beforeId}` : ''}`,
-      {
-        schema: postPageSchema,
-        signal,
-      },
-    ),
+    apiClient.get(`/api/v1/posts?limit=10&scope=${scope}` + cursor('before_id', beforeId), {
+      schema: postPageSchema,
+      signal,
+    }),
   create: (input: PostInput, signal?: AbortSignal) =>
     apiClient.postMultipart('/api/v1/posts', buildPostForm(input), { schema: postSchema, signal }),
   workout: (postId: number, signal?: AbortSignal) =>
@@ -68,10 +70,10 @@ export const feedApi = {
       ? apiClient.put(`/api/v1/posts/${postId}/like`, undefined, { schema: likeSchema })
       : apiClient.delete(`/api/v1/posts/${postId}/like`, { schema: likeSchema }),
   comments: (postId: number, afterId: number | null, signal?: AbortSignal) =>
-    apiClient.get(
-      `/api/v1/posts/${postId}/comments?limit=30${afterId ? `&after_id=${afterId}` : ''}`,
-      { schema: commentPageSchema, signal },
-    ),
+    apiClient.get(`/api/v1/posts/${postId}/comments?limit=30` + cursor('after_id', afterId), {
+      schema: commentPageSchema,
+      signal,
+    }),
   addComment: (postId: number, comment: string) =>
     apiClient.post(`/api/v1/posts/${postId}/comments`, commentInputSchema.parse({ comment }), {
       schema: commentSchema,

@@ -24,16 +24,30 @@ export function duration(seconds: number) {
 /** Volume stays in explicitly labelled kilograms, without float rounding of the decimal text. */
 export function volume(kilograms: string) {
   const [whole, fraction = ''] = kilograms.split('.');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const decimals = fraction.replace(/0+$/, '');
-  return `${grouped}${decimals ? `.${decimals}` : ''} kg`;
+  return withFraction(groupThousands(whole), trimTrailingZeros(fraction)) + ' kg';
+}
+
+function groupThousands(digits: string) {
+  const groups: string[] = [];
+  for (let end = digits.length; end > 0; end -= 3)
+    groups.unshift(digits.slice(Math.max(0, end - 3), end));
+  return groups.join(',');
+}
+
+function trimTrailingZeros(digits: string) {
+  let end = digits.length;
+  while (end > 0 && digits[end - 1] === '0') end -= 1;
+  return digits.slice(0, end);
+}
+
+function withFraction(whole: string, fraction: string) {
+  return fraction ? `${whole}.${fraction}` : whole;
 }
 
 /** Trims trailing zeros from backend decimal text without converting it to a float. */
 function decimal(text: string) {
   const [whole, fraction = ''] = text.split('.');
-  const digits = fraction.replace(/0+$/, '');
-  return digits ? `${whole}.${digits}` : whole;
+  return withFraction(whole, trimTrailingZeros(fraction));
 }
 
 /** One recorded set, e.g. "8 reps × 100 kg", "30 s" or "2.5 km in 12 min". */

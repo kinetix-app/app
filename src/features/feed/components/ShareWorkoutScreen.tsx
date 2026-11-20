@@ -70,22 +70,7 @@ export function ShareWorkoutScreen({
         quality: 0.85,
       });
       if (result.canceled) return;
-      const accepted: PostPhoto[] = [];
-      let rejected = 0;
-      for (const asset of result.assets.slice(0, room)) {
-        const type = asset.mimeType ?? asset.file?.type ?? 'image/jpeg';
-        const size = asset.fileSize ?? asset.file?.size ?? 0;
-        if (size > MAX_POST_IMAGE_BYTES || !POST_IMAGE_TYPES.includes(type)) {
-          rejected += 1;
-          continue;
-        }
-        accepted.push({
-          uri: asset.uri,
-          name: asset.fileName ?? `photo-${Date.now()}-${accepted.length + 1}.jpg`,
-          type,
-          file: Platform.OS === 'web' ? asset.file : undefined,
-        });
-      }
+      const { accepted, rejected } = acceptPhotos(result.assets.slice(0, room));
       setPhotos((current) => [...current, ...accepted].slice(0, MAX_POST_IMAGES));
       if (rejected)
         setPhotoError(
@@ -153,79 +138,28 @@ export function ShareWorkoutScreen({
           ) : null}
           <View accessibilityRole="radiogroup" accessibilityLabel="Workout to share" style={ui.gap}>
             {recent.length ? (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityLabel="No workout. Post only a caption or photos"
-                accessibilityState={{ checked: selected === null, disabled: pending }}
-                aria-checked={selected === null}
+              <RadioOption
+                label="No workout. Post only a caption or photos"
+                checked={selected === null}
                 disabled={pending}
                 onPress={() => setSelected('none')}
-                style={[
-                  styles.option,
-                  {
-                    backgroundColor: selected === null ? p['brand-soft'] : p['surface-200'],
-                    borderColor: selected === null ? p.brand : p['line-strong'],
-                  },
-                ]}
               >
-                <Feather
-                  name={selected === null ? 'check-circle' : 'circle'}
-                  size={22}
-                  color={selected === null ? p['brand-ink'] : p['ink-muted']}
-                />
                 <Text
                   style={[textStyles.label, { color: selected === null ? p['brand-ink'] : p.ink }]}
                 >
                   No workout
                 </Text>
-              </Pressable>
+              </RadioOption>
             ) : null}
-            {recent.map((workout) => {
-              const checked = workout.id === selected;
-              const sets = workout.exercises.reduce((sum, slot) => sum + slot.sets.length, 0);
-              const when = new Date(workout.ended_at).toLocaleString();
-              return (
-                <Pressable
-                  key={workout.id}
-                  accessibilityRole="radio"
-                  accessibilityLabel={`Workout finished ${when}`}
-                  accessibilityState={{ checked, disabled: pending }}
-                  aria-checked={checked}
-                  disabled={pending}
-                  onPress={() => setSelected(workout.id)}
-                  style={[
-                    styles.option,
-                    {
-                      backgroundColor: checked ? p['brand-soft'] : p['surface-200'],
-                      borderColor: checked ? p.brand : p['line-strong'],
-                    },
-                  ]}
-                >
-                  <Feather
-                    name={checked ? 'check-circle' : 'circle'}
-                    size={22}
-                    color={checked ? p['brand-ink'] : p['ink-muted']}
-                  />
-                  <View style={{ flex: 1, gap: spacing['space-1'] }}>
-                    <Text style={[textStyles.label, { color: checked ? p['brand-ink'] : p.ink }]}>
-                      {when}
-                    </Text>
-                    <Text
-                      numberOfLines={2}
-                      style={[
-                        textStyles['body-sm'],
-                        { color: checked ? p['brand-ink'] : p['ink-muted'] },
-                      ]}
-                    >
-                      {countLabel(workout.exercises.length, 'exercise')} · {countLabel(sets, 'set')}
-                      {workout.exercises.length
-                        ? ` · ${workout.exercises.map((slot) => slot.exercise.name).join(', ')}`
-                        : ''}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+            {recent.map((workout) => (
+              <WorkoutOption
+                key={workout.id}
+                workout={workout}
+                checked={workout.id === selected}
+                disabled={pending}
+                onPress={() => setSelected(workout.id)}
+              />
+            ))}
           </View>
         </View>
 
@@ -322,6 +256,102 @@ export function ShareWorkoutScreen({
         <Button title="Cancel" secondary disabled={pending} onPress={onClose} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+type SessionItem = Awaited<ReturnType<typeof trainingApi.sessions>>['items'][number];
+type PickedAsset = ImagePicker.ImagePickerAsset;
+
+/** Keeps JPEG, PNG and WebP photos up to the size limit and counts the rest. */
+export function acceptPhotos(assets: readonly PickedAsset[]) {
+  const accepted: PostPhoto[] = [];
+  let rejected = 0;
+  for (const asset of assets) {
+    const type = asset.mimeType ?? asset.file?.type ?? 'image/jpeg';
+    const size = asset.fileSize ?? asset.file?.size ?? 0;
+    if (size > MAX_POST_IMAGE_BYTES || !POST_IMAGE_TYPES.includes(type)) {
+      rejected += 1;
+      continue;
+    }
+    accepted.push({
+      uri: asset.uri,
+      name: asset.fileName ?? `photo-${Date.now()}-${accepted.length + 1}.jpg`,
+      type,
+      file: Platform.OS === 'web' ? asset.file : undefined,
+    });
+  }
+  return { accepted, rejected };
+}
+
+function RadioOption({
+  label,
+  checked,
+  disabled,
+  onPress,
+  children,
+}: Readonly<{
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+  onPress: () => void;
+  children: React.ReactNode;
+}>) {
+  const p = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked, disabled }}
+      aria-checked={checked}
+      disabled={disabled}
+      onPress={onPress}
+      style={[
+        styles.option,
+        {
+          backgroundColor: checked ? p['brand-soft'] : p['surface-200'],
+          borderColor: checked ? p.brand : p['line-strong'],
+        },
+      ]}
+    >
+      <Feather
+        name={checked ? 'check-circle' : 'circle'}
+        size={22}
+        color={checked ? p['brand-ink'] : p['ink-muted']}
+      />
+      {children}
+    </Pressable>
+  );
+}
+
+function WorkoutOption({
+  workout,
+  checked,
+  disabled,
+  onPress,
+}: Readonly<{ workout: SessionItem; checked: boolean; disabled: boolean; onPress: () => void }>) {
+  const p = usePalette();
+  const sets = workout.exercises.reduce((sum, slot) => sum + slot.sets.length, 0);
+  const when = new Date(workout.ended_at).toLocaleString();
+  const parts = [countLabel(workout.exercises.length, 'exercise'), countLabel(sets, 'set')];
+  if (workout.exercises.length)
+    parts.push(workout.exercises.map((slot) => slot.exercise.name).join(', '));
+  return (
+    <RadioOption
+      label={`Workout finished ${when}`}
+      checked={checked}
+      disabled={disabled}
+      onPress={onPress}
+    >
+      <View style={{ flex: 1, gap: spacing['space-1'] }}>
+        <Text style={[textStyles.label, { color: checked ? p['brand-ink'] : p.ink }]}>{when}</Text>
+        <Text
+          numberOfLines={2}
+          style={[textStyles['body-sm'], { color: checked ? p['brand-ink'] : p['ink-muted'] }]}
+        >
+          {parts.join(' · ')}
+        </Text>
+      </View>
+    </RadioOption>
   );
 }
 

@@ -22,6 +22,7 @@ import {
   SetupButton,
 } from '@/features/accounts';
 import { FeedScreen } from '@/features/feed';
+import { countLabel } from '@/features/feed/format';
 import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
 import { LeaguesScreen } from '@/features/leagues';
 import { FormCheckProvider } from '@/features/formcheck';
@@ -234,7 +235,7 @@ function HomeNavigation({
               accessibilityLabel="Open profile"
               accessibilityHint={
                 incomingRequests
-                  ? `${incomingRequests} new friend ${incomingRequests === 1 ? 'request' : 'requests'}`
+                  ? countLabel(incomingRequests, 'new friend request', 'new friend requests')
                   : undefined
               }
               onPress={showProfile}

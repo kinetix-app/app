@@ -69,18 +69,17 @@ export function PersonScreen({
             ) : null}
           </View>
         ) : null}
-        {person.data ? (
-          person.data.relationship === 'self' ? (
-            <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
-              This is you.
-            </Text>
-          ) : (
-            <FriendActions
-              accountId={accountId}
-              person={person.data}
-              relationship={person.data.relationship}
-            />
-          )
+        {person.data?.relationship === 'self' ? (
+          <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
+            This is you.
+          </Text>
+        ) : null}
+        {person.data && person.data.relationship !== 'self' ? (
+          <FriendActions
+            accountId={accountId}
+            person={person.data}
+            relationship={person.data.relationship}
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>

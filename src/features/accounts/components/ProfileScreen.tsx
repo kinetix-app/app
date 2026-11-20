@@ -3,6 +3,7 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { countLabel } from '@/features/feed/format';
 import { textStyles, spacing, usePalette } from '@/theme/tokens';
 import { getObjective } from '../api';
 import { profileDefaults } from '../profileForm';
@@ -115,7 +116,7 @@ export function ProfileScreen({
             title="Friends"
             detail={
               friendRequests
-                ? `${friendRequests} new ${friendRequests === 1 ? 'request' : 'requests'}`
+                ? countLabel(friendRequests, 'new request', 'new requests')
                 : 'Your friends, requests and people search'
             }
             icon="users"

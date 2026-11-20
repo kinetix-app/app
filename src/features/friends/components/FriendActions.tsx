@@ -51,69 +51,6 @@ export function FriendActions({
 
   if (relationship === 'self') return null;
   const busy = pending !== null;
-  let controls: React.ReactNode;
-  if (relationship === 'none')
-    controls = (
-      <Button
-        title={pending === 'request' ? 'Sending…' : 'Add friend'}
-        accessibilityLabel={`Add ${name} as a friend`}
-        tone="positive"
-        icon="user-plus"
-        disabled={busy}
-        onPress={() => void run('request')}
-      />
-    );
-  else if (relationship === 'outgoing')
-    controls = (
-      <>
-        {!compact ? (
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            Request sent · waiting for {name}
-          </Text>
-        ) : null}
-        <Button
-          title={pending === 'remove' ? 'Cancelling…' : 'Cancel request'}
-          accessibilityLabel={`Cancel friend request to ${name}`}
-          secondary
-          disabled={busy}
-          onPress={() => void run('remove')}
-        />
-      </>
-    );
-  else if (relationship === 'incoming')
-    controls = (
-      <>
-        <Button
-          title={pending === 'accept' ? 'Accepting…' : 'Accept'}
-          accessibilityLabel={`Accept friend request from ${name}`}
-          disabled={busy}
-          onPress={() => void run('accept')}
-        />
-        <Button
-          title={pending === 'remove' ? 'Declining…' : 'Decline'}
-          accessibilityLabel={`Decline friend request from ${name}`}
-          secondary
-          disabled={busy}
-          onPress={() => void run('remove')}
-        />
-      </>
-    );
-  else
-    controls = (
-      <>
-        {!compact ? (
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>You are friends</Text>
-        ) : null}
-        <Button
-          title="Remove friend"
-          accessibilityLabel={`Remove ${name} from friends`}
-          tone="danger"
-          disabled={busy}
-          onPress={() => setConfirmRemove(true)}
-        />
-      </>
-    );
-
   return (
     <View style={{ gap: spacing['space-2'] }}>
       <View
@@ -123,7 +60,14 @@ export function FriendActions({
             : { gap: spacing['space-2'] }
         }
       >
-        {controls}
+        <Controls
+          relationship={relationship}
+          name={name}
+          pending={pending}
+          compact={compact}
+          onRun={(action) => void run(action)}
+          onRemove={() => setConfirmRemove(true)}
+        />
       </View>
       {error ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -177,5 +121,84 @@ export function FriendActions({
         </View>
       </Modal>
     </View>
+  );
+}
+
+function Controls({
+  relationship,
+  name,
+  pending,
+  compact,
+  onRun,
+  onRemove,
+}: Readonly<{
+  relationship: Exclude<Relationship, 'self'>;
+  name: string;
+  pending: Action | null;
+  compact: boolean;
+  onRun: (action: Action) => void;
+  onRemove: () => void;
+}>) {
+  const p = usePalette();
+  const busy = pending !== null;
+  if (relationship === 'none')
+    return (
+      <Button
+        title={pending === 'request' ? 'Sending…' : 'Add friend'}
+        accessibilityLabel={`Add ${name} as a friend`}
+        tone="positive"
+        icon="user-plus"
+        disabled={busy}
+        onPress={() => onRun('request')}
+      />
+    );
+  if (relationship === 'outgoing')
+    return (
+      <>
+        {!compact ? (
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+            Request sent · waiting for {name}
+          </Text>
+        ) : null}
+        <Button
+          title={pending === 'remove' ? 'Cancelling…' : 'Cancel request'}
+          accessibilityLabel={`Cancel friend request to ${name}`}
+          secondary
+          disabled={busy}
+          onPress={() => onRun('remove')}
+        />
+      </>
+    );
+  if (relationship === 'incoming')
+    return (
+      <>
+        <Button
+          title={pending === 'accept' ? 'Accepting…' : 'Accept'}
+          accessibilityLabel={`Accept friend request from ${name}`}
+          disabled={busy}
+          onPress={() => onRun('accept')}
+        />
+        <Button
+          title={pending === 'remove' ? 'Declining…' : 'Decline'}
+          accessibilityLabel={`Decline friend request from ${name}`}
+          secondary
+          disabled={busy}
+          onPress={() => onRun('remove')}
+        />
+      </>
+    );
+  return (
+    <>
+      {!compact ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>You are friends</Text>
+      ) : null}
+      <Button
+        title="Remove friend"
+        accessibilityLabel={`Remove ${name} from friends`}
+        tone="danger"
+        disabled={busy}
+        onPress={onRemove}
+      />
+    </>
   );
 }
