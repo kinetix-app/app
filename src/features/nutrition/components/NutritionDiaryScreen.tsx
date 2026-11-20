@@ -183,7 +183,7 @@ export function NutritionDiaryScreen({
               onBack ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Back to home"
+                  accessibilityLabel="Back to feed"
                   onPress={onBack}
                   style={({ pressed }) => [
                     styles.backButton,

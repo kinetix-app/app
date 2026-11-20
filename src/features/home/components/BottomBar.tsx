@@ -20,7 +20,7 @@ export function BottomBar({
 }>) {
   const p = usePalette();
   const tabs = [
-    { id: 'home', icon: 'home', label: 'Home' },
+    { id: 'home', icon: 'home', label: 'Feed' },
     { id: 'workout', icon: 'activity', label: 'Workout' },
     { id: 'nutrition', icon: 'coffee', label: 'Nutrition' },
     { id: 'league', icon: 'award', label: 'League' },

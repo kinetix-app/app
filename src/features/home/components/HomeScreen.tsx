@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
 import { NutritionDiaryScreen, NutritionGoalEditor } from '@/features/nutrition';
@@ -13,18 +13,22 @@ import {
 } from '@/features/training';
 import { getAccount, type Account } from '@/features/accounts/api';
 import {
+  ProfileAvatar,
   ProfileEditor,
   ObjectiveEditor,
-  ProfileOverview,
   ProfileScreen,
   ProgressScreen,
   type ProfilePanel,
   SetupButton,
 } from '@/features/accounts';
+import { FeedScreen } from '@/features/feed';
+import { countLabel } from '@/features/feed/format';
+import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
 import { LeaguesScreen } from '@/features/leagues';
 import { FormCheckProvider } from '@/features/formcheck';
+import { Button, ui } from '@/features/training/components/ui';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
-import { spacing, usePalette } from '@/theme/tokens';
+import { sizes, spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
 
 /** Keeps recordings only for sets that still exist in the ongoing workout. */
@@ -44,7 +48,7 @@ function FormCheckHost({ accountId, children }: React.PropsWithChildren<{ accoun
 
 type ProfileOrigin = Exclude<HomeTab, 'profile'>;
 const profileBackLabels: Record<ProfileOrigin, string> = {
-  home: 'Back to home',
+  home: 'Back to feed',
   workout: 'Back to workout',
   nutrition: 'Back to nutrition',
   league: 'Back to leagues',
@@ -54,6 +58,8 @@ type HomeNavigationProps = Readonly<{
   account: Account;
   initialTab: HomeTab;
   onAccount: (account: Account) => void;
+  finishedSessionId: number | null;
+  onDismissFinished: () => void;
   initialInvitation?: string;
 }>;
 
@@ -61,6 +67,8 @@ function HomeNavigation({
   account,
   initialTab,
   onAccount,
+  finishedSessionId,
+  onDismissFinished,
   initialInvitation,
 }: HomeNavigationProps) {
   const accountId = account.id;
@@ -75,6 +83,13 @@ function HomeNavigation({
   const session = useSession();
   const [tab, setTab] = useState<HomeTab>(initialTab);
   const [routineEditing, setRoutineEditing] = useState(false);
+  // Pending requests drive the Profile badge; refreshed periodically while signed in.
+  const requests = useQuery({
+    queryKey: requestsKey(accountId),
+    queryFn: ({ signal }) => friendsApi.requests(signal),
+    refetchInterval: 60000,
+  });
+  const incomingRequests = requests.data?.incoming.length ?? 0;
   const [leagueDetailOpen, setLeagueDetailOpen] = useState(false);
   const [visited, setVisited] = useState<HomeTab[]>([initialTab]);
   const [profileOrigin, setProfileOrigin] = useState<ProfileOrigin>(
@@ -85,6 +100,12 @@ function HomeNavigation({
     setAddingFood(false);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
+  }
+  const [composeSessionId, setComposeSessionId] = useState<number | null>(null);
+  /** Opens the Feed's new-post screen with a completed workout selected. */
+  function shareWorkout(sessionId: number) {
+    setComposeSessionId(sessionId);
+    select('home');
   }
   /** Resumes Profile on its current panel, so unsaved edits survive leaving it. */
   function showProfile() {
@@ -168,10 +189,20 @@ function HomeNavigation({
             onClose={closeProfilePanel}
             backLabel="Back to profile"
             active={panelActive}
+            onShare={shareWorkout}
           />
         );
       case 'progress':
         return <ProgressScreen account={account} onClose={closeProfilePanel} />;
+      case 'friends':
+        return (
+          <FriendsScreen
+            accountId={accountId}
+            onClose={closeProfilePanel}
+            active={panelActive}
+            initialTab={incomingRequests ? 'requests' : 'friends'}
+          />
+        );
       default:
         return (
           <ProfileScreen
@@ -184,6 +215,7 @@ function HomeNavigation({
             }}
             signingOut={signingOut}
             signOutError={signOutError}
+            friendRequests={incomingRequests}
           />
         );
     }
@@ -191,15 +223,44 @@ function HomeNavigation({
   function renderTabContent(item: HomeTab) {
     if (item === 'home')
       return (
-        <ProfileOverview
-          account={account}
-          onOpenProfile={showProfile}
-          onEditObjective={() => openProfile('objective')}
-          onEditNutrition={() => {
-            openProfile('nutrition');
-            setNutritionOrigin('nutrition');
-          }}
-          onWorkout={() => select('workout')}
+        <FeedScreen
+          accountId={accountId}
+          active={tab === 'home' && (!session.draft || session.draft.minimized)}
+          composeSessionId={composeSessionId}
+          onComposeClosed={() => setComposeSessionId(null)}
+          onFindFriends={() => openProfile('friends')}
+          profileButton={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
+              accessibilityHint={
+                incomingRequests
+                  ? countLabel(incomingRequests, 'new friend request', 'new friend requests')
+                  : undefined
+              }
+              onPress={showProfile}
+              hitSlop={spacing['space-1']}
+              style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+            >
+              <ProfileAvatar account={account} size={sizes['tap-min']} compact />
+              {incomingRequests ? (
+                <View
+                  testID="friend-request-badge"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    borderWidth: 2,
+                    borderColor: p['surface-100'],
+                    backgroundColor: p.danger,
+                  }}
+                />
+              ) : null}
+            </Pressable>
+          }
         />
       );
     if (item === 'profile') return renderProfilePanel();
@@ -250,6 +311,43 @@ function HomeNavigation({
           onStart={() => session.start()}
         />
       ) : null}
+      <Modal
+        visible={finishedSessionId !== null && !session.draft}
+        transparent
+        animationType="fade"
+        onRequestClose={onDismissFinished}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: spacing['space-6'],
+            backgroundColor: p.scrim,
+          }}
+        >
+          <View
+            accessibilityViewIsModal
+            style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
+          >
+            <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
+              Workout saved
+            </Text>
+            <Text style={{ color: p['ink-muted'] }}>
+              Share it to your feed so your friends can cheer you on.
+            </Text>
+            <Button
+              title="Share to feed"
+              icon="share"
+              onPress={() => {
+                if (finishedSessionId !== null) shareWorkout(finishedSessionId);
+                onDismissFinished();
+              }}
+            />
+            <Button title="Not now" secondary onPress={onDismissFinished} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -284,6 +382,7 @@ function AccountGate({
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData(queryKey, initialAccount);
   }, [accountId, cache, initialAccount]);
+  const [finishedSessionId, setFinishedSessionId] = useState<number | null>(null);
   function saved(account: Account) {
     cache.setQueryData(['accounts', accountId, 'me'], account);
   }
@@ -324,13 +423,15 @@ function AccountGate({
       <ObjectiveEditor accountId={accountId} onSaved={saved} />
     );
   return (
-    <SessionProvider accountId={accountId} onSignOut={onSignOut}>
+    <SessionProvider accountId={accountId} onSignOut={onSignOut} onFinished={setFinishedSessionId}>
       <FormCheckHost accountId={accountId}>
         <HomeNavigation
           account={account}
           initialTab={initialTab}
           initialInvitation={initialInvitation}
           onAccount={saved}
+          finishedSessionId={finishedSessionId}
+          onDismissFinished={() => setFinishedSessionId(null)}
         />
       </FormCheckHost>
     </SessionProvider>

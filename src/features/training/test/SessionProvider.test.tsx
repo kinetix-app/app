@@ -122,10 +122,11 @@ function mount(
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
   }),
+  onFinished?: (sessionId: number) => void,
 ) {
   return render(
     <QueryClientProvider client={client}>
-      <SessionProvider accountId={1} onSignOut={onSignOut}>
+      <SessionProvider accountId={1} onSignOut={onSignOut} onFinished={onFinished}>
         <Controls />
       </SessionProvider>
     </QueryClientProvider>,
@@ -231,6 +232,24 @@ test('finish freezes the routine-update decision and retries without another PUT
     true,
     true,
   ]);
+});
+test('finish reports the completed session only after the backend confirms it', async () => {
+  const onFinished = jest.fn();
+  jest
+    .mocked(trainingApi.finishDraft)
+    .mockRejectedValueOnce(new Error('lost response'))
+    .mockResolvedValueOnce({ id: 42 } as Awaited<ReturnType<typeof trainingApi.finishDraft>>);
+  mount(jest.fn(), undefined, onFinished);
+  await record();
+  fireEvent.press(screen.getByText('Finish'));
+  await screen.findByText(
+    'Could not finish the workout. Your results are retained. Retry Finish safely.',
+  );
+  expect(onFinished).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Finish'));
+  await waitFor(() => expect(onFinished).toHaveBeenCalledWith(42));
+  expect(onFinished).toHaveBeenCalledTimes(1);
+  expect(draft()).toBeNull();
 });
 test('fresh device restores confirmed results from server and discards on server before local removal', async () => {
   const value = createSessionDraft(1, exampleRoutine);

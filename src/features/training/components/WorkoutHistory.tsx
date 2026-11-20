@@ -14,7 +14,15 @@ export function WorkoutHistory({
   onClose,
   backLabel = 'Back to routines',
   active = true,
-}: Readonly<{ accountId: number; onClose: () => void; backLabel?: string; active?: boolean }>) {
+  onShare,
+}: Readonly<{
+  accountId: number;
+  onClose: () => void;
+  backLabel?: string;
+  active?: boolean;
+  /** Opens the feed composer with this completed workout selected. */
+  onShare?: (sessionId: number) => void;
+}>) {
   const p = usePalette();
   const unit: WeightUnit = 'kg';
   const [selected, setSelected] = useState<number | null>(null);
@@ -67,6 +75,14 @@ export function WorkoutHistory({
         <ScrollView contentContainerStyle={ui.content}>
           {header}
           {detailContent}
+          {onShare && detail.data ? (
+            <Button
+              title="Share to feed"
+              tone="positive"
+              icon="share"
+              onPress={() => onShare(selected)}
+            />
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     );
@@ -106,6 +122,15 @@ export function WorkoutHistory({
               secondary
               onPress={() => setSelected(item.id)}
             />
+            {onShare ? (
+              <Button
+                title="Share to feed"
+                accessibilityLabel={`Share workout ${item.id} to feed`}
+                tone="positive"
+                icon="share"
+                onPress={() => onShare(item.id)}
+              />
+            ) : null}
           </View>
         )}
         onEndReachedThreshold={0.5}
