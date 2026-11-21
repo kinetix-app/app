@@ -14,6 +14,7 @@ import {
 import { getAccount, type Account } from '@/features/accounts/api';
 import {
   ProfileEditor,
+  ActivityEditor,
   ObjectiveEditor,
   ProfileOverview,
   ProfileScreen,
@@ -112,6 +113,18 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
   );
   function renderProfilePanel() {
     switch (profilePanel) {
+      case 'activity':
+        return (
+          <ActivityEditor
+            account={account}
+            active={panelActive}
+            onSaved={(next) => {
+              onAccount(next);
+              setProfilePanel('overview');
+            }}
+            onCancel={closeProfilePanel}
+          />
+        );
       case 'profile':
         return (
           <ProfileEditor
@@ -182,6 +195,7 @@ function HomeNavigation({ account, initialTab, onAccount }: HomeNavigationProps)
           account={account}
           onOpenProfile={showProfile}
           onEditObjective={() => openProfile('objective')}
+          onEditActivity={() => openProfile('activity')}
           onEditNutrition={() => {
             openProfile('nutrition');
             setNutritionOrigin('nutrition');

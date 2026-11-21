@@ -1,4 +1,5 @@
 export { ProfileEditor } from './components/ProfileEditor';
+export { ActivityEditor } from './components/ActivityEditor';
 export { ObjectiveEditor } from './components/ObjectiveEditor';
 export { ProfileOverview } from './components/ProfileOverview';
 export { SetupButton } from './components/SetupUI';

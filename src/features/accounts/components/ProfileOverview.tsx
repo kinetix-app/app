@@ -16,6 +16,7 @@ type ProfileOverviewProps = Readonly<{
   onOpenProfile: () => void;
   onEditObjective: () => void;
   onEditNutrition: () => void;
+  onEditActivity?: () => void;
   onWorkout: () => void;
 }>;
 
@@ -24,6 +25,7 @@ export function ProfileOverview({
   onOpenProfile,
   onEditObjective,
   onEditNutrition,
+  onEditActivity,
   onWorkout,
 }: ProfileOverviewProps) {
   const p = usePalette();
@@ -85,6 +87,9 @@ export function ProfileOverview({
             </>
           ) : null}
           <ProfileRow title="Change objective" icon="target" onPress={onEditObjective} />
+          {onEditActivity ? (
+            <ProfileRow title="Change weekly activity" icon="activity" onPress={onEditActivity} />
+          ) : null}
           <ProfileRow title="Edit nutrition goal" icon="pie-chart" onPress={onEditNutrition} />
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
             Nutrition targets are optional.

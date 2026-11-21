@@ -14,7 +14,7 @@ import { ProfileGroup, ProfileRow } from './ProfileRows';
 import { setupStyles as s } from './SetupUI';
 
 export type ProfilePanel =
-  'overview' | 'profile' | 'objective' | 'nutrition' | 'progress' | 'history';
+  'overview' | 'profile' | 'objective' | 'nutrition' | 'progress' | 'history' | 'activity';
 export function ProfileScreen({
   account,
   onOpen,
@@ -86,6 +86,11 @@ export function ProfileScreen({
           />
         </ProfileGroup>
         <ProfileGroup title="Your plan">
+          <ProfileRow
+            title="Change weekly activity"
+            icon="activity"
+            onPress={() => onOpen('activity')}
+          />
           <ProfileRow
             title="Change objective"
             detail={objective.isPending ? 'Loading…' : (goal ?? 'Objective unavailable')}
