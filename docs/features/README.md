@@ -4,14 +4,14 @@ Reviewed against the app source on 25 October 2026. These pages describe what th
 repository currently implements; issue status, design intent and API schema alone do not
 prove delivery. Update the relevant page when feature behavior changes.
 
-| Feature                             | Current state                                                                                                                      |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| [Authentication](authentication.md) | Development Basic and Clerk sign-in/session flows are implemented; release-provider and native acceptance still need verification. |
-| [Accounts](accounts.md)             | Account response validation and profile API helpers exist; there is no profile screen.                                             |
-| [Home](home.md)                     | Authenticated shell connects Home, Workout, Nutrition and workout start; Progress is disabled.                                     |
-| [Goals](goals.md)                   | Nutrition goals are integrated; physical-goal and measurement screens are not implemented.                                         |
-| [Nutrition](nutrition.md)           | Diary, food/recipe entry and nutrition-goal screens consume backend APIs.                                                          |
-| [Training](training.md)             | Routine, exercise catalogue, workout drafts and completed-history flows are implemented.                                           |
+| Feature                             | Current state                                                                                                                                               |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Authentication](authentication.md) | Development Basic and Clerk sign-in/session flows are implemented; release-provider and native acceptance still need verification.                          |
+| [Accounts](accounts.md)             | Users view and edit their profile, picture and objective after sign-in.                                                                                     |
+| [Home](home.md)                     | The authenticated shell connects Feed, Workout, Nutrition, League and Profile. Progress opens from Profile.                                                 |
+| [Goals](goals.md)                   | Profile Progress records body measurements, charts history and manages a weight target for the selected objective. Nutrition targets have their own editor. |
+| [Nutrition](nutrition.md)           | Diary, food/recipe entry and nutrition-goal screens consume backend APIs.                                                                                   |
+| [Training](training.md)             | Routine, exercise catalogue, workout drafts and completed-history flows are implemented.                                                                    |
 
 Detailed interaction contracts live in [home](../home.md), [routines](../routines.md),
 [workouts](../workouts.md), and [Clerk setup](../clerk-setup.md). The backend owns

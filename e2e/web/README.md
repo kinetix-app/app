@@ -119,3 +119,12 @@ units, retry, reload, history immutability and second-account isolation. Run it 
 `pnpm exec playwright test --config e2e/web/playwright.config.ts exercise-evolution.spec.ts`.
 `exercise-history.spec.ts` covers the separate paginated History tab. Browser
 acceptance does not establish Android/iOS or screen-reader behavior.
+
+## Body progress acceptance
+
+Run `pnpm exec playwright test --config e2e/web/playwright.config.ts body-progress.spec.ts`
+with two fresh private synthetic identities and the migrated run-owned `_test`
+database above. The test creates its own complete profiles through the real API and
+needs no exercise catalogue or media setup. It verifies the empty chart, check-ins,
+a lost response and safe retry, chronological backdating, profile changes, a saved
+weight target, reload, light and dark layouts and account isolation.

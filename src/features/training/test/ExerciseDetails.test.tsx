@@ -61,6 +61,8 @@ test('keeps instructions and provides accessible history and evolution tabs', as
   expect(
     await screen.findByText('No data in this period. No observations are available yet.'),
   ).toBeTruthy();
+  expect(screen.getByTestId('exercise-evolution-chart')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^\d{4}-\d{2}-\d{2},/ })).toBeNull();
   fireEvent.press(screen.getByRole('tab', { name: 'Instructions' }));
   expect(screen.getByText('1. Lower, then press.')).toBeTruthy();
 });

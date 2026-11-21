@@ -1,5 +1,6 @@
 import { completeAccount, incompleteAccount } from '@/features/accounts/test/fixtures';
 import { getAccount, getObjective, updateProfile, setObjective } from '@/features/accounts/api';
+import { progressApi } from '@/features/accounts/progressApi';
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackHandler } from 'react-native';
@@ -62,6 +63,10 @@ jest.mock('@/features/accounts/api', () => ({
   getObjective: jest.fn(),
   updateProfile: jest.fn(),
   setObjective: jest.fn(),
+}));
+jest.mock('@/features/accounts/progressApi', () => ({
+  ...jest.requireActual('@/features/accounts/progressApi'),
+  progressApi: { measurements: jest.fn(), target: jest.fn() },
 }));
 jest.mock('@/features/nutrition/api', () => ({
   nutritionApi: {
@@ -333,6 +338,8 @@ test('completed onboarding keeps form checking available in a resumed workout', 
 
 test('Profile owns account actions, progress and history; Workout omits duplicate history navigation', async () => {
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 20, offset: 0 });
+  jest.mocked(progressApi.measurements).mockResolvedValue({ items: [] });
+  jest.mocked(progressApi.target).mockResolvedValue({ objective: 'gain_weight', target: null });
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await screen.findByText('No posts yet');
   fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
@@ -340,10 +347,12 @@ test('Profile owns account actions, progress and history; Workout omits duplicat
   expect(screen.getByText('Edit profile')).toBeTruthy();
   expect(screen.getByText('Sign out')).toBeTruthy();
   fireEvent.press(screen.getByText('Progress'));
-  expect(screen.getByText('70.00 kg')).toBeTruthy();
-  expect(screen.getByText('Measurement recording is not available yet.')).toBeTruthy();
-  expect(screen.queryByText('Add measurement')).toBeNull();
+  expect(await screen.findByText('No weight measurements yet.')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Log measurements' })).toBeTruthy();
+  expect(screen.getByTestId('body-measurement-chart')).toBeTruthy();
+  expect(screen.queryByLabelText('Main navigation')).toBeNull();
   fireEvent.press(screen.getByLabelText('Back to profile'));
+  expect(screen.getByLabelText('Main navigation')).toBeTruthy();
   fireEvent.press(screen.getByText('Training history'));
   await screen.findByText('No completed workouts yet.');
   fireEvent.press(screen.getByLabelText('Back to profile'));

@@ -13,7 +13,7 @@ the Home avatar. History details return to history, then to Profile; the Profile
 arrow returns to Home. The central + starts a blank workout through the existing session
 controller; it is disabled during restoration, pending operations, storage failures
 or an existing workout. Nutrition retains diary, meal/food/recipe and goal operations. League is a disabled placeholder ("Coming soon") for the future FriendsLeague feature.
-Profile's compact grouped rows open profile/picture editing, objective and nutrition-goal editing, training history and a prepared Progress screen. Progress shows the current saved profile weight and clearly marks weight history, measurement recording and strength trends as unavailable; it does not generate historical data.
+Profile's compact grouped rows open profile/picture editing, objective and nutrition-goal editing, training history and Progress. In Progress, users log dated body measurements, switch metrics on the shared evolution chart, review their check-ins and set a weight target for their chosen objective. The chart stays visible before the first observation. See [body measurements and targets](features/goals.md) for supported measurements and profile sync.
 
 One account-scoped QueryClient serves all features. The workout provider remains
 mounted across tabs, so minimizing and switching tabs preserves the active workout.
