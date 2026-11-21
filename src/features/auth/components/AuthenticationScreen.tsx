@@ -15,19 +15,21 @@ const DevelopmentSignInScreen = __DEV__
 
 export function AuthenticationScreen({
   initialTab = 'home',
+  initialInvitation,
 }: Readonly<{
-  initialTab?: 'home' | 'nutrition';
+  initialTab?: 'home' | 'nutrition' | 'league';
+  initialInvitation?: string;
 }>) {
   if (__DEV__ && getAuthMode() === 'basic' && DevelopmentSignInScreen) {
     return (
       <Suspense fallback={<ActivityIndicator accessibilityLabel="Loading sign-in" />}>
-        <DevelopmentSignInScreen initialTab={initialTab} />
+        <DevelopmentSignInScreen initialTab={initialTab} initialInvitation={initialInvitation} />
       </Suspense>
     );
   }
   return (
     <Suspense fallback={<ActivityIndicator accessibilityLabel="Loading authentication" />}>
-      <ClerkAuthentication initialTab={initialTab} />
+      <ClerkAuthentication initialTab={initialTab} initialInvitation={initialInvitation} />
     </Suspense>
   );
 }

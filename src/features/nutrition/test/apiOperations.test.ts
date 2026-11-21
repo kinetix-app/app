@@ -16,12 +16,21 @@ test('encodes food searches and passes cancellation through catalogue and diary 
   const signal = new AbortController().signal;
   await nutritionApi.searchFoods(' Rice & beans ', signal);
   await nutritionApi.foods(signal);
+  await nutritionApi.foodPage(' Rice & beans ', 20, 21, signal);
+  await nutritionApi.foodPage('', 0, 21, signal);
   await nutritionApi.recipes(signal);
+  await nutritionApi.recipePage(' Rice & beans ', 20, 21, signal);
   await nutritionApi.day('2026-10-28', signal);
   expect(get.mock.calls).toEqual([
     ['/api/v1/foods?name=Rice%20%26%20beans', { schema: foodListSchema, signal }],
     ['/api/v1/foods', { schema: foodListSchema, signal }],
+    ['/api/v1/foods?offset=20&limit=21&name=Rice+%26+beans', { schema: foodListSchema, signal }],
+    ['/api/v1/foods?offset=0&limit=21', { schema: foodListSchema, signal }],
     ['/api/v1/recipes', { schema: recipeListSchema, signal }],
+    [
+      '/api/v1/recipes?offset=20&limit=21&name=Rice+%26+beans',
+      { schema: recipeListSchema, signal },
+    ],
     ['/api/v1/nutrition/days/2026-10-28', { schema: nutritionDaySchema, signal }],
   ]);
 });
@@ -48,6 +57,11 @@ test('validates recipe and logged amounts before issuing writes', async () => {
   expect(post).toHaveBeenLastCalledWith('/api/v1/nutrition/meal-items', meal, {
     schema: mealItemSchema,
   });
+  const patch = jest.spyOn(apiClient, 'patch').mockResolvedValue(undefined);
+  await nutritionApi.updateMealItem(3, { quantity_grams: 80 });
+  expect(patch).toHaveBeenLastCalledWith('/api/v1/nutrition/meal-items/3', {
+    quantity_grams: 80,
+  });
   const recipeMeal = { date: meal.date, meal_type: meal.meal_type, recipe_id: 2, servings: 1.5 };
   await nutritionApi.addRecipeMealItem(recipeMeal);
   expect(post).toHaveBeenLastCalledWith('/api/v1/nutrition/recipe-items', recipeMeal, {
@@ -73,6 +87,17 @@ test('creates food and nutrition targets and preserves zero macros on updates', 
   };
   await nutritionApi.createFood(food);
   expect(post).toHaveBeenLastCalledWith('/api/v1/foods', food, { schema: foodSchema });
+  await nutritionApi.updateFood(1, food);
+  expect(patch).toHaveBeenLastCalledWith('/api/v1/foods/1', food, { schema: foodSchema });
+  const recipe = {
+    name: 'Bowl',
+    servings: 2,
+    ingredients: [{ food_id: 1, quantity_grams: 100 }],
+  };
+  await nutritionApi.updateRecipe(2, recipe);
+  expect(patch).toHaveBeenLastCalledWith('/api/v1/recipes/2', recipe, {
+    schema: recipeSchema,
+  });
   const goal = { calories: 2000, protein: 100, carbohydrates: 200, fats: 0 };
   await nutritionApi.createGoal(goal);
   expect(post).toHaveBeenLastCalledWith('/api/v1/nutrition-goals', goal, {

@@ -50,9 +50,19 @@ export function useSession() {
 export function SessionProvider({
   accountId,
   onSignOut,
+  onFinished,
   children,
-}: React.PropsWithChildren<{ accountId: number; onSignOut: () => void }>) {
+}: React.PropsWithChildren<{
+  accountId: number;
+  onSignOut: () => void;
+  /** Called with the completed session ID once Finish is confirmed by the backend. */
+  onFinished?: (sessionId: number) => void;
+}>) {
   const cache = useQueryClient();
+  const finishedListener = useRef(onFinished);
+  useEffect(() => {
+    finishedListener.current = onFinished;
+  }, [onFinished]);
   const [draft, setDraft] = useState<SessionDraft | null>(null);
   const current = useRef<SessionDraft | null>(null);
   const [ready, setReady] = useState(false);
@@ -447,7 +457,7 @@ export function SessionProvider({
         };
         await sessionStorage.save(snapshot);
         install(snapshot);
-        await trainingApi.finishDraft(
+        const completed = await trainingApi.finishDraft(
           value.clientId,
           frozen.ended_at,
           request.current.signal,
@@ -457,7 +467,11 @@ export function SessionProvider({
         await sessionStorage.clear(accountId);
         if (!alive.current) return;
         install(null);
-        await cache.invalidateQueries({ queryKey: ['training', accountId] });
+        await Promise.all([
+          cache.invalidateQueries({ queryKey: ['training', accountId] }),
+          cache.invalidateQueries({ queryKey: ['leagues', accountId] }),
+        ]);
+        if (completed?.id) finishedListener.current?.(completed.id);
       } catch {
         if (alive.current && !closing.current)
           setError('Could not finish the workout. Your results are retained. Retry Finish safely.');

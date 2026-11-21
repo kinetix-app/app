@@ -39,8 +39,10 @@ function signInErrorMessage(cause: unknown) {
 
 export function DevelopmentSignInScreen({
   initialTab = 'home',
+  initialInvitation,
 }: Readonly<{
-  initialTab?: 'home' | 'nutrition';
+  initialTab?: 'home' | 'nutrition' | 'league';
+  initialInvitation?: string;
 }>) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -101,6 +103,7 @@ export function DevelopmentSignInScreen({
     return (
       <HomeScreen
         initialTab={initialTab}
+        initialInvitation={initialInvitation}
         accountId={account.id}
         initialAccount={account}
         onSignOut={signOut}

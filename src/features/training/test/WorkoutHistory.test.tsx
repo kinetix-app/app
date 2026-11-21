@@ -46,7 +46,7 @@ const session: CompletedSession = {
     },
   ],
 };
-function open() {
+function open(onShare?: (sessionId: number) => void) {
   const onClose = jest.fn();
   const view = render(
     <QueryClientProvider
@@ -58,7 +58,7 @@ function open() {
         })
       }
     >
-      <WorkoutHistory accountId={7} onClose={onClose} />
+      <WorkoutHistory accountId={7} onClose={onClose} onShare={onShare} />
     </QueryClientProvider>,
   );
   return { ...view, onClose };
@@ -148,4 +148,24 @@ test('preserves zero and missing cardio measurements with explicit distance and 
   expect(await screen.findByText('Set 1: 1.25 km · 00:12:30')).toBeTruthy();
   expect(screen.getByText('Set 2: — km · 00:00:00')).toBeTruthy();
   expect(screen.getByText('Set 3: 1.25 km · —')).toBeTruthy();
+});
+
+test('completed workouts can be shared to the feed from the list and the details', async () => {
+  jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [session], limit: 50, offset: 0 });
+  jest.mocked(trainingApi.session).mockResolvedValue(session);
+  const onShare = jest.fn();
+  open(onShare);
+  fireEvent.press(await screen.findByRole('button', { name: 'Share workout 1 to feed' }));
+  expect(onShare).toHaveBeenLastCalledWith(1);
+  fireEvent.press(screen.getByRole('button', { name: 'View workout 1' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Share to feed' }));
+  expect(onShare).toHaveBeenCalledTimes(2);
+  expect(onShare).toHaveBeenLastCalledWith(1);
+});
+
+test('without a share handler the history offers no share buttons', async () => {
+  jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [session], limit: 50, offset: 0 });
+  open();
+  await screen.findByRole('button', { name: 'View workout 1' });
+  expect(screen.queryByRole('button', { name: 'Share workout 1 to feed' })).toBeNull();
 });
