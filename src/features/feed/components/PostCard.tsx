@@ -16,7 +16,7 @@ type PostCardProps = Readonly<{
   likeError: boolean;
   onLike: (post: Post) => void;
   onComments: (post: Post) => void;
-  onDelete: (post: Post) => void;
+  onOptions: (post: Post) => void;
   onAuthor: (post: Post) => void;
   onWorkout?: (post: Post) => void;
 }>;
@@ -28,7 +28,7 @@ export function PostCard({
   likeError,
   onLike,
   onComments,
-  onDelete,
+  onOptions,
   onAuthor,
   onWorkout,
 }: PostCardProps) {
@@ -58,7 +58,7 @@ export function PostCard({
           </View>
         </Pressable>
         {post.is_mine ? (
-          <IconButton icon="trash-2" label="Delete your post" onPress={() => onDelete(post)} />
+          <IconButton icon="more-horizontal" label="Post options" onPress={() => onOptions(post)} />
         ) : null}
       </View>
       <MediaCarousel accountId={accountId} post={post} name={name} />

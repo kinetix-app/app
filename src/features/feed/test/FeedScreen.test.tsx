@@ -102,7 +102,7 @@ test('feed shows the author, description, workout title, summary and counts', as
   expect(screen.getByText('Exercises')).toBeTruthy();
   expect(screen.queryByText('Bench press · Squat')).toBeNull();
   expect(screen.getByText('2 likes')).toBeTruthy();
-  expect(screen.queryByLabelText('Delete your post')).toBeNull();
+  expect(screen.queryByLabelText('Post options')).toBeNull();
   expect(feedApi.posts).toHaveBeenCalledWith(null, expect.any(AbortSignal), 'friends');
 });
 
@@ -351,7 +351,7 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   expect(cards[0].props.testID).toBe('post-11');
   expect(within(cards[0]).getByText('Two extra reps on the final set.')).toBeTruthy();
   expect(within(cards[0]).getByText('Strength A')).toBeTruthy();
-  expect(within(cards[0]).getByLabelText('Delete your post')).toBeTruthy();
+  expect(within(cards[0]).getByLabelText('Post options')).toBeTruthy();
 });
 
 test('an already shared workout keeps the caption and description and explains the conflict', async () => {
@@ -385,11 +385,14 @@ test('deleting your post asks first and removes it after confirmation', async ()
     .mockResolvedValue({ items: [makePost({ is_mine: true })], next_before_id: null });
   jest.mocked(feedApi.remove).mockRejectedValueOnce(new Error('offline')).mockResolvedValue();
   renderFeed();
-  fireEvent.press(await screen.findByLabelText('Delete your post'));
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  expect(screen.getByRole('button', { name: 'Edit post · Coming soon' })).toBeDisabled();
+  fireEvent.press(screen.getByRole('button', { name: 'Delete post' }));
   expect(screen.getByText('Delete this post?')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
   expect(feedApi.remove).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByLabelText('Delete your post'));
+  fireEvent.press(screen.getByLabelText('Post options'));
+  fireEvent.press(screen.getByRole('button', { name: 'Delete post' }));
   fireEvent.press(screen.getByRole('button', { name: 'Delete' }));
   expect(await screen.findByText('Could not delete the post. Try again.')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Delete' }));

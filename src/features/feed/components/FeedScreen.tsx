@@ -48,6 +48,7 @@ export function FeedScreen({
   const [panel, setPanel] = useState<Panel>({ kind: 'feed' });
   const [liking, setLiking] = useState<ReadonlySet<number>>(new Set());
   const [likeErrors, setLikeErrors] = useState<ReadonlySet<number>>(new Set());
+  const [options, setOptions] = useState<Post | null>(null);
   const [deleting, setDeleting] = useState<Post | null>(null);
   // The feed shows only the person's own posts and their friends' posts.
   const feed = useInfiniteQuery({
@@ -137,10 +138,10 @@ export function FeedScreen({
           ui.screen,
           { backgroundColor: p['surface-100'], display: view.kind === 'feed' ? 'flex' : 'none' },
         ]}
-        aria-hidden={view.kind !== 'feed' || Boolean(deleting)}
-        accessibilityElementsHidden={view.kind !== 'feed' || Boolean(deleting)}
+        aria-hidden={view.kind !== 'feed' || Boolean(options || deleting)}
+        accessibilityElementsHidden={view.kind !== 'feed' || Boolean(options || deleting)}
         importantForAccessibility={
-          view.kind !== 'feed' || deleting ? 'no-hide-descendants' : 'auto'
+          view.kind !== 'feed' || options || deleting ? 'no-hide-descendants' : 'auto'
         }
       >
         <FlatList
@@ -182,7 +183,7 @@ export function FeedScreen({
               }}
               onComments={(post) => setPanel({ kind: 'comments', post })}
               onWorkout={(post) => setPanel({ kind: 'workout', post })}
-              onDelete={setDeleting}
+              onOptions={setOptions}
               onAuthor={(post) =>
                 setPanel({ kind: 'person', id: post.author.id, name: post.author.display_name })
               }
@@ -232,6 +233,14 @@ export function FeedScreen({
           }}
         />
       ) : null}
+      <PostOptions
+        post={options}
+        onClose={() => setOptions(null)}
+        onDelete={(post) => {
+          setOptions(null);
+          setDeleting(post);
+        }}
+      />
       <DeleteConfirmation
         post={deleting}
         onCancel={() => setDeleting(null)}
@@ -241,6 +250,35 @@ export function FeedScreen({
         }}
       />
     </View>
+  );
+}
+
+function PostOptions({
+  post,
+  onClose,
+  onDelete,
+}: Readonly<{ post: Post | null; onClose: () => void; onDelete: (post: Post) => void }>) {
+  const p = usePalette();
+  return (
+    <Modal visible={post !== null} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.scrim, { backgroundColor: p.scrim }]}>
+        <View
+          accessibilityViewIsModal
+          style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
+        >
+          <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
+            Post options
+          </Text>
+          {post?.is_mine ? (
+            <>
+              <Button title="Edit post · Coming soon" secondary disabled onPress={() => {}} />
+              <Button title="Delete post" tone="danger" onPress={() => onDelete(post)} />
+            </>
+          ) : null}
+          <Button title="Close" secondary onPress={onClose} />
+        </View>
+      </View>
+    </Modal>
   );
 }
 
