@@ -10,7 +10,7 @@ import { ApiError } from '@/services/apiClient';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { PersonScreen } from '@/features/friends';
 import { feedApi } from '../api';
-import { prependPost, removePost, scopedFeedKey, updatePost } from '../cache';
+import { prependPost, removePost, scopedFeedKey, updatePost, workoutOptionsKey } from '../cache';
 import type { Post } from '../schemas';
 import { PostOptions, type WorkoutActions } from './PostOptions';
 import { CommentsScreen } from './CommentsScreen';
@@ -232,6 +232,8 @@ export function FeedScreen({
           onClose={closePanel}
           onShared={(post) => {
             prependPost(cache, accountId, post);
+            if (post.workout)
+              void cache.invalidateQueries({ queryKey: workoutOptionsKey(accountId) });
             if (!feed.data) void feed.refetch();
             closePanel();
           }}
@@ -254,6 +256,8 @@ export function FeedScreen({
         onCancel={() => setDeleting(null)}
         onDeleted={(post) => {
           removePost(cache, accountId, post.id);
+          if (post.workout)
+            void cache.invalidateQueries({ queryKey: workoutOptionsKey(accountId) });
           setDeleting(null);
         }}
       />

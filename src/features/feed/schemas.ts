@@ -35,6 +35,11 @@ export const workoutSummarySchema = z.object({
   exercises: z.array(z.string()),
 });
 
+export const workoutOptionsSchema = z.object({
+  items: z.array(workoutSummarySchema).max(5),
+  selected: workoutSummarySchema.nullable(),
+});
+
 const decimalText = z.string().regex(/^\d+(\.\d+)?$/);
 
 const workoutSetSchema = z.object({

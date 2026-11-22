@@ -53,18 +53,20 @@ jest.mock('../api', () => ({
     media: jest.fn(),
     workout: jest.fn(),
     workoutTemplate: jest.fn(),
+    workoutOptions: jest.fn(),
   },
 }));
 
 // Composer flows have many interactions; allow for slower machines.
 jest.setTimeout(20000);
 
-const workout = {
-  id: 7,
-  title: 'Strength A',
-  ended_at: '2026-11-09T16:45:00Z',
-  exercises: [{ id: 1, exercise: { name: 'Bench press' }, sets: [{}, {}] }],
-};
+const workout = makePost().workout!;
+async function selectWorkout() {
+  fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+  const option = await screen.findByRole('radio', { name: /Workout finished/ });
+  expect(option).not.toBeChecked();
+  fireEvent.press(option);
+}
 
 const clients: QueryClient[] = [];
 
@@ -87,9 +89,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(feedApi.posts).mockResolvedValue({ items: [makePost()], next_before_id: null });
   jest.mocked(feedApi.comments).mockResolvedValue({ items: [], next_after_id: null });
-  jest
-    .mocked(trainingApi.sessions)
-    .mockResolvedValue({ items: [workout], limit: 50, offset: 0 } as never);
+  jest.mocked(feedApi.workoutOptions).mockImplementation(async (selected) => ({
+    items: [workout],
+    selected: selected === workout.session_id ? workout : null,
+  }));
 });
 
 test('feed shows the author, description, workout title, summary and counts', async () => {
@@ -321,12 +324,12 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   renderFeed();
   await screen.findByText('Leg day done');
   fireEvent.press(screen.getByRole('button', { name: 'New post' }));
-  const option = await screen.findByRole('radio', { name: /Workout finished/ });
-  expect(option.props.accessibilityState.checked).toBe(true);
+  expect(screen.queryByRole('button', { name: 'Preview workout' })).toBeNull();
+  await selectWorkout();
   expect(screen.getByLabelText('Caption').props.value).toBe('');
   fireEvent.changeText(screen.getByLabelText('Caption'), 'New PR');
   fireEvent.changeText(screen.getByLabelText('Description'), 'Two extra reps on the final set.');
-  fireEvent.press(screen.getByRole('button', { name: 'View workout' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Preview workout' }));
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
   expect(screen.getByRole('header', { name: 'Workout detail' })).toBeTruthy();
   expect(screen.getByRole('header', { name: workout.title })).toBeTruthy();
@@ -335,7 +338,7 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   fireEvent.press(screen.getByRole('button', { name: 'Back to new post' }));
   expect(screen.getByLabelText('Caption').props.value).toBe('New PR');
   expect(screen.getByLabelText('Description').props.value).toBe('Two extra reps on the final set.');
-  expect(screen.getByRole('radio', { name: /Workout finished/, checked: true })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Workout to share: Strength A' })).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith({
@@ -358,7 +361,7 @@ test('an already shared workout keeps the caption and description and explains t
   jest.mocked(feedApi.create).mockRejectedValue(new ApiError(409));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
-  await screen.findByRole('radio', { name: /Workout finished/ });
+  await selectWorkout();
   fireEvent.changeText(screen.getByLabelText('Caption'), 'Keep me');
   fireEvent.changeText(screen.getByLabelText('Description'), 'Keep these notes too');
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
@@ -372,11 +375,18 @@ test('an already shared workout keeps the caption and description and explains t
 test('a share request opens the new post screen with that workout selected', async () => {
   const onComposeClosed = jest.fn();
   renderFeed({ composeSessionId: 7, onComposeClosed });
-  const option = await screen.findByRole('radio', { name: /Workout finished/ });
-  expect(option.props.accessibilityState.checked).toBe(true);
+  expect(await screen.findByRole('button', { name: 'Workout to share: Strength A' })).toBeTruthy();
+  expect(feedApi.workoutOptions).toHaveBeenCalledWith(7, expect.any(AbortSignal));
   expect(screen.queryByText('Workout saved')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(onComposeClosed).toHaveBeenCalledTimes(1);
+});
+
+test('an unavailable history workout is explained without selecting another one', async () => {
+  renderFeed({ composeSessionId: 123 });
+  expect(await screen.findByText(/The workout you opened is unavailable/)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Workout to share: No workout' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Share' })).toBeDisabled();
 });
 
 test('a friend must confirm before starting a workout with skipped exercises', async () => {
@@ -474,7 +484,7 @@ test('deleting your post asks first and removes it after confirmation', async ()
 });
 
 test('without finished workouts a caption alone can be posted', async () => {
-  jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 50, offset: 0 } as never);
+  jest.mocked(feedApi.workoutOptions).mockResolvedValue({ items: [], selected: null });
   const free = makePost({
     id: 12,
     caption: 'Rest day',
@@ -486,11 +496,9 @@ test('without finished workouts a caption alone can be posted', async () => {
   jest.mocked(feedApi.create).mockResolvedValue(free);
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
-  expect(
-    await screen.findByText(
-      'No finished workouts yet. You can still post a caption, description or photos.',
-    ),
-  ).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+  expect(await screen.findByText('No finished workouts available to share.')).toBeTruthy();
+  fireEvent.press(screen.getByRole('radio', { name: 'No workout' }));
   const share = screen.getByRole('button', { name: 'Share' });
   expect(share.props.accessibilityState.disabled).toBe(true);
   fireEvent.changeText(screen.getByLabelText('Caption'), 'Rest day');
@@ -514,8 +522,9 @@ test('choosing No workout lets a description stand alone', async () => {
   jest.mocked(feedApi.create).mockResolvedValue(makePost({ id: 13, workout: null }));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
-  await screen.findByRole('radio', { name: /Workout finished/ });
-  fireEvent.press(screen.getByRole('radio', { name: /No workout/ }));
+  await selectWorkout();
+  fireEvent.press(screen.getByRole('button', { name: 'Workout to share: Strength A' }));
+  fireEvent.press(screen.getByRole('radio', { name: 'No workout' }));
   fireEvent.changeText(screen.getByLabelText('Description'), 'Just a thought');
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
@@ -586,7 +595,7 @@ test('shared posts are sent to friends and not labelled on every card', async ()
   renderFeed();
   expect(await screen.findByText('2 h ago')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'New post' }));
-  await screen.findByRole('radio', { name: /Workout finished/ });
+  await selectWorkout();
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'FRIENDS' })),

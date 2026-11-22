@@ -5,13 +5,13 @@ import React, { useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
-import { trainingApi } from '@/features/training/api';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
 import { SessionWorkoutDetailModal } from '@/features/training/components/SessionWorkoutDetail';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { feedApi, type PostPhoto } from '../api';
 import { countLabel } from '../format';
+import { workoutOptionsKey } from '../cache';
 import {
   MAX_POST_CAPTION,
   MAX_POST_DESCRIPTION,
@@ -19,6 +19,7 @@ import {
   MAX_POST_IMAGES,
   POST_IMAGE_TYPES,
   type Post,
+  type WorkoutSummary,
 } from '../schemas';
 
 type ShareWorkoutScreenProps = Readonly<{
@@ -35,13 +36,13 @@ export function ShareWorkoutScreen({
   onShared,
 }: ShareWorkoutScreenProps) {
   const p = usePalette();
-  // The training prefix is refreshed whenever a workout finishes.
+  const requestedSessionId = initialSessionId ?? null;
   const workouts = useQuery({
-    queryKey: ['training', accountId, 'sessions', 'kg', 'recent'],
-    queryFn: ({ signal }) => trainingApi.sessions(0, 'kg', signal),
+    queryKey: [...workoutOptionsKey(accountId), requestedSessionId],
+    queryFn: ({ signal }) => feedApi.workoutOptions(requestedSessionId, signal),
   });
-  // 'none' is an explicit post without a workout; null means "not chosen yet".
-  const [chosen, setSelected] = useState<number | 'none' | null>(initialSessionId ?? null);
+  const [chosen, setChosen] = useState<WorkoutSummary | null>();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [detailSessionId, setDetailSessionId] = useState<number | null>(null);
   const [caption, setCaption] = useState('');
   const [description, setDescription] = useState('');
@@ -50,14 +51,12 @@ export function ShareWorkoutScreen({
   const [photoError, setPhotoError] = useState('');
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
-  const recent = workouts.data?.items.slice(0, 10) ?? [];
-  // Default to the most recent workout until the person picks one.
-  const selected = chosen === 'none' ? null : (chosen ?? recent[0]?.id ?? null);
+  const recent = workouts.data?.items ?? [];
+  const selected = chosen === undefined ? (workouts.data?.selected ?? null) : chosen;
+  const unresolvedSelection = requestedSessionId !== null && chosen === undefined && !workouts.data;
   const canShare =
-    selected !== null ||
-    caption.trim().length > 0 ||
-    description.trim().length > 0 ||
-    photos.length > 0;
+    !unresolvedSelection &&
+    Boolean(selected || caption.trim() || description.trim() || photos.length);
 
   async function pickPhotos() {
     setPhotoError('');
@@ -98,7 +97,7 @@ export function ShareWorkoutScreen({
     try {
       // Every post goes to the author's friends.
       post = await feedApi.create({
-        trainingSessionId: selected,
+        trainingSessionId: selected?.session_id ?? null,
         caption,
         description,
         visibility: 'FRIENDS',
@@ -107,6 +106,7 @@ export function ShareWorkoutScreen({
     } catch (failure) {
       // Keep every entered value so the person can correct and retry.
       setError(shareErrorMessage(failure));
+      if (failure instanceof ApiError && failure.status === 409) void workouts.refetch();
       busy.current = false;
       setPending(false);
       return;
@@ -172,7 +172,46 @@ export function ShareWorkoutScreen({
 
         <View style={ui.gap}>
           <Text style={[textStyles['title-md'], { color: p.ink }]}>Workout · optional</Text>
-          {workouts.isPending ? <Loading /> : null}
+          <View style={ui.row}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Workout to share: ${selected?.title ?? 'No workout'}`}
+              accessibilityState={{ expanded: dropdownOpen, disabled: pending }}
+              onPress={() => setDropdownOpen(!dropdownOpen)}
+              disabled={pending}
+              style={[
+                styles.option,
+                { flex: 1, backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+              ]}
+            >
+              <Text style={[textStyles.label, { color: p.ink, flex: 1 }]} numberOfLines={1}>
+                {selected?.title ?? 'No workout'}
+              </Text>
+              <Feather
+                name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={22}
+                color={p.ink}
+              />
+            </Pressable>
+            {selected ? (
+              <IconButton
+                icon="eye"
+                label="Preview workout"
+                disabled={pending}
+                onPress={() => {
+                  setDropdownOpen(false);
+                  setDetailSessionId(selected.session_id);
+                }}
+              />
+            ) : null}
+          </View>
+          {unresolvedSelection && workouts.isPending ? <Loading /> : null}
+          {requestedSessionId !== null && workouts.data && !workouts.data.selected ? (
+            <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
+              The workout you opened is unavailable to share. Choose another workout or post without
+              one.
+            </Text>
+          ) : null}
           {workouts.isError ? (
             <View style={ui.gap}>
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -181,43 +220,39 @@ export function ShareWorkoutScreen({
               <Button title="Retry" secondary onPress={() => void workouts.refetch()} />
             </View>
           ) : null}
-          {workouts.data && !recent.length ? (
-            <Text style={{ color: p['ink-muted'] }}>
-              No finished workouts yet. You can still post a caption, description or photos.
-            </Text>
-          ) : null}
-          <View accessibilityRole="radiogroup" accessibilityLabel="Workout to share" style={ui.gap}>
-            {recent.length ? (
-              <RadioOption
-                label="No workout"
+          {dropdownOpen ? (
+            <View
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Workout options"
+              style={ui.gap}
+            >
+              <WorkoutOption
                 checked={selected === null}
                 disabled={pending}
-                onPress={() => setSelected('none')}
-              >
-                <Text
-                  style={[textStyles.label, { color: selected === null ? p['brand-ink'] : p.ink }]}
-                >
-                  No workout
-                </Text>
-              </RadioOption>
-            ) : null}
-            {recent.map((workout) => (
-              <WorkoutOption
-                key={workout.id}
-                workout={workout}
-                checked={workout.id === selected}
-                disabled={pending}
-                onPress={() => setSelected(workout.id)}
+                onPress={() => {
+                  setChosen(null);
+                  setDropdownOpen(false);
+                }}
               />
-            ))}
-          </View>
-          {selected !== null ? (
-            <Button
-              title="View workout"
-              secondary
-              disabled={pending}
-              onPress={() => setDetailSessionId(selected)}
-            />
+              {workouts.isPending && !unresolvedSelection ? <Loading /> : null}
+              {workouts.data && !recent.length ? (
+                <Text style={{ color: p['ink-muted'] }}>
+                  No finished workouts available to share.
+                </Text>
+              ) : null}
+              {recent.map((workout) => (
+                <WorkoutOption
+                  key={workout.session_id}
+                  workout={workout}
+                  checked={workout.session_id === selected?.session_id}
+                  disabled={pending}
+                  onPress={() => {
+                    setChosen(workout);
+                    setDropdownOpen(false);
+                  }}
+                />
+              ))}
+            </View>
           ) : null}
         </View>
 
@@ -306,7 +341,6 @@ export function ShareWorkoutScreen({
   );
 }
 
-type SessionItem = Awaited<ReturnType<typeof trainingApi.sessions>>['items'][number];
 type PickedAsset = ImagePicker.ImagePickerAsset;
 
 /** Keeps JPEG, PNG and WebP photos up to the size limit and counts the rest. */
@@ -330,24 +364,24 @@ export function acceptPhotos(assets: readonly PickedAsset[]) {
   return { accepted, rejected };
 }
 
-function RadioOption({
-  label,
+function WorkoutOption({
+  workout,
   checked,
   disabled,
   onPress,
-  children,
 }: Readonly<{
-  label: string;
+  workout?: WorkoutSummary;
   checked: boolean;
   disabled: boolean;
   onPress: () => void;
-  children: React.ReactNode;
 }>) {
   const p = usePalette();
+  const title = workout?.title ?? 'No workout';
+  const when = workout ? new Date(workout.ended_at).toLocaleString() : null;
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityLabel={label}
+      accessibilityLabel={when ? `${title}. Workout finished ${when}` : title}
       accessibilityState={{ checked, disabled }}
       aria-checked={checked}
       disabled={disabled}
@@ -362,45 +396,16 @@ function RadioOption({
     >
       <Feather
         name={checked ? 'check-circle' : 'circle'}
-        size={22}
+        size={20}
         color={checked ? p['brand-ink'] : p['ink-muted']}
       />
-      {children}
-    </Pressable>
-  );
-}
-
-function WorkoutOption({
-  workout,
-  checked,
-  disabled,
-  onPress,
-}: Readonly<{ workout: SessionItem; checked: boolean; disabled: boolean; onPress: () => void }>) {
-  const p = usePalette();
-  const sets = workout.exercises.reduce((sum, slot) => sum + slot.sets.length, 0);
-  const when = new Date(workout.ended_at).toLocaleString();
-  const parts = [when, countLabel(workout.exercises.length, 'exercise'), countLabel(sets, 'set')];
-  if (workout.exercises.length)
-    parts.push(workout.exercises.map((slot) => slot.exercise.name).join(', '));
-  return (
-    <RadioOption
-      label={`${workout.title}. Workout finished ${when}`}
-      checked={checked}
-      disabled={disabled}
-      onPress={onPress}
-    >
-      <View style={{ flex: 1, gap: spacing['space-1'] }}>
-        <Text style={[textStyles.label, { color: checked ? p['brand-ink'] : p.ink }]}>
-          {workout.title}
-        </Text>
-        <Text
-          numberOfLines={2}
-          style={[textStyles['body-sm'], { color: checked ? p['brand-ink'] : p['ink-muted'] }]}
-        >
-          {parts.join(' · ')}
-        </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[textStyles.label, { color: p.ink }]}>{title}</Text>
+        {when ? (
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{when}</Text>
+        ) : null}
       </View>
-    </RadioOption>
+    </Pressable>
   );
 }
 
