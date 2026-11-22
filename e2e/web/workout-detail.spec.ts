@@ -69,6 +69,8 @@ test('reopens the same completed workout from private screens and an authorized 
         await request('/me/profile', identity, 'PATCH', {
           display_name: identity.name,
           age: 30,
+          sex: 'female',
+          activity_level: 'moderate',
           weight_kg: '75',
           height_cm: '170',
           timezone: 'UTC',

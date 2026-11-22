@@ -34,6 +34,8 @@ test('cardio recording survives reload and persists mixed measurements', async (
       await request('/me/profile', 'PATCH', {
         display_name: 'Acceptance',
         age: 30,
+        sex: 'female',
+        activity_level: 'moderate',
         height_cm: '170',
         weight_kg: '70',
         measurement_system: 'metric',
