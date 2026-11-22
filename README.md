@@ -186,16 +186,19 @@ Stop the server with `docker compose --env-file .env.sonar --profile sonar stop 
 
 ## CI
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and on pushes to `master`, using Node from `.node-version` and pnpm from `package.json`. It has two jobs:
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and on pushes to `master`, using Node from `.node-version` and pnpm from `package.json`. It runs these jobs:
 
-- **Frontend checks:** checks out GitHub's merge commit on Ubuntu 24.04, restores the pnpm store, installs with `--frozen-lockfile`, then runs TypeScript, ESLint, Prettier, Jest with coverage, Expo Doctor and Android/iOS/web export. The job stops on failure and uploads the Jest LCOV report. Coverage appears in the test logs and has no percentage threshold yet.
+- **Static checks**, **Tests and coverage**, and **Expo checks** run in parallel on Ubuntu 24.04. Each restores the pnpm store and installs with `--frozen-lockfile`. They run TypeScript/ESLint/Prettier, Jest with coverage, and Expo Doctor/Android/iOS/web export respectively. Tests upload the LCOV report; coverage appears in the test logs and has no percentage threshold yet.
+- **Frontend checks:** waits for the three jobs and fails if any did not succeed, preserving the required branch-protection check.
 - **SonarCloud:** uploads the analysis and coverage report to SonarCloud, then waits up to 300 seconds for the quality gate. Both pull-request and main-branch scans fail the job when the project's configured coverage or analysis requirements fail, or when the gate result cannot be obtained before the timeout. Quality gate thresholds are managed in SonarCloud; confirm that the assigned gate includes the required coverage and analysis conditions.
+
+SonarCloud starts after the tests job uploads coverage, independently of the other checks. Parallel jobs repeat setup, so elapsed time and total runner minutes depend on runner availability and job durations.
 
 The workflow uses commit-pinned actions, a read-only repository token and no persisted checkout credentials. A newer commit cancels the previous run for the same PR; each job has a timeout. No branch/path filters are used, so the required check can run for every PR.
 
 Once the workflow has run on GitHub, configure branch protection/rulesets to require **Frontend checks**, **SonarCloud** and a teammate's review. Creating this workflow does not configure repository protection. Read the failed step's logs, reproduce its command from this repository root and push the fix; keep CI commands aligned with local development scripts.
 
-This workflow verifies code, tests and bundling. Native compilation/device testing, API integration and release signing/distribution require their own verification. On 4 October 2026, actionlint validated the workflow and all run commands passed in a clean temporary checkout with the pinned toolchain. Its first GitHub-hosted run is still pending.
+This workflow verifies code, tests and bundling. Native compilation/device testing, API integration and release signing/distribution require their own verification. The parallel workflow must be verified on GitHub to measure elapsed time and runner usage.
 
 ### SonarCloud setup
 
@@ -207,7 +210,7 @@ CI-based analysis needs a SonarCloud project bound to the GitHub repository and 
 2. Confirm `sonar.projectKey` in [sonar-project.properties](sonar-project.properties) matches the imported project (`kinetix-frontend`) and the `-Dsonar.organization` value in the workflow matches (`kinetix-app`).
 3. Create a personal access token and store it as the `SONAR_TOKEN` repository secret.
 
-Pull requests from forks do not receive repository secrets, so the SonarCloud job is skipped for fork pull requests; the **Frontend checks** job still runs. The scanner needs full history, so the SonarCloud job checks out with `fetch-depth: 0` and downloads the coverage artifact produced by **Frontend checks**. Pull-request runs are analyzed in the pull-request context, and pushes to `master` update the project's main branch.
+Pull requests from forks do not receive repository secrets, so the SonarCloud job is skipped for fork pull requests; the **Frontend checks** job still runs. The scanner needs full history, so the SonarCloud job checks out with `fetch-depth: 0` and downloads the coverage artifact produced by **Tests and coverage**. Pull-request runs are analyzed in the pull-request context, and pushes to `master` update the project's main branch.
 
 ## Verification and known limits
 
