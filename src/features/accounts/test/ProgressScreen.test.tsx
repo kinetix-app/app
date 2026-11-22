@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { calendarLabel, shiftCalendarMonth } from '@/components/CalendarGrid';
 import { ApiError } from '@/services/apiClient';
 import { ProgressScreen } from '../components/ProgressScreen';
@@ -38,13 +38,13 @@ const item: BodyMeasurement = {
   thigh_cm: null,
 };
 
-function open() {
+function open(account = completeAccount) {
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { gcTime: 0 } },
   });
   render(
     <QueryClientProvider client={cache}>
-      <ProgressScreen account={completeAccount} onClose={() => {}} />
+      <ProgressScreen account={account} onClose={() => {}} />
     </QueryClientProvider>,
   );
   return cache;
@@ -63,7 +63,9 @@ test('distinguishes failed loading from an empty plotted series and retries', as
   expect(screen.queryByText('No weight measurements yet.')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'Retry. Could not load measurements.' }));
   expect(await screen.findByText('No weight measurements yet.')).toBeTruthy();
-  expect(screen.getByTestId('body-measurement-chart')).toBeTruthy();
+  const chart = within(screen.getByTestId('body-measurement-chart'));
+  expect(chart.getByText('No weight measurements yet.')).toBeTruthy();
+  expect(chart.getByText('Log a measurement to start tracking.')).toBeTruthy();
   expect(screen.queryByRole('button', { name: /^\d{4}-\d{2}-\d{2},/ })).toBeNull();
 });
 
@@ -108,7 +110,11 @@ test('keeps a failed check-in and its request ID, then refreshes history and pro
   expect(screen.getByText('74.00 kg')).toBeTruthy();
   expect(invalidate).toHaveBeenCalledWith({ queryKey: measurementKey(1) });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['accounts', 1, 'me'], exact: true });
-  fireEvent.press(screen.getByRole('tab', { name: 'Waist' }));
+  const metricSelector = within(screen.getByLabelText('Measurement metric'));
+  fireEvent.press(metricSelector.getByRole('tab', { name: 'Waist' }));
+  expect(metricSelector.getByRole('tab', { name: 'Waist' }).props.accessibilityState.selected).toBe(
+    true,
+  );
   expect(screen.getByText('No waist measurements yet.')).toBeTruthy();
 });
 
@@ -174,4 +180,19 @@ test('opens the log with latest stored values and lets users clear a previous va
   });
   fireEvent.press(screen.getByRole('button', { name: 'Dismiss notification' }));
   expect(screen.queryByText('Measurements saved.')).toBeNull();
+});
+
+test('uses saved profile units for the chart and check-in without a unit selector', async () => {
+  jest.mocked(progressApi.measurements).mockResolvedValue({ items: [item] });
+  open({
+    ...completeAccount,
+    profile: { ...completeAccount.profile, measurement_system: 'imperial' },
+  });
+
+  expect(await screen.findByRole('button', { name: '2026-01-02, 165.35 lb' })).toBeTruthy();
+  expect(screen.queryByRole('radio', { name: 'Metric' })).toBeNull();
+  expect(screen.queryByRole('radio', { name: 'Imperial' })).toBeNull();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Log measurements' }));
+  expect(screen.getByLabelText('Weight (lb)').props.value).toBe('165.35');
 });

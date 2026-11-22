@@ -19,6 +19,7 @@ import { trainingApi } from '../api';
 import type { EvolutionDay } from '../schemas';
 import { Failure, IconButton, Loading } from './ui';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
+import { ChartMetricSelector } from '@/components/ChartMetricSelector';
 import { EvolutionGraph } from '@/components/EvolutionGraph';
 
 // React Native Web supports this CSS property; native ViewStyle does not declare it.
@@ -27,6 +28,8 @@ const gestureHandleStyle: ViewStyle & { touchAction?: 'none' } =
 
 type Metric = 'estimated_1rm' | 'weight' | 'volume' | 'reps' | 'distance' | 'duration_seconds';
 type Range = 1 | 3 | 6 | 12 | 'All';
+const gymMetrics: readonly Metric[] = ['estimated_1rm', 'weight', 'volume', 'reps'];
+const cardioMetrics: readonly Metric[] = ['distance', 'duration_seconds'];
 const labels: Record<Metric, string> = {
   estimated_1rm: 'Estimated strength (1RM)',
   weight: 'Weight',
@@ -153,8 +156,9 @@ export function ExerciseEvolution({
     queryKey: ['accounts', accountId, 'me'],
     queryFn: ({ signal }) => getAccount(undefined, signal),
   });
-  const imperial = account.data?.profile.measurement_system === 'imperial';
-  const { weight, distance } = evolutionUnits(imperial);
+  const { weight, distance } = evolutionUnits(
+    account.data?.profile.measurement_system === 'imperial',
+  );
   const query = useQuery({
     queryKey: ['training', accountId, 'exercise', exerciseId, 'evolution', weight, distance],
     queryFn: ({ signal }) => trainingApi.exerciseEvolution(exerciseId, weight, distance, signal),
@@ -168,33 +172,18 @@ export function ExerciseEvolution({
   const current = visible.find((d) => d.date === selected) ?? visible.at(-1);
   return (
     <View style={{ gap: 12 }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        accessibilityRole="tablist"
-        contentContainerStyle={{ gap: 16 }}
-      >
-        {(cardio
-          ? ['distance', 'duration_seconds']
-          : ['estimated_1rm', 'weight', 'volume', 'reps']
-        ).map((item) => {
-          const key = item as Metric;
-          return (
-            <AnimatedTextSelector
-              key={key}
-              label={labels[key]}
-              selected={metric === key}
-              role="tab"
-              reduceMotion={reduceMotion}
-              onPress={() => {
-                animate();
-                setMetric(key);
-                setSelected(null);
-              }}
-            />
-          );
-        })}
-      </ScrollView>
+      <ChartMetricSelector
+        metrics={cardio ? cardioMetrics : gymMetrics}
+        value={metric}
+        label="Exercise metric"
+        labelFor={(key) => labels[key]}
+        reduceMotion={reduceMotion}
+        onChange={(key) => {
+          animate();
+          setMetric(key);
+          setSelected(null);
+        }}
+      />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, fontWeight: '700' }}>
           <MetricHeadline current={current} metric={metric} weight={weight} distance={distance} />
@@ -223,11 +212,6 @@ export function ExerciseEvolution({
           }}
         />
       ) : null}
-      {query.data && !current ? (
-        <Text style={{ color: p['ink-muted'] }}>
-          {emptyMessage(all.length > 0, history.length > 0)}
-        </Text>
-      ) : null}
       {current ? (
         <Text style={{ color: p['ink-muted'] }}>
           {current.date}
@@ -242,6 +226,9 @@ export function ExerciseEvolution({
             value: Number(day[metric]),
             label: value(day, metric, weight, distance),
           }))}
+          emptyState={
+            query.isError ? undefined : { title: emptyMessage(all.length > 0, history.length > 0) }
+          }
           selected={selected}
           onSelect={setSelected}
           formatAxis={(amount, showUnit) =>

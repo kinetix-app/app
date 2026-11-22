@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -8,6 +9,8 @@ const plotHeight = 150;
 const touchRadius = sizes['tap-min'] / 2;
 const rightInset = touchRadius;
 
+type EmptyState = Readonly<{ title: string; hint?: string }>;
+
 type EvolutionGraphProps = Readonly<{
   /** Ordered by date with no more than one point per date. */
   points: readonly EvolutionPoint[];
@@ -15,6 +18,7 @@ type EvolutionGraphProps = Readonly<{
   onSelect: (date: string | null) => void;
   formatAxis: (value: number, showUnit: boolean) => string;
   opacity?: Animated.Value;
+  emptyState?: EmptyState;
   testID?: string;
 }>;
 
@@ -24,11 +28,13 @@ export function EvolutionGraph({
   onSelect,
   formatAxis,
   opacity,
+  emptyState,
   testID,
 }: EvolutionGraphProps) {
   const p = usePalette();
   const { fontScale } = useWindowDimensions();
   const [width, setWidth] = useState(0);
+  if (!points.length) return emptyState ? <EmptyChart state={emptyState} testID={testID} /> : null;
   const axisWidth = Math.ceil(54 * fontScale);
   const leftInset = axisWidth + spacing['space-2'];
   const plotWidth = Math.max(0, width - leftInset - rightInset);
@@ -154,6 +160,33 @@ export function EvolutionGraph({
   );
 }
 
+function EmptyChart({ state, testID }: Readonly<{ state: EmptyState; testID?: string }>) {
+  const p = usePalette();
+  return (
+    <View
+      testID={testID}
+      style={[styles.empty, { backgroundColor: p['surface-100'], borderColor: p.line }]}
+    >
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.emptyGrid]}>
+        {['top', 'middle', 'bottom'].map((line) => (
+          <View key={line} style={[styles.emptyGuide, { borderColor: p.line }]} />
+        ))}
+      </View>
+      <View style={[styles.emptyContent, { backgroundColor: p['surface-100'] }]}>
+        <View aria-hidden>
+          <Feather name="trending-up" size={22} color={p['brand-ink']} />
+        </View>
+        <Text style={[textStyles.label, styles.centeredText, { color: p.ink }]}>{state.title}</Text>
+        {state.hint ? (
+          <Text style={[textStyles['body-sm'], styles.centeredText, { color: p['ink-muted'] }]}>
+            {state.hint}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 function axisBounds(points: readonly EvolutionPoint[], initial: number) {
   let low = initial;
   let high = initial;
@@ -166,6 +199,26 @@ function axisBounds(points: readonly EvolutionPoint[], initial: number) {
 }
 
 const styles = StyleSheet.create({
+  empty: {
+    minHeight: 144,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii['radius-md'],
+    padding: spacing['space-3'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyGrid: {
+    justifyContent: 'space-evenly',
+    paddingHorizontal: spacing['space-3'],
+  },
+  emptyGuide: { borderTopWidth: StyleSheet.hairlineWidth },
+  emptyContent: {
+    alignItems: 'center',
+    gap: spacing['space-1'],
+    padding: spacing['space-2'],
+    borderRadius: radii['radius-sm'],
+  },
+  centeredText: { textAlign: 'center' },
   chart: { minHeight: plotHeight + sizes['tap-min'] },
   axis: { ...textStyles.caption, position: 'absolute', left: 0 },
   point: {

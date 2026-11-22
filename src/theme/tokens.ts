@@ -1,11 +1,8 @@
-import { createContext, useContext } from 'react';
 import type { TextStyle } from 'react-native';
 import source from './design-tokens.json';
-import lightPalette from './light-palette.json';
 
-export function palette(theme: 'light' | 'dark' = 'dark'): Record<string, string> {
-  const dark = Object.fromEntries(source.color.tokens.map((token) => [token.name, token.value]));
-  const values = theme === 'light' ? { ...dark, ...lightPalette } : dark;
+export function palette(): Record<string, string> {
+  const values = Object.fromEntries(source.color.tokens.map((token) => [token.name, token.value]));
   values.focus = values.brand;
   return values;
 }
@@ -37,8 +34,6 @@ export const textStyles: Record<string, TextStyle> = Object.fromEntries(
 );
 export const shadows = () =>
   Object.fromEntries(source.shadow.tokens.map((token) => [token.name, token.value]));
-const PaletteContext = createContext(palette());
-export const PaletteProvider = PaletteContext.Provider;
 export function usePalette() {
-  return useContext(PaletteContext);
+  return palette();
 }

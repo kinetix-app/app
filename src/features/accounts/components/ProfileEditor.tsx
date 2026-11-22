@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ProfileBack } from './ProfileBack';
+import { MeasurementSystemSelector } from '@/components/MeasurementSystemSelector';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { apiClient } from '@/services/apiClient';
@@ -179,42 +180,14 @@ function MeasurementSystemFields({
         control={form.control}
         name="measurement_system"
         render={({ field: { value, onChange } }) => (
-          <View
-            accessibilityRole="radiogroup"
-            accessibilityLabel="Measurement system"
-            style={{ flexDirection: 'row', gap: 12 }}
-          >
-            {(['metric', 'imperial'] as const).map((unit) => (
-              <Pressable
-                key={unit}
-                accessibilityRole="radio"
-                accessibilityLabel={unit === 'metric' ? 'Metric' : 'Imperial'}
-                accessibilityState={{
-                  selected: value === unit,
-                  checked: value === unit,
-                  disabled,
-                }}
-                disabled={disabled}
-                onPress={() => {
-                  updateMeasurementsForUnit(unit, value, account, form);
-                  onChange(unit);
-                }}
-                style={[
-                  s.field,
-                  {
-                    flex: 1,
-                    borderColor: value === unit ? p.brand : p['line-strong'],
-                    backgroundColor: value === unit ? p['brand-soft'] : p['surface-300'],
-                  },
-                ]}
-              >
-                <Text style={{ color: value === unit ? p['brand-ink'] : p.ink }}>
-                  {unit === 'metric' ? 'Metric' : 'Imperial'}
-                  {value === unit ? ' ✓' : ''}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <MeasurementSystemSelector
+            value={value}
+            disabled={disabled}
+            onChange={(unit) => {
+              updateMeasurementsForUnit(unit, value, account, form);
+              onChange(unit);
+            }}
+          />
         )}
       />
       {error ? (

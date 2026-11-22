@@ -196,9 +196,7 @@ function HomeNavigation({
           />
         );
       case 'progress':
-        return (
-          <ProgressScreen account={account} onClose={closeProfilePanel} active={panelActive} />
-        );
+        return <ProgressScreen account={account} onClose={closeProfilePanel} />;
       case 'friends':
         return (
           <FriendsScreen

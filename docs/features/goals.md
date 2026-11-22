@@ -8,13 +8,13 @@ to leave it out of the new check-in. Successful saves show a toast. Failed saves
 the draft and reuse the same submission ID for a retry.
 
 The trends card uses the same chart as exercise evolution. Select a metric to show its
-observations. An empty chart shows an empty grid, and a recorded check-in appears in the
-dated history. If a metric has several observations on the same day, the chart shows
-the last one and the history keeps each entry. The screen, forms and graph follow the
-device's appearance setting, using Kinetix's light and dark palettes.
+observations. An empty chart shows guidance for the selected metric inside the grid, and a
+recorded check-in appears in the dated history. If a metric has several observations on the same day, the chart shows
+the last one and the history keeps each entry. The screen, forms and chart use Kinetix's dark palette.
 
-Display units follow the profile preference. Metric uses cm and kg. Imperial uses feet
-and inches for height, inches for other lengths and pounds for mass. Percentages stay
+The chart, history, target, and measurement entry use the saved profile unit
+preference. Metric uses cm and kg. Imperial uses feet and inches for height, inches
+for other lengths, and pounds for mass. Percentages stay
 the same. The API uses canonical decimals. Logging the latest height or weight refreshes
 the related profile field. Direct edits to those values in Profile appear in the day's history.
 

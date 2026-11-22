@@ -75,7 +75,11 @@ test('records private body trends, syncs profile values, and retains a weight ta
   await openProgress(page);
   await page.getByRole('tab', { name: 'Waist', exact: true }).click();
   await expect(page.getByTestId('body-measurement-chart')).toBeVisible();
-  await expect(page.getByText('No waist measurements yet.', { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByTestId('body-measurement-chart')
+      .getByText('No waist measurements yet.', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: /^\d{4}-\d{2}-\d{2},/ })).toHaveCount(0);
   await page.screenshot({ path: '.codex/artifacts/previews/body-progress-empty.png' });
 
@@ -165,10 +169,9 @@ test('records private body trends, syncs profile values, and retains a weight ta
       .getByTestId('body-measurement-chart')
       .evaluate((chart) => getComputedStyle(chart.parentElement!).backgroundColor);
   await page.emulateMedia({ colorScheme: 'light' });
-  const light = await chartCardBackground();
-  await page.screenshot({ path: '.codex/artifacts/previews/body-progress-light.png' });
+  await expect.poll(chartCardBackground).toBe('rgb(22, 29, 24)');
   await page.emulateMedia({ colorScheme: 'dark' });
-  await expect.poll(chartCardBackground).not.toBe(light);
+  await expect.poll(chartCardBackground).toBe('rgb(22, 29, 24)');
   await page.screenshot({ path: '.codex/artifacts/previews/body-progress-dark.png' });
   await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
   await expect(page.getByRole('tablist', { name: 'Main navigation' })).toBeVisible();

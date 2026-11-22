@@ -1,24 +1,15 @@
 import { Feather } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useColorScheme,
-} from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
+import { ChartMetricSelector } from '@/components/ChartMetricSelector';
 import { Button } from '@/components/Button';
 import { EvolutionGraph } from '@/components/EvolutionGraph';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { Toast } from '@/components/Toast';
-import { palette, PaletteProvider, radii, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { MeasurementSystem } from '../profileForm';
 import { measurementKey, progressApi, targetKey } from '../progressApi';
 import {
@@ -40,24 +31,14 @@ import { ProfileBack } from './ProfileBack';
 import { MeasurementEditor, PhysicalTargetEditor } from './ProgressEditors';
 
 const noMeasurements: readonly BodyMeasurement[] = [];
-const progressPalettes = { light: palette('light'), dark: palette('dark') };
 type Editor =
   | { kind: 'measurement' }
   | { kind: 'target'; objective: Objective; target: PhysicalTarget['target'] };
 
-type ProgressScreenProps = Readonly<{ account: Account; onClose: () => void; active?: boolean }>;
-
-export function ProgressScreen({ active = true, ...props }: ProgressScreenProps) {
-  const appearance = useColorScheme() === 'light' ? 'light' : 'dark';
-  return (
-    <PaletteProvider value={progressPalettes[appearance]}>
-      {active ? <StatusBar style={appearance === 'light' ? 'dark' : 'light'} /> : null}
-      <ProgressContent {...props} />
-    </PaletteProvider>
-  );
-}
-
-function ProgressContent({ account, onClose }: ProgressScreenProps) {
+export function ProgressScreen({
+  account,
+  onClose,
+}: Readonly<{ account: Account; onClose: () => void }>) {
   const p = usePalette();
   const cache = useQueryClient();
   const system = account.profile.measurement_system ?? 'metric';
@@ -143,27 +124,16 @@ function ProgressContent({ account, onClose }: ProgressScreenProps) {
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
                   Measurement trends
                 </Text>
-                <ScrollView
-                  horizontal
-                  accessibilityRole="tablist"
-                  accessibilityLabel="Measurement metric"
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.selectors}
-                >
-                  {measurementMetrics.map((key) => (
-                    <AnimatedTextSelector
-                      key={key}
-                      label={measurementDefinitions[key].label}
-                      selected={key === metric}
-                      role="tab"
-                      reduceMotion
-                      onPress={() => {
-                        setMetric(key);
-                        setSelected(null);
-                      }}
-                    />
-                  ))}
-                </ScrollView>
+                <ChartMetricSelector
+                  metrics={measurementMetrics}
+                  value={metric}
+                  label="Measurement metric"
+                  labelFor={(key) => measurementDefinitions[key].label}
+                  onChange={(key) => {
+                    setMetric(key);
+                    setSelected(null);
+                  }}
+                />
                 {measurements.isPending ? (
                   <ActivityIndicator accessibilityLabel="Loading measurements" color={p.brand} />
                 ) : null}
@@ -175,14 +145,18 @@ function ProgressContent({ account, onClose }: ProgressScreenProps) {
                 ) : null}
                 {measurements.data ? (
                   <>
-                    <MeasurementHeadline
-                      highlighted={highlighted}
-                      label={label}
-                      failed={measurements.isError}
-                    />
+                    {highlighted ? <MeasurementHeadline highlighted={highlighted} /> : null}
                     <EvolutionGraph
                       testID="body-measurement-chart"
                       points={points}
+                      emptyState={
+                        measurements.isError
+                          ? undefined
+                          : {
+                              title: `No ${label.toLowerCase()} measurements yet.`,
+                              hint: 'Log a measurement to start tracking.',
+                            }
+                      }
                       selected={selected}
                       onSelect={setSelected}
                       formatAxis={(value, showUnit) =>
@@ -265,31 +239,17 @@ function ProgressContent({ account, onClose }: ProgressScreenProps) {
 
 function MeasurementHeadline({
   highlighted,
-  label,
-  failed,
-}: Readonly<{
-  highlighted: ReturnType<typeof measurementSeries>[number] | undefined;
-  label: string;
-  failed: boolean;
-}>) {
+}: Readonly<{ highlighted: ReturnType<typeof measurementSeries>[number] }>) {
   const p = usePalette();
-  if (highlighted) {
-    return (
-      <View style={styles.metric}>
-        <Text style={[textStyles['metric-lg'], styles.numbers, { color: p.ink }]}>
-          {highlighted.label}
-        </Text>
-        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {displayProgressDate(highlighted.date)}
-        </Text>
-      </View>
-    );
-  }
-  if (failed) return null;
   return (
-    <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-      No {label.toLowerCase()} measurements yet.
-    </Text>
+    <View style={styles.metric}>
+      <Text style={[textStyles['metric-lg'], styles.numbers, { color: p.ink }]}>
+        {highlighted.label}
+      </Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        {displayProgressDate(highlighted.date)}
+      </Text>
+    </View>
   );
 }
 
@@ -398,7 +358,6 @@ const styles = StyleSheet.create({
   content: { paddingBottom: spacing['space-8'] },
   sections: { gap: spacing['space-4'] },
   card: { borderRadius: radii['radius-lg'], padding: spacing['space-4'], gap: spacing['space-3'] },
-  selectors: { gap: spacing['space-4'] },
   metric: { gap: spacing['space-1'] },
   numbers: { fontVariant: ['tabular-nums'] },
   headingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] },
