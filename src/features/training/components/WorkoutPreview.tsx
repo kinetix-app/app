@@ -8,6 +8,7 @@ import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
 import { formatCardioDuration } from '../cardio';
 import type { CompletedSession } from '../schemas';
+import { formatElapsedDuration } from '../workoutFormat';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 import { WorkoutExerciseCard } from './WorkoutExerciseList';
 
@@ -169,15 +170,6 @@ function WorkoutSummary({ session }: Readonly<{ session: CompletedSession }>) {
 
 function ExerciseSeparator() {
   return <View style={styles.separator} />;
-}
-
-function formatElapsedDuration(seconds: number) {
-  if (seconds < 60) return `${seconds} sec`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours} h`;
 }
 
 function formatWorkoutSet(set: CompletedSession['exercises'][number]['sets'][number]) {

@@ -20,16 +20,19 @@ completed sessions. Detailed API, state, retry and unit behavior is in
 
 | Where to open                          | Action                                                                   |
 | -------------------------------------- | ------------------------------------------------------------------------ |
-| Profile → Training history             | Tap **View workout** on a completed session.                             |
+| Profile → Training history             | Tap a completed workout card.                                            |
 | Workout saved                          | Tap **View workout** after finishing a session.                          |
 | Feed → New post                        | Select a workout and tap **Preview workout**. Back returns to the draft. |
 | Exercise details → History             | Tap **View workout** on an entry to see the full session.                |
 | League → Rankings → Your score history | Tap **View workout** on a credited workout.                              |
 | Feed post                              | Tap the workout on a post you can see.                                   |
 
-Training history opens on a paginated list of completed sessions. Selecting a
-row opens a preview above the list, so Back returns to the same place. The
-preview shows the session date, elapsed time, exercise and set counts, and
+Training history opens on a paginated list of completed sessions grouped by local
+completion month. History and Feed use the same summary card for workout metrics
+and a short exercise list. Feed includes recorded lifting volume when available.
+History cards have a separate share shortcut. Selecting a card opens a preview
+above the list, so Back returns to the same place. The preview shows the session
+date, elapsed time, exercise and set counts, and
 recorded results in order. The `showShare` parameter enables a persistent
 **Share to feed** action when the caller also provides a share handler. The
 composer hides that action and keeps sharing in the post draft.

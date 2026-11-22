@@ -113,7 +113,7 @@ test('cardio recording survives reload and persists mixed measurements', async (
   await page.getByRole('tab', { name: 'Feed', exact: true }).click();
   await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
-  await page.getByRole('button', { name: `View workout ${result.id}`, exact: true }).click();
+  await page.getByTestId(`history-workout-${result.id}`).click();
   await expect(page.getByText('1.25 km · 00:12:30', { exact: true })).toBeVisible();
 });
 

@@ -102,6 +102,22 @@ test('feed shows the author, caption, workout summary and counts', async () => {
   expect(feedApi.posts).toHaveBeenCalledWith(null, expect.any(AbortSignal), 'friends');
 });
 
+test('a workout without lifting volume shows its exercise count and recorded duration', async () => {
+  const post = makePost();
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [
+      makePost({ workout: { ...post.workout!, duration_seconds: 26, total_volume_kg: '0.00' } }),
+    ],
+    next_before_id: null,
+  });
+  renderFeed();
+  const summary = within(await screen.findByRole('button', { name: 'See Bob’s workout' }));
+  expect(summary.getByText('26 sec')).toBeTruthy();
+  expect(summary.getByText('Exercises')).toBeTruthy();
+  expect(summary.queryByText('Volume')).toBeNull();
+  expect(feedApi.workout).not.toHaveBeenCalled();
+});
+
 test('empty feed invites the person to share a workout', async () => {
   jest.mocked(feedApi.posts).mockResolvedValue({ items: [], next_before_id: null });
   renderFeed();

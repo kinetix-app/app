@@ -524,7 +524,7 @@ test('a workout from Training history can be shared and opens the Feed composer'
   await screen.findByText('No posts yet', undefined, { timeout: 10000 });
   fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   fireEvent.press(screen.getByText('Training history'));
-  fireEvent.press(await screen.findByRole('button', { name: 'Share workout 5 to feed' }));
+  fireEvent.press(await screen.findByRole('button', { name: /^Share workout from .* to feed$/ }));
   expect(screen.getByRole('tab', { name: 'Feed' }).props.accessibilityState.selected).toBe(true);
   const option = await screen.findByRole('radio', { name: /Workout finished/ });
   expect(option.props.accessibilityState.checked).toBe(true);

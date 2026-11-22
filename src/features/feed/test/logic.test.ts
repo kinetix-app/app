@@ -1,7 +1,8 @@
 import { ApiError } from '@/services/apiClient';
+import { exerciseLine } from '@/features/training/workoutFormat';
 import { buildPostForm } from '../api';
 import { shareErrorMessage } from '../components/ShareWorkoutScreen';
-import { duration, exerciseLine, relativeTime, setLine, volume, authorName } from '../format';
+import { duration, relativeTime, setLine, volume, authorName } from '../format';
 import { mediaPathSchema, postPageSchema } from '../schemas';
 import { makePost } from './fixtures';
 

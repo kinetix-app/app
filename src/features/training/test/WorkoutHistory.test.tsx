@@ -1,6 +1,14 @@
 import React from 'react';
 import { FlatList } from 'react-native';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WorkoutHistory } from '../components/WorkoutHistory';
 import { trainingApi } from '../api';
@@ -90,7 +98,7 @@ test('retries the list and detail independently and displays saved results inclu
     .mockResolvedValue(session);
   open();
   fireEvent.press(await screen.findByText('Retry'));
-  fireEvent.press(await screen.findByLabelText('View workout 1'));
+  fireEvent.press(await screen.findByTestId('history-workout-1'));
   fireEvent.press(await screen.findByText('Retry'));
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
   expect(screen.getByText('Set 1')).toBeTruthy();
@@ -98,19 +106,32 @@ test('retries the list and detail independently and displays saved results inclu
   expect(screen.getByText('— kg · — reps')).toBeTruthy();
   expect(trainingApi.session).toHaveBeenLastCalledWith(1, 'kg', expect.anything());
   fireEvent.press(screen.getByLabelText('Back to history'));
-  expect(await screen.findByLabelText('View workout 1')).toBeTruthy();
+  expect(await screen.findByTestId('history-workout-1')).toBeTruthy();
 });
-test('paginates, retries a failed next page and stops requesting after the last page', async () => {
+test('groups paginated results by completion month and retries a failed next page', async () => {
+  const older = {
+    ...session,
+    id: 3,
+    started_at: '2026-09-28T10:00:00Z',
+    ended_at: '2026-09-28T11:00:00Z',
+  };
   jest
     .mocked(trainingApi.sessions)
     .mockResolvedValueOnce({ items: [session], limit: 1, offset: 0 })
     .mockRejectedValueOnce(new Error('offline'))
-    .mockResolvedValueOnce({ items: [{ ...session, id: 2 }], limit: 2, offset: 1 });
+    .mockResolvedValueOnce({ items: [{ ...session, id: 2 }, older], limit: 3, offset: 1 });
   const view = open();
-  await screen.findByLabelText('View workout 1');
+  const summary = within(await screen.findByTestId('history-workout-1'));
+  expect(summary.getByText('1 h')).toBeTruthy();
+  expect(summary.getByText('Bench press')).toBeTruthy();
+  expect(summary.getByText('Sets')).toBeTruthy();
+  expect(trainingApi.session).not.toHaveBeenCalled();
   act(() => view.UNSAFE_getByType(FlatList).props.onEndReached());
-  fireEvent.press((await screen.findAllByText('Retry')).at(-1)!);
-  expect(await screen.findByLabelText('View workout 2')).toBeTruthy();
+  fireEvent.press(await screen.findByText('Retry'));
+  expect(await screen.findByTestId('history-workout-2')).toBeTruthy();
+  expect(screen.getAllByRole('header', { name: 'October 2026' })).toHaveLength(1);
+  expect(screen.getByRole('header', { name: 'September 2026' })).toBeTruthy();
+  expect(screen.getByTestId('history-workout-3')).toBeTruthy();
   expect(trainingApi.sessions).toHaveBeenNthCalledWith(2, 1, 'kg', expect.anything());
   expect(trainingApi.sessions).toHaveBeenNthCalledWith(3, 1, 'kg', expect.anything());
   act(() => view.UNSAFE_getByType(FlatList).props.onEndReached());
@@ -145,7 +166,7 @@ test('preserves zero and missing cardio measurements with explicit distance and 
     .mockResolvedValue({ items: [cardioSession], limit: 20, offset: 0 });
   jest.mocked(trainingApi.session).mockResolvedValue(cardioSession);
   open();
-  fireEvent.press(await screen.findByLabelText('View workout 1'));
+  fireEvent.press(await screen.findByTestId('history-workout-1'));
   expect(await screen.findByText('1.25 km · 00:12:30')).toBeTruthy();
   expect(screen.getByText('— km · 00:00:00')).toBeTruthy();
   expect(screen.getByText('1.25 km · —')).toBeTruthy();
@@ -156,10 +177,10 @@ test('completed workouts can be shared to the feed from the list and the details
   jest.mocked(trainingApi.session).mockResolvedValue(session);
   const onShare = jest.fn();
   open(onShare);
-  fireEvent.press(await screen.findByRole('button', { name: 'Share workout 1 to feed' }));
+  fireEvent.press(await screen.findByRole('button', { name: /^Share workout from .* to feed$/ }));
   expect(onShare).toHaveBeenLastCalledWith(1);
   expect(trainingApi.session).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByRole('button', { name: 'View workout 1' }));
+  fireEvent.press(screen.getByTestId('history-workout-1'));
   expect(await screen.findByRole('header', { name: 'Workout preview' })).toBeTruthy();
   expect(await screen.findByText('1 h')).toBeTruthy();
   fireEvent.press(await screen.findByRole('button', { name: 'Share to feed' }));
@@ -172,8 +193,8 @@ test('without a share handler the history offers no share buttons', async () => 
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [session], limit: 50, offset: 0 });
   jest.mocked(trainingApi.session).mockResolvedValue(session);
   open();
-  const entry = await screen.findByRole('button', { name: 'View workout 1' });
-  expect(screen.queryByRole('button', { name: 'Share workout 1 to feed' })).toBeNull();
+  const entry = await screen.findByTestId('history-workout-1');
+  expect(screen.queryByRole('button', { name: /^Share workout from .* to feed$/ })).toBeNull();
   fireEvent.press(entry);
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Share to feed' })).toBeNull();

@@ -142,7 +142,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
   await expect(page.getByRole('button', { name: 'Log measurements', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
-  await page.getByRole('button', { name: `View workout ${completed.id}`, exact: true }).click();
+  await page.getByTestId(`history-workout-${completed.id}`).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to history', exact: true }).click();
   await page.getByRole('button', { name: 'Back to profile', exact: true }).click();

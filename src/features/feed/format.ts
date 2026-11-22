@@ -71,11 +71,6 @@ export function setLine(set: {
   return [work, extra.join(' in ')].filter(Boolean).join(' · ') || 'Done';
 }
 
-export function exerciseLine(names: readonly string[], shown = 3) {
-  if (names.length <= shown) return names.join(' · ');
-  return `${names.slice(0, shown).join(' · ')} · +${names.length - shown} more`;
-}
-
 export function countLabel(value: number, singular: string, plural = `${singular}s`) {
   return `${value} ${value === 1 ? singular : plural}`;
 }

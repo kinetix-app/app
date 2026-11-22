@@ -112,6 +112,7 @@ test('reopens the same completed workout from private screens and an authorized 
   const { id: sessionId } = await (await finish).json();
   const viewSaved = page.getByRole('button', { name: 'View workout', exact: true });
   const viewSession = page.getByRole('button', { name: `View workout ${sessionId}`, exact: true });
+  const historyWorkout = page.getByTestId(`history-workout-${sessionId}`);
   const privateSet = page.getByText('42.50 kg · 8 reps', { exact: true });
   await expect(page.getByRole('heading', { name: 'Workout saved' })).toBeVisible();
   await viewSaved.click();
@@ -139,16 +140,19 @@ test('reopens the same completed workout from private screens and an authorized 
   await page.getByRole('button', { name: 'Training history' }).click();
   await expect(page.getByRole('heading', { name: 'Workout history', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Workout preview' })).toHaveCount(0);
+  await expect(historyWorkout.getByText('Acceptance press', { exact: true })).toBeVisible();
+  await expect(historyWorkout.getByText('Exercises', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Share workout from .* to feed$/ })).toBeVisible();
   const privateRoute = `**/api/v1/sessions/${sessionId}?weight_unit=kg`;
   await page.route(privateRoute, (route) => route.abort());
-  await viewSession.click();
+  await historyWorkout.click();
   await expect(page.getByRole('alert')).toContainText('Could not connect');
   await page.unroute(privateRoute);
   await page.getByRole('button', { name: 'Retry' }).click();
   await expect(privateSet).toBeVisible();
   await expect(page.getByRole('button', { name: 'Share to feed', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to history' }).click();
-  await expect(viewSession).toBeVisible();
+  await expect(historyWorkout).toBeVisible();
 
   await page.getByRole('tab', { name: 'League', exact: true }).click();
   await page.getByRole('button', { name: leagueName, exact: true }).click();
@@ -170,8 +174,12 @@ test('reopens the same completed workout from private screens and an authorized 
 
   const peerPage = await browser.newPage();
   try {
+    await peerPage.setViewportSize({ width: 320, height: 740 });
     await signIn(peerPage, peer);
-    await peerPage.getByRole('button', { name: 'See Workout Alice’s workout' }).click();
+    const postWorkout = peerPage.getByRole('button', { name: 'See Workout Alice’s workout' });
+    await expect(postWorkout.getByText('340 kg', { exact: true })).toBeVisible();
+    await expect(postWorkout.getByText('Acceptance press', { exact: true })).toBeVisible();
+    await postWorkout.click();
     await expect(peerPage.getByText('8 reps × 42.5 kg', { exact: true })).toBeVisible();
     await peerPage.getByRole('button', { name: 'Back to feed' }).click();
     await peerPage.getByRole('tab', { name: 'League', exact: true }).click();
