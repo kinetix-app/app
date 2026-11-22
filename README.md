@@ -188,11 +188,12 @@ Stop the server with `docker compose --env-file .env.sonar --profile sonar stop 
 
 [.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and on pushes to `master`, using Node from `.node-version` and pnpm from `package.json`. It runs these jobs:
 
-- **Static checks**, **Tests and coverage**, and **Expo checks** run in parallel on Ubuntu 24.04. Each restores the pnpm store and installs with `--frozen-lockfile`. They run TypeScript/ESLint/Prettier, Jest with coverage, and Expo Doctor/Android/iOS/web export respectively. Tests upload the LCOV report; coverage appears in the test logs and has no percentage threshold yet.
-- **Frontend checks:** waits for the three jobs and fails if any did not succeed, preserving the required branch-protection check.
+- **Detect code changes** compares the pull request merge commit with its base, or a push with its previous commit. Changes outside `docs/` and Markdown files count as code changes, including assets, dependencies, configuration and workflows. If the base is unavailable, checks run.
+- **Static checks** always run TypeScript, ESLint and Prettier. When code changes, **Tests and coverage** and **Expo checks** also run, in parallel with static checks. Each restores the pnpm store and installs with `--frozen-lockfile`. Tests upload the LCOV report; Expo runs Doctor and the Android/iOS/web export. Coverage appears in the test logs and has no percentage threshold yet.
+- **Frontend checks:** waits for change detection and the check jobs; it accepts skipped test and Expo jobs only when there are no code changes, preserving the required branch-protection check.
 - **SonarCloud:** uploads the analysis and coverage report to SonarCloud, then waits up to 300 seconds for the quality gate. Both pull-request and main-branch scans fail the job when the project's configured coverage or analysis requirements fail, or when the gate result cannot be obtained before the timeout. Quality gate thresholds are managed in SonarCloud; confirm that the assigned gate includes the required coverage and analysis conditions.
 
-SonarCloud starts after the tests job uploads coverage, independently of the other checks. Parallel jobs repeat setup, so elapsed time and total runner minutes depend on runner availability and job durations.
+For code changes, SonarCloud starts after the tests job uploads coverage, independently of the other checks. For documentation-only changes, its job reports success without running analysis because there is no new coverage report. Parallel jobs repeat setup, so elapsed time and total runner minutes depend on runner availability and job durations.
 
 The workflow uses commit-pinned actions, a read-only repository token and no persisted checkout credentials. A newer commit cancels the previous run for the same PR; each job has a timeout. No branch/path filters are used, so the required check can run for every PR.
 
