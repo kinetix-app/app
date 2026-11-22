@@ -14,6 +14,7 @@ export function IconButton({
   disabled = false,
   onOverlay = false,
   bare = false,
+  expanded,
 }: Readonly<{
   icon: React.ComponentProps<typeof Feather>['name'] | React.ReactElement;
   label: string;
@@ -21,6 +22,7 @@ export function IconButton({
   disabled?: boolean;
   onOverlay?: boolean;
   bare?: boolean;
+  expanded?: boolean;
 }>) {
   const p = usePalette();
   let background = onOverlay ? p.brand : p['surface-300'];
@@ -33,7 +35,7 @@ export function IconButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, expanded }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => ({

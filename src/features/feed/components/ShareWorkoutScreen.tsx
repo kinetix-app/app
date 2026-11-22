@@ -46,6 +46,7 @@ export function ShareWorkoutScreen({
   const [detailSessionId, setDetailSessionId] = useState<number | null>(null);
   const [caption, setCaption] = useState('');
   const [description, setDescription] = useState('');
+  const [photoInfoOpen, setPhotoInfoOpen] = useState(false);
   const [photos, setPhotos] = useState<PostPhoto[]>([]);
   const [error, setError] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -257,9 +258,26 @@ export function ShareWorkoutScreen({
         </View>
 
         <View style={ui.gap}>
-          <Text style={[textStyles['title-md'], { color: p.ink }]}>
-            Photos · {photos.length}/{MAX_POST_IMAGES}
-          </Text>
+          <View style={ui.row}>
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>
+              Photos · {photos.length}/{MAX_POST_IMAGES}
+            </Text>
+            <IconButton
+              icon="info"
+              label="Photo requirements"
+              bare
+              expanded={photoInfoOpen}
+              onPress={() => setPhotoInfoOpen(!photoInfoOpen)}
+            />
+          </View>
+          {photoInfoOpen ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[textStyles['body-sm'], { color: p['ink-muted'] }]}
+            >
+              Use JPEG, PNG or WebP up to 5 MB each. Location and other photo details are removed.
+            </Text>
+          ) : null}
           <View style={styles.photos}>
             {photos.map((photo, position) => (
               <View key={`${photo.uri}-${position}`} style={styles.thumbnail}>
@@ -300,9 +318,6 @@ export function ShareWorkoutScreen({
               </Pressable>
             ) : null}
           </View>
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            Optional · JPEG, PNG or WebP up to 5 MB. Location and other photo details are removed.
-          </Text>
           {photoError ? (
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
               {photoError}

@@ -675,6 +675,18 @@ test('photos can be picked, filtered by type and size, removed and shared', asyn
   ]);
 });
 
+test('photo requirements are available on demand', async () => {
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+  const info = screen.getByRole('button', { name: 'Photo requirements' });
+  expect(screen.queryByText(/Location and other photo details/)).toBeNull();
+  fireEvent.press(info);
+  expect(info.props.accessibilityState.expanded).toBe(true);
+  expect(screen.getByText(/Location and other photo details/)).toBeTruthy();
+  fireEvent.press(info);
+  expect(screen.queryByText(/Location and other photo details/)).toBeNull();
+});
+
 test('photo access denial, cancellation and picker failures are explained', async () => {
   const permission = jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync);
   const picker = jest.mocked(ImagePicker.launchImageLibraryAsync);
