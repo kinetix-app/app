@@ -10,6 +10,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react-native';
+import { textStyles } from '@/theme/tokens';
 import { ApiError } from '@/services/apiClient';
 import { trainingApi } from '@/features/training/api';
 import { exampleExercise } from '@/features/training/test/fixtures';
@@ -103,6 +104,22 @@ test('feed shows the author, description, workout title, summary and counts', as
   expect(screen.getByText('2 likes')).toBeTruthy();
   expect(screen.queryByLabelText('Delete your post')).toBeNull();
   expect(feedApi.posts).toHaveBeenCalledWith(null, expect.any(AbortSignal), 'friends');
+});
+
+test('captions are headings while descriptions keep body typography', async () => {
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [
+      makePost({ caption: 'A bigger caption', description: '' }),
+      makePost({ id: 11, caption: '', description: 'Description only' }),
+    ],
+    next_before_id: null,
+  });
+  renderFeed();
+  expect(await screen.findByRole('header', { name: 'A bigger caption' })).toHaveStyle(
+    textStyles['title-lg'],
+  );
+  expect(screen.getByText('Description only')).toHaveStyle(textStyles.body);
+  expect(screen.queryByRole('header', { name: 'Description only' })).toBeNull();
 });
 
 test('a workout without lifting volume shows its exercise count and recorded duration', async () => {

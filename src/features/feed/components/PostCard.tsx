@@ -65,7 +65,9 @@ export function PostCard({
       {post.caption || post.description ? (
         <View style={styles.copy}>
           {post.caption ? (
-            <Text style={[textStyles['title-md'], { color: p.ink }]}>{post.caption}</Text>
+            <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
+              {post.caption}
+            </Text>
           ) : null}
           {post.description ? (
             <Text style={[textStyles.body, { color: p.ink }]}>{post.description}</Text>
