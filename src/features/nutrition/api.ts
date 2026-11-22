@@ -10,6 +10,7 @@ import {
   nutritionDaySchema,
   nutritionGoalInputSchema,
   nutritionGoalSchema,
+  nutritionRecommendationSchema,
   recipeInputSchema,
   recipeListSchema,
   recipeMealItemInputSchema,
@@ -30,6 +31,11 @@ function catalogueParams(name: string, offset: number, limit: number) {
 }
 
 export const nutritionApi = {
+  recommendation: (signal?: AbortSignal) =>
+    apiClient.get('/api/v1/nutrition-goals/recommendation', {
+      schema: nutritionRecommendationSchema,
+      signal,
+    }),
   goal: async (signal?: AbortSignal) => {
     try {
       return await apiClient.get('/api/v1/nutrition-goals/me', {

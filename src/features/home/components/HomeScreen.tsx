@@ -15,6 +15,7 @@ import { getAccount, type Account } from '@/features/accounts/api';
 import {
   ProfileAvatar,
   ProfileEditor,
+  ActivityEditor,
   ObjectiveEditor,
   ProfileScreen,
   ProgressScreen,
@@ -146,6 +147,21 @@ function HomeNavigation({
   );
   function renderProfilePanel() {
     switch (profilePanel) {
+      case 'activity':
+        return (
+          <ActivityEditor
+            account={account}
+            active={panelActive}
+            onSaved={(next) => {
+              onAccount(next);
+              void cache.invalidateQueries({
+                queryKey: ['nutrition', accountId, 'recommendation'],
+              });
+              setProfilePanel('overview');
+            }}
+            onCancel={closeProfilePanel}
+          />
+        );
       case 'profile':
         return (
           <ProfileEditor

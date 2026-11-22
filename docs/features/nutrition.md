@@ -2,6 +2,13 @@
 
 ## Current state
 
+Edit goal first opens a recommendation preview from
+`GET /api/v1/nutrition-goals/recommendation`. It explains Mifflin–St Jeor,
+activity, objective adjustment and the macro split. Acceptance explicitly saves
+through the existing goal APIs; Enter manually opens the existing editor and
+Back returns to the preview. Missing/ineligible profiles show an explanation;
+network/save failures support retry. No automatic onboarding save is introduced.
+
 The app has a working nutrition diary and goal editor backed by authenticated nutrition
 API calls. The diary selects a day from the current seven-day strip, shows calorie and
 macro totals against the account's nutrition goal, lists meal items by meal, supports

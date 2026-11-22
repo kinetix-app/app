@@ -18,6 +18,13 @@ const macros = [
   { label: 'Fat', field: 'fats', color: 'macro-fat' },
 ] as const;
 
+const targetPurpose = {
+  lose_fat: 'to lose fat',
+  build_muscle: 'to build muscle',
+  gain_weight: 'to gain weight',
+  maintain_weight: 'to maintain weight',
+};
+
 // This is the single place the future diary endpoint will populate from meal items.
 
 const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const;
@@ -302,6 +309,7 @@ export function NutritionDiaryScreen({
                 </Text>
                 <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
                   of {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
+                  {goal.data?.objective ? ` ${targetPurpose[goal.data.objective]}` : ''}
                 </Text>
               </View>
               {onEditGoal ? (
