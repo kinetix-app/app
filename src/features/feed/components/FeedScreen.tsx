@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useState } from 'react';
 import { FlatList, Modal, RefreshControl, StyleSheet, Text, View } from 'react-native';
@@ -114,7 +115,7 @@ export function FeedScreen({
       <ScreenHeader title="Feed">
         <View style={ui.row}>
           <IconButton
-            icon="plus-square"
+            icon={<Ionicons name="create-outline" size={24} color={p.ink} />}
             label="New post"
             onPress={() => setPanel({ kind: 'share' })}
           />

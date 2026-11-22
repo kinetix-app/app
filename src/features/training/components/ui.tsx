@@ -15,7 +15,7 @@ export function IconButton({
   onOverlay = false,
   bare = false,
 }: Readonly<{
-  icon: React.ComponentProps<typeof Feather>['name'];
+  icon: React.ComponentProps<typeof Feather>['name'] | React.ReactElement;
   label: string;
   onPress: () => void;
   disabled?: boolean;
@@ -47,7 +47,7 @@ export function IconButton({
         opacity: disabled || pressed ? 0.55 : 1,
       })}
     >
-      <Feather name={icon} size={24} color={foreground} />
+      {typeof icon === 'string' ? <Feather name={icon} size={24} color={foreground} /> : icon}
     </Pressable>
   );
 }
