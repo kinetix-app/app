@@ -11,6 +11,7 @@ import { PersonScreen } from '@/features/friends';
 import { feedApi } from '../api';
 import { prependPost, removePost, scopedFeedKey, updatePost } from '../cache';
 import type { Post } from '../schemas';
+import { PostOptions, type WorkoutActions } from './PostOptions';
 import { CommentsScreen } from './CommentsScreen';
 import { PostCard } from './PostCard';
 import { ShareWorkoutScreen } from './ShareWorkoutScreen';
@@ -33,6 +34,7 @@ type FeedScreenProps = Readonly<{
   onComposeClosed?: () => void;
   /** Opens the shell's friends screen. */
   onFindFriends?: () => void;
+  workoutActions?: WorkoutActions;
 }>;
 
 export function FeedScreen({
@@ -42,6 +44,7 @@ export function FeedScreen({
   composeSessionId = null,
   onComposeClosed,
   onFindFriends,
+  workoutActions,
 }: FeedScreenProps) {
   const p = usePalette();
   const cache = useQueryClient();
@@ -233,14 +236,18 @@ export function FeedScreen({
           }}
         />
       ) : null}
-      <PostOptions
-        post={options}
-        onClose={() => setOptions(null)}
-        onDelete={(post) => {
-          setOptions(null);
-          setDeleting(post);
-        }}
-      />
+      {options ? (
+        <PostOptions
+          key={options.id}
+          post={options}
+          workoutActions={workoutActions}
+          onClose={() => setOptions(null)}
+          onDelete={(post) => {
+            setOptions(null);
+            setDeleting(post);
+          }}
+        />
+      ) : null}
       <DeleteConfirmation
         post={deleting}
         onCancel={() => setDeleting(null)}
@@ -250,35 +257,6 @@ export function FeedScreen({
         }}
       />
     </View>
-  );
-}
-
-function PostOptions({
-  post,
-  onClose,
-  onDelete,
-}: Readonly<{ post: Post | null; onClose: () => void; onDelete: (post: Post) => void }>) {
-  const p = usePalette();
-  return (
-    <Modal visible={post !== null} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.scrim, { backgroundColor: p.scrim }]}>
-        <View
-          accessibilityViewIsModal
-          style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
-        >
-          <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            Post options
-          </Text>
-          {post?.is_mine ? (
-            <>
-              <Button title="Edit post · Coming soon" secondary disabled onPress={() => {}} />
-              <Button title="Delete post" tone="danger" onPress={() => onDelete(post)} />
-            </>
-          ) : null}
-          <Button title="Close" secondary onPress={onClose} />
-        </View>
-      </View>
-    </Modal>
   );
 }
 

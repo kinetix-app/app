@@ -16,7 +16,7 @@ type PostCardProps = Readonly<{
   likeError: boolean;
   onLike: (post: Post) => void;
   onComments: (post: Post) => void;
-  onOptions: (post: Post) => void;
+  onOptions?: (post: Post) => void;
   onAuthor: (post: Post) => void;
   onWorkout?: (post: Post) => void;
 }>;
@@ -57,7 +57,7 @@ export function PostCard({
             </Text>
           </View>
         </Pressable>
-        {post.is_mine ? (
+        {onOptions && (post.is_mine || post.workout) ? (
           <IconButton icon="more-horizontal" label="Post options" onPress={() => onOptions(post)} />
         ) : null}
       </View>

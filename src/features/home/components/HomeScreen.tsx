@@ -252,6 +252,13 @@ function HomeNavigation({
         <FeedScreen
           accountId={accountId}
           active={tab === 'home' && (!session.draft || session.draft.minimized)}
+          workoutActions={{
+            activeDraft: Boolean(session.draft),
+            expandedDraft: Boolean(session.draft && !session.draft.minimized),
+            available: session.ready && !session.pending && !session.storageError,
+            start: session.startShared,
+            resume: () => session.change((value) => ({ ...value, minimized: false })),
+          }}
           composeSessionId={composeSessionId}
           onComposeClosed={() => setComposeSessionId(null)}
           onFindFriends={() => openProfile('friends')}

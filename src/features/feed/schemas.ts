@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { workoutTitleSchema } from '@/features/training/schemas';
+import { exerciseSummarySchema, workoutTitleSchema } from '@/features/training/schemas';
 
 const entityId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const count = z.number().int().nonnegative();
@@ -37,24 +37,34 @@ export const workoutSummarySchema = z.object({
 
 const decimalText = z.string().regex(/^\d+(\.\d+)?$/);
 
+const workoutSetSchema = z.object({
+  set_number: z.number().int(),
+  reps: count.nullable(),
+  weight_kg: decimalText.nullable(),
+  duration_seconds: count.nullable(),
+  distance_km: decimalText.nullable(),
+});
+
 export const workoutDetailSchema = workoutSummarySchema.extend({
   detailed_exercises: z.array(
     z.object({
       exercise_id: entityId,
       name: z.string(),
       image_url: z.string().nullable().optional(),
-      sets: z.array(
-        z.object({
-          set_number: z.number().int(),
-          reps: count.nullable(),
-          weight_kg: decimalText.nullable(),
-          duration_seconds: count.nullable(),
-          distance_km: decimalText.nullable(),
-        }),
-      ),
+      sets: z.array(workoutSetSchema),
     }),
   ),
 });
+
+export const workoutTemplateSchema = z.object({
+  title: workoutTitleSchema,
+  exercises: z.array(
+    z.object({ exercise: exerciseSummarySchema, sets: z.array(workoutSetSchema) }),
+  ),
+  skipped_exercises: z.array(z.string()),
+});
+
+export type WorkoutTemplate = z.infer<typeof workoutTemplateSchema>;
 
 export const postSchema = z
   .object({

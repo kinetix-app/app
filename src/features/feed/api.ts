@@ -8,6 +8,7 @@ import {
   postPageSchema,
   postSchema,
   workoutDetailSchema,
+  workoutTemplateSchema,
   type PostVisibility,
 } from './schemas';
 
@@ -66,6 +67,8 @@ export const feedApi = {
     apiClient.postMultipart('/api/v1/posts', buildPostForm(input), { schema: postSchema, signal }),
   workout: (postId: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/posts/${postId}/workout`, { schema: workoutDetailSchema, signal }),
+  workoutTemplate: (postId: number) =>
+    apiClient.get(`/api/v1/posts/${postId}/workout-template`, { schema: workoutTemplateSchema }),
   remove: (postId: number) => apiClient.delete(`/api/v1/posts/${postId}`),
   like: (postId: number, liked: boolean) =>
     liked

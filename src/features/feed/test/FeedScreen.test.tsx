@@ -52,6 +52,7 @@ jest.mock('../api', () => ({
     removeComment: jest.fn(),
     media: jest.fn(),
     workout: jest.fn(),
+    workoutTemplate: jest.fn(),
   },
 }));
 
@@ -102,7 +103,6 @@ test('feed shows the author, description, workout title, summary and counts', as
   expect(screen.getByText('Exercises')).toBeTruthy();
   expect(screen.queryByText('Bench press · Squat')).toBeNull();
   expect(screen.getByText('2 likes')).toBeTruthy();
-  expect(screen.queryByLabelText('Post options')).toBeNull();
   expect(feedApi.posts).toHaveBeenCalledWith(null, expect.any(AbortSignal), 'friends');
 });
 
@@ -377,6 +377,78 @@ test('a share request opens the new post screen with that workout selected', asy
   expect(screen.queryByText('Workout saved')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(onComposeClosed).toHaveBeenCalledTimes(1);
+});
+
+test('a friend must confirm before starting a workout with skipped exercises', async () => {
+  const seed = {
+    title: 'Strength A',
+    exercises: [{ exercise: exampleExercise, sets: [] }],
+    skipped_exercises: ['Private move'],
+  };
+  jest.mocked(feedApi.workoutTemplate).mockResolvedValue(seed);
+  const start = jest.fn().mockResolvedValue(true);
+  renderFeed({
+    workoutActions: {
+      activeDraft: false,
+      expandedDraft: false,
+      available: true,
+      start,
+      resume: jest.fn(),
+    },
+  });
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  expect(screen.queryByRole('button', { name: 'Delete post' })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Perform workout' }));
+  expect(await screen.findByText(/Private move/)).toBeTruthy();
+  expect(start).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Start available exercises' }));
+  await waitFor(() => expect(start).toHaveBeenCalledWith(seed));
+  expect(feedApi.workoutTemplate).toHaveBeenCalledTimes(1);
+});
+
+test('post options offer to resume an active workout without requesting a template', async () => {
+  const start = jest.fn();
+  const resume = jest.fn();
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [makePost({ is_mine: true })],
+    next_before_id: null,
+  });
+  renderFeed({
+    workoutActions: { activeDraft: true, expandedDraft: false, available: true, start, resume },
+  });
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  fireEvent.press(screen.getByRole('button', { name: 'Resume active workout' }));
+  expect(resume).toHaveBeenCalledTimes(1);
+  expect(start).not.toHaveBeenCalled();
+  expect(feedApi.workoutTemplate).not.toHaveBeenCalled();
+});
+
+test('cannot start a shared workout when all exercises are unavailable', async () => {
+  jest.mocked(feedApi.workoutTemplate).mockResolvedValue({
+    title: 'Strength A',
+    exercises: [],
+    skipped_exercises: ['Private move'],
+  });
+  const start = jest.fn();
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [makePost({ is_mine: true })],
+    next_before_id: null,
+  });
+  renderFeed({
+    workoutActions: {
+      activeDraft: false,
+      expandedDraft: false,
+      available: true,
+      start,
+      resume: jest.fn(),
+    },
+  });
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  fireEvent.press(screen.getByRole('button', { name: 'Perform again' }));
+  expect(
+    await screen.findByText('None of the exercises in this workout are available to you.'),
+  ).toBeTruthy();
+  expect(start).not.toHaveBeenCalled();
 });
 
 test('deleting your post asks first and removes it after confirmation', async () => {
