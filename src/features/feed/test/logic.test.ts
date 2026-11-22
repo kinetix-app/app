@@ -2,14 +2,11 @@ import { ApiError } from '@/services/apiClient';
 import { formatWorkoutVolume } from '@/features/training/workoutFormat';
 import { buildPostForm } from '../api';
 import { shareErrorMessage } from '../components/ShareWorkoutScreen';
-import { duration, relativeTime, setLine, authorName } from '../format';
+import { relativeTime, authorName } from '../format';
 import { mediaPathSchema, postPageSchema, postSchema } from '../schemas';
 import { makePost } from './fixtures';
 
 test('formats workout totals without losing explicit units', () => {
-  expect(duration(2700)).toBe('45 min');
-  expect(duration(3600)).toBe('1 h');
-  expect(duration(5460)).toBe('1 h 31 min');
   expect(formatWorkoutVolume('1312.50')).toBe('1,312.5 kg');
   expect(formatWorkoutVolume('1234567.00')).toBe('1,234,567 kg');
   expect(formatWorkoutVolume('0.00')).toBe('0 kg');
@@ -83,16 +80,6 @@ test('a post without a workout omits the workout field', () => {
   expect(form.get('training_session_id')).toBeNull();
   expect(form.get('caption')).toBe('');
   expect(form.get('description')).toBe('Hi');
-});
-
-test('set lines show what was recorded without float rounding', () => {
-  const set = { reps: null, weight_kg: null, duration_seconds: null, distance_km: null };
-  expect(setLine({ ...set, reps: 8, weight_kg: '100.000000' })).toBe('8 reps × 100 kg');
-  expect(setLine({ ...set, reps: 1, weight_kg: '62.50' })).toBe('1 rep × 62.5 kg');
-  expect(setLine({ ...set, reps: 12, weight_kg: '0.00' })).toBe('12 reps');
-  expect(setLine({ ...set, duration_seconds: 45 })).toBe('45 s');
-  expect(setLine({ ...set, distance_km: '2.50', duration_seconds: 720 })).toBe('2.5 km in 12 min');
-  expect(setLine(set)).toBe('Done');
 });
 
 test('share errors explain what to change', () => {

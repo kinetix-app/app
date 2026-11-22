@@ -34,8 +34,12 @@ Training History and Feed cards open the same **Workout detail** component.
 History opens the detail above the list, so Back returns to the same place.
 The card and detail use the workout's saved title. The API captures the routine
 name at completion or uses **Training session** for a standalone workout.
-Workout detail shows duration, exercise count and volume above set and rep counts.
-The exercise cards show each available catalogue image beside the recorded sets.
+Workout detail leads with the title and the athlete's avatar and name. The
+completion date and time appear below the name. Duration, volume and exercise
+count appear above sets and reps in the session card, with dividers between metrics.
+Each exercise has its own card with an image beside the set table. The table uses
+dividers between sets. Strength rows align weight and reps. Cardio rows align
+distance and time. Missing values appear as a dash.
 The only **Share to feed** action is inside Workout detail, reached from Training
 History or Workout saved. The post composer retains its optional caption and
 description when returning from a workout's detail. Feed shows the post text

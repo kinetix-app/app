@@ -17,13 +17,14 @@ const identities = [
 const [owner, peer] = identities;
 
 function request(path: string, identity = owner, method = 'GET', body?: unknown) {
+  const multipart = body instanceof FormData;
   return fetch(`${api}/api/v1${path}`, {
     method,
     headers: {
       Authorization: `Basic ${Buffer.from(`${identity.email}:${identity.password}`).toString('base64')}`,
-      'Content-Type': 'application/json',
+      ...(multipart ? {} : { 'Content-Type': 'application/json' }),
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: multipart ? body : body === undefined ? undefined : JSON.stringify(body),
   });
 }
 
@@ -35,6 +36,17 @@ async function signIn(page: Page, identity = owner) {
   await page.getByRole('button', { name: /^Sign in/ }).click();
   expect((await authenticated).status()).toBe(200);
   await expect(page.getByRole('button', { name: 'Open profile' })).toBeVisible();
+}
+
+async function expectWorkoutAuthor(page: Page) {
+  const author = page.getByTestId('workout-detail-author');
+  await expect(author.getByText(owner.name, { exact: true })).toBeVisible();
+  await expect(author).toContainText(/·\s+\d{1,2}:\d{2}/);
+  const picture = author.locator('img');
+  await expect(picture).toHaveCount(1);
+  await expect
+    .poll(() => picture.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
 }
 
 test('reopens the same completed workout from private screens and an authorized post', async ({
@@ -69,6 +81,15 @@ test('reopens the same completed workout from private screens and an authorized 
     ).toBe(200);
   }
   const [ownerId, peerId] = userIds;
+  const picture = new FormData();
+  const png = new Uint8Array(
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZl0AAAAASUVORK5CYII=',
+      'base64',
+    ),
+  );
+  picture.append('file', new Blob([png], { type: 'image/png' }), 'workout-author.png');
+  expect((await request('/me/profile/picture', owner, 'POST', picture)).status).toBe(200);
   expect((await request('/friends/requests', owner, 'POST', { user_id: peerId })).status).toBe(200);
   expect((await request(`/friends/requests/${ownerId}/accept`, peer, 'POST')).status).toBe(200);
 
@@ -127,7 +148,9 @@ test('reopens the same completed workout from private screens and an authorized 
   const viewSaved = page.getByRole('button', { name: 'View workout', exact: true });
   const viewSession = page.getByRole('button', { name: `View workout ${sessionId}`, exact: true });
   const historyWorkout = page.getByTestId(`history-workout-${sessionId}`);
-  const privateSet = page.getByText('42.50 kg · 8 reps', { exact: true });
+  const privateSet = page
+    .getByRole('table', { name: 'Strength sets' })
+    .getByRole('cell', { name: '42.50', exact: true });
   const shareWorkout = page.getByRole('button', { name: 'Share to feed', exact: true });
   const workoutDetail = page.getByRole('heading', { name: 'Workout detail', exact: true });
   await expect(page.getByRole('heading', { name: 'Workout saved' })).toBeVisible();
@@ -188,12 +211,13 @@ test('reopens the same completed workout from private screens and an authorized 
   await expect(privateSet).toBeVisible();
   await expect(workoutDetail).toBeVisible();
   await expect(page.getByTestId('workout-detail-primary-metrics')).toContainText(
-    /Duration.*Exercises.*Volume.*340 kg/s,
+    /Duration.*Volume.*340 kg.*Exercises/s,
   );
   await expect(page.getByTestId('workout-detail-secondary-metrics')).toContainText(
     /Sets.*Reps.*8/s,
   );
   await expect(page.getByLabel('Image of Acceptance press')).toBeVisible();
+  await expectWorkoutAuthor(page);
   await expect(shareWorkout).toBeVisible();
   await page.getByRole('button', { name: 'Back to history' }).click();
   await expect(historyWorkout).toBeVisible();
@@ -233,17 +257,21 @@ test('reopens the same completed workout from private screens and an authorized 
       peerPage.getByRole('heading', { name: 'Workout detail', exact: true }),
     ).toBeVisible();
     await expect(peerPage.getByRole('heading', { name: routineName, exact: true })).toBeVisible();
-    await expect(peerPage.getByText('8 reps × 42.5 kg', { exact: true })).toBeVisible();
+    const strength = peerPage.getByRole('table', { name: 'Strength sets' });
+    await expect(strength.getByRole('columnheader', { name: 'Weight (kg)' })).toBeVisible();
+    const set = strength.getByRole('row').nth(1);
+    await expect(set.getByRole('cell')).toHaveText(['1', '42.50', '8']);
     await expect(peerPage.getByTestId('workout-detail-primary-metrics')).toContainText(
-      /Duration.*Exercises.*Volume.*340 kg/s,
+      /Duration.*Volume.*340 kg.*Exercises/s,
     );
     await expect(peerPage.getByTestId('workout-detail-secondary-metrics')).toContainText(
       /Sets.*Reps.*8/s,
     );
+    await expectWorkoutAuthor(peerPage);
     const image = peerPage.getByLabel('Image of Acceptance press');
     await expect(image).toBeVisible();
     const imageBox = await image.boundingBox();
-    const setBox = await peerPage.getByText('8 reps × 42.5 kg', { exact: true }).boundingBox();
+    const setBox = await strength.boundingBox();
     expect(imageBox!.x + imageBox!.width).toBeLessThan(setBox!.x);
     await expect(peerPage.getByRole('button', { name: /Share.*to feed/i })).toHaveCount(0);
     await peerPage.getByRole('button', { name: 'Back to feed' }).click();

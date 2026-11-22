@@ -108,9 +108,16 @@ test('retries the list and detail independently and displays saved results inclu
     uri: exampleExercise.image_url,
   });
   expect(screen.getByRole('header', { name: session.title })).toBeTruthy();
-  expect(screen.getByText('Set 1')).toBeTruthy();
-  expect(screen.getByText('80 kg · 8 reps')).toBeTruthy();
-  expect(screen.getByText('— kg · — reps')).toBeTruthy();
+  const results = within(screen.getByTestId('workout-exercise-0'));
+  expect(results.getByRole('columnheader', { name: 'Weight (kg)' })).toBeTruthy();
+  expect(results.getAllByRole('cell').map((cell) => cell.props.children)).toEqual([
+    1,
+    '80',
+    8,
+    2,
+    '—',
+    '—',
+  ]);
   expect(trainingApi.session).toHaveBeenLastCalledWith(1, 'kg', expect.anything());
   fireEvent.press(screen.getByLabelText('Back to history'));
   expect(await screen.findByTestId('history-workout-1')).toBeTruthy();
@@ -170,6 +177,7 @@ test('preserves zero and missing cardio measurements with explicit distance and 
           cardioSet,
           { ...cardioSet, set_number: 2, distance_km: null, duration_seconds: 0 },
           { ...cardioSet, set_number: 3, duration_seconds: null },
+          { ...cardioSet, set_number: 4, reps: 5, weight_kg: '25.00' },
         ],
       },
     ],
@@ -180,9 +188,24 @@ test('preserves zero and missing cardio measurements with explicit distance and 
   jest.mocked(trainingApi.session).mockResolvedValue(cardioSession);
   open();
   fireEvent.press(await screen.findByTestId('history-workout-1'));
-  expect(await screen.findByText('1.25 km · 00:12:30')).toBeTruthy();
-  expect(screen.getByText('— km · 00:00:00')).toBeTruthy();
-  expect(screen.getByText('1.25 km · —')).toBeTruthy();
+  const cardio = within(await screen.findByLabelText('Cardio sets'));
+  expect(cardio.getByRole('columnheader', { name: 'Distance (km)' })).toBeTruthy();
+  expect(cardio.getAllByRole('cell').map((cell) => cell.props.children)).toEqual([
+    1,
+    '1.25',
+    '00:12:30',
+    2,
+    '—',
+    '00:00:00',
+    3,
+    '1.25',
+    '—',
+    4,
+    '1.25',
+    '00:12:30',
+  ]);
+  const legacy = within(screen.getByLabelText('Strength sets'));
+  expect(legacy.getAllByRole('cell').map((cell) => cell.props.children)).toEqual([4, '25.00', 5]);
 });
 
 test('sharing a completed workout is available inside its detail', async () => {

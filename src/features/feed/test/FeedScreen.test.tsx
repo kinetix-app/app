@@ -230,14 +230,26 @@ test('tapping a shared workout shows every exercise and set', async () => {
   expect(screen.getByRole('header', { name: 'Workout detail' })).toBeTruthy();
   expect(screen.getByRole('header', { name: 'Exercise results' })).toBeTruthy();
   expect(screen.getByRole('header', { name: 'Strength A' })).toBeTruthy();
+  expect(within(screen.getByTestId('workout-detail-author')).getByText('Bob')).toBeTruthy();
   expect(within(bench).getByText('1. Bench press')).toBeTruthy();
+  expect(within(bench).queryByText('2 sets', { exact: true })).toBeNull();
   const image = within(bench).getByLabelText('Image of Bench press');
   expect(image.props.source).toEqual({ uri: 'https://media.example/bench.jpg' });
   fireEvent(image, 'error');
   expect(within(bench).queryByLabelText('Image of Bench press')).toBeNull();
-  expect(within(bench).getByText('8 reps × 100 kg')).toBeTruthy();
-  expect(within(bench).getByText('5 reps × 62.5 kg')).toBeTruthy();
-  expect(within(screen.getByTestId('workout-exercise-1')).getByText('45 s')).toBeTruthy();
+  expect(within(bench).getByRole('columnheader', { name: 'Weight (kg)' })).toBeTruthy();
+  expect(
+    within(bench)
+      .getAllByRole('cell')
+      .map((cell) => cell.props.children),
+  ).toEqual([1, '100.00', 8, 2, '62.50', 5]);
+  const plank = within(screen.getByTestId('workout-exercise-1'));
+  expect(plank.getByRole('columnheader', { name: 'Distance (km)' })).toBeTruthy();
+  expect(plank.getAllByRole('cell').map((cell) => cell.props.children)).toEqual([
+    1,
+    '—',
+    '00:00:45',
+  ]);
   const primary = within(screen.getByTestId('workout-detail-primary-metrics'));
   expect(primary.getByText('1,312.5 kg')).toBeTruthy();
   expect(primary.getByText('Exercises')).toBeTruthy();

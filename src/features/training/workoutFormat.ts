@@ -9,7 +9,11 @@ export function formatElapsedDuration(seconds: number) {
 
 /** Volume stays in explicitly labelled kilograms, without float rounding of the decimal text. */
 export function formatWorkoutVolume(kilograms?: string) {
-  return kilograms === undefined ? '—' : `${formatWorkoutDecimal(kilograms, true)} kg`;
+  if (kilograms === undefined) return '—';
+  const [whole, fraction = ''] = kilograms.split('.');
+  const digits = groupThousands(whole);
+  const decimal = trimTrailingZeros(fraction);
+  return decimal ? `${digits}.${decimal} kg` : `${digits} kg`;
 }
 
 function groupThousands(digits: string) {
@@ -23,14 +27,4 @@ function trimTrailingZeros(digits: string) {
   let end = digits.length;
   while (end > 0 && digits[end - 1] === '0') end -= 1;
   return digits.slice(0, end);
-}
-
-function withFraction(whole: string, fraction: string) {
-  return fraction ? `${whole}.${fraction}` : whole;
-}
-
-/** Trims trailing zeros from backend decimal text without converting it to a float. */
-export function formatWorkoutDecimal(text: string, grouped = false) {
-  const [whole, fraction = ''] = text.split('.');
-  return withFraction(grouped ? groupThousands(whole) : whole, trimTrailingZeros(fraction));
 }
