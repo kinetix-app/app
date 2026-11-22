@@ -240,6 +240,9 @@ test('returning incomplete users must save their profile and explicitly select a
   fireEvent.press(screen.getByRole('radio', { name: 'Metric' }));
   fireEvent.changeText(screen.getByLabelText('Height (cm)'), '170');
   fireEvent.changeText(screen.getByLabelText('Weight'), '70');
+  fireEvent.press(screen.getByRole('radio', { name: 'Female' }));
+  fireEvent.press(screen.getByText('Continue'));
+  fireEvent.press(screen.getByRole('radio', { name: /^Moderate\./ }));
   fireEvent.press(screen.getByText('Continue'));
   await screen.findByText('Confirmation');
   expect(updateProfile).not.toHaveBeenCalled();
@@ -404,11 +407,11 @@ test('nutrition goal closes to its origin without losing Profile', async () => {
   await screen.findByText('No posts yet');
   fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   fireEvent.press(screen.getByText('Edit nutrition goal'));
-  fireEvent.press(await screen.findByText('Back'));
+  fireEvent.press(await screen.findByRole('button', { name: 'Back' }));
   expect(screen.getByRole('button', { name: 'Back to feed' })).toBeTruthy();
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   fireEvent.press(await screen.findByRole('button', { name: 'Edit nutrition goal' }));
-  fireEvent.press(await screen.findByText('Back'));
+  fireEvent.press(await screen.findByRole('button', { name: 'Back' }));
   expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
     true,
   );
@@ -419,7 +422,7 @@ test('Feed avatar resets the Profile return origin after a Nutrition shortcut', 
   await screen.findByText('No posts yet');
   fireEvent.press(screen.getByRole('tab', { name: 'Nutrition' }));
   fireEvent.press(await screen.findByRole('button', { name: 'Edit nutrition goal' }));
-  fireEvent.press(await screen.findByText('Back'));
+  fireEvent.press(await screen.findByRole('button', { name: 'Back' }));
   expect(screen.getByRole('tab', { name: 'Nutrition' }).props.accessibilityState.selected).toBe(
     true,
   );

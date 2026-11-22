@@ -53,6 +53,7 @@ function next() {
 function review() {
   next();
   next();
+  next();
 }
 
 test('activity step requires a category and saves it with the profile', async () => {
@@ -90,8 +91,12 @@ test('step validation requires explicit units and back retains values', async ()
   fireEvent.press(screen.getByRole('radio', { name: 'Metric' }));
   fireEvent.changeText(screen.getByLabelText('Weight'), '70');
   fireEvent.changeText(screen.getByLabelText('Height (cm)'), '170');
+  fireEvent.press(screen.getByRole('radio', { name: 'Female' }));
+  next();
+  fireEvent.press(screen.getByRole('radio', { name: /^Moderate\./ }));
   next();
   expect(screen.getByText('Confirmation')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Back'));
   fireEvent.press(screen.getByLabelText('Back'));
   expect(screen.getByLabelText('Age (years)').props.value).toBe('25');
   fireEvent.press(screen.getByLabelText('Back'));
@@ -109,6 +114,7 @@ test('failed save retains entries and retry omits picture field', async () => {
   next();
   fireEvent.press(screen.getByRole('radio', { name: 'Imperial' }));
   fireEvent.changeText(screen.getByLabelText('Weight'), '100');
+  next();
   next();
   fireEvent.press(screen.getByText('Save profile'));
   await screen.findByText(
@@ -171,6 +177,7 @@ test('switching systems without editing preserves canonical height and weight pr
   expect(screen.getByLabelText('Height (inches)').props.value).toBe('0.00');
   fireEvent.press(screen.getByRole('radio', { name: 'Metric' }));
   expect(screen.getByLabelText('Height (cm)').props.value).toBe('182.87');
+  next();
   next();
   fireEvent.press(screen.getByText('Save profile'));
   await waitFor(() => expect(updateProfile).toHaveBeenCalled());
