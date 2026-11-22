@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Image } from 'react-native';
+import { BackHandler, FlatList, Image } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   act,
@@ -380,6 +380,55 @@ test('a share request opens the new post screen with that workout selected', asy
   expect(screen.queryByText('Workout saved')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(onComposeClosed).toHaveBeenCalledTimes(1);
+});
+
+test('back closes the workout dropdown before prompting to discard composer edits', async () => {
+  const callbacks = new Set<Parameters<typeof BackHandler.addEventListener>[1]>();
+  const listener = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, callback) => {
+    callbacks.add(callback);
+    return { remove: () => callbacks.delete(callback) };
+  });
+  try {
+    renderFeed();
+    fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+    fireEvent.changeText(screen.getByLabelText('Caption'), 'Keep this');
+    fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+    await screen.findByRole('radio', { name: 'No workout' });
+    await act(async () => {
+      [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
+    });
+    expect(screen.queryByRole('radio', { name: 'No workout' })).toBeNull();
+    expect(screen.queryByText('Discard this post?')).toBeNull();
+    await act(async () => {
+      [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
+    });
+    fireEvent.press(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByLabelText('Caption').props.value).toBe('Keep this');
+    fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Discard' }));
+    expect(await screen.findByText('Leg day done')).toBeTruthy();
+  } finally {
+    listener.mockRestore();
+  }
+});
+
+test('back during a publish request leaves the composer open and preserves the draft on failure', async () => {
+  let reject = (_: Error) => {};
+  jest.mocked(feedApi.create).mockImplementation(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+  );
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+  fireEvent.changeText(screen.getByLabelText('Caption'), 'An edited caption');
+  fireEvent.press(screen.getByRole('button', { name: 'Share' }));
+  expect(screen.getByRole('button', { name: 'Back to feed' })).toBeDisabled();
+  await act(async () => reject(new Error('offline')));
+  expect(screen.getByLabelText('Caption').props.value).toBe('An edited caption');
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(screen.getByText('Discard this post?')).toBeTruthy();
 });
 
 test('an unavailable history workout is explained without selecting another one', async () => {

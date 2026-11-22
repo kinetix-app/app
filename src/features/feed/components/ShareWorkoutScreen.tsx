@@ -2,8 +2,18 @@ import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useRef, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { TextField } from '@/components/TextField';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
 import { SessionWorkoutDetailModal } from '@/features/training/components/SessionWorkoutDetail';
@@ -25,6 +35,7 @@ import {
 type ShareWorkoutScreenProps = Readonly<{
   accountId: number;
   initialSessionId?: number | null;
+  active: boolean;
   onClose: () => void;
   onShared: (post: Post) => void;
 }>;
@@ -32,6 +43,7 @@ type ShareWorkoutScreenProps = Readonly<{
 export function ShareWorkoutScreen({
   accountId,
   initialSessionId,
+  active,
   onClose,
   onShared,
 }: ShareWorkoutScreenProps) {
@@ -50,6 +62,7 @@ export function ShareWorkoutScreen({
   const [photos, setPhotos] = useState<PostPhoto[]>([]);
   const [error, setError] = useState('');
   const [photoError, setPhotoError] = useState('');
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
   const recent = workouts.data?.items ?? [];
@@ -58,6 +71,23 @@ export function ShareWorkoutScreen({
   const canShare =
     !unresolvedSelection &&
     Boolean(selected || caption.trim() || description.trim() || photos.length);
+
+  const dirty =
+    caption.length > 0 ||
+    description.length > 0 ||
+    photos.length > 0 ||
+    (selected?.session_id ?? null) !== (workouts.data?.selected?.session_id ?? null);
+
+  function back() {
+    if (busy.current) return true;
+    if (detailSessionId !== null) setDetailSessionId(null);
+    else if (dropdownOpen) setDropdownOpen(false);
+    else if (dirty) setDiscardOpen(true);
+    else onClose();
+    return true;
+  }
+
+  useHardwareBack(back, active && !discardOpen && detailSessionId === null);
 
   async function pickPhotos() {
     setPhotoError('');
@@ -123,14 +153,16 @@ export function ShareWorkoutScreen({
       style={[ui.screen, { backgroundColor: p['surface-100'] }]}
     >
       <ScrollView
-        aria-hidden={detailSessionId !== null}
-        accessibilityElementsHidden={detailSessionId !== null}
-        importantForAccessibility={detailSessionId !== null ? 'no-hide-descendants' : 'auto'}
+        aria-hidden={discardOpen || detailSessionId !== null}
+        accessibilityElementsHidden={discardOpen || detailSessionId !== null}
+        importantForAccessibility={
+          discardOpen || detailSessionId !== null ? 'no-hide-descendants' : 'auto'
+        }
         contentContainerStyle={ui.content}
         keyboardShouldPersistTaps="handled"
       >
         <View style={ui.row}>
-          <IconButton icon="arrow-left" label="Back to feed" onPress={onClose} />
+          <IconButton icon="arrow-left" label="Back to feed" disabled={pending} onPress={back} />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
             New post
           </Text>
@@ -341,8 +373,26 @@ export function ShareWorkoutScreen({
             void share();
           }}
         />
-        <Button title="Cancel" secondary disabled={pending} onPress={onClose} />
       </ScrollView>
+      <Modal
+        visible={discardOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDiscardOpen(false)}
+      >
+        <View style={[styles.scrim, { backgroundColor: p.scrim }]}>
+          <View
+            accessibilityViewIsModal
+            style={[ui.card, styles.dialog, { backgroundColor: p['surface-200'] }]}
+          >
+            <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
+              Discard this post?
+            </Text>
+            <Button title="Keep editing" secondary onPress={() => setDiscardOpen(false)} />
+            <Button title="Discard" tone="danger" onPress={onClose} />
+          </View>
+        </View>
+      </Modal>
       {detailSessionId !== null ? (
         <SessionWorkoutDetailModal
           accountId={accountId}
@@ -440,6 +490,8 @@ export function shareErrorMessage(error: unknown) {
 }
 
 const styles = StyleSheet.create({
+  scrim: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['space-6'] },
+  dialog: { width: '100%', maxWidth: 420 },
   option: {
     minHeight: sizes['control-height'],
     flexDirection: 'row',

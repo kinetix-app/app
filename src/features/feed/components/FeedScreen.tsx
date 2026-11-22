@@ -72,7 +72,7 @@ export function FeedScreen({
     closePanel();
     return true;
   }, [closePanel]);
-  useHardwareBack(onBack, active && view.kind !== 'feed' && !deleting);
+  useHardwareBack(onBack, active && view.kind !== 'feed' && view.kind !== 'share' && !deleting);
 
   async function toggleLike(post: Post) {
     if (liking.has(post.id)) return;
@@ -229,6 +229,7 @@ export function FeedScreen({
           key={`share-${view.sessionId ?? 'new'}`}
           accountId={accountId}
           initialSessionId={view.sessionId}
+          active={active}
           onClose={closePanel}
           onShared={(post) => {
             prependPost(cache, accountId, post);
