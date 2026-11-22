@@ -12,6 +12,7 @@ export function Button({
   accessibilityLabel,
   tone,
   icon,
+  shape = 'pill',
 }: Readonly<{
   title: string;
   onPress: () => void;
@@ -20,6 +21,7 @@ export function Button({
   accessibilityLabel?: string;
   tone?: 'positive' | 'danger';
   icon?: React.ComponentProps<typeof Feather>['name'];
+  shape?: 'pill' | 'rounded';
 }>) {
   const p = usePalette();
   const background = buttonBackground(tone, secondary, p);
@@ -37,7 +39,7 @@ export function Button({
         minHeight: sizes['control-height'],
         paddingHorizontal: spacing['space-5'],
         paddingVertical: spacing['space-3'],
-        borderRadius: radii['radius-pill'],
+        borderRadius: radii[shape === 'rounded' ? 'radius-md' : 'radius-pill'],
         backgroundColor: background,
         borderWidth: tone === 'danger' ? 1 : 0,
         borderColor: tone === 'danger' ? p.danger : background,

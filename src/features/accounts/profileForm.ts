@@ -25,17 +25,32 @@ export function displayWeight(kg: string, system: MeasurementSystem) {
   );
 }
 
+function inchesToCm(inches: bigint) {
+  return fixed((inches * 254n + 50n) / 100n);
+}
+
+function cmToInches(cm: string) {
+  return (cents(cm) * 100n + 127n) / 254n;
+}
+
 /** 1 inch = exactly 2.54 cm; canonical cm rounds half-up to two places. */
+export function canonicalLength(value: string, system: MeasurementSystem) {
+  return system === 'metric' ? fixed(cents(value)) : inchesToCm(cents(value));
+}
+
+export function displayLength(cm: string, system: MeasurementSystem) {
+  return fixed(system === 'metric' ? cents(cm) : cmToInches(cm));
+}
+
 export function canonicalHeight(
   value: Pick<ProfileFormValues, 'height_cm' | 'height_ft' | 'height_in'>,
   system: MeasurementSystem,
 ) {
-  if (system === 'metric') return fixed(cents(value.height_cm));
-  const inches = BigInt(value.height_ft) * 1200n + cents(value.height_in);
-  return fixed((inches * 254n + 50n) / 100n);
+  if (system === 'metric') return canonicalLength(value.height_cm, system);
+  return inchesToCm(BigInt(value.height_ft) * 1200n + cents(value.height_in));
 }
 export function displayHeight(cm: string) {
-  const totalInches = (cents(cm) * 100n + 127n) / 254n;
+  const totalInches = cmToInches(cm);
   return {
     height_cm: fixed(cents(cm)),
     height_ft: String(totalInches / 1200n),

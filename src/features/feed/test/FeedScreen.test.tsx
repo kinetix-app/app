@@ -1,7 +1,15 @@
 import React from 'react';
 import { FlatList, Image } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import { ApiError } from '@/services/apiClient';
 import { trainingApi } from '@/features/training/api';
 import { friendsApi } from '@/features/friends/api';
@@ -52,14 +60,22 @@ const workout = {
   exercises: [{ id: 1, exercise: { name: 'Bench press' }, sets: [{}, {}] }],
 };
 
+const clients: QueryClient[] = [];
+
 function renderFeed(props: Partial<React.ComponentProps<typeof FeedScreen>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  clients.push(client);
   return render(
     <QueryClientProvider client={client}>
       <FeedScreen accountId={1} {...props} />
     </QueryClientProvider>,
   );
 }
+
+afterEach(() => {
+  cleanup();
+  clients.splice(0).forEach((client) => client.clear());
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

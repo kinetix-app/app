@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { friendsApi } from '../api';
 import { FriendsScreen } from '../components/FriendsScreen';
 
@@ -26,14 +26,22 @@ jest.setTimeout(20000);
 const bob = { id: 2, display_name: 'Bob', has_picture: false };
 const carol = { id: 3, display_name: 'Carol', has_picture: false };
 
+const clients: QueryClient[] = [];
+
 function renderFriends(props: Partial<React.ComponentProps<typeof FriendsScreen>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  clients.push(client);
   return render(
     <QueryClientProvider client={client}>
       <FriendsScreen accountId={1} onClose={jest.fn()} {...props} />
     </QueryClientProvider>,
   );
 }
+
+afterEach(() => {
+  cleanup();
+  clients.splice(0).forEach((client) => client.clear());
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

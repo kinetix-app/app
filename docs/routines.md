@@ -216,7 +216,8 @@ while Cancel, the close icon and platform Back preserve the applied filters.
 
 ### Exercise detail history
 
-Exercise details retain their media and instructions under the Instructions tab. The History tab requests completed sessions containing that exercise in pages, showing each session's local completion date and its recorded sets with units; repeated occurrences appear together in order. Evolution is reserved for future graphs. History supports empty, loading, retry and load-more states.
+Exercise details retain their media and instructions under the Instructions tab. The History tab requests completed sessions containing that exercise in pages, showing each session's local completion date and its recorded sets with units; repeated occurrences appear together in order. History supports empty, loading, retry and load-more states. The Evolution chart
+uses the saved profile unit preference.
 
 Cardio sets use one numeric time field formatted as `mm:ss` (or `hh:mm:ss` from one hour): entering `1230`
 produces `12:30`. Input is limited to six digits, up to `99:59:59`. Minutes and seconds must be 00–59; saving continues to send

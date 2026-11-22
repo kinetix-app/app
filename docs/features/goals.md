@@ -1,23 +1,29 @@
-# Goals
+# Goals and body measurements
 
-## Current state
+Open **Profile → Progress** to record weight, height, body-fat percentage, muscle mass,
+or waist, chest, arm and thigh circumference. Users can record any subset on a given
+date. The calendar defaults to today in the saved profile timezone, with UTC as the
+fallback. The log fills in the latest saved value for each measurement. Clear any field
+to leave it out of the new check-in. Successful saves show a toast. Failed saves retain
+the draft and reuse the same submission ID for a retry.
 
-The mobile client implements **nutrition goals only**, through the nutrition feature's
-daily calorie and macronutrient editor. It does not have physical-goal, body-measurement,
-weight-progress or goal-completion screens or API helpers. The Home tab currently uses
-nutrition-goal setup as its initial content; this is not a physical-goal dashboard.
+The trends card uses the same chart as exercise evolution. Select a metric to show its
+observations. An empty chart shows guidance for the selected metric inside the grid, and a
+recorded check-in appears in the dated history. If a metric has several observations on the same day, the chart shows
+the last one and the history keeps each entry. The screen, forms and chart use Kinetix's dark palette.
 
-## Code and evidence
+The chart, history, target, and measurement entry use the saved profile unit
+preference. Metric uses cm and kg. Imperial uses feet and inches for height, inches
+for other lengths, and pounds for mass. Percentages stay
+the same. The API uses canonical decimals. Logging the latest height or weight refreshes
+the related profile field. Direct edits to those values in Profile appear in the day's history.
 
-- Nutrition goal UI/API is described in [Nutrition](nutrition.md) and implemented by
-  `src/features/nutrition/components/NutritionGoalEditor.tsx` and
-  `src/features/nutrition/api.ts`.
-- The backend currently has model tables for physical goals and body measurements but no
-  corresponding API; see the
-  [backend goals status](https://github.com/kinetix-app/app-rest/blob/master/docs/features/goals.md).
+The **Weight target** card shows the current objective and its manually chosen weight
+target. Users can set or edit the target and optionally choose a date from the calendar. Each objective
+has its own target, so returning to a previous objective restores its saved target.
+Expected progress and automatic completion are outside this workflow.
+[Nutrition targets](nutrition.md) remain available in the Nutrition goal editor.
 
-## Remaining gaps
-
-Physical-goal meaning, target units, progress calculation and completion semantics need
-product decisions before a client flow can be implemented. A persisted nutrition goal
-must not be presented as evidence that physical-goal tracking exists.
+The account feature uses the private body-measurements and physical-target API endpoints.
+Backend documentation covers persistence and synchronization rules.
+[Backend goals](https://github.com/kinetix-app/app-rest/blob/master/docs/features/goals.md)
