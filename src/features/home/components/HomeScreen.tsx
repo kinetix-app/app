@@ -29,7 +29,7 @@ import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
 import { LeaguesScreen } from '@/features/leagues';
 import { FormCheckProvider } from '@/features/formcheck';
 import { Button, ui } from '@/features/training/components/ui';
-import { WorkoutSessionDetail } from '@/features/training/components/WorkoutSessionDetail';
+import { WorkoutPreview } from '@/features/training/components/WorkoutPreview';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { sizes, spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
@@ -348,11 +348,12 @@ function HomeNavigation({
         onRequestClose={viewingFinished ? () => setViewingFinished(false) : onDismissFinished}
       >
         {viewingFinished && finishedSessionId !== null ? (
-          <WorkoutSessionDetail
+          <WorkoutPreview
             accountId={accountId}
             sessionId={finishedSessionId}
             backLabel="Back to workout saved"
             onBack={() => setViewingFinished(false)}
+            showShare
             onShare={shareFinishedWorkout}
           />
         ) : (

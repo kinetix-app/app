@@ -116,11 +116,15 @@ test('reopens the same completed workout from private screens and an authorized 
   await expect(page.getByRole('heading', { name: 'Workout saved' })).toBeVisible();
   await viewSaved.click();
   await expect(privateSet).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workout preview' })).toBeVisible();
+  await expect(page.getByText('Duration', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Share to feed', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to workout saved' }).click();
   await page.getByRole('button', { name: 'Share to feed', exact: true }).click();
   await page.getByLabel('Caption', { exact: true }).fill('An acceptance workout');
   await page.getByRole('button', { name: 'Preview workout' }).click();
   await expect(privateSet).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Share to feed', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to new post' }).click();
   await expect(page.getByLabel('Caption', { exact: true })).toHaveValue('An acceptance workout');
   const posted = page.waitForResponse(
@@ -133,6 +137,8 @@ test('reopens the same completed workout from private screens and an authorized 
   await signIn(page);
   await page.getByRole('button', { name: 'Open profile' }).click();
   await page.getByRole('button', { name: 'Training history' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout history', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workout preview' })).toHaveCount(0);
   const privateRoute = `**/api/v1/sessions/${sessionId}?weight_unit=kg`;
   await page.route(privateRoute, (route) => route.abort());
   await viewSession.click();
@@ -140,6 +146,7 @@ test('reopens the same completed workout from private screens and an authorized 
   await page.unroute(privateRoute);
   await page.getByRole('button', { name: 'Retry' }).click();
   await expect(privateSet).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Share to feed', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to history' }).click();
   await expect(viewSession).toBeVisible();
 

@@ -158,15 +158,23 @@ test('completed workouts can be shared to the feed from the list and the details
   open(onShare);
   fireEvent.press(await screen.findByRole('button', { name: 'Share workout 1 to feed' }));
   expect(onShare).toHaveBeenLastCalledWith(1);
+  expect(trainingApi.session).not.toHaveBeenCalled();
   fireEvent.press(screen.getByRole('button', { name: 'View workout 1' }));
+  expect(await screen.findByRole('header', { name: 'Workout preview' })).toBeTruthy();
+  expect(await screen.findByText('1 h')).toBeTruthy();
   fireEvent.press(await screen.findByRole('button', { name: 'Share to feed' }));
   expect(onShare).toHaveBeenCalledTimes(2);
   expect(onShare).toHaveBeenLastCalledWith(1);
+  expect(await screen.findByRole('header', { name: 'Workout history' })).toBeTruthy();
 });
 
 test('without a share handler the history offers no share buttons', async () => {
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [session], limit: 50, offset: 0 });
+  jest.mocked(trainingApi.session).mockResolvedValue(session);
   open();
-  await screen.findByRole('button', { name: 'View workout 1' });
+  const entry = await screen.findByRole('button', { name: 'View workout 1' });
   expect(screen.queryByRole('button', { name: 'Share workout 1 to feed' })).toBeNull();
+  fireEvent.press(entry);
+  expect(await screen.findByText('1. Bench press')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Share to feed' })).toBeNull();
 });

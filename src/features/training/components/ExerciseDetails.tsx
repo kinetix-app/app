@@ -7,7 +7,7 @@ import { trainingApi } from '../api';
 import { ExerciseMedia } from './ExerciseMedia';
 import { ExerciseHistory } from './ExerciseHistory';
 import { ExerciseEvolution } from './ExerciseEvolution';
-import { WorkoutSessionDetail } from './WorkoutSessionDetail';
+import { WorkoutPreview } from './WorkoutPreview';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import type { Exercise, ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
@@ -40,7 +40,7 @@ export function ExerciseDetails({
   return (
     <Modal onRequestClose={workoutId === null ? onClose : closeWorkout} animationType="slide">
       {workoutId !== null ? (
-        <WorkoutSessionDetail
+        <WorkoutPreview
           accountId={accountId}
           sessionId={workoutId}
           backLabel="Back to exercise history"

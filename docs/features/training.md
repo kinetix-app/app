@@ -27,9 +27,15 @@ completed sessions. Detailed API, state, retry and unit behavior is in
 | League → Rankings → Your score history | Tap **View workout** on a credited workout.                              |
 | Feed post                              | Tap the workout on a post you can see.                                   |
 
-The private detail opens through the owner’s session endpoint. Feed details open
-through the post endpoint and include its server-provided workout totals. Both
-display the recorded exercises and sets in order. The browser scenario in
+Training history opens on a paginated list of completed sessions. Selecting a
+row opens a preview above the list, so Back returns to the same place. The
+preview shows the session date, elapsed time, exercise and set counts, and
+recorded results in order. The `showShare` parameter enables a persistent
+**Share to feed** action when the caller also provides a share handler. The
+composer hides that action and keeps sharing in the post draft.
+
+The private preview uses the owner’s session endpoint. Feed details use the
+post endpoint and include its server-provided workout totals. The browser scenario in
 [`workout-detail.spec.ts`](../../e2e/web/workout-detail.spec.ts) exercises these
 entry points and checks access from a second account.
 

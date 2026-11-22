@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
 import { trainingApi } from '@/features/training/api';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
-import { WorkoutSessionDetailModal } from '@/features/training/components/WorkoutSessionDetail';
+import { WorkoutPreviewModal } from '@/features/training/components/WorkoutPreview';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { feedApi, type PostPhoto } from '../api';
@@ -114,7 +114,13 @@ export function ShareWorkoutScreen({
       edges={['top', 'left', 'right']}
       style={[ui.screen, { backgroundColor: p['surface-100'] }]}
     >
-      <ScrollView contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        aria-hidden={previewSessionId !== null}
+        accessibilityElementsHidden={previewSessionId !== null}
+        importantForAccessibility={previewSessionId !== null ? 'no-hide-descendants' : 'auto'}
+        contentContainerStyle={ui.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={ui.row}>
           <IconButton icon="arrow-left" label="Back to feed" onPress={onClose} />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
@@ -266,11 +272,12 @@ export function ShareWorkoutScreen({
         <Button title="Cancel" secondary disabled={pending} onPress={onClose} />
       </ScrollView>
       {previewSessionId !== null ? (
-        <WorkoutSessionDetailModal
+        <WorkoutPreviewModal
           accountId={accountId}
           sessionId={previewSessionId}
           backLabel="Back to new post"
           onBack={() => setPreviewSessionId(null)}
+          showShare={false}
         />
       ) : null}
     </SafeAreaView>

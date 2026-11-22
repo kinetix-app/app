@@ -262,6 +262,8 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   fireEvent.changeText(screen.getByLabelText('Caption'), 'New PR');
   fireEvent.press(screen.getByRole('button', { name: 'Preview workout' }));
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Workout preview' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Share to feed' })).toBeNull();
   expect(trainingApi.session).toHaveBeenCalledWith(7, 'kg', expect.any(AbortSignal));
   fireEvent.press(screen.getByRole('button', { name: 'Back to new post' }));
   expect(screen.getByLabelText('Caption').props.value).toBe('New PR');
