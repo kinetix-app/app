@@ -4,9 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PersonAvatar } from '@/features/friends/components/PersonAvatar';
 import { IconButton } from '@/features/training/components/ui';
 import { WorkoutSummaryCard } from '@/features/training/components/WorkoutSummaryCard';
-import { formatElapsedDuration } from '@/features/training/workoutFormat';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { authorName, countLabel, relativeTime, volume } from '../format';
+import { authorName, countLabel, relativeTime } from '../format';
 import type { Post, WorkoutSummary } from '../schemas';
 import { PostImage } from './PostImage';
 
@@ -63,7 +62,16 @@ export function PostCard({
         ) : null}
       </View>
       <MediaCarousel accountId={accountId} post={post} name={name} />
-      {post.text ? <Text style={[textStyles.body, { color: p.ink }]}>{post.text}</Text> : null}
+      {post.caption || post.description ? (
+        <View style={styles.copy}>
+          {post.caption ? (
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>{post.caption}</Text>
+          ) : null}
+          {post.description ? (
+            <Text style={[textStyles.body, { color: p.ink }]}>{post.description}</Text>
+          ) : null}
+        </View>
+      ) : null}
       {post.workout ? (
         <PostWorkoutSummary
           workout={post.workout}
@@ -181,20 +189,14 @@ function PostWorkoutSummary({
   onPress,
 }: Readonly<{ workout: WorkoutSummary; label: string; onPress?: () => void }>) {
   const date = workoutDate.format(new Date(workout.ended_at));
-  const hasVolume = Number(workout.total_volume_kg) > 0;
   return (
     <WorkoutSummaryCard
       embedded
-      title="Workout"
-      subtitle={hasVolume ? `${date} · ${countLabel(workout.exercise_count, 'exercise')}` : date}
-      metrics={[
-        { label: 'Duration', value: formatElapsedDuration(workout.duration_seconds) },
-        hasVolume
-          ? { label: 'Volume', value: volume(workout.total_volume_kg) }
-          : { label: 'Exercises', value: workout.exercise_count.toLocaleString() },
-        { label: 'Sets', value: workout.set_count.toLocaleString() },
-      ]}
-      exerciseNames={workout.exercises}
+      title={workout.title}
+      subtitle={date}
+      durationSeconds={workout.duration_seconds}
+      volumeKg={workout.total_volume_kg}
+      exerciseCount={workout.exercise_count}
       open={onPress ? { label, onPress } : undefined}
     />
   );
@@ -220,6 +222,7 @@ const styles = StyleSheet.create({
     gap: spacing['space-3'],
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  copy: { gap: spacing['space-1'] },
   actions: { flexDirection: 'row', gap: spacing['space-4'] },
   action: {
     minHeight: sizes['tap-min'],

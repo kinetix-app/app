@@ -5,9 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
-import { formatElapsedDuration } from '../workoutFormat';
 import { Failure, IconButton, Loading, ui } from './ui';
-import { WorkoutPreviewModal } from './WorkoutPreview';
+import { SessionWorkoutDetailModal } from './SessionWorkoutDetail';
 import { WorkoutSummaryCard } from './WorkoutSummaryCard';
 
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
@@ -35,7 +34,7 @@ export function WorkoutHistory({
   const p = usePalette();
   const unit = 'kg';
   const [selected, setSelected] = useState<number | null>(null);
-  const previewOpen = active && selected !== null;
+  const detailOpen = active && selected !== null;
   const list = useInfiniteQuery({
     queryKey: ['training', accountId, 'sessions', unit],
     initialPageParam: 0,
@@ -66,9 +65,9 @@ export function WorkoutHistory({
   return (
     <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
       <View
-        aria-hidden={previewOpen}
-        accessibilityElementsHidden={previewOpen}
-        importantForAccessibility={previewOpen ? 'no-hide-descendants' : 'auto'}
+        aria-hidden={detailOpen}
+        accessibilityElementsHidden={detailOpen}
+        importantForAccessibility={detailOpen ? 'no-hide-descendants' : 'auto'}
         style={[styles.header, { borderColor: p.line }]}
       >
         <View style={[ui.row, styles.headerContent]}>
@@ -79,9 +78,9 @@ export function WorkoutHistory({
         </View>
       </View>
       <FlatList
-        aria-hidden={previewOpen}
-        accessibilityElementsHidden={previewOpen}
-        importantForAccessibility={previewOpen ? 'no-hide-descendants' : 'auto'}
+        aria-hidden={detailOpen}
+        accessibilityElementsHidden={detailOpen}
+        importantForAccessibility={detailOpen ? 'no-hide-descendants' : 'auto'}
         contentContainerStyle={[ui.content, styles.list]}
         data={sessions}
         keyExtractor={(item) => String(item.id)}
@@ -110,7 +109,6 @@ export function WorkoutHistory({
             0,
             Math.floor((completed.getTime() - Date.parse(item.started_at)) / 1000),
           );
-          const sets = item.exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
           return (
             <View style={styles.item}>
               {startsMonth ? (
@@ -123,23 +121,15 @@ export function WorkoutHistory({
               ) : null}
               <WorkoutSummaryCard
                 testID={`history-workout-${item.id}`}
-                title={day}
-                subtitle={time}
-                metrics={[
-                  { label: 'Duration', value: formatElapsedDuration(seconds) },
-                  { label: 'Exercises', value: item.exercises.length.toLocaleString() },
-                  { label: 'Sets', value: sets.toLocaleString() },
-                ]}
-                exerciseNames={item.exercises.map(({ exercise }) => exercise.name)}
-                open={{ label: `View workout from ${when}`, onPress: () => setSelected(item.id) }}
-                share={
-                  onShare
-                    ? {
-                        label: `Share workout from ${when} to feed`,
-                        onPress: () => onShare(item.id),
-                      }
-                    : undefined
-                }
+                title={item.title}
+                subtitle={`${day} · ${time}`}
+                durationSeconds={seconds}
+                volumeKg={item.total_volume_kg}
+                exerciseCount={item.exercises.length}
+                open={{
+                  label: `View ${item.title} from ${when}`,
+                  onPress: () => setSelected(item.id),
+                }}
               />
             </View>
           );
@@ -151,8 +141,8 @@ export function WorkoutHistory({
         }}
         ListFooterComponent={footer}
       />
-      {previewOpen ? (
-        <WorkoutPreviewModal
+      {detailOpen ? (
+        <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={selected}
           backLabel="Back to history"

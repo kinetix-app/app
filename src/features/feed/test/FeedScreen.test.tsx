@@ -59,6 +59,7 @@ jest.setTimeout(20000);
 
 const workout = {
   id: 7,
+  title: 'Strength A',
   ended_at: '2026-11-09T16:45:00Z',
   exercises: [{ id: 1, exercise: { name: 'Bench press' }, sets: [{}, {}] }],
 };
@@ -89,14 +90,16 @@ beforeEach(() => {
     .mockResolvedValue({ items: [workout], limit: 50, offset: 0 } as never);
 });
 
-test('feed shows the author, caption, workout summary and counts', async () => {
+test('feed shows the author, description, workout title, summary and counts', async () => {
   renderFeed();
   expect(await screen.findByText('Bob')).toBeTruthy();
   expect(screen.getByText('Leg day done')).toBeTruthy();
+  expect(screen.getByText('Strength A')).toBeTruthy();
   expect(screen.getByText('2 h ago')).toBeTruthy();
   expect(screen.getByText('45 min')).toBeTruthy();
   expect(screen.getByText('1,312.5 kg')).toBeTruthy();
-  expect(screen.getByText('Bench press · Squat')).toBeTruthy();
+  expect(screen.getByText('Exercises')).toBeTruthy();
+  expect(screen.queryByText('Bench press · Squat')).toBeNull();
   expect(screen.getByText('2 likes')).toBeTruthy();
   expect(screen.queryByLabelText('Delete your post')).toBeNull();
   expect(feedApi.posts).toHaveBeenCalledWith(null, expect.any(AbortSignal), 'friends');
@@ -114,7 +117,7 @@ test('a workout without lifting volume shows its exercise count and recorded dur
   const summary = within(await screen.findByRole('button', { name: 'See Bob’s workout' }));
   expect(summary.getByText('26 sec')).toBeTruthy();
   expect(summary.getByText('Exercises')).toBeTruthy();
-  expect(summary.queryByText('Volume')).toBeNull();
+  expect(summary.getByText('0 kg')).toBeTruthy();
   expect(feedApi.workout).not.toHaveBeenCalled();
 });
 
@@ -157,7 +160,7 @@ test('reaching the end loads older posts and keeps them after a failed page', as
     .mockResolvedValueOnce({ items: [makePost()], next_before_id: 10 })
     .mockRejectedValueOnce(new Error('offline'))
     .mockResolvedValueOnce({
-      items: [makePost({ id: 9, text: 'Older session' })],
+      items: [makePost({ id: 9, description: 'Older session' })],
       next_before_id: null,
     });
   renderFeed();
@@ -200,6 +203,7 @@ test('tapping a shared workout shows every exercise and set', async () => {
       {
         exercise_id: 3,
         name: 'Bench press',
+        image_url: 'https://media.example/bench.jpg',
         sets: [
           {
             set_number: 1,
@@ -223,11 +227,24 @@ test('tapping a shared workout shows every exercise and set', async () => {
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'See Bob’s workout' }));
   const bench = await screen.findByTestId('workout-exercise-0');
-  expect(within(bench).getByText('Bench press')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Workout detail' })).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Exercise results' })).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Strength A' })).toBeTruthy();
+  expect(within(bench).getByText('1. Bench press')).toBeTruthy();
+  const image = within(bench).getByLabelText('Image of Bench press');
+  expect(image.props.source).toEqual({ uri: 'https://media.example/bench.jpg' });
+  fireEvent(image, 'error');
+  expect(within(bench).queryByLabelText('Image of Bench press')).toBeNull();
   expect(within(bench).getByText('8 reps × 100 kg')).toBeTruthy();
   expect(within(bench).getByText('5 reps × 62.5 kg')).toBeTruthy();
   expect(within(screen.getByTestId('workout-exercise-1')).getByText('45 s')).toBeTruthy();
-  expect(screen.getByText('23')).toBeTruthy();
+  const primary = within(screen.getByTestId('workout-detail-primary-metrics'));
+  expect(primary.getByText('1,312.5 kg')).toBeTruthy();
+  expect(primary.getByText('Exercises')).toBeTruthy();
+  const secondary = within(screen.getByTestId('workout-detail-secondary-metrics'));
+  expect(secondary.getByText('Sets')).toBeTruthy();
+  expect(secondary.getByText('23')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Share to feed' })).toBeNull();
   expect(feedApi.workout).toHaveBeenCalledWith(10, expect.any(AbortSignal));
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(await screen.findByText('Leg day done')).toBeTruthy();
@@ -255,7 +272,8 @@ test('failed comment keeps the text', async () => {
 test('sharing a workout posts it and shows it first in the feed', async () => {
   const shared = makePost({
     id: 11,
-    text: 'New PR',
+    caption: 'New PR',
+    description: 'Two extra reps on the final set.',
     is_mine: true,
     author: { id: 1, display_name: 'Alice', has_picture: false },
   });
@@ -263,7 +281,8 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   jest.mocked(trainingApi.session).mockResolvedValue({
     id: 7,
     client_session_id: null,
-    routine_id: null,
+    routine_id: 4,
+    title: workout.title,
     started_at: '2026-11-09T16:00:00Z',
     ended_at: workout.ended_at,
     activity_type: 'gym',
@@ -275,20 +294,25 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   fireEvent.press(screen.getByRole('button', { name: 'New post' }));
   const option = await screen.findByRole('radio', { name: /Workout finished/ });
   expect(option.props.accessibilityState.checked).toBe(true);
+  expect(screen.getByLabelText('Caption').props.value).toBe('');
   fireEvent.changeText(screen.getByLabelText('Caption'), 'New PR');
-  fireEvent.press(screen.getByRole('button', { name: 'Preview workout' }));
+  fireEvent.changeText(screen.getByLabelText('Description'), 'Two extra reps on the final set.');
+  fireEvent.press(screen.getByRole('button', { name: 'View workout' }));
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
-  expect(screen.getByRole('header', { name: 'Workout preview' })).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'Workout detail' })).toBeTruthy();
+  expect(screen.getByRole('header', { name: workout.title })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Share to feed' })).toBeNull();
   expect(trainingApi.session).toHaveBeenCalledWith(7, 'kg', expect.any(AbortSignal));
   fireEvent.press(screen.getByRole('button', { name: 'Back to new post' }));
   expect(screen.getByLabelText('Caption').props.value).toBe('New PR');
+  expect(screen.getByLabelText('Description').props.value).toBe('Two extra reps on the final set.');
   expect(screen.getByRole('radio', { name: /Workout finished/, checked: true })).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith({
       trainingSessionId: 7,
-      text: 'New PR',
+      caption: 'New PR',
+      description: 'Two extra reps on the final set.',
       visibility: 'FRIENDS',
       photos: [],
     }),
@@ -296,20 +320,24 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   expect(await screen.findByText('New PR')).toBeTruthy();
   const cards = screen.getAllByTestId(/^post-/);
   expect(cards[0].props.testID).toBe('post-11');
+  expect(within(cards[0]).getByText('Two extra reps on the final set.')).toBeTruthy();
+  expect(within(cards[0]).getByText('Strength A')).toBeTruthy();
   expect(within(cards[0]).getByLabelText('Delete your post')).toBeTruthy();
 });
 
-test('an already shared workout keeps the caption and explains the conflict', async () => {
+test('an already shared workout keeps the caption and description and explains the conflict', async () => {
   jest.mocked(feedApi.create).mockRejectedValue(new ApiError(409));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
   await screen.findByRole('radio', { name: /Workout finished/ });
   fireEvent.changeText(screen.getByLabelText('Caption'), 'Keep me');
+  fireEvent.changeText(screen.getByLabelText('Description'), 'Keep these notes too');
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   expect(
     await screen.findByText('You already shared this workout. Choose another one.'),
   ).toBeTruthy();
   expect(screen.getByLabelText('Caption').props.value).toBe('Keep me');
+  expect(screen.getByLabelText('Description').props.value).toBe('Keep these notes too');
 });
 
 test('a share request opens the new post screen with that workout selected', async () => {
@@ -345,7 +373,8 @@ test('without finished workouts a caption alone can be posted', async () => {
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 50, offset: 0 } as never);
   const free = makePost({
     id: 12,
-    text: 'Rest day',
+    caption: 'Rest day',
+    description: '',
     workout: null,
     type: 'GENERAL',
     is_mine: true,
@@ -354,7 +383,9 @@ test('without finished workouts a caption alone can be posted', async () => {
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
   expect(
-    await screen.findByText('No finished workouts yet. You can still post a caption or photos.'),
+    await screen.findByText(
+      'No finished workouts yet. You can still post a caption, description or photos.',
+    ),
   ).toBeTruthy();
   const share = screen.getByRole('button', { name: 'Share' });
   expect(share.props.accessibilityState.disabled).toBe(true);
@@ -366,7 +397,8 @@ test('without finished workouts a caption alone can be posted', async () => {
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith({
       trainingSessionId: null,
-      text: 'Rest day',
+      caption: 'Rest day',
+      description: '',
       visibility: 'FRIENDS',
       photos: [],
     }),
@@ -374,17 +406,21 @@ test('without finished workouts a caption alone can be posted', async () => {
   expect(await screen.findByText('Rest day')).toBeTruthy();
 });
 
-test('choosing No workout posts without the suggested workout', async () => {
+test('choosing No workout lets a description stand alone', async () => {
   jest.mocked(feedApi.create).mockResolvedValue(makePost({ id: 13, workout: null }));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
   await screen.findByRole('radio', { name: /Workout finished/ });
   fireEvent.press(screen.getByRole('radio', { name: /No workout/ }));
-  fireEvent.changeText(screen.getByLabelText('Caption'), 'Just a thought');
+  fireEvent.changeText(screen.getByLabelText('Description'), 'Just a thought');
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith(
-      expect.objectContaining({ trainingSessionId: null, text: 'Just a thought' }),
+      expect.objectContaining({
+        trainingSessionId: null,
+        caption: '',
+        description: 'Just a thought',
+      }),
     ),
   );
 });

@@ -29,7 +29,7 @@ import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
 import { LeaguesScreen } from '@/features/leagues';
 import { FormCheckProvider } from '@/features/formcheck';
 import { Button, ui } from '@/features/training/components/ui';
-import { WorkoutPreview } from '@/features/training/components/WorkoutPreview';
+import { SessionWorkoutDetail } from '@/features/training/components/SessionWorkoutDetail';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { sizes, spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
@@ -348,7 +348,7 @@ function HomeNavigation({
         onRequestClose={viewingFinished ? () => setViewingFinished(false) : onDismissFinished}
       >
         {viewingFinished && finishedSessionId !== null ? (
-          <WorkoutPreview
+          <SessionWorkoutDetail
             accountId={accountId}
             sessionId={finishedSessionId}
             backLabel="Back to workout saved"
@@ -356,7 +356,7 @@ function HomeNavigation({
             showShare
             onShare={shareFinishedWorkout}
           />
-        ) : (
+        ) : finishedSessionId !== null ? (
           <View
             style={{
               flex: 1,
@@ -373,21 +373,11 @@ function HomeNavigation({
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
                 Workout saved
               </Text>
-              <Text style={{ color: p['ink-muted'] }}>
-                Share it to your feed so your friends can cheer you on.
-              </Text>
-              <Button
-                title="Share to feed"
-                icon="share"
-                onPress={() => {
-                  if (finishedSessionId !== null) shareFinishedWorkout(finishedSessionId);
-                }}
-              />
-              <Button title="View workout" secondary onPress={() => setViewingFinished(true)} />
+              <Button title="View workout" onPress={() => setViewingFinished(true)} />
               <Button title="Not now" secondary onPress={onDismissFinished} />
             </View>
           </View>
-        )}
+        ) : null}
       </Modal>
     </View>
   );

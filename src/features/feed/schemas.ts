@@ -1,9 +1,11 @@
 import { z } from 'zod/v4';
+import { workoutTitleSchema } from '@/features/training/schemas';
 
 const entityId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const count = z.number().int().nonnegative();
 
-export const MAX_POST_TEXT = 2200;
+export const MAX_POST_CAPTION = 160;
+export const MAX_POST_DESCRIPTION = 2200;
 export const MAX_COMMENT_TEXT = 1000;
 export const MAX_POST_IMAGES = 5;
 export const MAX_POST_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -20,6 +22,7 @@ export const postAuthorSchema = z.object({
 
 export const workoutSummarySchema = z.object({
   session_id: entityId,
+  title: workoutTitleSchema,
   activity_type: z.string(),
   started_at: z.iso.datetime({ offset: true }),
   ended_at: z.iso.datetime({ offset: true }),
@@ -39,6 +42,7 @@ export const workoutDetailSchema = workoutSummarySchema.extend({
     z.object({
       exercise_id: entityId,
       name: z.string(),
+      image_url: z.string().nullable().optional(),
       sets: z.array(
         z.object({
           set_number: z.number().int(),
@@ -52,27 +56,34 @@ export const workoutDetailSchema = workoutSummarySchema.extend({
   ),
 });
 
-export const postSchema = z.object({
-  id: entityId,
-  text: z.string(),
-  visibility: z.enum(['PUBLIC', 'FRIENDS', 'PRIVATE', 'LEAGUE']),
-  type: z.enum(['SESSION', 'LEAGUE_PENALTY', 'GENERAL']),
-  created_at: z.iso.datetime({ offset: true }),
-  author: postAuthorSchema,
-  workout: workoutSummarySchema.nullable(),
-  media: z.array(
-    z.object({
-      id: entityId,
-      type: z.enum(['IMAGE', 'VIDEO']),
-      order: z.number().int(),
-      url: mediaPathSchema,
-    }),
-  ),
-  like_count: count,
-  comment_count: count,
-  liked_by_me: z.boolean(),
-  is_mine: z.boolean(),
-});
+export const postSchema = z
+  .object({
+    id: entityId,
+    caption: z.string().default(''),
+    description: z.string().optional(),
+    text: z.string().optional(),
+    visibility: z.enum(['PUBLIC', 'FRIENDS', 'PRIVATE', 'LEAGUE']),
+    type: z.enum(['SESSION', 'LEAGUE_PENALTY', 'GENERAL']),
+    created_at: z.iso.datetime({ offset: true }),
+    author: postAuthorSchema,
+    workout: workoutSummarySchema.nullable(),
+    media: z.array(
+      z.object({
+        id: entityId,
+        type: z.enum(['IMAGE', 'VIDEO']),
+        order: z.number().int(),
+        url: mediaPathSchema,
+      }),
+    ),
+    like_count: count,
+    comment_count: count,
+    liked_by_me: z.boolean(),
+    is_mine: z.boolean(),
+  })
+  .transform(({ description, text, ...post }) => ({
+    ...post,
+    description: description ?? text ?? '',
+  }));
 
 export const postPageSchema = z.object({
   items: z.array(postSchema),

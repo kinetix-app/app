@@ -1,9 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { exerciseLine } from '../workoutFormat';
-import { IconButton } from './ui';
+import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { formatElapsedDuration, formatWorkoutVolume } from '../workoutFormat';
 
 type Action = Readonly<{ label: string; onPress: () => void }>;
 
@@ -11,50 +10,54 @@ type Action = Readonly<{ label: string; onPress: () => void }>;
 export function WorkoutSummaryCard({
   title,
   subtitle,
-  metrics,
-  exerciseNames,
+  durationSeconds,
+  volumeKg,
+  exerciseCount,
   open,
-  share,
   embedded = false,
   testID,
 }: Readonly<{
   title: string;
   subtitle: string;
-  metrics: readonly { label: string; value: string }[];
-  exerciseNames: readonly string[];
+  durationSeconds: number;
+  volumeKg?: string;
+  exerciseCount: number;
   open?: Action;
-  share?: Action;
   embedded?: boolean;
   testID?: string;
 }>) {
   const p = usePalette();
   const [focused, setFocused] = useState(false);
-  const names = exerciseLine(exerciseNames);
+  const metrics = [
+    { label: 'Duration', value: formatElapsedDuration(durationSeconds) },
+    { label: 'Volume', value: formatWorkoutVolume(volumeKg) },
+    { label: 'Exercises', value: exerciseCount.toLocaleString() },
+  ];
   const summary = (
     <>
-      <View style={[styles.header, share && styles.withShare]}>
+      <View style={styles.header}>
         <View style={[styles.icon, { backgroundColor: p['brand-soft'] }]}>
           <Feather name="activity" size={18} color={p['brand-ink']} />
         </View>
         <View style={styles.heading}>
-          <Text style={[textStyles['title-md'], { color: p.ink }]}>{title}</Text>
+          <Text numberOfLines={2} style={[textStyles['title-md'], { color: p.ink }]}>
+            {title}
+          </Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{subtitle}</Text>
         </View>
         {open ? <Feather name="chevron-right" size={20} color={p['brand-ink']} /> : null}
       </View>
       <View style={[styles.metrics, { borderColor: p.line }]}>
-        {metrics.map(({ label, value }) => (
-          <View key={label} style={styles.metric}>
+        {metrics.map(({ label, value }, index) => (
+          <View
+            key={label}
+            style={[styles.metric, index > 0 && styles.metricDivider, { borderColor: p.line }]}
+          >
             <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>{value}</Text>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{label}</Text>
           </View>
         ))}
       </View>
-      {names ? (
-        <Text numberOfLines={2} style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {names}
-        </Text>
-      ) : null}
     </>
   );
 
@@ -73,7 +76,11 @@ export function WorkoutSummaryCard({
           testID={testID}
           accessibilityRole="button"
           accessibilityLabel={open.label}
-          accessibilityHint={[...metrics.map(({ label, value }) => `${label}: ${value}`), names]
+          accessibilityHint={[
+            title,
+            subtitle,
+            ...metrics.map(({ label, value }) => `${label}: ${value}`),
+          ]
             .filter(Boolean)
             .join('. ')}
           onPress={open.onPress}
@@ -95,11 +102,6 @@ export function WorkoutSummaryCard({
       ) : (
         <View style={styles.content}>{summary}</View>
       )}
-      {share ? (
-        <View style={styles.share}>
-          <IconButton icon="share" label={share.label} onPress={share.onPress} />
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -111,8 +113,7 @@ const styles = StyleSheet.create({
     padding: spacing['space-3'],
     gap: spacing['space-2'],
   },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
-  withShare: { paddingRight: sizes['tap-min'] },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] },
   icon: {
     width: 36,
     height: 36,
@@ -123,12 +124,10 @@ const styles = StyleSheet.create({
   heading: { flex: 1, minWidth: 0, gap: spacing['space-1'] },
   metrics: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing['space-2'],
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: spacing['space-2'],
   },
-  metric: { flexBasis: '28%', flexGrow: 1 },
-  tabular: { fontVariant: ['tabular-nums'] },
-  share: { position: 'absolute', top: spacing['space-3'], right: spacing['space-3'] },
+  metric: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: spacing['space-1'] },
+  metricDivider: { borderLeftWidth: StyleSheet.hairlineWidth },
+  tabular: { fontVariant: ['tabular-nums'], textAlign: 'center' },
 });

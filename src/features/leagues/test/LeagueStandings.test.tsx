@@ -157,6 +157,7 @@ test('one round still offers all-time standings and the breakdown pages match th
     ended_at: credited.ended_at,
     activity_type: 'gym',
     state: 'completed',
+    title: 'Training session',
     exercises: [{ id: 1, exercise_order: 1, exercise: exampleExercise, sets: [] }],
   });
   jest.mocked(leaguesApi.contributions).mockImplementation(async (_id, roundId, offset) => ({

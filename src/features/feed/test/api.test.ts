@@ -35,7 +35,13 @@ test('feed calls use the posts routes with cursors and the friends scope', () =>
 });
 
 test('feed writes send the expected requests', () => {
-  void feedApi.create({ trainingSessionId: null, text: 'Hi', visibility: 'FRIENDS', photos: [] });
+  void feedApi.create({
+    trainingSessionId: null,
+    caption: 'Hi',
+    description: '',
+    visibility: 'FRIENDS',
+    photos: [],
+  });
   expect(apiClient.postMultipart).toHaveBeenCalledWith(
     '/api/v1/posts',
     expect.any(FormData),

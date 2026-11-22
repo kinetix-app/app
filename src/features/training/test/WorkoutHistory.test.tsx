@@ -23,11 +23,14 @@ jest.mock('../api', () => ({ trainingApi: { sessions: jest.fn(), session: jest.f
 const session: CompletedSession = {
   id: 1,
   client_session_id: null,
-  routine_id: null,
+  routine_id: 4,
+  title: 'Strength A',
   activity_type: 'gym',
   state: 'completed',
   started_at: '2026-10-28T10:00:00Z',
   ended_at: '2026-10-28T11:00:00Z',
+  total_reps: 8,
+  total_volume_kg: '640.00',
   exercises: [
     {
       id: 1,
@@ -101,6 +104,10 @@ test('retries the list and detail independently and displays saved results inclu
   fireEvent.press(await screen.findByTestId('history-workout-1'));
   fireEvent.press(await screen.findByText('Retry'));
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
+  expect(screen.getByLabelText('Image of Bench press').props.source).toEqual({
+    uri: exampleExercise.image_url,
+  });
+  expect(screen.getByRole('header', { name: session.title })).toBeTruthy();
   expect(screen.getByText('Set 1')).toBeTruthy();
   expect(screen.getByText('80 kg · 8 reps')).toBeTruthy();
   expect(screen.getByText('— kg · — reps')).toBeTruthy();
@@ -112,6 +119,8 @@ test('groups paginated results by completion month and retries a failed next pag
   const older = {
     ...session,
     id: 3,
+    routine_id: null,
+    title: 'Training session',
     started_at: '2026-09-28T10:00:00Z',
     ended_at: '2026-09-28T11:00:00Z',
   };
@@ -123,15 +132,19 @@ test('groups paginated results by completion month and retries a failed next pag
   const view = open();
   const summary = within(await screen.findByTestId('history-workout-1'));
   expect(summary.getByText('1 h')).toBeTruthy();
-  expect(summary.getByText('Bench press')).toBeTruthy();
-  expect(summary.getByText('Sets')).toBeTruthy();
+  expect(summary.getByText(session.title)).toBeTruthy();
+  expect(summary.getByText('640 kg')).toBeTruthy();
+  expect(summary.getByText('Exercises')).toBeTruthy();
+  expect(summary.queryByText('Bench press')).toBeNull();
   expect(trainingApi.session).not.toHaveBeenCalled();
   act(() => view.UNSAFE_getByType(FlatList).props.onEndReached());
   fireEvent.press(await screen.findByText('Retry'));
   expect(await screen.findByTestId('history-workout-2')).toBeTruthy();
   expect(screen.getAllByRole('header', { name: 'October 2026' })).toHaveLength(1);
   expect(screen.getByRole('header', { name: 'September 2026' })).toBeTruthy();
-  expect(screen.getByTestId('history-workout-3')).toBeTruthy();
+  expect(
+    within(screen.getByTestId('history-workout-3')).getByText('Training session'),
+  ).toBeTruthy();
   expect(trainingApi.sessions).toHaveBeenNthCalledWith(2, 1, 'kg', expect.anything());
   expect(trainingApi.sessions).toHaveBeenNthCalledWith(3, 1, 'kg', expect.anything());
   act(() => view.UNSAFE_getByType(FlatList).props.onEndReached());
@@ -172,19 +185,19 @@ test('preserves zero and missing cardio measurements with explicit distance and 
   expect(screen.getByText('1.25 km · —')).toBeTruthy();
 });
 
-test('completed workouts can be shared to the feed from the list and the details', async () => {
+test('sharing a completed workout is available inside its detail', async () => {
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [session], limit: 50, offset: 0 });
   jest.mocked(trainingApi.session).mockResolvedValue(session);
   const onShare = jest.fn();
   open(onShare);
-  fireEvent.press(await screen.findByRole('button', { name: /^Share workout from .* to feed$/ }));
-  expect(onShare).toHaveBeenLastCalledWith(1);
+  const entry = await screen.findByTestId('history-workout-1');
+  expect(screen.queryByRole('button', { name: /Share.*to feed/i })).toBeNull();
   expect(trainingApi.session).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByTestId('history-workout-1'));
-  expect(await screen.findByRole('header', { name: 'Workout preview' })).toBeTruthy();
+  fireEvent.press(entry);
+  expect(await screen.findByRole('header', { name: 'Workout detail' })).toBeTruthy();
   expect(await screen.findByText('1 h')).toBeTruthy();
   fireEvent.press(await screen.findByRole('button', { name: 'Share to feed' }));
-  expect(onShare).toHaveBeenCalledTimes(2);
+  expect(onShare).toHaveBeenCalledTimes(1);
   expect(onShare).toHaveBeenLastCalledWith(1);
   expect(await screen.findByRole('header', { name: 'Workout history' })).toBeTruthy();
 });
@@ -194,7 +207,7 @@ test('without a share handler the history offers no share buttons', async () => 
   jest.mocked(trainingApi.session).mockResolvedValue(session);
   open();
   const entry = await screen.findByTestId('history-workout-1');
-  expect(screen.queryByRole('button', { name: /^Share workout from .* to feed$/ })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Share.*to feed/i })).toBeNull();
   fireEvent.press(entry);
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Share to feed' })).toBeNull();

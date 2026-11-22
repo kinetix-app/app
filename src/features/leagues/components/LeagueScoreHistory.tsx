@@ -2,7 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { screenContentStyle } from '@/components/ScreenHeader';
-import { WorkoutPreviewModal } from '@/features/training/components/WorkoutPreview';
+import { SessionWorkoutDetailModal } from '@/features/training/components/SessionWorkoutDetail';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi, leagueViewGcTime } from '../api';
 import type { ScoreHistoryMember } from '../schemas';
@@ -121,7 +121,7 @@ export function LeagueScoreHistory({
         ListFooterComponent={renderPagination()}
       />
       {active && ownHistory && workoutId !== null ? (
-        <WorkoutPreviewModal
+        <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={workoutId}
           backLabel="Back to score history"

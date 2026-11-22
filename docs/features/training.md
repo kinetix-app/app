@@ -18,27 +18,31 @@ completed sessions. Detailed API, state, retry and unit behavior is in
 
 ## Completed workout details
 
-| Where to open                          | Action                                                                   |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| Profile → Training history             | Tap a completed workout card.                                            |
-| Workout saved                          | Tap **View workout** after finishing a session.                          |
-| Feed → New post                        | Select a workout and tap **Preview workout**. Back returns to the draft. |
-| Exercise details → History             | Tap **View workout** on an entry to see the full session.                |
-| League → Rankings → Your score history | Tap **View workout** on a credited workout.                              |
-| Feed post                              | Tap the workout on a post you can see.                                   |
+| Where to open                          | Action                                                                |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| Profile → Training history             | Tap a completed workout card.                                         |
+| Workout saved                          | Tap **View workout** after finishing a session.                       |
+| Feed → New post                        | Select a workout and tap **View workout**. Back returns to the draft. |
+| Exercise details → History             | Tap **View workout** on an entry to see the full session.             |
+| League → Rankings → Your score history | Tap **View workout** on a credited workout.                           |
+| Feed post                              | Tap the workout on a post you can see.                                |
 
 Training history opens on a paginated list of completed sessions grouped by local
-completion month. History and Feed use the same summary card for workout metrics
-and a short exercise list. Feed includes recorded lifting volume when available.
-History cards have a separate share shortcut. Selecting a card opens a preview
-above the list, so Back returns to the same place. The preview shows the session
-date, elapsed time, exercise and set counts, and
-recorded results in order. The `showShare` parameter enables a persistent
-**Share to feed** action when the caller also provides a share handler. The
-composer hides that action and keeps sharing in the post draft.
+completion month. History and Feed use the same summary card for workout duration,
+lifting volume and exercise count.
+Training History and Feed cards open the same **Workout detail** component.
+History opens the detail above the list, so Back returns to the same place.
+The card and detail use the workout's saved title. The API captures the routine
+name at completion or uses **Training session** for a standalone workout.
+Workout detail shows duration, exercise count and volume above set and rep counts.
+The exercise cards show each available catalogue image beside the recorded sets.
+The only **Share to feed** action is inside Workout detail, reached from Training
+History or Workout saved. The post composer retains its optional caption and
+description when returning from a workout's detail. Feed shows the post text
+separately from its workout attachment.
 
-The private preview uses the owner’s session endpoint. Feed details use the
-post endpoint and include its server-provided workout totals. The browser scenario in
+The private detail uses the owner’s session endpoint. Feed uses the post endpoint
+and includes its server-provided lifting volume and repetitions. The browser scenario in
 [`workout-detail.spec.ts`](../../e2e/web/workout-detail.spec.ts) exercises these
 entry points and checks access from a second account.
 

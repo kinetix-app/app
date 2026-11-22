@@ -180,14 +180,23 @@ export const completionInputSchema = z
       .max(500),
   })
   .refine((v) => Date.parse(v.ended_at) >= Date.parse(v.started_at), 'End must follow start.');
+// The default also supports responses from servers that predate workout titles.
+export const workoutTitleSchema = z.string().trim().min(1).default('Training session');
+
 export const completedSessionSchema = z.object({
   id: entityId,
   client_session_id: z.uuid().nullable(),
   routine_id: entityId.nullable(),
+  title: workoutTitleSchema,
   activity_type: z.string(),
   state: z.literal('completed'),
   started_at: z.iso.datetime({ offset: true }),
   ended_at: z.iso.datetime({ offset: true }),
+  total_reps: z.number().int().nonnegative().optional(),
+  total_volume_kg: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/)
+    .optional(),
   exercises: z.array(
     z.object({
       id: entityId,

@@ -85,20 +85,30 @@ test('reopens the same completed workout from private screens and an authorized 
   expect(catalogue.status).toBe(200);
   const { items } = await catalogue.json();
   const routineName = `Detail press ${randomUUID().slice(0, 8)}`;
+  const renamedRoutine = `${routineName} renamed`;
   const routine = await request('/routines', owner, 'POST', {
     name: routineName,
     exercises: [{ exercise_id: items[0].id, sets: [{ reps: 8, weight_kg: '42.50' }] }],
   });
   expect(routine.status).toBe(201);
+  const { id: routineId } = await routine.json();
+  const blank = await request('/sessions', owner, 'POST', {
+    client_session_id: randomUUID(),
+    started_at: new Date(Date.now() - 90000).toISOString(),
+    ended_at: new Date(Date.now() - 60000).toISOString(),
+    exercises: [],
+  });
+  expect(blank.status).toBe(201);
+  const { id: blankId } = await blank.json();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page);
   await page.getByRole('tab', { name: 'Workout', exact: true }).click();
-  async function startRoutine() {
-    await page.getByRole('button', { name: `Routine actions for ${routineName}` }).click();
-    await page.getByRole('button', { name: `Train ${routineName}` }).click();
+  async function startRoutine(name: string) {
+    await page.getByRole('button', { name: `Routine actions for ${name}` }).click();
+    await page.getByRole('button', { name: `Train ${name}` }).click();
   }
-  await startRoutine();
+  await startRoutine(routineName);
   const slot = page.getByRole('button', { name: 'Edit sets for Acceptance press' });
   await expect(slot).toBeVisible();
   if ((await slot.getAttribute('aria-expanded')) !== 'true') await slot.click();
@@ -109,40 +119,66 @@ test('reopens the same completed workout from private screens and an authorized 
   await page.getByRole('button', { name: 'Finish', exact: true }).click();
   await page.getByRole('button', { name: 'Keep routine', exact: true }).click();
   expect((await finish).status()).toBe(200);
-  const { id: sessionId } = await (await finish).json();
+  const { id: sessionId, title } = await (await finish).json();
+  expect(title).toBe(routineName);
+  expect(
+    (await request(`/routines/${routineId}`, owner, 'PATCH', { name: renamedRoutine })).status,
+  ).toBe(200);
   const viewSaved = page.getByRole('button', { name: 'View workout', exact: true });
   const viewSession = page.getByRole('button', { name: `View workout ${sessionId}`, exact: true });
   const historyWorkout = page.getByTestId(`history-workout-${sessionId}`);
   const privateSet = page.getByText('42.50 kg · 8 reps', { exact: true });
+  const shareWorkout = page.getByRole('button', { name: 'Share to feed', exact: true });
+  const workoutDetail = page.getByRole('heading', { name: 'Workout detail', exact: true });
   await expect(page.getByRole('heading', { name: 'Workout saved' })).toBeVisible();
+  await expect(shareWorkout).toHaveCount(0);
   await viewSaved.click();
   await expect(privateSet).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Workout preview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: routineName, exact: true })).toBeVisible();
+  await expect(workoutDetail).toBeVisible();
   await expect(page.getByText('Duration', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Share to feed', exact: true })).toBeVisible();
+  await expect(shareWorkout).toBeVisible();
   await page.getByRole('button', { name: 'Back to workout saved' }).click();
-  await page.getByRole('button', { name: 'Share to feed', exact: true }).click();
+  await expect(shareWorkout).toHaveCount(0);
+  await viewSaved.click();
+  await shareWorkout.click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByLabel('Caption', { exact: true })).toHaveValue('');
   await page.getByLabel('Caption', { exact: true }).fill('An acceptance workout');
-  await page.getByRole('button', { name: 'Preview workout' }).click();
+  await page.getByLabel('Description', { exact: true }).fill('Three screens share this result.');
+  await page.getByRole('button', { name: 'View workout', exact: true }).click();
+  await expect(workoutDetail).toBeVisible();
   await expect(privateSet).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Share to feed', exact: true })).toHaveCount(0);
+  await expect(shareWorkout).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to new post' }).click();
   await expect(page.getByLabel('Caption', { exact: true })).toHaveValue('An acceptance workout');
+  await expect(page.getByLabel('Description', { exact: true })).toHaveValue(
+    'Three screens share this result.',
+  );
   const posted = page.waitForResponse(
     (response) => response.url().endsWith('/posts') && response.request().method() === 'POST',
   );
   await page.getByRole('button', { name: 'Share', exact: true }).click();
   expect((await posted).status()).toBe(201);
+  expect(await (await posted).json()).toMatchObject({
+    caption: 'An acceptance workout',
+    description: 'Three screens share this result.',
+    workout: { title: routineName },
+  });
 
   await page.reload();
   await signIn(page);
   await page.getByRole('button', { name: 'Open profile' }).click();
   await page.getByRole('button', { name: 'Training history' }).click();
   await expect(page.getByRole('heading', { name: 'Workout history', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Workout preview' })).toHaveCount(0);
-  await expect(historyWorkout.getByText('Acceptance press', { exact: true })).toBeVisible();
+  await expect(workoutDetail).toHaveCount(0);
+  await expect(historyWorkout.getByText(routineName, { exact: true })).toBeVisible();
+  const blankWorkout = page.getByTestId(`history-workout-${blankId}`);
+  await expect(blankWorkout.getByText('Training session', { exact: true })).toBeVisible();
+  await expect(historyWorkout.getByText('340 kg', { exact: true })).toBeVisible();
+  await expect(historyWorkout.getByText('Acceptance press', { exact: true })).toHaveCount(0);
   await expect(historyWorkout.getByText('Exercises', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Share workout from .* to feed$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Share.*to feed/i })).toHaveCount(0);
   const privateRoute = `**/api/v1/sessions/${sessionId}?weight_unit=kg`;
   await page.route(privateRoute, (route) => route.abort());
   await historyWorkout.click();
@@ -150,7 +186,15 @@ test('reopens the same completed workout from private screens and an authorized 
   await page.unroute(privateRoute);
   await page.getByRole('button', { name: 'Retry' }).click();
   await expect(privateSet).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Share to feed', exact: true })).toBeVisible();
+  await expect(workoutDetail).toBeVisible();
+  await expect(page.getByTestId('workout-detail-primary-metrics')).toContainText(
+    /Duration.*Exercises.*Volume.*340 kg/s,
+  );
+  await expect(page.getByTestId('workout-detail-secondary-metrics')).toContainText(
+    /Sets.*Reps.*8/s,
+  );
+  await expect(page.getByLabel('Image of Acceptance press')).toBeVisible();
+  await expect(shareWorkout).toBeVisible();
   await page.getByRole('button', { name: 'Back to history' }).click();
   await expect(historyWorkout).toBeVisible();
 
@@ -164,7 +208,7 @@ test('reopens the same completed workout from private screens and an authorized 
   await page.getByRole('button', { name: 'Back to standings' }).click();
   await page.getByRole('button', { name: 'Back to leagues' }).click();
   await page.getByRole('tab', { name: 'Workout', exact: true }).click();
-  await startRoutine();
+  await startRoutine(renamedRoutine);
   await page.getByRole('button', { name: 'Details for Acceptance press', exact: true }).click();
   await page.getByRole('tab', { name: 'History', exact: true }).click();
   await viewSession.click();
@@ -177,10 +221,31 @@ test('reopens the same completed workout from private screens and an authorized 
     await peerPage.setViewportSize({ width: 320, height: 740 });
     await signIn(peerPage, peer);
     const postWorkout = peerPage.getByRole('button', { name: 'See Workout Alice’s workout' });
+    await expect(peerPage.getByText('An acceptance workout', { exact: true })).toBeVisible();
+    await expect(
+      peerPage.getByText('Three screens share this result.', { exact: true }),
+    ).toBeVisible();
+    await expect(postWorkout.getByText(routineName, { exact: true })).toBeVisible();
     await expect(postWorkout.getByText('340 kg', { exact: true })).toBeVisible();
-    await expect(postWorkout.getByText('Acceptance press', { exact: true })).toBeVisible();
+    await expect(postWorkout.getByText('Acceptance press', { exact: true })).toHaveCount(0);
     await postWorkout.click();
+    await expect(
+      peerPage.getByRole('heading', { name: 'Workout detail', exact: true }),
+    ).toBeVisible();
+    await expect(peerPage.getByRole('heading', { name: routineName, exact: true })).toBeVisible();
     await expect(peerPage.getByText('8 reps × 42.5 kg', { exact: true })).toBeVisible();
+    await expect(peerPage.getByTestId('workout-detail-primary-metrics')).toContainText(
+      /Duration.*Exercises.*Volume.*340 kg/s,
+    );
+    await expect(peerPage.getByTestId('workout-detail-secondary-metrics')).toContainText(
+      /Sets.*Reps.*8/s,
+    );
+    const image = peerPage.getByLabel('Image of Acceptance press');
+    await expect(image).toBeVisible();
+    const imageBox = await image.boundingBox();
+    const setBox = await peerPage.getByText('8 reps × 42.5 kg', { exact: true }).boundingBox();
+    expect(imageBox!.x + imageBox!.width).toBeLessThan(setBox!.x);
+    await expect(peerPage.getByRole('button', { name: /Share.*to feed/i })).toHaveCount(0);
     await peerPage.getByRole('button', { name: 'Back to feed' }).click();
     await peerPage.getByRole('tab', { name: 'League', exact: true }).click();
     await peerPage.getByRole('button', { name: leagueName, exact: true }).click();
