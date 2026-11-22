@@ -1,13 +1,21 @@
-import { formatCardioDuration } from '../cardio';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
-import { usePalette } from '@/theme/tokens';
+import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
-import type { CompletedSession, WeightUnit } from '../schemas';
-import { Button, Failure, IconButton, Loading, ui } from './ui';
+import { Failure, IconButton, Loading, ui } from './ui';
+import { SessionWorkoutDetailModal } from './SessionWorkoutDetail';
+import { WorkoutSummaryCard } from './WorkoutSummaryCard';
+
+const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
+const dayFormat = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+});
+const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 
 export function WorkoutHistory({
   accountId,
@@ -24,8 +32,9 @@ export function WorkoutHistory({
   onShare?: (sessionId: number) => void;
 }>) {
   const p = usePalette();
-  const unit: WeightUnit = 'kg';
+  const unit = 'kg';
   const [selected, setSelected] = useState<number | null>(null);
+  const detailOpen = active && selected !== null;
   const list = useInfiniteQuery({
     queryKey: ['training', accountId, 'sessions', unit],
     initialPageParam: 0,
@@ -33,106 +42,98 @@ export function WorkoutHistory({
     getNextPageParam: (page) =>
       page.items.length === page.limit ? page.offset + page.limit : undefined,
   });
-  const detail = useQuery({
-    queryKey: ['training', accountId, 'session', selected, unit],
-    enabled: selected !== null,
-    queryFn: ({ signal }) => trainingApi.session(selected ?? 0, unit, signal),
-  });
-  let detailContent = null;
-  if (detail.isPending) detailContent = <Loading />;
-  else if (detail.isError)
-    detailContent = <Failure error={detail.error} retry={() => void detail.refetch()} />;
-  else if (detail.data)
-    detailContent = <SessionDetails session={detail.data} unit={unit} palette={p} />;
+  const sessions = list.data?.pages.flatMap((page) => page.items) ?? [];
   let footer = null;
   if (list.isFetchingNextPage) footer = <Loading />;
   else if (list.isFetchNextPageError)
     footer = (
       <Failure error={list.error} retry={() => void list.fetchNextPage({ cancelRefetch: false })} />
     );
-  const back = () => (selected === null ? onClose() : setSelected(null));
-  useHardwareBack(() => {
-    back();
-    return true;
-  }, active);
-  const header = (
-    <View style={ui.gap}>
-      <View style={ui.row}>
-        <IconButton
-          icon="arrow-left"
-          label={selected === null ? backLabel : 'Back to history'}
-          onPress={back}
-        />
-        <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-          Workout history
-        </Text>
-      </View>
-    </View>
+  useHardwareBack(
+    () => {
+      onClose();
+      return true;
+    },
+    active && selected === null,
   );
-  if (selected !== null)
-    return (
-      <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
-        <ScrollView contentContainerStyle={ui.content}>
-          {header}
-          {detailContent}
-          {onShare && detail.data ? (
-            <Button
-              title="Share to feed"
-              tone="positive"
-              icon="share"
-              onPress={() => onShare(selected)}
-            />
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    );
+
+  function shareSelected(sessionId: number) {
+    setSelected(null);
+    onShare?.(sessionId);
+  }
+
   return (
     <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
+      <View
+        aria-hidden={detailOpen}
+        accessibilityElementsHidden={detailOpen}
+        importantForAccessibility={detailOpen ? 'no-hide-descendants' : 'auto'}
+        style={[styles.header, { borderColor: p.line }]}
+      >
+        <View style={[ui.row, styles.headerContent]}>
+          <IconButton icon="arrow-left" label={backLabel} onPress={onClose} />
+          <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
+            Workout history
+          </Text>
+        </View>
+      </View>
       <FlatList
-        contentContainerStyle={ui.content}
-        data={list.data?.pages.flatMap((page) => page.items) ?? []}
+        aria-hidden={detailOpen}
+        accessibilityElementsHidden={detailOpen}
+        importantForAccessibility={detailOpen ? 'no-hide-descendants' : 'auto'}
+        contentContainerStyle={[ui.content, styles.list]}
+        data={sessions}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={
-          <View style={ui.gap}>
-            {header}
-            {list.isPending ? <Loading /> : null}
-            {list.isError ? (
-              <Failure
-                error={list.error}
-                retry={() => {
-                  void list.refetch();
-                }}
-              />
-            ) : null}
-          </View>
+          list.isPending ? (
+            <Loading />
+          ) : list.isError && !list.isFetchNextPageError ? (
+            <Failure error={list.error} retry={() => void list.refetch()} />
+          ) : null
         }
         ListEmptyComponent={
           !list.isPending && !list.isError ? (
             <Text style={{ color: p['ink-muted'] }}>No completed workouts yet.</Text>
           ) : null
         }
-        renderItem={({ item }) => (
-          <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
-            <Text style={{ color: p.ink }}>
-              {new Date(item.ended_at).toLocaleString()} · {item.exercises.length} exercises
-            </Text>
-            <Button
-              title="View workout"
-              accessibilityLabel={`View workout ${item.id}`}
-              secondary
-              onPress={() => setSelected(item.id)}
-            />
-            {onShare ? (
-              <Button
-                title="Share to feed"
-                accessibilityLabel={`Share workout ${item.id} to feed`}
-                tone="positive"
-                icon="share"
-                onPress={() => onShare(item.id)}
+        renderItem={({ item, index }) => {
+          const completed = new Date(item.ended_at);
+          const month = monthFormat.format(completed);
+          const previous = sessions[index - 1];
+          const startsMonth =
+            !previous || month !== monthFormat.format(new Date(previous.ended_at));
+          const day = dayFormat.format(completed);
+          const time = timeFormat.format(completed);
+          const when = `${day} at ${time}`;
+          const seconds = Math.max(
+            0,
+            Math.floor((completed.getTime() - Date.parse(item.started_at)) / 1000),
+          );
+          return (
+            <View style={styles.item}>
+              {startsMonth ? (
+                <Text
+                  accessibilityRole="header"
+                  style={[textStyles['title-md'], { color: p.ink }, index > 0 && styles.nextMonth]}
+                >
+                  {month}
+                </Text>
+              ) : null}
+              <WorkoutSummaryCard
+                testID={`history-workout-${item.id}`}
+                title={item.title}
+                subtitle={`${day} · ${time}`}
+                durationSeconds={seconds}
+                volumeKg={item.total_volume_kg}
+                exerciseCount={item.exercises.length}
+                open={{
+                  label: `View ${item.title} from ${when}`,
+                  onPress: () => setSelected(item.id),
+                }}
               />
-            ) : null}
-          </View>
-        )}
+            </View>
+          );
+        }}
         onEndReachedThreshold={0.5}
         onEndReached={() => {
           if (list.hasNextPage && !list.isFetching && !list.isFetchNextPageError)
@@ -140,51 +141,30 @@ export function WorkoutHistory({
         }}
         ListFooterComponent={footer}
       />
+      {detailOpen ? (
+        <SessionWorkoutDetailModal
+          accountId={accountId}
+          sessionId={selected}
+          backLabel="Back to history"
+          onBack={() => setSelected(null)}
+          showShare={Boolean(onShare)}
+          onShare={shareSelected}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
 
-function SessionDetails({
-  session,
-  unit,
-  palette,
-}: Readonly<{
-  session: CompletedSession;
-  unit: WeightUnit;
-  palette: ReturnType<typeof usePalette>;
-}>) {
-  return (
-    <View style={ui.gap}>
-      <Text style={{ color: palette.ink }}>
-        Completed {new Date(session.ended_at).toLocaleString()}
-      </Text>
-      <Text style={{ color: palette['ink-muted'] }}>
-        Started {new Date(session.started_at).toLocaleString()}
-      </Text>
-      {session.exercises.map((slot) => (
-        <View key={slot.id} style={[ui.card, { backgroundColor: palette['surface-200'] }]}>
-          <Text style={[ui.heading, { color: palette.ink }]}>
-            {slot.exercise_order}. {slot.exercise.name}
-          </Text>
-          {slot.sets.map((set) => (
-            <Text key={set.set_number} style={{ color: palette.ink }}>
-              Set {set.set_number}: {formatWorkoutSet(set, unit)}
-            </Text>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function formatWorkoutSet(
-  set: CompletedSession['exercises'][number]['sets'][number],
-  unit: WeightUnit,
-) {
-  if (set.duration_seconds !== null || set.distance_km !== null) {
-    const duration =
-      set.duration_seconds === null ? '—' : formatCardioDuration(set.duration_seconds);
-    return `${set.distance_km ?? '—'} km · ${duration}`;
-  }
-  return `${set.weight?.value ?? '—'} ${set.weight?.unit ?? unit} · ${set.reps ?? '—'} reps`;
-}
+const styles = StyleSheet.create({
+  header: { borderBottomWidth: StyleSheet.hairlineWidth },
+  headerContent: {
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+    paddingHorizontal: spacing['space-4'],
+    paddingVertical: spacing['space-3'],
+  },
+  list: { gap: spacing['space-3'] },
+  item: { gap: spacing['space-3'] },
+  nextMonth: { marginTop: spacing['space-2'] },
+});

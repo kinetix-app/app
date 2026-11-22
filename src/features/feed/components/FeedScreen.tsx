@@ -14,7 +14,7 @@ import type { Post } from '../schemas';
 import { CommentsScreen } from './CommentsScreen';
 import { PostCard } from './PostCard';
 import { ShareWorkoutScreen } from './ShareWorkoutScreen';
-import { WorkoutDetailScreen } from './WorkoutDetailScreen';
+import { SharedWorkoutDetail } from './SharedWorkoutDetail';
 
 type Panel =
   | { kind: 'feed' }
@@ -217,7 +217,7 @@ export function FeedScreen({
         <CommentsScreen accountId={accountId} post={view.post} onBack={closePanel} />
       ) : null}
       {view.kind === 'workout' ? (
-        <WorkoutDetailScreen accountId={accountId} post={view.post} onBack={closePanel} />
+        <SharedWorkoutDetail accountId={accountId} post={view.post} onBack={closePanel} />
       ) : null}
       {view.kind === 'share' ? (
         <ShareWorkoutScreen

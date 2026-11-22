@@ -7,14 +7,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
 import { trainingApi } from '@/features/training/api';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
+import { SessionWorkoutDetailModal } from '@/features/training/components/SessionWorkoutDetail';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { feedApi, type PostPhoto } from '../api';
 import { countLabel } from '../format';
 import {
+  MAX_POST_CAPTION,
+  MAX_POST_DESCRIPTION,
   MAX_POST_IMAGE_BYTES,
   MAX_POST_IMAGES,
-  MAX_POST_TEXT,
   POST_IMAGE_TYPES,
   type Post,
 } from '../schemas';
@@ -40,7 +42,9 @@ export function ShareWorkoutScreen({
   });
   // 'none' is an explicit post without a workout; null means "not chosen yet".
   const [chosen, setSelected] = useState<number | 'none' | null>(initialSessionId ?? null);
-  const [text, setText] = useState('');
+  const [detailSessionId, setDetailSessionId] = useState<number | null>(null);
+  const [caption, setCaption] = useState('');
+  const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PostPhoto[]>([]);
   const [error, setError] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -49,7 +53,11 @@ export function ShareWorkoutScreen({
   const recent = workouts.data?.items.slice(0, 10) ?? [];
   // Default to the most recent workout until the person picks one.
   const selected = chosen === 'none' ? null : (chosen ?? recent[0]?.id ?? null);
-  const canShare = selected !== null || text.trim().length > 0 || photos.length > 0;
+  const canShare =
+    selected !== null ||
+    caption.trim().length > 0 ||
+    description.trim().length > 0 ||
+    photos.length > 0;
 
   async function pickPhotos() {
     setPhotoError('');
@@ -91,7 +99,8 @@ export function ShareWorkoutScreen({
       // Every post goes to the author's friends.
       post = await feedApi.create({
         trainingSessionId: selected,
-        text,
+        caption,
+        description,
         visibility: 'FRIENDS',
         photos,
       });
@@ -112,11 +121,52 @@ export function ShareWorkoutScreen({
       edges={['top', 'left', 'right']}
       style={[ui.screen, { backgroundColor: p['surface-100'] }]}
     >
-      <ScrollView contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        aria-hidden={detailSessionId !== null}
+        accessibilityElementsHidden={detailSessionId !== null}
+        importantForAccessibility={detailSessionId !== null ? 'no-hide-descendants' : 'auto'}
+        contentContainerStyle={ui.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={ui.row}>
           <IconButton icon="arrow-left" label="Back to feed" onPress={onClose} />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
             New post
+          </Text>
+        </View>
+
+        <View style={ui.gap}>
+          <Text nativeID="caption-label" style={[textStyles['title-md'], { color: p.ink }]}>
+            Caption
+          </Text>
+          <TextField
+            accessibilityLabel="Caption"
+            accessibilityLabelledBy="caption-label"
+            placeholder="Add a short caption"
+            value={caption}
+            onChangeText={setCaption}
+            maxLength={MAX_POST_CAPTION}
+            editable={!pending}
+          />
+        </View>
+
+        <View style={ui.gap}>
+          <Text nativeID="description-label" style={[textStyles['title-md'], { color: p.ink }]}>
+            Description
+          </Text>
+          <TextField
+            accessibilityLabel="Description"
+            accessibilityLabelledBy="description-label"
+            placeholder="How did it go?"
+            value={description}
+            onChangeText={setDescription}
+            maxLength={MAX_POST_DESCRIPTION}
+            multiline
+            editable={!pending}
+            inputStyle={{ minHeight: 96, textAlignVertical: 'top' }}
+          />
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'right' }]}>
+            {description.length}/{MAX_POST_DESCRIPTION}
           </Text>
         </View>
 
@@ -133,13 +183,13 @@ export function ShareWorkoutScreen({
           ) : null}
           {workouts.data && !recent.length ? (
             <Text style={{ color: p['ink-muted'] }}>
-              No finished workouts yet. You can still post a caption or photos.
+              No finished workouts yet. You can still post a caption, description or photos.
             </Text>
           ) : null}
           <View accessibilityRole="radiogroup" accessibilityLabel="Workout to share" style={ui.gap}>
             {recent.length ? (
               <RadioOption
-                label="No workout. Post only a caption or photos"
+                label="No workout"
                 checked={selected === null}
                 disabled={pending}
                 onPress={() => setSelected('none')}
@@ -161,26 +211,14 @@ export function ShareWorkoutScreen({
               />
             ))}
           </View>
-        </View>
-
-        <View style={ui.gap}>
-          <Text nativeID="caption-label" style={[textStyles['title-md'], { color: p.ink }]}>
-            Caption
-          </Text>
-          <TextField
-            accessibilityLabel="Caption"
-            accessibilityLabelledBy="caption-label"
-            placeholder="How did it go?"
-            value={text}
-            onChangeText={setText}
-            maxLength={MAX_POST_TEXT}
-            multiline
-            editable={!pending}
-            inputStyle={{ minHeight: 96, textAlignVertical: 'top' }}
-          />
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'right' }]}>
-            {text.length}/{MAX_POST_TEXT}
-          </Text>
+          {selected !== null ? (
+            <Button
+              title="View workout"
+              secondary
+              disabled={pending}
+              onPress={() => setDetailSessionId(selected)}
+            />
+          ) : null}
         </View>
 
         <View style={ui.gap}>
@@ -255,6 +293,15 @@ export function ShareWorkoutScreen({
         />
         <Button title="Cancel" secondary disabled={pending} onPress={onClose} />
       </ScrollView>
+      {detailSessionId !== null ? (
+        <SessionWorkoutDetailModal
+          accountId={accountId}
+          sessionId={detailSessionId}
+          backLabel="Back to new post"
+          onBack={() => setDetailSessionId(null)}
+          showShare={false}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -332,18 +379,20 @@ function WorkoutOption({
   const p = usePalette();
   const sets = workout.exercises.reduce((sum, slot) => sum + slot.sets.length, 0);
   const when = new Date(workout.ended_at).toLocaleString();
-  const parts = [countLabel(workout.exercises.length, 'exercise'), countLabel(sets, 'set')];
+  const parts = [when, countLabel(workout.exercises.length, 'exercise'), countLabel(sets, 'set')];
   if (workout.exercises.length)
     parts.push(workout.exercises.map((slot) => slot.exercise.name).join(', '));
   return (
     <RadioOption
-      label={`Workout finished ${when}`}
+      label={`${workout.title}. Workout finished ${when}`}
       checked={checked}
       disabled={disabled}
       onPress={onPress}
     >
       <View style={{ flex: 1, gap: spacing['space-1'] }}>
-        <Text style={[textStyles.label, { color: checked ? p['brand-ink'] : p.ink }]}>{when}</Text>
+        <Text style={[textStyles.label, { color: checked ? p['brand-ink'] : p.ink }]}>
+          {workout.title}
+        </Text>
         <Text
           numberOfLines={2}
           style={[textStyles['body-sm'], { color: checked ? p['brand-ink'] : p['ink-muted'] }]}
@@ -361,13 +410,13 @@ export function shareErrorMessage(error: unknown) {
     if (error.status === 413) return 'Photos are too large. Use up to 5 photos of 5 MB each.';
     if (error.status === 415) return 'Use JPEG, PNG or WebP photos.';
     if (error.status === 422)
-      return 'Add a caption, a photo or a workout. If you chose a workout or photos, check them and try again.';
+      return 'Add a caption, description, photo or workout. Check any attachments and try again.';
     if (error.status === 503)
       return 'Photo upload is unavailable right now. Remove the photos or try again later.';
     if ([401, 403].includes(error.status))
       return 'Your account cannot share right now. Sign out and sign in again.';
   }
-  return 'Could not share your workout. Your caption and photos are kept. Try again.';
+  return 'Could not share your post. Your caption, description and photos are kept. Try again.';
 }
 
 const styles = StyleSheet.create({

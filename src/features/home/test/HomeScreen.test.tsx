@@ -515,16 +515,19 @@ test('a workout from Training history can be shared and opens the Feed composer'
     routine_id: null,
     activity_type: 'gym',
     state: 'completed' as const,
+    title: 'Training session',
     started_at: '2026-11-17T10:00:00Z',
     ended_at: '2026-11-17T11:00:00Z',
     exercises: [],
   };
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [finished], limit: 50, offset: 0 });
+  jest.mocked(trainingApi.session).mockResolvedValue(finished);
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await screen.findByText('No posts yet', undefined, { timeout: 10000 });
   fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   fireEvent.press(screen.getByText('Training history'));
-  fireEvent.press(await screen.findByRole('button', { name: 'Share workout 5 to feed' }));
+  fireEvent.press(await screen.findByTestId('history-workout-5'));
+  fireEvent.press(await screen.findByRole('button', { name: 'Share to feed' }));
   expect(screen.getByRole('tab', { name: 'Feed' }).props.accessibilityState.selected).toBe(true);
   const option = await screen.findByRole('radio', { name: /Workout finished/ });
   expect(option.props.accessibilityState.checked).toBe(true);

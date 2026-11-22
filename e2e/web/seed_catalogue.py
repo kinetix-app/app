@@ -10,6 +10,12 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.features.training.models import exercise
 
+# The image is a synthetic PNG for exercising browser image decoding without a remote host.
+PRESS_IMAGE = (
+    "data:image/png;base64,"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZl0AAAAASUVORK5CYII="
+)
+
 
 async def main():
     if os.environ.get("APP_ENV") != "test":
@@ -42,6 +48,7 @@ async def main():
                         imported_at=datetime.now(UTC),
                         body_parts=[body_part] if body_part else [],
                         instructions=["Move with control."],
+                        image_url=PRESS_IMAGE if key == "press" else None,
                     )
                 )
     await engine.dispose()

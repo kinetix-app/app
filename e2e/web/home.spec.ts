@@ -109,7 +109,7 @@ test('home shares navigation, goal persistence, existing nutrition and an ongoin
   await page.getByRole('tab', { name: 'Home', exact: true }).click();
   await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
-  await page.getByRole('button', { name: `View workout ${completed.id}`, exact: true }).click();
+  await page.getByTestId(`history-workout-${completed.id}`).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Home', exact: true }).click();
   await page.getByRole('button', { name: 'Edit nutrition goal', exact: true }).click();

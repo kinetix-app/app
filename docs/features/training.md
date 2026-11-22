@@ -16,6 +16,40 @@ completed exercise configuration is shown as guidance/placeholders. History load
 completed sessions. Detailed API, state, retry and unit behavior is in
 [routines](../routines.md) and [workouts](../workouts.md).
 
+## Completed workout details
+
+| Where to open                          | Action                                                                |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| Profile → Training history             | Tap a completed workout card.                                         |
+| Workout saved                          | Tap **View workout** after finishing a session.                       |
+| Feed → New post                        | Select a workout and tap **View workout**. Back returns to the draft. |
+| Exercise details → History             | Tap **View workout** on an entry to see the full session.             |
+| League → Rankings → Your score history | Tap **View workout** on a credited workout.                           |
+| Feed post                              | Tap the workout on a post you can see.                                |
+
+Training history opens on a paginated list of completed sessions grouped by local
+completion month. History and Feed use the same summary card for workout duration,
+lifting volume and exercise count.
+Training History and Feed cards open the same **Workout detail** component.
+History opens the detail above the list, so Back returns to the same place.
+The card and detail use the workout's saved title. The API captures the routine
+name at completion or uses **Training session** for a standalone workout.
+Workout detail leads with the title and the athlete's avatar and name. The
+completion date and time appear below the name. Duration, volume and exercise
+count appear above sets and reps in the session card, with dividers between metrics.
+Each exercise has its own card with an image beside the set table. The table uses
+dividers between sets. Strength rows align weight and reps. Cardio rows align
+distance and time. Missing values appear as a dash.
+The only **Share to feed** action is inside Workout detail, reached from Training
+History or Workout saved. The post composer retains its optional caption and
+description when returning from a workout's detail. Feed shows the post text
+separately from its workout attachment.
+
+The private detail uses the owner’s session endpoint. Feed uses the post endpoint
+and includes its server-provided lifting volume and repetitions. The browser scenario in
+[`workout-detail.spec.ts`](../../e2e/web/workout-detail.spec.ts) exercises these
+entry points and checks access from a second account.
+
 ## Code and evidence
 
 - Feature API/schemas/state: `src/features/training/api.ts`, `schemas.ts`,

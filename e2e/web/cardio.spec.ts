@@ -34,6 +34,8 @@ test('cardio recording survives reload and persists mixed measurements', async (
       await request('/me/profile', 'PATCH', {
         display_name: 'Acceptance',
         age: 30,
+        sex: 'female',
+        activity_level: 'moderate',
         height_cm: '170',
         weight_kg: '70',
         measurement_system: 'metric',
@@ -109,11 +111,18 @@ test('cardio recording survives reload and persists mixed measurements', async (
     distance_km: null,
   });
   expect((await request(`/sessions/${result.id}`)).status).toBe(200);
-  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Not now', exact: true }).click();
+  await page.getByRole('tab', { name: 'Feed', exact: true }).click();
   await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
-  await page.getByRole('button', { name: `View workout ${result.id}`, exact: true }).click();
-  await expect(page.getByText('Set 1: 1.25 km · 00:12:30', { exact: true })).toBeVisible();
+  await page.getByTestId(`history-workout-${result.id}`).click();
+  const cardio = page.getByRole('table', { name: 'Cardio sets' });
+  await expect(cardio.getByRole('columnheader', { name: 'Distance (km)' })).toBeVisible();
+  await expect(cardio.getByRole('row').nth(1).getByRole('cell')).toHaveText([
+    '1',
+    '1.25',
+    '00:12:30',
+  ]);
 });
 
 test('cardio routine defaults save, reopen and edit through the real app', async ({ page }) => {

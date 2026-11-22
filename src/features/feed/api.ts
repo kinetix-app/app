@@ -20,9 +20,10 @@ export type PostPhoto = Readonly<{
 }>;
 
 export type PostInput = Readonly<{
-  /** Null posts without a workout; they then need a caption or a photo. */
+  /** A post without a workout needs a caption, description or photo. */
   trainingSessionId: number | null;
-  text: string;
+  caption: string;
+  description: string;
   visibility: PostVisibility;
   photos: readonly PostPhoto[];
 }>;
@@ -31,7 +32,8 @@ export function buildPostForm(input: PostInput) {
   const form = new FormData();
   if (input.trainingSessionId !== null)
     form.append('training_session_id', String(input.trainingSessionId));
-  form.append('text', input.text.trim());
+  form.append('caption', input.caption.trim());
+  form.append('description', input.description.trim());
   form.append('visibility', input.visibility);
   for (const photo of input.photos) {
     if (photo.file) form.append('files', photo.file, photo.name);

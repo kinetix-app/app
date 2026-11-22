@@ -2,8 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { AccessibilityInfo, FlatList, View } from 'react-native';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
+import { trainingApi } from '@/features/training/api';
+import { exampleExercise } from '@/features/training/test/fixtures';
 import { leaguesApi } from '../api';
 import { LeagueStandings } from '../components/LeagueStandings';
+
+jest.mock('@/features/training/api', () => ({ trainingApi: { session: jest.fn() } }));
 
 jest.mock('../api', () => ({
   ...jest.requireActual('../api'),
@@ -130,6 +134,8 @@ test('opens a member page, loads older credited workouts, hides peer calculation
   await screen.findByRole('header', { name: 'Score history' });
   expect(await screen.findByText('Workout #39')).toBeTruthy();
   expect(screen.queryByText(/Body weight/)).toBeNull();
+  expect(screen.queryByRole('button', { name: 'View workout 39' })).toBeNull();
+  expect(trainingApi.session).not.toHaveBeenCalled();
   act(() => view.UNSAFE_getByType(FlatList).props.onEndReached());
   expect(await screen.findByText('Workout #11')).toBeTruthy();
   expect(leaguesApi.scoreHistory).toHaveBeenCalledWith(9, 1, '2026-11-17', expect.anything());
@@ -143,6 +149,17 @@ test('one round still offers all-time standings and the breakdown pages match th
     .mockResolvedValue({ timezone: 'Europe/Madrid', current_round_id: 2, rounds: [currentRound] });
   jest.mocked(leaguesApi.standingsPage).mockResolvedValue({ items: [alice], next_offset: null });
   jest.mocked(leaguesApi.scoreHistory).mockResolvedValue({ items: [credited], next_before: null });
+  jest.mocked(trainingApi.session).mockResolvedValue({
+    id: 39,
+    client_session_id: null,
+    routine_id: null,
+    started_at: '2026-11-17T17:00:00Z',
+    ended_at: credited.ended_at,
+    activity_type: 'gym',
+    state: 'completed',
+    title: 'Training session',
+    exercises: [{ id: 1, exercise_order: 1, exercise: exampleExercise, sets: [] }],
+  });
   jest.mocked(leaguesApi.contributions).mockImplementation(async (_id, roundId, offset) => ({
     items: [
       {
@@ -173,6 +190,10 @@ test('one round still offers all-time standings and the breakdown pages match th
   expect(screen.getByText(calculation)).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'View score history for Alice' }));
   expect(await screen.findByText(calculation)).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'View workout 39' }));
+  expect(await screen.findByText('1. Bench press')).toBeTruthy();
+  expect(trainingApi.session).toHaveBeenCalledWith(39, 'kg', expect.any(AbortSignal));
+  fireEvent.press(screen.getByRole('button', { name: 'Back to score history' }));
   fireEvent.press(screen.getByRole('button', { name: 'Back to standings' }));
   expect(screen.getByRole('tab', { name: 'Points breakdown', selected: true })).toBeTruthy();
   act(() => view.UNSAFE_getByType(FlatList).props.onEndReached());

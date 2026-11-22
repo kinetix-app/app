@@ -1,10 +1,11 @@
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PersonAvatar } from '@/features/friends/components/PersonAvatar';
 import { IconButton } from '@/features/training/components/ui';
+import { WorkoutSummaryCard } from '@/features/training/components/WorkoutSummaryCard';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { authorName, countLabel, duration, exerciseLine, relativeTime, volume } from '../format';
+import { authorName, countLabel, relativeTime } from '../format';
 import type { Post, WorkoutSummary } from '../schemas';
 import { PostImage } from './PostImage';
 
@@ -61,9 +62,18 @@ export function PostCard({
         ) : null}
       </View>
       <MediaCarousel accountId={accountId} post={post} name={name} />
-      {post.text ? <Text style={[textStyles.body, { color: p.ink }]}>{post.text}</Text> : null}
+      {post.caption || post.description ? (
+        <View style={styles.copy}>
+          {post.caption ? (
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>{post.caption}</Text>
+          ) : null}
+          {post.description ? (
+            <Text style={[textStyles.body, { color: p.ink }]}>{post.description}</Text>
+          ) : null}
+        </View>
+      ) : null}
       {post.workout ? (
-        <WorkoutBlock
+        <PostWorkoutSummary
           workout={post.workout}
           label={`See ${name}’s workout`}
           onPress={onWorkout ? () => onWorkout(post) : undefined}
@@ -167,61 +177,28 @@ function MediaCarousel({
   );
 }
 
-function WorkoutBlock({
+const workoutDate = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+function PostWorkoutSummary({
   workout,
   label,
   onPress,
 }: Readonly<{ workout: WorkoutSummary; label: string; onPress?: () => void }>) {
-  const p = usePalette();
-  const metrics = [
-    ['Duration', duration(workout.duration_seconds)],
-    ['Volume', volume(workout.total_volume_kg)],
-    ['Sets', String(workout.set_count)],
-  ] as const;
+  const date = workoutDate.format(new Date(workout.ended_at));
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint="Shows every exercise and set"
-      disabled={!onPress}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.workout,
-        { backgroundColor: p['surface-300'], opacity: pressed ? 0.7 : 1 },
-      ]}
-    >
-      <View style={styles.workoutTitle}>
-        <Feather name="activity" size={18} color={p['brand-ink']} />
-        <Text style={[textStyles.label, { color: p.ink, flex: 1 }]}>
-          Workout · {countLabel(workout.exercise_count, 'exercise')}
-        </Text>
-        {onPress ? (
-          <View style={styles.workoutTitle}>
-            <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>See details</Text>
-            <Feather name="chevron-right" size={18} color={p['brand-ink']} />
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.metrics}>
-        {metrics.map(([label, value]) => (
-          <View key={label} style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{label}</Text>
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              style={[textStyles['metric-md'], styles.tabular, { color: p.ink }]}
-            >
-              {value}
-            </Text>
-          </View>
-        ))}
-      </View>
-      {workout.exercises.length ? (
-        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {exerciseLine(workout.exercises)}
-        </Text>
-      ) : null}
-    </Pressable>
+    <WorkoutSummaryCard
+      embedded
+      title={workout.title}
+      subtitle={date}
+      durationSeconds={workout.duration_seconds}
+      volumeKg={workout.total_volume_kg}
+      exerciseCount={workout.exercise_count}
+      open={onPress ? { label, onPress } : undefined}
+    />
   );
 }
 
@@ -245,6 +222,7 @@ const styles = StyleSheet.create({
     gap: spacing['space-3'],
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
+  copy: { gap: spacing['space-1'] },
   actions: { flexDirection: 'row', gap: spacing['space-4'] },
   action: {
     minHeight: sizes['tap-min'],
@@ -255,11 +233,4 @@ const styles = StyleSheet.create({
   tabular: { fontVariant: ['tabular-nums'] },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: spacing['space-1'] },
   dot: { width: 8, height: 8, borderRadius: radii['radius-pill'] },
-  workout: {
-    borderRadius: radii['radius-md'],
-    padding: spacing['space-3'],
-    gap: spacing['space-3'],
-  },
-  workoutTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] },
-  metrics: { flexDirection: 'row', gap: spacing['space-3'] },
 });
