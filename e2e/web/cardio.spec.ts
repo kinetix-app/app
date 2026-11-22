@@ -109,11 +109,12 @@ test('cardio recording survives reload and persists mixed measurements', async (
     distance_km: null,
   });
   expect((await request(`/sessions/${result.id}`)).status).toBe(200);
-  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Not now', exact: true }).click();
+  await page.getByRole('tab', { name: 'Feed', exact: true }).click();
   await page.getByRole('button', { name: 'Open profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
   await page.getByRole('button', { name: `View workout ${result.id}`, exact: true }).click();
-  await expect(page.getByText('Set 1: 1.25 km · 00:12:30', { exact: true })).toBeVisible();
+  await expect(page.getByText('1.25 km · 00:12:30', { exact: true })).toBeVisible();
 });
 
 test('cardio routine defaults save, reopen and edit through the real app', async ({ page }) => {

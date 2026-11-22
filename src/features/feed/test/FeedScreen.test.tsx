@@ -12,6 +12,7 @@ import {
 } from '@testing-library/react-native';
 import { ApiError } from '@/services/apiClient';
 import { trainingApi } from '@/features/training/api';
+import { exampleExercise } from '@/features/training/test/fixtures';
 import { friendsApi } from '@/features/friends/api';
 import { feedApi } from '../api';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,7 +26,9 @@ jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(),
   launchImageLibraryAsync: jest.fn(),
 }));
-jest.mock('@/features/training/api', () => ({ trainingApi: { sessions: jest.fn() } }));
+jest.mock('@/features/training/api', () => ({
+  trainingApi: { sessions: jest.fn(), session: jest.fn() },
+}));
 jest.mock('@/features/friends/api', () => ({
   ...jest.requireActual('@/features/friends/api'),
   friendsApi: {
@@ -241,12 +244,28 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
     author: { id: 1, display_name: 'Alice', has_picture: false },
   });
   jest.mocked(feedApi.create).mockResolvedValue(shared);
+  jest.mocked(trainingApi.session).mockResolvedValue({
+    id: 7,
+    client_session_id: null,
+    routine_id: null,
+    started_at: '2026-11-09T16:00:00Z',
+    ended_at: workout.ended_at,
+    activity_type: 'gym',
+    state: 'completed',
+    exercises: [{ id: 1, exercise_order: 1, exercise: exampleExercise, sets: [] }],
+  });
   renderFeed();
   await screen.findByText('Leg day done');
   fireEvent.press(screen.getByRole('button', { name: 'New post' }));
   const option = await screen.findByRole('radio', { name: /Workout finished/ });
   expect(option.props.accessibilityState.checked).toBe(true);
   fireEvent.changeText(screen.getByLabelText('Caption'), 'New PR');
+  fireEvent.press(screen.getByRole('button', { name: 'Preview workout' }));
+  expect(await screen.findByText('1. Bench press')).toBeTruthy();
+  expect(trainingApi.session).toHaveBeenCalledWith(7, 'kg', expect.any(AbortSignal));
+  fireEvent.press(screen.getByRole('button', { name: 'Back to new post' }));
+  expect(screen.getByLabelText('Caption').props.value).toBe('New PR');
+  expect(screen.getByRole('radio', { name: /Workout finished/, checked: true })).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith({

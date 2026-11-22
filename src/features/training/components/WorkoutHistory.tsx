@@ -1,13 +1,12 @@
-import { formatCardioDuration } from '../cardio';
 import React, { useState } from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { usePalette } from '@/theme/tokens';
 import { trainingApi } from '../api';
-import type { CompletedSession, WeightUnit } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
+import { WorkoutSessionDetail } from './WorkoutSessionDetail';
 
 export function WorkoutHistory({
   accountId,
@@ -24,7 +23,7 @@ export function WorkoutHistory({
   onShare?: (sessionId: number) => void;
 }>) {
   const p = usePalette();
-  const unit: WeightUnit = 'kg';
+  const unit = 'kg';
   const [selected, setSelected] = useState<number | null>(null);
   const list = useInfiniteQuery({
     queryKey: ['training', accountId, 'sessions', unit],
@@ -33,17 +32,6 @@ export function WorkoutHistory({
     getNextPageParam: (page) =>
       page.items.length === page.limit ? page.offset + page.limit : undefined,
   });
-  const detail = useQuery({
-    queryKey: ['training', accountId, 'session', selected, unit],
-    enabled: selected !== null,
-    queryFn: ({ signal }) => trainingApi.session(selected ?? 0, unit, signal),
-  });
-  let detailContent = null;
-  if (detail.isPending) detailContent = <Loading />;
-  else if (detail.isError)
-    detailContent = <Failure error={detail.error} retry={() => void detail.refetch()} />;
-  else if (detail.data)
-    detailContent = <SessionDetails session={detail.data} unit={unit} palette={p} />;
   let footer = null;
   if (list.isFetchingNextPage) footer = <Loading />;
   else if (list.isFetchNextPageError)
@@ -55,37 +43,26 @@ export function WorkoutHistory({
     back();
     return true;
   }, active);
+  if (selected !== null)
+    return (
+      <WorkoutSessionDetail
+        accountId={accountId}
+        sessionId={selected}
+        backLabel="Back to history"
+        onBack={back}
+        onShare={onShare}
+      />
+    );
   const header = (
     <View style={ui.gap}>
       <View style={ui.row}>
-        <IconButton
-          icon="arrow-left"
-          label={selected === null ? backLabel : 'Back to history'}
-          onPress={back}
-        />
+        <IconButton icon="arrow-left" label={backLabel} onPress={back} />
         <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
           Workout history
         </Text>
       </View>
     </View>
   );
-  if (selected !== null)
-    return (
-      <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
-        <ScrollView contentContainerStyle={ui.content}>
-          {header}
-          {detailContent}
-          {onShare && detail.data ? (
-            <Button
-              title="Share to feed"
-              tone="positive"
-              icon="share"
-              onPress={() => onShare(selected)}
-            />
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    );
   return (
     <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
       <FlatList
@@ -142,49 +119,4 @@ export function WorkoutHistory({
       />
     </SafeAreaView>
   );
-}
-
-function SessionDetails({
-  session,
-  unit,
-  palette,
-}: Readonly<{
-  session: CompletedSession;
-  unit: WeightUnit;
-  palette: ReturnType<typeof usePalette>;
-}>) {
-  return (
-    <View style={ui.gap}>
-      <Text style={{ color: palette.ink }}>
-        Completed {new Date(session.ended_at).toLocaleString()}
-      </Text>
-      <Text style={{ color: palette['ink-muted'] }}>
-        Started {new Date(session.started_at).toLocaleString()}
-      </Text>
-      {session.exercises.map((slot) => (
-        <View key={slot.id} style={[ui.card, { backgroundColor: palette['surface-200'] }]}>
-          <Text style={[ui.heading, { color: palette.ink }]}>
-            {slot.exercise_order}. {slot.exercise.name}
-          </Text>
-          {slot.sets.map((set) => (
-            <Text key={set.set_number} style={{ color: palette.ink }}>
-              Set {set.set_number}: {formatWorkoutSet(set, unit)}
-            </Text>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function formatWorkoutSet(
-  set: CompletedSession['exercises'][number]['sets'][number],
-  unit: WeightUnit,
-) {
-  if (set.duration_seconds !== null || set.distance_km !== null) {
-    const duration =
-      set.duration_seconds === null ? '—' : formatCardioDuration(set.duration_seconds);
-    return `${set.distance_km ?? '—'} km · ${duration}`;
-  }
-  return `${set.weight?.value ?? '—'} ${set.weight?.unit ?? unit} · ${set.reps ?? '—'} reps`;
 }

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
 import { trainingApi } from '@/features/training/api';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
+import { WorkoutSessionDetailModal } from '@/features/training/components/WorkoutSessionDetail';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { feedApi, type PostPhoto } from '../api';
@@ -40,6 +41,7 @@ export function ShareWorkoutScreen({
   });
   // 'none' is an explicit post without a workout; null means "not chosen yet".
   const [chosen, setSelected] = useState<number | 'none' | null>(initialSessionId ?? null);
+  const [previewSessionId, setPreviewSessionId] = useState<number | null>(null);
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<PostPhoto[]>([]);
   const [error, setError] = useState('');
@@ -161,6 +163,14 @@ export function ShareWorkoutScreen({
               />
             ))}
           </View>
+          {selected !== null ? (
+            <Button
+              title="Preview workout"
+              secondary
+              disabled={pending}
+              onPress={() => setPreviewSessionId(selected)}
+            />
+          ) : null}
         </View>
 
         <View style={ui.gap}>
@@ -255,6 +265,14 @@ export function ShareWorkoutScreen({
         />
         <Button title="Cancel" secondary disabled={pending} onPress={onClose} />
       </ScrollView>
+      {previewSessionId !== null ? (
+        <WorkoutSessionDetailModal
+          accountId={accountId}
+          sessionId={previewSessionId}
+          backLabel="Back to new post"
+          onBack={() => setPreviewSessionId(null)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

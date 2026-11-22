@@ -1,7 +1,8 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { screenContentStyle } from '@/components/ScreenHeader';
+import { WorkoutSessionDetailModal } from '@/features/training/components/WorkoutSessionDetail';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { leaguesApi, leagueViewGcTime } from '../api';
 import type { ScoreHistoryMember } from '../schemas';
@@ -28,6 +29,8 @@ export function LeagueScoreHistory({
 }>) {
   const p = usePalette();
   const name = member.display_name ?? 'Member';
+  const [workoutId, setWorkoutId] = useState<number | null>(null);
+  const ownHistory = member.user_id === accountId;
   const history = useInfiniteQuery({
     gcTime: leagueViewGcTime,
     queryKey: ['leagues', accountId, leagueId, 'score-history', member.user_id],
@@ -49,69 +52,82 @@ export function LeagueScoreHistory({
   }
 
   return (
-    <FlatList
-      contentContainerStyle={[
-        screenContentStyle,
-        {
-          paddingTop: spacing['space-3'],
-          paddingBottom: spacing['space-8'],
-          gap: spacing['space-3'],
-        },
-      ]}
-      data={history.data?.pages.flatMap((page) => page.items) ?? []}
-      keyExtractor={(item) => item.local_day}
-      ListHeaderComponent={
-        <View style={leagueStyles.section}>
-          <LeaguePageHeader
+    <>
+      <FlatList
+        contentContainerStyle={[
+          screenContentStyle,
+          {
+            paddingTop: spacing['space-3'],
+            paddingBottom: spacing['space-8'],
+            gap: spacing['space-3'],
+          },
+        ]}
+        data={history.data?.pages.flatMap((page) => page.items) ?? []}
+        keyExtractor={(item) => item.local_day}
+        ListHeaderComponent={
+          <View style={leagueStyles.section}>
+            <LeaguePageHeader
+              accountId={accountId}
+              title={name}
+              picture={member.picture_url}
+              member
+              navigationLabel={backTo}
+              backLabel={`Back to ${backTo.toLowerCase()}`}
+              onBack={onBack}
+            />
+            <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
+              Score history
+            </Text>
+            {history.isPending ? (
+              <ActivityIndicator color={p.brand} accessibilityLabel="Loading score history" />
+            ) : null}
+            {history.isError && !history.data ? (
+              <>
+                <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
+                  Could not load score history.
+                </Text>
+                <LeagueAction
+                  label="Retry score history"
+                  onPress={() => {
+                    void history.refetch();
+                  }}
+                />
+              </>
+            ) : null}
+          </View>
+        }
+        ListEmptyComponent={
+          history.isSuccess ? (
+            <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+              No credited scores yet.
+            </Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <LeagueContributionRow
+            item={item}
+            member={member}
             accountId={accountId}
-            title={name}
-            picture={member.picture_url}
-            member
-            navigationLabel={backTo}
-            backLabel={`Back to ${backTo.toLowerCase()}`}
-            onBack={onBack}
+            timezone={timezone}
+            showMember={false}
+            onOpenWorkout={ownHistory ? () => setWorkoutId(item.session_id) : undefined}
           />
-          <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-            Score history
-          </Text>
-          {history.isPending ? (
-            <ActivityIndicator color={p.brand} accessibilityLabel="Loading score history" />
-          ) : null}
-          {history.isError && !history.data ? (
-            <>
-              <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                Could not load score history.
-              </Text>
-              <LeagueAction
-                label="Retry score history"
-                onPress={() => {
-                  void history.refetch();
-                }}
-              />
-            </>
-          ) : null}
-        </View>
-      }
-      ListEmptyComponent={
-        history.isSuccess ? (
-          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No credited scores yet.</Text>
-        ) : null
-      }
-      renderItem={({ item }) => (
-        <LeagueContributionRow
-          item={item}
-          member={member}
+        )}
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (history.hasNextPage && !history.isFetching && !history.isFetchNextPageError)
+            following();
+        }}
+        ListFooterComponent={renderPagination()}
+      />
+      {active && ownHistory && workoutId !== null ? (
+        <WorkoutSessionDetailModal
           accountId={accountId}
-          timezone={timezone}
-          showMember={false}
+          sessionId={workoutId}
+          backLabel="Back to score history"
+          onBack={() => setWorkoutId(null)}
         />
-      )}
-      onEndReachedThreshold={0.5}
-      onEndReached={() => {
-        if (history.hasNextPage && !history.isFetching && !history.isFetchNextPageError)
-          following();
-      }}
-      ListFooterComponent={renderPagination()}
-    />
+      ) : null}
+    </>
   );
 }

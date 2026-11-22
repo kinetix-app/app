@@ -93,8 +93,9 @@ test('retries the list and detail independently and displays saved results inclu
   fireEvent.press(await screen.findByLabelText('View workout 1'));
   fireEvent.press(await screen.findByText('Retry'));
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
-  expect(screen.getByText('Set 1: 80 kg · 8 reps')).toBeTruthy();
-  expect(screen.getByText('Set 2: — kg · — reps')).toBeTruthy();
+  expect(screen.getByText('Set 1')).toBeTruthy();
+  expect(screen.getByText('80 kg · 8 reps')).toBeTruthy();
+  expect(screen.getByText('— kg · — reps')).toBeTruthy();
   expect(trainingApi.session).toHaveBeenLastCalledWith(1, 'kg', expect.anything());
   fireEvent.press(screen.getByLabelText('Back to history'));
   expect(await screen.findByLabelText('View workout 1')).toBeTruthy();
@@ -145,9 +146,9 @@ test('preserves zero and missing cardio measurements with explicit distance and 
   jest.mocked(trainingApi.session).mockResolvedValue(cardioSession);
   open();
   fireEvent.press(await screen.findByLabelText('View workout 1'));
-  expect(await screen.findByText('Set 1: 1.25 km · 00:12:30')).toBeTruthy();
-  expect(screen.getByText('Set 2: — km · 00:00:00')).toBeTruthy();
-  expect(screen.getByText('Set 3: 1.25 km · —')).toBeTruthy();
+  expect(await screen.findByText('1.25 km · 00:12:30')).toBeTruthy();
+  expect(screen.getByText('— km · 00:00:00')).toBeTruthy();
+  expect(screen.getByText('1.25 km · —')).toBeTruthy();
 });
 
 test('completed workouts can be shared to the feed from the list and the details', async () => {

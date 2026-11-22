@@ -5,6 +5,7 @@ import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { ScoreHistoryItem, ScoreHistoryMember } from '../schemas';
 import { durationHours, formatScoreMeasurement, roundRange } from '../scoreDisplay';
 import { LeagueAvatar } from './LeagueAvatar';
+import { Button } from '@/components/Button';
 import { LeagueCard, leagueStyles } from './LeagueUI';
 
 export function LeagueContributionRow({
@@ -14,6 +15,7 @@ export function LeagueContributionRow({
   timezone,
   showMember = true,
   onOpen,
+  onOpenWorkout,
 }: Readonly<{
   item: ScoreHistoryItem;
   member: ScoreHistoryMember;
@@ -21,6 +23,7 @@ export function LeagueContributionRow({
   timezone: string;
   showMember?: boolean;
   onOpen?: () => void;
+  onOpenWorkout?: () => void;
 }>) {
   const p = usePalette();
   const own = member.user_id === accountId;
@@ -104,6 +107,14 @@ export function LeagueContributionRow({
           {durationHours(calculation.duration_us)} h · Body weight{' '}
           {formatScoreMeasurement(calculation.body_weight_kg)} kg
         </Text>
+      ) : null}
+      {own && onOpenWorkout ? (
+        <Button
+          title="View workout"
+          secondary
+          accessibilityLabel={`View workout ${item.session_id}`}
+          onPress={onOpenWorkout}
+        />
       ) : null}
     </LeagueCard>
   );

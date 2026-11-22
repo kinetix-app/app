@@ -3,10 +3,11 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
+import { WorkoutExerciseList } from '@/features/training/components/WorkoutExerciseList';
 import { ApiError } from '@/services/apiClient';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { feedApi } from '../api';
-import { authorName, countLabel, duration, setLine, volume } from '../format';
+import { authorName, duration, setLine, volume } from '../format';
 import type { Post } from '../schemas';
 
 /** Everything recorded in a shared workout: each exercise with its sets, in order. */
@@ -79,34 +80,16 @@ export function WorkoutDetailScreen({
                   </View>
                 ))}
               </View>
-              {workout.detailed_exercises.length ? null : (
-                <Text style={{ color: p['ink-muted'] }}>No exercises were recorded.</Text>
-              )}
-              {workout.detailed_exercises.map((exercise, position) => (
-                <View
-                  key={`${exercise.exercise_id}-${position}`}
-                  testID={`workout-exercise-${position}`}
-                  style={[ui.card, { backgroundColor: p['surface-200'] }]}
-                >
-                  <Text style={[textStyles['title-md'], { color: p.ink }]}>{exercise.name}</Text>
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {countLabel(exercise.sets.length, 'set')}
-                  </Text>
-                  {exercise.sets.map((set, index) => (
-                    <View
-                      key={`${set.set_number}-${index}`}
-                      style={[styles.set, { borderTopColor: p.line }]}
-                    >
-                      <Text style={[textStyles.label, styles.setNumber, { color: p['ink-muted'] }]}>
-                        Set {set.set_number}
-                      </Text>
-                      <Text style={[textStyles.body, styles.tabular, { color: p.ink, flex: 1 }]}>
-                        {setLine(set)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
+              <WorkoutExerciseList
+                exercises={workout.detailed_exercises.map((exercise, position) => ({
+                  id: `${exercise.exercise_id}-${position}`,
+                  name: exercise.name,
+                  sets: exercise.sets.map((set) => ({
+                    number: set.set_number,
+                    result: setLine(set),
+                  })),
+                }))}
+              />
             </>
           ) : null}
         </View>
@@ -124,13 +107,5 @@ const styles = StyleSheet.create({
     gap: spacing['space-3'],
   },
   metric: { flexGrow: 1, flexBasis: '20%', minWidth: 64 },
-  set: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing['space-3'],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: spacing['space-2'],
-  },
-  setNumber: { width: 52 },
   tabular: { fontVariant: ['tabular-nums'] },
 });

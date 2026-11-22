@@ -16,6 +16,23 @@ completed exercise configuration is shown as guidance/placeholders. History load
 completed sessions. Detailed API, state, retry and unit behavior is in
 [routines](../routines.md) and [workouts](../workouts.md).
 
+## Completed workout details
+
+| Where to open                          | Action                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| Profile → Training history             | Tap **View workout** on a completed session.                             |
+| Workout saved                          | Tap **View workout** after finishing a session.                          |
+| Feed → New post                        | Select a workout and tap **Preview workout**. Back returns to the draft. |
+| Exercise details → History             | Tap **View workout** on an entry to see the full session.                |
+| League → Rankings → Your score history | Tap **View workout** on a credited workout.                              |
+| Feed post                              | Tap the workout on a post you can see.                                   |
+
+The private detail opens through the owner’s session endpoint. Feed details open
+through the post endpoint and include its server-provided workout totals. Both
+display the recorded exercises and sets in order. The browser scenario in
+[`workout-detail.spec.ts`](../../e2e/web/workout-detail.spec.ts) exercises these
+entry points and checks access from a second account.
+
 ## Code and evidence
 
 - Feature API/schemas/state: `src/features/training/api.ts`, `schemas.ts`,

@@ -5,12 +5,17 @@ import { spacing, usePalette } from '@/theme/tokens';
 import { formatCardioDuration } from '../cardio';
 import { trainingApi } from '../api';
 import type { ExerciseHistoryItem } from '../schemas';
-import { Failure, Loading, ui } from './ui';
+import { Button, Failure, Loading, ui } from './ui';
 
 export function ExerciseHistory({
   accountId,
   exerciseId,
-}: Readonly<{ accountId: number; exerciseId: number }>) {
+  onOpenWorkout,
+}: Readonly<{
+  accountId: number;
+  exerciseId: number;
+  onOpenWorkout: (id: number) => void;
+}>) {
   const p = usePalette();
   const history = useInfiniteQuery({
     queryKey: ['training', accountId, 'exercise-history', exerciseId, 'kg'],
@@ -29,7 +34,7 @@ export function ExerciseHistory({
         <Text style={{ color: p['ink-muted'] }}>No previous sessions for this exercise.</Text>
       ) : null}
       {items.map((item) => (
-        <HistoryCard key={item.session_id} item={item} />
+        <HistoryCard key={item.session_id} item={item} onOpenWorkout={onOpenWorkout} />
       ))}
       {history.isFetchNextPageError ? (
         <Failure error={history.error} retry={() => void history.fetchNextPage()} />
@@ -48,7 +53,10 @@ export function ExerciseHistory({
   );
 }
 
-function HistoryCard({ item }: Readonly<{ item: ExerciseHistoryItem }>) {
+function HistoryCard({
+  item,
+  onOpenWorkout,
+}: Readonly<{ item: ExerciseHistoryItem; onOpenWorkout: (id: number) => void }>) {
   const p = usePalette();
   const sets = keyedSets(item.sets);
   return (
@@ -64,6 +72,12 @@ function HistoryCard({ item }: Readonly<{ item: ExerciseHistoryItem }>) {
       ) : (
         <Text style={{ color: p['ink-muted'] }}>No sets recorded.</Text>
       )}
+      <Button
+        title="View workout"
+        secondary
+        accessibilityLabel={`View workout ${item.session_id}`}
+        onPress={() => onOpenWorkout(item.session_id)}
+      />
     </View>
   );
 }

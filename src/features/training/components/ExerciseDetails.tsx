@@ -7,6 +7,7 @@ import { trainingApi } from '../api';
 import { ExerciseMedia } from './ExerciseMedia';
 import { ExerciseHistory } from './ExerciseHistory';
 import { ExerciseEvolution } from './ExerciseEvolution';
+import { WorkoutSessionDetail } from './WorkoutSessionDetail';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import type { Exercise, ExerciseSummary } from '../schemas';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
@@ -24,6 +25,7 @@ export function ExerciseDetails({
 }>) {
   const p = usePalette();
   const [tab, setTab] = useState<'Instructions' | 'History' | 'Evolution'>('Instructions');
+  const [workoutId, setWorkoutId] = useState<number | null>(null);
   const [reduceMotion, setReduceMotion] = useState(true);
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -34,9 +36,24 @@ export function ExerciseDetails({
     queryKey: ['training', accountId, 'exercise', exerciseId],
     queryFn: ({ signal }) => trainingApi.exercise(exerciseId, signal),
   });
+  const closeWorkout = () => setWorkoutId(null);
   return (
-    <Modal onRequestClose={onClose} animationType="slide">
-      <SafeAreaView style={[ui.screen, { backgroundColor: p['surface-100'] }]}>
+    <Modal onRequestClose={workoutId === null ? onClose : closeWorkout} animationType="slide">
+      {workoutId !== null ? (
+        <WorkoutSessionDetail
+          accountId={accountId}
+          sessionId={workoutId}
+          backLabel="Back to exercise history"
+          onBack={closeWorkout}
+        />
+      ) : null}
+      <SafeAreaView
+        style={[
+          ui.screen,
+          { backgroundColor: p['surface-100'] },
+          workoutId !== null && { display: 'none' },
+        ]}
+      >
         <ScrollView contentContainerStyle={ui.content}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <IconButton icon="arrow-left" label="Back" onPress={onClose} />
@@ -71,7 +88,11 @@ export function ExerciseDetails({
                 ))}
               </View>
               {tab === 'History' ? (
-                <ExerciseHistory accountId={accountId} exerciseId={exerciseId} />
+                <ExerciseHistory
+                  accountId={accountId}
+                  exerciseId={exerciseId}
+                  onOpenWorkout={setWorkoutId}
+                />
               ) : null}
               {tab === 'Evolution' ? (
                 <ExerciseEvolution

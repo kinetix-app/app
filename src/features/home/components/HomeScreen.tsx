@@ -29,6 +29,7 @@ import { FriendsScreen, friendsApi, requestsKey } from '@/features/friends';
 import { LeaguesScreen } from '@/features/leagues';
 import { FormCheckProvider } from '@/features/formcheck';
 import { Button, ui } from '@/features/training/components/ui';
+import { WorkoutSessionDetail } from '@/features/training/components/WorkoutSessionDetail';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { sizes, spacing, usePalette } from '@/theme/tokens';
 import { BottomBar, type HomeTab } from './BottomBar';
@@ -104,10 +105,16 @@ function HomeNavigation({
     setTab(next);
   }
   const [composeSessionId, setComposeSessionId] = useState<number | null>(null);
+  const [viewingFinished, setViewingFinished] = useState(false);
   /** Opens the Feed's new-post screen with a completed workout selected. */
   function shareWorkout(sessionId: number) {
     setComposeSessionId(sessionId);
     select('home');
+  }
+  function shareFinishedWorkout(sessionId: number) {
+    setViewingFinished(false);
+    shareWorkout(sessionId);
+    onDismissFinished();
   }
   /** Resumes Profile on its current panel, so unsaved edits survive leaving it. */
   function showProfile() {
@@ -338,38 +345,48 @@ function HomeNavigation({
         visible={finishedSessionId !== null && !session.draft}
         transparent
         animationType="fade"
-        onRequestClose={onDismissFinished}
+        onRequestClose={viewingFinished ? () => setViewingFinished(false) : onDismissFinished}
       >
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: spacing['space-6'],
-            backgroundColor: p.scrim,
-          }}
-        >
+        {viewingFinished && finishedSessionId !== null ? (
+          <WorkoutSessionDetail
+            accountId={accountId}
+            sessionId={finishedSessionId}
+            backLabel="Back to workout saved"
+            onBack={() => setViewingFinished(false)}
+            onShare={shareFinishedWorkout}
+          />
+        ) : (
           <View
-            accessibilityViewIsModal
-            style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: spacing['space-6'],
+              backgroundColor: p.scrim,
+            }}
           >
-            <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              Workout saved
-            </Text>
-            <Text style={{ color: p['ink-muted'] }}>
-              Share it to your feed so your friends can cheer you on.
-            </Text>
-            <Button
-              title="Share to feed"
-              icon="share"
-              onPress={() => {
-                if (finishedSessionId !== null) shareWorkout(finishedSessionId);
-                onDismissFinished();
-              }}
-            />
-            <Button title="Not now" secondary onPress={onDismissFinished} />
+            <View
+              accessibilityViewIsModal
+              style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
+            >
+              <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
+                Workout saved
+              </Text>
+              <Text style={{ color: p['ink-muted'] }}>
+                Share it to your feed so your friends can cheer you on.
+              </Text>
+              <Button
+                title="Share to feed"
+                icon="share"
+                onPress={() => {
+                  if (finishedSessionId !== null) shareFinishedWorkout(finishedSessionId);
+                }}
+              />
+              <Button title="View workout" secondary onPress={() => setViewingFinished(true)} />
+              <Button title="Not now" secondary onPress={onDismissFinished} />
+            </View>
           </View>
-        </View>
+        )}
       </Modal>
     </View>
   );

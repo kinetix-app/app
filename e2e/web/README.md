@@ -128,3 +128,12 @@ database above. The test creates its own complete profiles through the real API 
 needs no exercise catalogue or media setup. It verifies the empty chart, check-ins,
 a lost response and safe retry, chronological backdating, profile changes, a saved
 weight target, reload, light and dark layouts and account isolation.
+
+## Completed workout details
+
+Run `pnpm exec playwright test --config e2e/web/playwright.config.ts workout-detail.spec.ts`
+with two fresh private synthetic identities and the seeded Acceptance catalogue
+in a run-owned `_test` database. The scenario finishes a workout, previews and
+shares it, reopens it after reload, retries a failed history fetch, and checks
+the links from exercise history and league score history. The second account
+can open the authorized Feed post and receives a 404 for the private session.
