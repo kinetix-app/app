@@ -1,6 +1,6 @@
 import React from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ExerciseDetails } from '../components/ExerciseDetails';
 import { rangeStart, duration } from '../components/ExerciseEvolution';
@@ -61,6 +61,8 @@ test('keeps instructions and provides accessible history and evolution tabs', as
   expect(
     await screen.findByText('No data in this period. No observations are available yet.'),
   ).toBeTruthy();
+  expect(screen.getByTestId('exercise-evolution-chart')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^\d{4}-\d{2}-\d{2},/ })).toBeNull();
   fireEvent.press(screen.getByRole('tab', { name: 'Instructions' }));
   expect(screen.getByText('1. Lower, then press.')).toBeTruthy();
 });
@@ -139,7 +141,11 @@ test('selects observations, resets on metric change and explains estimates', asy
   fireEvent.press(screen.getByRole('button', { name: 'About Estimated strength (1RM)' }));
   expect(screen.getByText(/we do not know how close/)).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Close explanation' }));
-  fireEvent.press(screen.getByRole('tab', { name: 'Weight' }));
+  const metricSelector = within(screen.getByLabelText('Exercise metric'));
+  fireEvent.press(metricSelector.getByRole('tab', { name: 'Weight' }));
+  expect(
+    metricSelector.getByRole('tab', { name: 'Weight' }).props.accessibilityState.selected,
+  ).toBe(true);
   expect(
     screen.getByRole('button', { name: `${date}, 60.0 kg` }).props.accessibilityState.selected,
   ).toBe(false);
@@ -175,6 +181,8 @@ test('retries evolution using imperial profile units', async () => {
     await screen.findByText('No data in this period. No observations are available yet.'),
   ).toBeTruthy();
   expect(trainingApi.exerciseEvolution).toHaveBeenLastCalledWith(1, 'lb', 'mi', expect.anything());
+  expect(screen.queryByRole('radio', { name: 'Imperial' })).toBeNull();
+  expect(screen.queryByRole('radio', { name: 'Metric' })).toBeNull();
 });
 
 test('uses the same selectable tabs for details and evolution and clears a point on range change', async () => {

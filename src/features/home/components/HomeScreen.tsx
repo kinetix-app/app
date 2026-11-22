@@ -12,6 +12,7 @@ import {
   useSession,
 } from '@/features/training';
 import { getAccount, type Account } from '@/features/accounts/api';
+import { measurementKey, targetKey } from '@/features/accounts/progressApi';
 import {
   ProfileAvatar,
   ProfileEditor,
@@ -170,6 +171,7 @@ function HomeNavigation({
             active={panelActive}
             onSaved={(next) => {
               onAccount(next);
+              void cache.invalidateQueries({ queryKey: measurementKey(accountId) });
               setProfilePanel('overview');
             }}
             onCancel={() => setProfilePanel('overview')}
@@ -182,6 +184,7 @@ function HomeNavigation({
             active={panelActive}
             onSaved={(next) => {
               onAccount(next);
+              void cache.invalidateQueries({ queryKey: targetKey(accountId) });
               setProfilePanel('overview');
             }}
             onCancel={() => setProfilePanel('overview')}
@@ -304,7 +307,10 @@ function HomeNavigation({
   }
   return (
     <View style={{ flex: 1, backgroundColor: p['surface-100'] }}>
-      <SessionHost hideMinimized={tab === 'workout' && routineEditing}>
+      <SessionHost
+        hideMinimized={tab === 'workout' && routineEditing}
+        reserveMinimizedSpace={tab === 'profile'}
+      >
         {visited.map((item) => (
           <View
             key={item}
@@ -319,7 +325,8 @@ function HomeNavigation({
       </SessionHost>
       {!addingFood &&
       (tab !== 'workout' || !routineEditing) &&
-      (tab !== 'league' || !leagueDetailOpen) ? (
+      (tab !== 'league' || !leagueDetailOpen) &&
+      (tab !== 'profile' || profilePanel !== 'progress') ? (
         <BottomBar
           tab={tab}
           onSelect={select}

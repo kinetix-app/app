@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ProfileBack } from './ProfileBack';
+import { MeasurementSystemSelector } from '@/components/MeasurementSystemSelector';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { apiClient } from '@/services/apiClient';
@@ -179,52 +180,14 @@ function MeasurementSystemFields({
         control={form.control}
         name="measurement_system"
         render={({ field: { value, onChange } }) => (
-          <View
-            accessibilityRole="radiogroup"
-            accessibilityLabel="Measurement system"
-            style={{ flexDirection: 'row', gap: 12 }}
-          >
-            {(['metric', 'imperial'] as const).map((unit) => (
-              <Pressable
-                key={unit}
-                accessibilityRole="radio"
-                accessibilityLabel={unit === 'metric' ? 'Metric' : 'Imperial'}
-                accessibilityState={{
-                  selected: value === unit,
-                  checked: value === unit,
-                  disabled,
-                }}
-                disabled={disabled}
-                onPress={() => {
-                  updateMeasurementsForUnit(unit, value, account, form);
-                  onChange(unit);
-                }}
-                style={({ pressed }) => [
-                  s.field,
-                  {
-                    flex: 1,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 999,
-                    borderWidth: 2,
-                    borderColor: value === unit ? p.brand : p['line-strong'],
-                    backgroundColor: value === unit ? p.brand : p['surface-200'],
-                    opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    textStyles.label,
-                    { color: value === unit ? p['on-brand'] : p.ink, textAlign: 'center' },
-                  ]}
-                >
-                  {unit === 'metric' ? 'Metric' : 'Imperial'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <MeasurementSystemSelector
+            value={value}
+            disabled={disabled}
+            onChange={(unit) => {
+              updateMeasurementsForUnit(unit, value, account, form);
+              onChange(unit);
+            }}
+          />
         )}
       />
       {error ? (

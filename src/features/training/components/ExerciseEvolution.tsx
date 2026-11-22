@@ -5,7 +5,6 @@ import {
   Animated,
   LayoutAnimation,
   Modal,
-  Pressable,
   PanResponder,
   Platform,
   ScrollView,
@@ -20,6 +19,8 @@ import { trainingApi } from '../api';
 import type { EvolutionDay } from '../schemas';
 import { Failure, IconButton, Loading } from './ui';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
+import { ChartMetricSelector } from '@/components/ChartMetricSelector';
+import { EvolutionGraph } from '@/components/EvolutionGraph';
 
 // React Native Web supports this CSS property; native ViewStyle does not declare it.
 const gestureHandleStyle: ViewStyle & { touchAction?: 'none' } =
@@ -27,6 +28,8 @@ const gestureHandleStyle: ViewStyle & { touchAction?: 'none' } =
 
 type Metric = 'estimated_1rm' | 'weight' | 'volume' | 'reps' | 'distance' | 'duration_seconds';
 type Range = 1 | 3 | 6 | 12 | 'All';
+const gymMetrics: readonly Metric[] = ['estimated_1rm', 'weight', 'volume', 'reps'];
+const cardioMetrics: readonly Metric[] = ['distance', 'duration_seconds'];
 const labels: Record<Metric, string> = {
   estimated_1rm: 'Estimated strength (1RM)',
   weight: 'Weight',
@@ -78,6 +81,9 @@ function axisPrecision(metric: Metric): number {
   if (metric === 'distance') return 2;
   if (metric === 'reps' || metric === 'duration_seconds') return 0;
   return 1;
+}
+function evolutionUnits(imperial: boolean): { weight: 'kg' | 'lb'; distance: 'km' | 'mi' } {
+  return imperial ? { weight: 'lb', distance: 'mi' } : { weight: 'kg', distance: 'km' };
 }
 function rangeLabel(range: Range): string {
   if (range === 'All') return range;
@@ -150,9 +156,9 @@ export function ExerciseEvolution({
     queryKey: ['accounts', accountId, 'me'],
     queryFn: ({ signal }) => getAccount(undefined, signal),
   });
-  const imperial = account.data?.profile.measurement_system === 'imperial';
-  const weight = imperial ? 'lb' : 'kg',
-    distance = imperial ? 'mi' : 'km';
+  const { weight, distance } = evolutionUnits(
+    account.data?.profile.measurement_system === 'imperial',
+  );
   const query = useQuery({
     queryKey: ['training', accountId, 'exercise', exerciseId, 'evolution', weight, distance],
     queryFn: ({ signal }) => trainingApi.exerciseEvolution(exerciseId, weight, distance, signal),
@@ -166,33 +172,18 @@ export function ExerciseEvolution({
   const current = visible.find((d) => d.date === selected) ?? visible.at(-1);
   return (
     <View style={{ gap: 12 }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        accessibilityRole="tablist"
-        contentContainerStyle={{ gap: 16 }}
-      >
-        {(cardio
-          ? ['distance', 'duration_seconds']
-          : ['estimated_1rm', 'weight', 'volume', 'reps']
-        ).map((item) => {
-          const key = item as Metric;
-          return (
-            <AnimatedTextSelector
-              key={key}
-              label={labels[key]}
-              selected={metric === key}
-              role="tab"
-              reduceMotion={reduceMotion}
-              onPress={() => {
-                animate();
-                setMetric(key);
-                setSelected(null);
-              }}
-            />
-          );
-        })}
-      </ScrollView>
+      <ChartMetricSelector
+        metrics={cardio ? cardioMetrics : gymMetrics}
+        value={metric}
+        label="Exercise metric"
+        labelFor={(key) => labels[key]}
+        reduceMotion={reduceMotion}
+        onChange={(key) => {
+          animate();
+          setMetric(key);
+          setSelected(null);
+        }}
+      />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, fontWeight: '700' }}>
           <MetricHeadline current={current} metric={metric} weight={weight} distance={distance} />
@@ -221,27 +212,31 @@ export function ExerciseEvolution({
           }}
         />
       ) : null}
-      {query.data && !current ? (
+      {current ? (
         <Text style={{ color: p['ink-muted'] }}>
-          {emptyMessage(all.length > 0, history.length > 0)}
+          {current.date}
+          {metric === 'volume' && current.volume_partial ? ' · Some sets excluded' : ''}
         </Text>
       ) : null}
-      {current ? (
-        <>
-          <Text style={{ color: p['ink-muted'] }}>
-            {current.date}
-            {metric === 'volume' && current.volume_partial ? ' · Some sets excluded' : ''}
-          </Text>
-          <EvolutionGraph
-            visible={visible}
-            metric={metric}
-            weight={weight}
-            distance={distance}
-            selected={selected}
-            setSelected={setSelected}
-            opacity={opacity}
-          />
-        </>
+      {query.data ? (
+        <EvolutionGraph
+          testID="exercise-evolution-chart"
+          points={visible.map((day) => ({
+            date: day.date,
+            value: Number(day[metric]),
+            label: value(day, metric, weight, distance),
+          }))}
+          emptyState={
+            query.isError ? undefined : { title: emptyMessage(all.length > 0, history.length > 0) }
+          }
+          selected={selected}
+          onSelect={setSelected}
+          formatAxis={(amount, showUnit) =>
+            amount.toFixed(axisPrecision(metric)) +
+            (showUnit ? ` ${metricUnit(metric, weight, distance)}` : '')
+          }
+          opacity={opacity}
+        />
       ) : null}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         {([1, 3, 6, 12, 'All'] as Range[]).map((r) => (
@@ -268,161 +263,6 @@ export function ExerciseEvolution({
         reduceMotion={reduceMotion}
       />
     </View>
-  );
-}
-
-function EvolutionGraph({
-  visible,
-  metric,
-  weight,
-  distance,
-  selected,
-  setSelected,
-  opacity,
-}: Readonly<{
-  visible: EvolutionDay[];
-  metric: Metric;
-  weight: string;
-  distance: string;
-  selected: string | null;
-  setSelected: React.Dispatch<React.SetStateAction<string | null>>;
-  opacity: Animated.Value;
-}>) {
-  const p = usePalette();
-  const [width, setWidth] = useState(0);
-  const numbers = visible.map((d) => Number(d[metric]));
-  const low = Math.min(...numbers),
-    high = Math.max(...numbers);
-  const padding = high === low ? Math.max(Math.abs(high) * 0.1, 1) : (high - low) * 0.1;
-  const min = Math.max(0, low - padding),
-    max = high + padding;
-  const plotWidth = Math.max(0, width - 92),
-    height = 150;
-  const points = visible.map((d) => ({
-    day: d,
-    x:
-      visible.length === 1
-        ? plotWidth / 2
-        : ((Date.parse(d.date) - Date.parse(visible[0].date)) /
-            (Date.parse(visible.at(-1)?.date ?? visible[0].date) - Date.parse(visible[0].date))) *
-          plotWidth,
-    y: max === min ? height / 2 : height - ((Number(d[metric]) - min) / (max - min)) * height,
-  }));
-  return (
-    <Animated.View
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-      style={{ height: 205, paddingLeft: 48, opacity }}
-    >
-      {[0, 0.5, 1].map((v) => (
-        <View
-          key={v}
-          style={{
-            position: 'absolute',
-            left: 48,
-            right: 0,
-            top: v * height,
-            borderTopWidth: 1,
-            borderColor: p['surface-300'],
-          }}
-        />
-      ))}
-      <Text style={{ position: 'absolute', left: 0, top: 0, color: p['ink-muted'], fontSize: 10 }}>
-        {max.toFixed(axisPrecision(metric))} {metricUnit(metric, weight, distance)}
-      </Text>
-      <Text
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: height - 12,
-          color: p['ink-muted'],
-          fontSize: 10,
-        }}
-      >
-        {min.toFixed(axisPrecision(metric))}
-      </Text>
-      {points.slice(1).map((point, i) => {
-        const prev = points[i];
-        const dx = point.x - prev.x,
-          dy = point.y - prev.y;
-        return (
-          <View
-            key={point.day.date}
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              left: 70 + (prev.x + point.x) / 2 - Math.hypot(dx, dy) / 2,
-              top: (prev.y + point.y) / 2,
-              width: Math.hypot(dx, dy),
-              height: 1,
-              backgroundColor: p.brand,
-              transform: [{ rotate: `${Math.atan2(dy, dx)}rad` }],
-            }}
-          />
-        );
-      })}
-      {points.map((point) => (
-        <Pressable
-          key={point.day.date}
-          accessibilityRole="button"
-          accessibilityLabel={`${point.day.date}, ${value(point.day, metric, weight, distance)}`}
-          accessibilityState={{ selected: selected === point.day.date }}
-          aria-selected={selected === point.day.date}
-          onPress={() => setSelected(selected === point.day.date ? null : point.day.date)}
-          style={{
-            position: 'absolute',
-            left: 70 + point.x - 22,
-            top: point.y - 22,
-            width: 44,
-            height: 44,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: p.brand }} />
-        </Pressable>
-      ))}
-      {selected &&
-        points
-          .filter((point) => point.day.date === selected)
-          .map((point) => (
-            <Text
-              key={point.day.date}
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                left: Math.max(48, Math.min(width - 130, 75 + point.x)),
-                top: Math.max(0, point.y - 35),
-                color: p.ink,
-                backgroundColor: p['surface-300'],
-                fontSize: 12,
-              }}
-            >
-              {point.day.date} · {value(point.day, metric, weight, distance)}
-            </Text>
-          ))}
-      <Text
-        style={{
-          position: 'absolute',
-          left: 48,
-          top: height + 25,
-          color: p['ink-muted'],
-          fontSize: 10,
-        }}
-      >
-        {visible[0].date}
-      </Text>
-      <Text
-        style={{
-          position: 'absolute',
-          right: 0,
-          top: height + 25,
-          color: p['ink-muted'],
-          fontSize: 10,
-        }}
-      >
-        {visible.length > 1 ? visible.at(-1)?.date : ''}
-      </Text>
-    </Animated.View>
   );
 }
 

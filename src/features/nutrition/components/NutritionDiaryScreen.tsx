@@ -4,6 +4,7 @@ import React from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CalendarGrid } from '@/components/CalendarGrid';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -565,8 +566,6 @@ function CalendarModal({
   onClose: () => void;
 }>) {
   const p = usePalette();
-  const gridStart = addDays(month, -((month.getDay() + 6) % 7));
-  const days = Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
   const monthLabel = new Intl.DateTimeFormat('en-US', {
     month: 'long',
     year: 'numeric',
@@ -597,59 +596,12 @@ function CalendarModal({
               <Feather name="chevron-right" size={22} color={p.ink} />
             </Pressable>
           </View>
-          <View style={styles.calendarWeekdays}>
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((weekday) => (
-              <Text
-                key={weekday}
-                style={[textStyles.caption, styles.calendarCell, { color: p['ink-muted'] }]}
-              >
-                {weekday}
-              </Text>
-            ))}
-          </View>
-          <View style={styles.calendarGrid}>
-            {days.map((date) => {
-              const id = localDateId(date);
-              const isSelected = id === selectedDay;
-              const isToday = id === localDateId(new Date());
-              const isCurrentMonth = date.getMonth() === month.getMonth();
-              return (
-                <Pressable
-                  key={id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(date)}${isToday ? ', today' : ''}`}
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => onSelect(date)}
-                  style={styles.calendarCell}
-                >
-                  <View
-                    style={[
-                      styles.calendarDay,
-                      isSelected && { borderColor: p.brand, borderWidth: 2 },
-                      isToday && !isSelected && { borderColor: `${p.brand}66`, borderWidth: 2 },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        textStyles.label,
-                        {
-                          color:
-                            isSelected || isToday
-                              ? p['brand-ink']
-                              : isCurrentMonth
-                                ? p.ink
-                                : p['ink-muted'],
-                          opacity: isCurrentMonth || isSelected || isToday ? 1 : 0.45,
-                        },
-                      ]}
-                    >
-                      {date.getDate()}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          <CalendarGrid
+            month={localDateId(month)}
+            today={localDateId(new Date())}
+            selected={selectedDay}
+            onSelect={(day) => onSelect(dateFromId(day))}
+          />
           <Pressable
             accessibilityRole="button"
             onPress={onClose}
@@ -789,22 +741,6 @@ const styles = StyleSheet.create({
   calendarArrow: {
     width: sizes['tap-min'],
     height: sizes['tap-min'],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calendarWeekdays: { flexDirection: 'row' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calendarCell: {
-    width: `${100 / 7}%`,
-    minHeight: sizes['tap-min'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-  },
-  calendarDay: {
-    width: 36,
-    height: 36,
-    borderRadius: radii['radius-pill'],
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -164,15 +164,15 @@ test('daily Evolution graphs preserve source history, units, selection and owner
     ).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('button', { name: `${day}, 70.0 kg`, exact: true })).toBeVisible();
     const point = page.getByRole('button', { name: `${priorDay}, 40.0 kg`, exact: true });
-    await point.click();
+    await point.click({ timeout: 6000 });
     await expect(point).toHaveAttribute('aria-selected', 'true');
     await page.screenshot({
       path: '.codex/artifacts/e2e/evolution-selected.png',
       animations: 'disabled',
     });
-    await point.click();
+    await point.click({ timeout: 6000 });
     await expect(point).toHaveAttribute('aria-selected', 'false');
-    await point.click();
+    await point.click({ timeout: 6000 });
     await page.getByRole('button', { name: '1 month', exact: true }).click();
     await expect(point).toHaveAttribute('aria-selected', 'false');
     await page.getByRole('button', { name: 'About Estimated strength (1RM)', exact: true }).click();
@@ -214,6 +214,8 @@ test('daily Evolution graphs preserve source history, units, selection and owner
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await openExercise('Acceptance row');
     await expect(page.getByText(/No observations/)).toBeVisible();
+    await expect(page.getByTestId('exercise-evolution-chart')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^\d{4}-\d{2}-\d{2},/ })).toHaveCount(0);
     await page.reload();
     await signIn(page);
     await openExercise('Acceptance press');
@@ -268,6 +270,8 @@ test('daily Evolution graphs preserve source history, units, selection and owner
       .client_session_id;
     await openExercise('Acceptance press');
     await expect(page.getByText(/No observations/)).toBeVisible();
+    await expect(page.getByTestId('exercise-evolution-chart')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^\d{4}-\d{2}-\d{2},/ })).toHaveCount(0);
     await expect(page.getByRole('button', { name: `${day}, 70.0 kg`, exact: true })).toHaveCount(0);
   } finally {
     if (otherDraftId)
