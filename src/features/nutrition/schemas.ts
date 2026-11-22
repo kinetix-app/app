@@ -23,6 +23,27 @@ export const nutritionGoalInputSchema = z.object({
 
 export type NutritionGoalInput = z.infer<typeof nutritionGoalInputSchema>;
 
+export const nutritionRecommendationSchema = z.object({
+  version: z.string(),
+  available: z.boolean(),
+  reason: z.string().nullable(),
+  missing_fields: z.array(z.string()),
+  objective: objectiveSchema.nullable(),
+  bmr: z.coerce.number().nullable(),
+  maintenance_calories: z.coerce.number().nullable(),
+  activity_factor: z.coerce.number().nullable(),
+  adjustment_percent: z.number().nullable(),
+  protein_per_kg: z.coerce.number().nullable(),
+  goal: z
+    .object({
+      calories: z.coerce.number().positive(),
+      protein: z.coerce.number().nonnegative(),
+      carbohydrates: z.coerce.number().nonnegative(),
+      fats: z.coerce.number().nonnegative(),
+    })
+    .nullable(),
+});
+
 export const foodSchema = z.object({
   id: z.number().int().positive(),
   user_id: z.number().int().positive().nullable(),

@@ -1,5 +1,8 @@
 # Kinetix — frontend
 
+Nutrition's Edit goal opens a recommendation preview with explicit acceptance and
+a manual-entry alternative. See [nutrition](docs/features/nutrition.md).
+
 The authenticated [onboarding flow](docs/onboarding.md) requires a complete profile and selected objective; manual nutrition targets remain optional.
 
 The Android and iOS client for a university fitness project, built with **React Native, Expo, Expo Router and TypeScript**. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.

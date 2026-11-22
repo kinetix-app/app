@@ -6,6 +6,7 @@ const decimal = (max: number, places: number) =>
     .regex(new RegExp(String.raw`^\d+(?:\.\d{1,${places}})?$`))
     .refine((value) => Number(value) > 0 && Number(value) <= max);
 export const measurementSystemSchema = z.enum(['metric', 'imperial']);
+export const activityLevelSchema = z.enum(['sedentary', 'light', 'moderate', 'high', 'very_high']);
 export const profilePicturePath = '/api/v1/me/profile/picture';
 export const pictureUrlSchema = z.union([
   z.literal(profilePicturePath),
@@ -33,6 +34,8 @@ export const accountSchema = z.object({
     display_name: z.string().nullable(),
     timezone: z.string().nullable(),
     age: z.number().int().min(1).max(120).nullable(),
+    sex: z.enum(['male', 'female']).nullable().default(null),
+    activity_level: activityLevelSchema.nullable().default(null),
     height_cm: decimal(300, 2).nullable(),
     weight_kg: decimal(1000, 6).nullable(),
     measurement_system: measurementSystemSchema.nullable(),
@@ -46,6 +49,8 @@ export const profilePatchSchema = z
     display_name: z.string().trim().min(1).max(100).nullable().optional(),
     timezone: z.string().nullable().optional(),
     age: z.number().int().min(1).max(120).nullable().optional(),
+    sex: z.enum(['male', 'female']).nullable().optional(),
+    activity_level: activityLevelSchema.nullable().optional(),
     height_cm: decimal(300, 2).nullable().optional(),
     weight_kg: decimal(1000, 6).nullable().optional(),
     measurement_system: measurementSystemSchema.nullable().optional(),

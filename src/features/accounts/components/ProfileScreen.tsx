@@ -9,13 +9,21 @@ import { getObjective } from '../api';
 import { profileDefaults } from '../profileForm';
 import type { Account } from '../schemas';
 import { objectiveOptions } from './ObjectiveEditor';
+import { activityOptions } from './ProfileEditor';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileBack } from './ProfileBack';
 import { ProfileGroup, ProfileRow } from './ProfileRows';
 import { setupStyles as s } from './SetupUI';
 
 export type ProfilePanel =
-  'overview' | 'profile' | 'objective' | 'nutrition' | 'progress' | 'history' | 'friends';
+  | 'overview'
+  | 'profile'
+  | 'objective'
+  | 'nutrition'
+  | 'activity'
+  | 'progress'
+  | 'history'
+  | 'friends';
 export function ProfileScreen({
   account,
   onOpen,
@@ -90,6 +98,15 @@ export function ProfileScreen({
           />
         </ProfileGroup>
         <ProfileGroup title="Your plan">
+          <ProfileRow
+            title="Weekly activity"
+            detail={
+              activityOptions.find((item) => item.value === account.profile.activity_level)
+                ?.label ?? 'Choose your activity level'
+            }
+            icon="activity"
+            onPress={() => onOpen('activity')}
+          />
           <ProfileRow
             title="Change objective"
             detail={objective.isPending ? 'Loading…' : (goal ?? 'Objective unavailable')}
