@@ -163,7 +163,7 @@ function checkInput(
     // Each joint alone may be seen often enough while all of them together rarely are.
     const worst = missing.length
       ? missing
-      : [required.reduce((a, j) => (coverage(j) < coverage(a) ? j : a))];
+      : [required.slice(1).reduce((a, j) => (coverage(j) < coverage(a) ? j : a), required[0])];
     return unassessable('missing_joints', spec, locale, prep.warnings, { joints: worst });
   }
   return null;

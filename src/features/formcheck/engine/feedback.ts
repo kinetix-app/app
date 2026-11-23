@@ -125,9 +125,12 @@ const MESSAGES = {
 
 /** Python's max() over (number, string) tuples: the highest number, ties to the highest id. */
 function maxByThenId<T extends string>(items: [number, T][]): T {
-  return items.reduce((best, it) =>
-    it[0] > best[0] || (it[0] === best[0] && it[1] > best[1]) ? it : best,
-  )[1];
+  return items
+    .slice(1)
+    .reduce(
+      (best, it) => (it[0] > best[0] || (it[0] === best[0] && it[1] > best[1]) ? it : best),
+      items[0],
+    )[1];
 }
 
 /** Simulates the cues during the set: at most one per rep, only if the fault repeats. */

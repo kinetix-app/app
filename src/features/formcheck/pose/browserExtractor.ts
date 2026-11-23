@@ -18,7 +18,7 @@ export type BrowserPose = {
  * user data is sent. Each frame is sampled at 15 fps, enough for the engine (validated on the
  * Mendeley dataset).
  */
-export const BROWSER_EXTRACTOR = String.raw`
+export const BROWSER_EXTRACTOR = `
 (function () {
   if (window.kinetixPose) return;
   var CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0';
