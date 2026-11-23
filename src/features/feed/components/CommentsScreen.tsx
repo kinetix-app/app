@@ -259,9 +259,11 @@ function PostComments({
             editable={!sending}
             containerStyle={{ flex: 1 }}
           />
-          <Button
-            title={sending ? 'Sending…' : 'Send'}
-            tone="positive"
+          <IconButton
+            icon={sending ? 'clock' : 'send'}
+            label="Send comment"
+            onOverlay
+            busy={sending}
             disabled={sending || !draft.trim()}
             onPress={() => {
               void send();

@@ -209,7 +209,7 @@ test('comments open, post a trimmed comment and update the feed count', async ()
   fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
   expect(await screen.findByText('No comments yet. Start the conversation.')).toBeTruthy();
   fireEvent.changeText(screen.getByLabelText('Write a comment'), '  Strong work  ');
-  fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Send comment' }));
   expect(await screen.findByText('Strong work')).toBeTruthy();
   expect(feedApi.addComment).toHaveBeenCalledWith(10, 'Strong work');
   expect(screen.getByLabelText('Write a comment').props.value).toBe('');
@@ -248,7 +248,7 @@ test('losing access while commenting removes the composer and post context', asy
   fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
   await screen.findByText('No comments yet. Start the conversation.');
   fireEvent.changeText(screen.getByLabelText('Write a comment'), 'My message');
-  fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Send comment' }));
   expect(await screen.findByText('This post is no longer available.')).toBeTruthy();
   expect(screen.queryByLabelText('Write a comment')).toBeNull();
   expect(screen.queryByTestId('post-10')).toBeNull();
@@ -328,12 +328,34 @@ test('a workout that is no longer available says so', async () => {
   expect(await screen.findByText('This workout is no longer available.')).toBeTruthy();
 });
 
+test('the send icon is disabled for blank text and while submitting', async () => {
+  let reject = (_: Error) => {};
+  jest.mocked(feedApi.addComment).mockImplementation(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+  );
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  const send = await screen.findByRole('button', { name: 'Send comment' });
+  expect(send).toBeDisabled();
+  fireEvent.changeText(screen.getByLabelText('Write a comment'), 'A comment');
+  fireEvent.press(send);
+  expect(send).toBeDisabled();
+  expect(send.props.accessibilityState.busy).toBe(true);
+  await act(async () => reject(new Error('offline')));
+  expect(send).not.toBeDisabled();
+  expect(send.props.accessibilityState.busy).toBe(false);
+  expect(screen.getByLabelText('Write a comment').props.value).toBe('A comment');
+});
+
 test('failed comment keeps the text', async () => {
   jest.mocked(feedApi.addComment).mockRejectedValue(new Error('offline'));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
   fireEvent.changeText(await screen.findByLabelText('Write a comment'), 'Nice');
-  fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Send comment' }));
   expect(
     await screen.findByText('Could not post your comment. Your text is kept. Try again.'),
   ).toBeTruthy();
