@@ -391,6 +391,18 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   await screen.findByText('Leg day done');
   fireEvent.press(screen.getByRole('button', { name: 'New post' }));
   expect(screen.queryByRole('button', { name: 'Preview workout' })).toBeNull();
+  const picker = screen.getByRole('button', { name: 'Workout to share: No workout' });
+  fireEvent.press(picker);
+  const menu = await screen.findByTestId('post-workout-menu');
+  expect(within(menu).queryByRole('button', { name: 'Preview No workout' })).toBeNull();
+  fireEvent.press(await within(menu).findByRole('button', { name: `Preview ${workout.title}` }));
+  const pickerModal = screen
+    .UNSAFE_getAllByType(Modal)
+    .find((item) => item.props.statusBarTranslucent);
+  act(() => pickerModal?.props.onDismiss?.());
+  expect(await screen.findByRole('header', { name: workout.title })).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to new post' }));
+  expect(screen.getByRole('button', { name: 'Workout to share: No workout' })).toBeTruthy();
   await selectWorkout();
   expect(screen.getByLabelText('Caption').props.value).toBe('');
   fireEvent.changeText(screen.getByLabelText('Caption'), 'New PR');

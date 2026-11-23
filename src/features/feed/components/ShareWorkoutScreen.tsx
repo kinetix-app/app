@@ -328,6 +328,11 @@ function WorkoutPicker({
                 value: workout.session_id,
                 label: workout.title,
                 detail: new Date(workout.ended_at).toLocaleString(),
+                action: {
+                  label: `Preview ${workout.title}`,
+                  icon: 'eye-outline' as const,
+                  onPress: () => onPreview(workout.session_id),
+                },
               })),
             ]}
             onSelect={(id) => onSelect(recent.find((workout) => workout.session_id === id) ?? null)}

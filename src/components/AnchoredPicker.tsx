@@ -21,7 +21,18 @@ const maxMenuHeight = 248;
 const gap = spacing['space-2'];
 const margin = spacing['space-4'];
 
-export type PickerOption<Value> = { value: Value; label: string; detail?: string };
+type OptionAction = {
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  onPress: () => void;
+};
+
+export type PickerOption<Value> = {
+  value: Value;
+  label: string;
+  detail?: string;
+  action?: OptionAction;
+};
 
 export function AnchoredPicker<Value extends string | number | null>({
   selection,
@@ -49,6 +60,7 @@ export function AnchoredPicker<Value extends string | number | null>({
   const p = usePalette();
   const viewport = useWindowDimensions();
   const trigger = useRef<View>(null);
+  const pendingAction = useRef<(() => void) | null>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [closing, setClosing] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(true);
@@ -65,6 +77,16 @@ export function AnchoredPicker<Value extends string | number | null>({
       progress.stopAnimation();
     };
   }, [progress]);
+
+  function runPendingAction() {
+    const action = pendingAction.current;
+    pendingAction.current = null;
+    action?.();
+  }
+
+  useEffect(() => {
+    if (anchor === null && Platform.OS !== 'ios') runPendingAction();
+  }, [anchor]);
 
   function animate(value: number, duration: number) {
     return Animated.timing(progress, {
@@ -150,17 +172,18 @@ export function AnchoredPicker<Value extends string | number | null>({
           color={p['ink-muted']}
         />
       </Pressable>
-      {anchor ? (
-        <Modal
-          transparent
-          visible
-          statusBarTranslucent
-          navigationBarTranslucent
-          onShow={() => {
-            if (expanded && !reduceMotion) animate(1, 180).start();
-          }}
-          onRequestClose={closeMenu}
-        >
+      <Modal
+        transparent
+        visible={anchor !== null}
+        statusBarTranslucent
+        navigationBarTranslucent
+        onShow={() => {
+          if (expanded && !reduceMotion) animate(1, 180).start();
+        }}
+        onRequestClose={closeMenu}
+        onDismiss={runPendingAction}
+      >
+        {anchor ? (
           <View
             style={{ flex: 1 }}
             accessibilityViewIsModal
@@ -210,49 +233,83 @@ export function AnchoredPicker<Value extends string | number | null>({
                 {options.map((option) => {
                   const checked = option.value === selection;
                   return (
-                    <Pressable
-                      key={String(option.value)}
-                      accessibilityRole="button"
-                      accessibilityLabel={option.label}
-                      accessibilityHint={option.detail}
-                      accessibilityState={{ selected: checked }}
-                      aria-selected={checked}
-                      onPress={() => {
-                        onSelect(option.value);
-                        closeMenu();
-                      }}
-                      style={({ pressed }) => [
-                        styles.row,
-                        {
-                          minHeight: sizes['tap-min'],
-                          padding: spacing['space-2'],
-                          borderRadius: radii['radius-md'],
-                          backgroundColor: checked || pressed ? p['surface-300'] : undefined,
-                        },
-                      ]}
-                    >
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[textStyles.label, { color: p.ink }]}>{option.label}</Text>
-                        {option.detail ? (
-                          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                            {option.detail}
-                          </Text>
-                        ) : null}
-                      </View>
-                      {checked ? <Ionicons name="checkmark" size={20} color={p.ink} /> : null}
-                    </Pressable>
+                    <View key={String(option.value)} style={styles.row}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={option.label}
+                        accessibilityHint={option.detail}
+                        accessibilityState={{ selected: checked }}
+                        aria-selected={checked}
+                        onPress={() => {
+                          onSelect(option.value);
+                          closeMenu();
+                        }}
+                        style={({ pressed }) => [
+                          styles.row,
+                          {
+                            flex: 1,
+                            minHeight: sizes['tap-min'],
+                            padding: spacing['space-2'],
+                            borderRadius: radii['radius-md'],
+                            backgroundColor: checked || pressed ? p['surface-300'] : undefined,
+                          },
+                        ]}
+                      >
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={[textStyles.label, { color: p.ink }]}>{option.label}</Text>
+                          {option.detail ? (
+                            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                              {option.detail}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {checked ? <Ionicons name="checkmark" size={20} color={p.ink} /> : null}
+                      </Pressable>
+                      {option.action ? (
+                        <OptionActionButton
+                          action={option.action}
+                          onPress={(action) => {
+                            pendingAction.current = action;
+                            closeMenu();
+                          }}
+                        />
+                      ) : null}
+                    </View>
                   );
                 })}
                 {menuFooter}
               </ScrollView>
             </Animated.View>
           </View>
-        </Modal>
-      ) : null}
+        ) : null}
+      </Modal>
     </>
   );
 }
 
+function OptionActionButton({
+  action,
+  onPress,
+}: Readonly<{ action: OptionAction; onPress: (action: () => void) => void }>) {
+  const p = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={action.label}
+      onPress={() => onPress(action.onPress)}
+      style={styles.action}
+    >
+      <Ionicons name={action.icon} size={20} color={p.ink} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  action: {
+    width: sizes['tap-min'],
+    height: sizes['tap-min'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing['space-3'] },
 });

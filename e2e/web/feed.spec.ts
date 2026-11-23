@@ -119,6 +119,15 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
   await picker.click();
   await page
     .getByTestId('post-workout-menu')
+    .getByRole('button', { name: `Preview ${workout.title}` })
+    .first()
+    .click();
+  await expect(page.getByRole('heading', { name: workout.title, exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to new post' }).click();
+  await expect(picker).toBeVisible();
+  await picker.click();
+  await page
+    .getByTestId('post-workout-menu')
     .getByRole('button', { name: workout.title, exact: true })
     .first()
     .click();
