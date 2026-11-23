@@ -36,6 +36,21 @@ type QueuedEntry = EntrySource & { amount: number };
 const entryKey = (entry: EntrySource) => `${entry.kind}:${entry.source.id}`;
 const nutritionFactor = (entry: QueuedEntry) =>
   entry.kind === 'food' ? entry.amount / 100 : entry.amount;
+function entryUnit(kind: EntrySource['kind'], amount: number): string {
+  if (kind === 'food') return 'g';
+  return amount === 1 ? 'serving' : 'servings';
+}
+
+function saveLabel(pending: boolean, editing: boolean, createLabel: string): string {
+  if (pending) return 'Saving…';
+  return editing ? 'Save changes' : createLabel;
+}
+
+function searchStatus(searching: boolean, failed: boolean): string {
+  if (searching) return 'Searching…';
+  return failed ? 'Could not load foods' : 'No foods found';
+}
+
 const maxEntryAmount = 999999.99;
 const roundedAmount = (value: string) => Math.round(Number(value) * 100) / 100;
 const validAmount = (value: string) =>
@@ -48,6 +63,168 @@ type CatalogueForm = { kind: 'create'; type: EntityType } | { kind: 'edit'; entr
 const mealTypeFor = (meal: string) =>
   ({ Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' })[meal] as
     'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+function upsertQueuedEntry(current: QueuedEntry[], entry: QueuedEntry): QueuedEntry[] {
+  if (!current.some((item) => entryKey(item) === entryKey(entry))) return [...current, entry];
+  return current.map((item) => (entryKey(item) === entryKey(entry) ? entry : item));
+}
+
+async function submitQueuedEntries(entries: QueuedEntry[], date: string, meal: string) {
+  const context = { date, meal_type: mealTypeFor(meal) };
+  const results = await Promise.allSettled(
+    entries.map(async (entry) => {
+      if (entry.kind === 'food') {
+        return nutritionApi.addMealItem({
+          ...context,
+          food_id: entry.source.id,
+          quantity_grams: entry.amount,
+        });
+      }
+      return nutritionApi.addRecipeMealItem({
+        ...context,
+        recipe_id: entry.source.id,
+        servings: entry.amount,
+      });
+    }),
+  );
+  return entries.filter((_, index) => results[index].status === 'rejected');
+}
+
+function CatalogueHeader({
+  meal,
+  reviewingEntries,
+  pending,
+  tab,
+  reduceMotion,
+  onTabChange,
+  onCreate,
+  onBack,
+}: Readonly<{
+  meal: string;
+  reviewingEntries: boolean;
+  pending: boolean;
+  tab: EntityType;
+  reduceMotion: boolean;
+  onTabChange: (tab: EntityType) => void;
+  onCreate: () => void;
+  onBack: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <>
+      <View style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={reviewingEntries ? 'Back to selection' : 'Back to nutrition'}
+          disabled={pending}
+          onPress={() => {
+            onBack();
+          }}
+          style={[styles.back, !reviewingEntries && { backgroundColor: p['surface-300'] }]}
+        >
+          <Feather name="arrow-left" size={24} color={p.ink} />
+        </Pressable>
+        <View style={styles.heading}>
+          <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
+            {reviewingEntries ? 'Review entries' : 'Add food'}
+          </Text>
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{meal}</Text>
+        </View>
+        {!reviewingEntries ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Create"
+            onPress={() => onCreate()}
+            style={[styles.createButton, { backgroundColor: p['brand-soft'] }]}
+          >
+            <Feather name="plus" size={20} color={p['brand-ink']} />
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Create</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {!reviewingEntries ? (
+        <View accessibilityRole="tablist" accessibilityLabel="Catalogue type" style={styles.header}>
+          {entityTypes.map((label) => (
+            <AnimatedTextSelector
+              key={label}
+              label={label}
+              selected={tab === label}
+              role="tab"
+              reduceMotion={reduceMotion}
+              onPress={() => onTabChange(label)}
+              equalWidth
+            />
+          ))}
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function FoodCatalogueList({
+  active,
+  foodList,
+  results,
+  visibleFoodSearch,
+  debouncedSearch,
+  queuedEntries,
+  accountId,
+  onSelect,
+  onEdit,
+  onRequestDelete,
+}: Readonly<{
+  active: boolean;
+  foodList: React.RefObject<FlatList<Food> | null>;
+  results: ReturnType<typeof useFoodCatalogue>;
+  visibleFoodSearch: boolean;
+  debouncedSearch: string;
+  queuedEntries: QueuedEntry[];
+  accountId: number;
+  onSelect: (food: Food) => void;
+  onEdit: (food: Food) => void;
+  onRequestDelete: (food: Food) => void;
+}>) {
+  const p = usePalette();
+  return (
+    <>
+      {active ? (
+        <FlatList
+          ref={foodList}
+          testID="food-catalogue"
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          data={visibleFoodSearch ? results.items : []}
+          initialNumToRender={20}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <FoodRow
+              food={item}
+              isQueued={queuedEntries.some(
+                (entry) => entry.kind === 'food' && entry.source.id === item.id,
+              )}
+              onSelect={onSelect}
+              accountId={accountId}
+              onEdit={onEdit}
+              onRequestDelete={onRequestDelete}
+            />
+          )}
+          ListEmptyComponent={
+            visibleFoodSearch && debouncedSearch && !results.isPending && !results.isError ? (
+              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
+            ) : null
+          }
+          ListFooterComponent={
+            visibleFoodSearch ? <CatalogueStatus catalogue={results} collection="foods" /> : null
+          }
+          onEndReachedThreshold={0.5}
+          onEndReached={results.loadMore}
+        />
+      ) : null}
+    </>
+  );
+}
 
 export function AddFoodScreen({
   accountId,
@@ -99,23 +276,7 @@ export function AddFoodScreen({
   const foodList = React.useRef<FlatList<Food>>(null);
   const saveQueue = useMutation({
     mutationFn: async () => {
-      const context = { date, meal_type: mealTypeFor(meal) };
-      const results = await Promise.allSettled(
-        queuedEntries.map(async (entry) =>
-          entry.kind === 'food'
-            ? nutritionApi.addMealItem({
-                ...context,
-                food_id: entry.source.id,
-                quantity_grams: entry.amount,
-              })
-            : nutritionApi.addRecipeMealItem({
-                ...context,
-                recipe_id: entry.source.id,
-                servings: entry.amount,
-              }),
-        ),
-      );
-      const failed = queuedEntries.filter((_, index) => results[index].status === 'rejected');
+      const failed = await submitQueuedEntries(queuedEntries, date, meal);
       setQueuedEntries(failed);
       if (failed.length < queuedEntries.length) onSaved();
       if (failed.length) throw new Error('Some entries could not be added.');
@@ -123,11 +284,7 @@ export function AddFoodScreen({
     onSuccess: onClose,
   });
   const queueEntry = (entry: QueuedEntry) => {
-    setQueuedEntries((current) =>
-      current.some((item) => entryKey(item) === entryKey(entry))
-        ? current.map((item) => (entryKey(item) === entryKey(entry) ? entry : item))
-        : [...current, entry],
-    );
+    setQueuedEntries((current) => upsertQueuedEntry(current, entry));
   };
   const removeFood = useMutation({
     mutationFn: (foodId: number) => nutritionApi.deleteFood(foodId),
@@ -145,60 +302,21 @@ export function AddFoodScreen({
         style={styles.screen}
       >
         <View style={styles.content}>
-          <View style={styles.header}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={reviewingEntries ? 'Back to selection' : 'Back to nutrition'}
-              disabled={saveQueue.isPending}
-              onPress={() => {
-                if (reviewingEntries) {
-                  saveQueue.reset();
-                  setReviewingEntries(false);
-                  return;
-                }
-                onClose();
-              }}
-              style={[styles.back, !reviewingEntries && { backgroundColor: p['surface-300'] }]}
-            >
-              <Feather name="arrow-left" size={24} color={p.ink} />
-            </Pressable>
-            <View style={styles.heading}>
-              <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-                {reviewingEntries ? 'Review entries' : 'Add food'}
-              </Text>
-              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{meal}</Text>
-            </View>
-            {!reviewingEntries ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Create"
-                onPress={() => openForm({ kind: 'create', type: tab })}
-                style={[styles.createButton, { backgroundColor: p['brand-soft'] }]}
-              >
-                <Feather name="plus" size={20} color={p['brand-ink']} />
-                <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Create</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {!reviewingEntries ? (
-            <View
-              accessibilityRole="tablist"
-              accessibilityLabel="Catalogue type"
-              style={styles.header}
-            >
-              {entityTypes.map((label) => (
-                <AnimatedTextSelector
-                  key={label}
-                  label={label}
-                  selected={tab === label}
-                  role="tab"
-                  reduceMotion={reduceMotion}
-                  onPress={() => setTab(label)}
-                  equalWidth
-                />
-              ))}
-            </View>
-          ) : null}
+          <CatalogueHeader
+            meal={meal}
+            reviewingEntries={reviewingEntries}
+            pending={saveQueue.isPending}
+            tab={tab}
+            reduceMotion={reduceMotion}
+            onTabChange={setTab}
+            onCreate={() => openForm({ kind: 'create', type: tab })}
+            onBack={() => {
+              if (reviewingEntries) {
+                saveQueue.reset();
+                setReviewingEntries(false);
+              } else onClose();
+            }}
+          />
           {tab === 'Food' && !reviewingEntries ? (
             <>
               <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
@@ -253,48 +371,21 @@ export function AddFoodScreen({
               />
             </ScrollView>
           ) : null}
-          {tab === 'Food' && !reviewingEntries ? (
-            <FlatList
-              ref={foodList}
-              testID="food-catalogue"
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              data={visibleFoodSearch ? results.items : []}
-              initialNumToRender={20}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => (
-                <FoodRow
-                  food={item}
-                  isQueued={queuedEntries.some(
-                    (entry) => entry.kind === 'food' && entry.source.id === item.id,
-                  )}
-                  onSelect={(food) => openPortion({ kind: 'food', source: food })}
-                  accountId={accountId}
-                  onEdit={(food) =>
-                    openForm({ kind: 'edit', entry: { kind: 'food', source: food } })
-                  }
-                  onRequestDelete={(food) => {
-                    removeFood.reset();
-                    setFoodToDelete(food);
-                  }}
-                />
-              )}
-              ListEmptyComponent={
-                visibleFoodSearch && debouncedSearch && !results.isPending && !results.isError ? (
-                  <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
-                ) : null
-              }
-              ListFooterComponent={
-                visibleFoodSearch ? (
-                  <CatalogueStatus catalogue={results} collection="foods" />
-                ) : null
-              }
-              onEndReachedThreshold={0.5}
-              onEndReached={results.loadMore}
-            />
-          ) : null}
+          <FoodCatalogueList
+            active={tab === 'Food' && !reviewingEntries}
+            foodList={foodList}
+            results={results}
+            visibleFoodSearch={visibleFoodSearch}
+            debouncedSearch={debouncedSearch}
+            queuedEntries={queuedEntries}
+            accountId={accountId}
+            onSelect={(food) => openPortion({ kind: 'food', source: food })}
+            onEdit={(food) => openForm({ kind: 'edit', entry: { kind: 'food', source: food } })}
+            onRequestDelete={(food) => {
+              removeFood.reset();
+              setFoodToDelete(food);
+            }}
+          />
         </View>
         {!reviewingEntries && queuedEntries.length > 0 ? (
           <View style={styles.reviewFooter}>
@@ -365,7 +456,9 @@ function CatalogueFormModal({
   const p = usePalette();
   const scroll = React.useRef<ScrollView>(null);
   const editing = form.kind === 'edit';
-  const type = editing ? (form.entry.kind === 'food' ? 'Food' : 'Recipe') : form.type;
+  let type: EntityType;
+  if (form.kind === 'edit') type = form.entry.kind === 'food' ? 'Food' : 'Recipe';
+  else type = form.type;
   return (
     <Modal animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -421,27 +514,46 @@ function CatalogueFormModal({
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.recipeForm}
           >
-            {!editing || type === 'Food' ? (
-              <View style={type === 'Food' ? undefined : styles.hidden}>
-                <FoodEditor
-                  food={editing && form.entry.kind === 'food' ? form.entry.source : null}
-                  onSaved={(source) => onSaved({ kind: 'food', source })}
-                />
-              </View>
-            ) : null}
-            {!editing || type === 'Recipe' ? (
-              <View style={type === 'Recipe' ? undefined : styles.hidden}>
-                <RecipeEditor
-                  accountId={accountId}
-                  recipe={editing && form.entry.kind === 'recipe' ? form.entry.source : null}
-                  onSaved={(source) => onSaved({ kind: 'recipe', source })}
-                />
-              </View>
-            ) : null}
+            <CatalogueEditors accountId={accountId} form={form} type={type} onSaved={onSaved} />
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+function CatalogueEditors({
+  accountId,
+  form,
+  type,
+  onSaved,
+}: Readonly<{
+  accountId: number;
+  form: CatalogueForm;
+  type: EntityType;
+  onSaved: (entry: EntrySource) => void;
+}>) {
+  const editing = form.kind === 'edit';
+  return (
+    <>
+      {!editing || type === 'Food' ? (
+        <View style={type === 'Food' ? undefined : styles.hidden}>
+          <FoodEditor
+            food={editing && form.entry.kind === 'food' ? form.entry.source : null}
+            onSaved={(source) => onSaved({ kind: 'food', source })}
+          />
+        </View>
+      ) : null}
+      {!editing || type === 'Recipe' ? (
+        <View style={type === 'Recipe' ? undefined : styles.hidden}>
+          <RecipeEditor
+            accountId={accountId}
+            recipe={editing && form.entry.kind === 'recipe' ? form.entry.source : null}
+            onSaved={(source) => onSaved({ kind: 'recipe', source })}
+          />
+        </View>
+      ) : null}
+    </>
   );
 }
 
@@ -736,6 +848,7 @@ function EntryQueueReview({
     { calories: 0, protein: 0, carbohydrates: 0, fats: 0 },
   );
   const confirmDisabled = pending || editingKey !== null || !entries.length;
+  const entryLabel = entries.length === 1 ? 'entry' : 'entries';
 
   return (
     <View style={styles.reviewSections}>
@@ -745,7 +858,7 @@ function EntryQueueReview({
           const editing = editingKey === key;
           const amount =
             editing && validAmount(draftQuantity) ? roundedAmount(draftQuantity) : item.amount;
-          const unit = item.kind === 'food' ? 'g' : amount === 1 ? 'serving' : 'servings';
+          const unit = entryUnit(item.kind, amount);
           const factor = nutritionFactor({ ...item, amount });
           const calories = Math.round(item.source.calories * factor);
           return (
@@ -843,9 +956,7 @@ function EntryQueueReview({
         ]}
       >
         <Text style={[textStyles.label, styles.centeredText, { color: p['on-brand'] }]}>
-          {pending
-            ? 'Adding…'
-            : `Add ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} to ${meal}`}
+          {pending ? 'Adding…' : `Add ${entries.length} ${entryLabel} to ${meal}`}
         </Text>
       </Pressable>
     </View>
@@ -938,6 +1049,21 @@ function SelectedFoodPreview({ food, amount }: Readonly<{ food: Food; amount: st
 
 function formatGrams(value: number, maximumFractionDigits = 1) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits }).format(value);
+}
+
+function EmptyRecipes({ searching }: Readonly<{ searching: boolean }>) {
+  const p = usePalette();
+  if (searching)
+    return <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes found.</Text>;
+  return (
+    <View style={styles.emptyRecipes}>
+      <Feather name="book-open" size={22} color={p['ink-muted']} />
+      <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        Create one to add its servings to any meal.
+      </Text>
+    </View>
+  );
 }
 
 function RecipePicker({
@@ -1059,17 +1185,7 @@ function RecipePicker({
         )}
         ListEmptyComponent={
           visibleSearch && !recipes.isPending && !recipes.isError ? (
-            debouncedSearch ? (
-              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes found.</Text>
-            ) : (
-              <View style={styles.emptyRecipes}>
-                <Feather name="book-open" size={22} color={p['ink-muted']} />
-                <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
-                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  Create one to add its servings to any meal.
-                </Text>
-              </View>
-            )
+            <EmptyRecipes searching={Boolean(debouncedSearch)} />
           ) : null
         }
         ListFooterComponent={
@@ -1185,7 +1301,7 @@ function ServingsStepper({
         maxLength={fractional ? undefined : 3}
         value={value}
         onChangeText={(text) =>
-          onChange(fractional ? numericAmount(text) : text.replace(/[^0-9]/g, ''))
+          onChange(fractional ? numericAmount(text) : text.replace(/\D/g, ''))
         }
         containerStyle={[
           styles.compactField,
@@ -1281,219 +1397,64 @@ function FoodEditor({
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Saving…' : food ? 'Save changes' : 'Save food'}
+          {saveLabel(save.isPending, Boolean(food), 'Save food')}
         </Text>
       </Pressable>
     </View>
   );
 }
 
-function RecipeEditor({
-  accountId,
-  recipe,
-  onSaved,
-}: Readonly<{ accountId: number; recipe: Recipe | null; onSaved: (recipe: Recipe) => void }>) {
-  const p = usePalette();
-  const queryClient = useQueryClient();
-  const [name, setName] = React.useState(recipe?.name ?? '');
-  const [servings, setServings] = React.useState(recipe?.servings.toString() ?? '1');
-  const [search, setSearch] = React.useState('');
-  const [debouncedSearch, setDebouncedSearch] = React.useState('');
-  const term = search.trim();
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(term), 300);
-    return () => clearTimeout(timer);
-  }, [term]);
-  const [ingredients, setIngredients] = React.useState<
-    {
-      key: number;
-      food: Pick<Food, 'id' | 'name'>;
-      grams: string;
-      nutrition: NutritionValues | null;
-    }[]
-  >(
-    recipe?.ingredients.map((ingredient, index) => ({
-      key: index,
-      food: { id: ingredient.food_id, name: ingredient.name },
-      grams: ingredient.quantity_grams.toString(),
-      nutrition: null,
-    })) ?? [],
-  );
-  const existingFoodIds = [
-    ...new Set(ingredients.filter((item) => !item.nutrition).map((item) => item.food.id)),
-  ];
-  const existingFoods = useQueries({
-    queries: existingFoodIds.map((id) => ({
-      queryKey: ['nutrition', 'foods', 'detail', accountId, id],
-      queryFn: ({ signal }) => nutritionApi.food(id, signal),
-    })),
-  });
-  const nutritionById = new Map(
-    existingFoodIds.map((id, index) => [id, existingFoods[index].data]),
-  );
-  const ingredientsWithNutrition = ingredients.map((item) => ({
-    ...item,
-    nutrition: item.nutrition ?? nutritionById.get(item.food.id),
-  }));
-  const nextIngredientKey = React.useRef(ingredients.length);
-  const clearIngredientSearch = () => {
-    setSearch('');
-    setDebouncedSearch('');
-  };
-  const chooseIngredient = (food: Food) => {
-    const key = nextIngredientKey.current++;
-    setIngredients((current) => [...current, { key, food, grams: '100', nutrition: food }]);
-    clearIngredientSearch();
-  };
-  const results = useFoodCatalogue(debouncedSearch, Boolean(term) && term === debouncedSearch);
-  const save = useMutation({
-    mutationFn: () => {
-      const input = {
-        name: name.trim(),
-        servings: Number(servings),
-        ingredients: ingredients.map(({ food, grams }) => ({
-          food_id: food.id,
-          quantity_grams: Number(grams),
-        })),
-      };
-      return recipe
-        ? nutritionApi.updateRecipe(recipe.id, input)
-        : nutritionApi.createRecipe(input);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['nutrition', 'recipes'] });
-    },
-  });
-  const servingCount = Number(servings);
-  const validServings = Number.isInteger(servingCount) && servingCount > 0 && servingCount <= 100;
-  const validQuantities =
-    ingredients.length > 0 &&
-    ingredients.every(({ grams }) => Number.isFinite(Number(grams)) && Number(grams) > 0);
-  const valid = Boolean(name.trim()) && validServings && validQuantities;
+type RecipeIngredient = {
+  key: number;
+  food: Pick<Food, 'id' | 'name'>;
+  grams: string;
+  nutrition: NutritionValues | null;
+};
 
-  // Food nutrition is per 100 g. Sum unrounded contributions before dividing by servings.
+type IngredientWithNutrition = Omit<RecipeIngredient, 'nutrition'> & {
+  nutrition: NutritionValues | null | undefined;
+};
+
+function recipeNutrition(ingredients: IngredientWithNutrition[]): NutritionValues {
   const totals: NutritionValues = { calories: 0, protein: 0, carbohydrates: 0, fats: 0 };
-  const showEstimate =
-    validServings && validQuantities && ingredientsWithNutrition.every((item) => item.nutrition);
-  if (showEstimate) {
-    for (const { nutrition, grams } of ingredientsWithNutrition) {
-      if (!nutrition) continue;
-      const factor = Number(grams) / 100;
-      totals.calories += nutrition.calories * factor;
-      totals.protein += nutrition.protein * factor;
-      totals.carbohydrates += nutrition.carbohydrates * factor;
-      totals.fats += nutrition.fats * factor;
-    }
+  for (const { nutrition, grams } of ingredients) {
+    if (!nutrition) continue;
+    const factor = Number(grams) / 100;
+    totals.calories += nutrition.calories * factor;
+    totals.protein += nutrition.protein * factor;
+    totals.carbohydrates += nutrition.carbohydrates * factor;
+    totals.fats += nutrition.fats * factor;
   }
+  return totals;
+}
 
-  const matchesSavedPortions =
-    recipe &&
-    recipe.servings === servingCount &&
+function matchesRecipe(
+  recipe: Recipe | null,
+  servings: number,
+  ingredients: RecipeIngredient[],
+): boolean {
+  return Boolean(
+    recipe?.servings === servings &&
     recipe.ingredients.length === ingredients.length &&
     recipe.ingredients.every(
       (item, index) =>
         item.food_id === ingredients[index].food.id &&
         item.quantity_grams === Number(ingredients[index].grams),
-    );
-  const preview = matchesSavedPortions ? recipe : showEstimate ? totals : null;
+    ),
+  );
+}
 
+function RecipeIngredients({
+  ingredientsWithNutrition,
+  setIngredients,
+}: Readonly<{
+  ingredientsWithNutrition: IngredientWithNutrition[];
+  setIngredients: React.Dispatch<React.SetStateAction<RecipeIngredient[]>>;
+}>) {
+  const p = usePalette();
   return (
-    <View style={styles.recipeForm}>
-      <View style={styles.recipeFields}>
-        <Text style={[textStyles.label, { color: p.ink }]}>Recipe name</Text>
-        <TextField
-          accessibilityLabel="Recipe name"
-          value={name}
-          onChangeText={setName}
-          placeholder="Chicken rice bowl"
-          containerStyle={styles.compactField}
-          inputStyle={styles.compactInput}
-        />
-        <View style={styles.servingRow}>
-          <Text style={[textStyles.label, styles.flex, { color: p.ink }]}>Servings</Text>
-          <ServingsStepper label="Recipe servings" value={servings} onChange={setServings} />
-        </View>
-      </View>
-      <View style={styles.recipeFields}>
-        <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          Add ingredients
-        </Text>
-        <TextField
-          accessibilityLabel="Search ingredient"
-          maxLength={150}
-          leading={<Feather name="search" size={18} color={p['ink-muted']} />}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search for a food"
-          trailing={
-            search ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Clear ingredient search"
-                onPress={clearIngredientSearch}
-                style={styles.stepperButton}
-              >
-                <Feather name="x" size={18} color={p['ink-muted']} />
-              </Pressable>
-            ) : null
-          }
-          containerStyle={[styles.compactField, styles.ingredientSearchField]}
-          inputStyle={styles.compactInput}
-        />
-      </View>
-      {term ? (
-        <ScrollView
-          style={[styles.ingredientResults, { backgroundColor: p['surface-100'] }]}
-          keyboardShouldPersistTaps="handled"
-          nestedScrollEnabled
-          accessibilityLabel="Ingredient search results"
-          scrollEventThrottle={32}
-          onScroll={({ nativeEvent: { contentSize, contentOffset, layoutMeasurement } }) => {
-            if (contentSize.height - contentOffset.y <= layoutMeasurement.height * 1.5) {
-              results.loadMore();
-            }
-          }}
-        >
-          {term === debouncedSearch && results.items.length ? (
-            results.items.map((food) => (
-              <Pressable
-                key={food.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Add ${food.name} as an ingredient`}
-                onPress={() => chooseIngredient(food)}
-                style={({ pressed }) => [
-                  styles.ingredientSearchRow,
-                  { borderColor: p.line, backgroundColor: p['surface-200'] },
-                  pressed && { backgroundColor: p['surface-300'] },
-                ]}
-              >
-                <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
-                <View style={[styles.ingredientAddIcon, { backgroundColor: p['brand-soft'] }]}>
-                  <Feather name="plus" size={18} color={p['brand-ink']} />
-                </View>
-              </Pressable>
-            ))
-          ) : (
-            <Text
-              style={[
-                textStyles['body-sm'],
-                styles.ingredientSearchHint,
-                { color: p['ink-muted'] },
-              ]}
-            >
-              {term !== debouncedSearch || results.isPending
-                ? 'Searching…'
-                : results.isError
-                  ? 'Could not load foods'
-                  : 'No foods found'}
-            </Text>
-          )}
-          {term === debouncedSearch ? (
-            <CatalogueStatus catalogue={results} collection="foods" />
-          ) : null}
-        </ScrollView>
-      ) : null}
-      {ingredients.length ? (
+    <>
+      {ingredientsWithNutrition.length ? (
         <View style={styles.recipeFields}>
           <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
             In this recipe
@@ -1555,6 +1516,213 @@ function RecipeEditor({
           </View>
         </View>
       ) : null}
+    </>
+  );
+}
+
+function IngredientSearchResults({
+  term,
+  debouncedSearch,
+  results,
+  chooseIngredient,
+}: Readonly<{
+  term: string;
+  debouncedSearch: string;
+  results: ReturnType<typeof useFoodCatalogue>;
+  chooseIngredient: (food: Food) => void;
+}>) {
+  const p = usePalette();
+  return (
+    <>
+      {term ? (
+        <ScrollView
+          style={[styles.ingredientResults, { backgroundColor: p['surface-100'] }]}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          accessibilityLabel="Ingredient search results"
+          scrollEventThrottle={32}
+          onScroll={({ nativeEvent: { contentSize, contentOffset, layoutMeasurement } }) => {
+            if (contentSize.height - contentOffset.y <= layoutMeasurement.height * 1.5) {
+              results.loadMore();
+            }
+          }}
+        >
+          {term === debouncedSearch && results.items.length ? (
+            results.items.map((food) => (
+              <Pressable
+                key={food.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${food.name} as an ingredient`}
+                onPress={() => chooseIngredient(food)}
+                style={({ pressed }) => [
+                  styles.ingredientSearchRow,
+                  { borderColor: p.line, backgroundColor: p['surface-200'] },
+                  pressed && { backgroundColor: p['surface-300'] },
+                ]}
+              >
+                <Text style={[textStyles.body, styles.flex, { color: p.ink }]}>{food.name}</Text>
+                <View style={[styles.ingredientAddIcon, { backgroundColor: p['brand-soft'] }]}>
+                  <Feather name="plus" size={18} color={p['brand-ink']} />
+                </View>
+              </Pressable>
+            ))
+          ) : (
+            <Text
+              style={[
+                textStyles['body-sm'],
+                styles.ingredientSearchHint,
+                { color: p['ink-muted'] },
+              ]}
+            >
+              {searchStatus(term !== debouncedSearch || results.isPending, results.isError)}
+            </Text>
+          )}
+          {term === debouncedSearch ? (
+            <CatalogueStatus catalogue={results} collection="foods" />
+          ) : null}
+        </ScrollView>
+      ) : null}
+    </>
+  );
+}
+
+function RecipeEditor({
+  accountId,
+  recipe,
+  onSaved,
+}: Readonly<{ accountId: number; recipe: Recipe | null; onSaved: (recipe: Recipe) => void }>) {
+  const p = usePalette();
+  const queryClient = useQueryClient();
+  const [name, setName] = React.useState(recipe?.name ?? '');
+  const [servings, setServings] = React.useState(recipe?.servings.toString() ?? '1');
+  const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
+  const term = search.trim();
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(term), 300);
+    return () => clearTimeout(timer);
+  }, [term]);
+  const [ingredients, setIngredients] = React.useState<RecipeIngredient[]>(
+    recipe?.ingredients.map((ingredient, index) => ({
+      key: index,
+      food: { id: ingredient.food_id, name: ingredient.name },
+      grams: ingredient.quantity_grams.toString(),
+      nutrition: null,
+    })) ?? [],
+  );
+  const existingFoodIds = [
+    ...new Set(ingredients.filter((item) => !item.nutrition).map((item) => item.food.id)),
+  ];
+  const existingFoods = useQueries({
+    queries: existingFoodIds.map((id) => ({
+      queryKey: ['nutrition', 'foods', 'detail', accountId, id],
+      queryFn: ({ signal }) => nutritionApi.food(id, signal),
+    })),
+  });
+  const nutritionById = new Map(
+    existingFoodIds.map((id, index) => [id, existingFoods[index].data]),
+  );
+  const ingredientsWithNutrition = ingredients.map((item) => ({
+    ...item,
+    nutrition: item.nutrition ?? nutritionById.get(item.food.id),
+  }));
+  const nextIngredientKey = React.useRef(ingredients.length);
+  const clearIngredientSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
+  };
+  const chooseIngredient = (food: Food) => {
+    const key = nextIngredientKey.current++;
+    setIngredients((current) => [...current, { key, food, grams: '100', nutrition: food }]);
+    clearIngredientSearch();
+  };
+  const results = useFoodCatalogue(debouncedSearch, Boolean(term) && term === debouncedSearch);
+  const save = useMutation({
+    mutationFn: () => {
+      const input = {
+        name: name.trim(),
+        servings: Number(servings),
+        ingredients: ingredients.map(({ food, grams }) => ({
+          food_id: food.id,
+          quantity_grams: Number(grams),
+        })),
+      };
+      return recipe
+        ? nutritionApi.updateRecipe(recipe.id, input)
+        : nutritionApi.createRecipe(input);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['nutrition', 'recipes'] });
+    },
+  });
+  const servingCount = Number(servings);
+  const validServings = Number.isInteger(servingCount) && servingCount > 0 && servingCount <= 100;
+  const validQuantities =
+    ingredients.length > 0 &&
+    ingredients.every(({ grams }) => Number.isFinite(Number(grams)) && Number(grams) > 0);
+  const valid = Boolean(name.trim()) && validServings && validQuantities;
+
+  // Food nutrition is per 100 g. Sum unrounded contributions before dividing by servings.
+  const showEstimate =
+    validServings && validQuantities && ingredientsWithNutrition.every((item) => item.nutrition);
+  const matchesSavedPortions = matchesRecipe(recipe, servingCount, ingredients);
+  let preview = showEstimate ? recipeNutrition(ingredientsWithNutrition) : null;
+  if (matchesSavedPortions) preview = recipe;
+
+  return (
+    <View style={styles.recipeForm}>
+      <View style={styles.recipeFields}>
+        <Text style={[textStyles.label, { color: p.ink }]}>Recipe name</Text>
+        <TextField
+          accessibilityLabel="Recipe name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Chicken rice bowl"
+          containerStyle={styles.compactField}
+          inputStyle={styles.compactInput}
+        />
+        <View style={styles.servingRow}>
+          <Text style={[textStyles.label, styles.flex, { color: p.ink }]}>Servings</Text>
+          <ServingsStepper label="Recipe servings" value={servings} onChange={setServings} />
+        </View>
+      </View>
+      <View style={styles.recipeFields}>
+        <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
+          Add ingredients
+        </Text>
+        <TextField
+          accessibilityLabel="Search ingredient"
+          maxLength={150}
+          leading={<Feather name="search" size={18} color={p['ink-muted']} />}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search for a food"
+          trailing={
+            search ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear ingredient search"
+                onPress={clearIngredientSearch}
+                style={styles.stepperButton}
+              >
+                <Feather name="x" size={18} color={p['ink-muted']} />
+              </Pressable>
+            ) : null
+          }
+          containerStyle={[styles.compactField, styles.ingredientSearchField]}
+          inputStyle={styles.compactInput}
+        />
+      </View>
+      <IngredientSearchResults
+        term={term}
+        debouncedSearch={debouncedSearch}
+        results={results}
+        chooseIngredient={chooseIngredient}
+      />
+      <RecipeIngredients
+        ingredientsWithNutrition={ingredientsWithNutrition}
+        setIngredients={setIngredients}
+      />
       {preview ? (
         <View style={[styles.recipeNutrition, { borderColor: p.line }]}>
           <PortionNutritionPreview
@@ -1565,7 +1733,11 @@ function RecipeEditor({
             embedded
           />
         </View>
-      ) : validServings && validQuantities && existingFoods.some((result) => result.isError) ? (
+      ) : null}
+      {!preview &&
+      validServings &&
+      validQuantities &&
+      existingFoods.some((result) => result.isError) ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
           Nutrition is unavailable for one or more ingredients.
         </Text>
@@ -1584,7 +1756,7 @@ function RecipeEditor({
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {save.isPending ? 'Saving…' : recipe ? 'Save changes' : 'Create recipe'}
+          {saveLabel(save.isPending, Boolean(recipe), 'Create recipe')}
         </Text>
       </Pressable>
     </View>

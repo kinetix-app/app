@@ -124,7 +124,7 @@ class OneEuro {
 
 /** Applies the 1€ filter and restarts it after each gap. */
 export function smooth(values: Series, t: Series): Series {
-  const out = new Array<number>(values.length).fill(NaN);
+  const out = new Array<number>(values.length).fill(Number.NaN);
   let f: OneEuro | null = null;
   for (let i = 0; i < values.length; i++) {
     if (!isNum(values[i])) {
@@ -173,7 +173,7 @@ export function removeSpikes(x: Series, window = 3, k = 3.0, floor = 6.0): Serie
     if (!isNum(x[i]) || seg.length < 3) continue;
     const med = median(seg);
     const mad = 1.4826 * median(seg.map((v) => Math.abs(v - med)));
-    if (Math.abs(x[i] - med) > Math.max(k * mad, floor)) out[i] = NaN;
+    if (Math.abs(x[i] - med) > Math.max(k * mad, floor)) out[i] = Number.NaN;
   }
   return out;
 }
@@ -205,8 +205,8 @@ function rejectOutliers(pts: Record<Joint, Track>): number {
   for (const [j, mask] of flags) {
     mask.forEach((m, i) => {
       if (m) {
-        pts[j].x[i] = NaN;
-        pts[j].y[i] = NaN;
+        pts[j].x[i] = Number.NaN;
+        pts[j].y[i] = Number.NaN;
         count++;
       }
     });
@@ -216,6 +216,57 @@ function rejectOutliers(pts: Record<Joint, Track>): number {
 
 export function worldKey(a: Joint, b: Joint): string {
   return `${a}|${b}`;
+}
+
+function worldLengths(series: PoseSeries, side: Side): Map<string, number> {
+  const worldLen = new Map<string, number>();
+  if (series.world) {
+    const world = series.world;
+    JOINTS.forEach((first, i) => {
+      for (const second of JOINTS.slice(i + 1)) {
+        const ka = IDX[`${side}_${first}`];
+        const kb = IDX[`${side}_${second}`];
+        const d = nanmedian(
+          world.map((w) => norm3(w[ka][0] - w[kb][0], w[ka][1] - w[kb][1], w[ka][2] - w[kb][2])),
+        );
+        worldLen.set(worldKey(first, second), d);
+        worldLen.set(worldKey(second, first), d);
+      }
+    });
+  }
+
+  return worldLen;
+}
+
+function jointTracks(
+  series: PoseSeries,
+  side: Side,
+  thighPx: number,
+  px: (frame: number, landmark: number) => [number, number],
+): { pts: Record<Joint, Track>; vis: Record<Joint, Series>; spikes: number } {
+  const pts = {} as Record<Joint, Track>;
+  const vis = {} as Record<Joint, Series>;
+  let spikes = 0;
+  for (const j of JOINTS) {
+    const k = IDX[`${side}_${j}`];
+    const v = series.visibility.map((row) => row[k]);
+    const track: Track = { x: [], y: [] };
+    for (let f = 0; f < series.t.length; f++) {
+      const [x, y] = px(f, k);
+      const hidden = v[f] < MIN_VISIBILITY;
+      track.x.push(hidden ? Number.NaN : x);
+      track.y.push(hidden ? Number.NaN : y);
+    }
+    for (const axis of ['x', 'y'] as const) {
+      const before = track[axis].filter((n) => !isNum(n)).length;
+      track[axis] = removeSpikes(track[axis], 3, 3.0, 0.05 * thighPx);
+      spikes += track[axis].filter((n) => !isNum(n)).length - before;
+    }
+    pts[j] = track;
+    vis[j] = v;
+  }
+
+  return { pts, vis, spikes };
 }
 
 export function prepare(series: PoseSeries, spec?: ExerciseSpec): Prepared {
@@ -262,27 +313,7 @@ export function prepare(series: PoseSeries, spec?: ExerciseSpec): Prepared {
   // Legs out of frame (e.g. an upper-body shot of a curl): the torso is similar in size.
   if (!isNum(thighPx)) thighPx = 0.9 * nanmedian(torso);
 
-  const pts = {} as Record<Joint, Track>;
-  const vis = {} as Record<Joint, Series>;
-  let spikes = 0;
-  for (const j of JOINTS) {
-    const k = IDX[`${side}_${j}`];
-    const v = series.visibility.map((row) => row[k]);
-    const track: Track = { x: [], y: [] };
-    for (let f = 0; f < T; f++) {
-      const [x, y] = px(f, k);
-      const hidden = v[f] < MIN_VISIBILITY;
-      track.x.push(hidden ? NaN : x);
-      track.y.push(hidden ? NaN : y);
-    }
-    for (const axis of ['x', 'y'] as const) {
-      const before = track[axis].filter((n) => !isNum(n)).length;
-      track[axis] = removeSpikes(track[axis], 3, 3.0, 0.05 * thighPx);
-      spikes += track[axis].filter((n) => !isNum(n)).length - before;
-    }
-    pts[j] = track;
-    vis[j] = v;
-  }
+  const { pts, vis, spikes } = jointTracks(series, side, thighPx, px);
 
   const rejected = rejectOutliers(pts);
   if (spikes || rejected) {
@@ -302,27 +333,15 @@ export function prepare(series: PoseSeries, spec?: ExerciseSpec): Prepared {
     // Feet out of frame: the nose points where the person faces.
     toe = nanmedian(
       series.t.map((_, f) =>
-        series.visibility[f][IDX.nose] < MIN_VISIBILITY ? NaN : px(f, IDX.nose)[0] - pts.ear.x[f],
+        series.visibility[f][IDX.nose] < MIN_VISIBILITY
+          ? Number.NaN
+          : px(f, IDX.nose)[0] - pts.ear.x[f],
       ),
     );
   }
   const facing = !isNum(toe) || toe >= 0 ? 1.0 : -1.0;
 
-  const worldLen = new Map<string, number>();
-  if (series.world) {
-    const world = series.world;
-    JOINTS.forEach((a, i) => {
-      for (const b of JOINTS.slice(i + 1)) {
-        const ka = IDX[`${side}_${a}`];
-        const kb = IDX[`${side}_${b}`];
-        const d = nanmedian(
-          world.map((w) => norm3(w[ka][0] - w[kb][0], w[ka][1] - w[kb][1], w[ka][2] - w[kb][2])),
-        );
-        worldLen.set(worldKey(a, b), d);
-        worldLen.set(worldKey(b, a), d);
-      }
-    });
-  }
+  const worldLen = worldLengths(series, side);
 
   return { t: series.t, pts, vis, side, facing, sideViewRatio, worldLen, warnings };
 }

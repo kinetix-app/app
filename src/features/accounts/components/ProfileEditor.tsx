@@ -285,15 +285,20 @@ function accountForPictureDraft(account: Account, draft: ProfilePictureDraft) {
   return { ...account, profile: { ...account.profile, picture_url: null } };
 }
 
+function fieldOpacity(disabled: boolean, pressed: boolean): number {
+  if (disabled) return 0.5;
+  return pressed ? 0.75 : 1;
+}
+
 function SexFields({
   form,
   disabled,
   error,
-}: {
+}: Readonly<{
   form: ProfileFormApi;
   disabled: boolean;
   error?: string;
-}) {
+}>) {
   const p = usePalette();
   return (
     <View style={{ gap: spacing['space-3'], marginTop: spacing['space-2'] }}>
@@ -325,7 +330,7 @@ function SexFields({
                     borderWidth: 2,
                     borderColor: value === sex ? p.brand : p['line-strong'],
                     backgroundColor: value === sex ? p.brand : p['surface-200'],
-                    opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
+                    opacity: fieldOpacity(disabled, pressed),
                     transform: [{ scale: pressed ? 0.98 : 1 }],
                   },
                 ]}
@@ -387,11 +392,11 @@ export function ActivityFields({
   form,
   disabled,
   error,
-}: {
+}: Readonly<{
   form: ProfileFormApi;
   disabled: boolean;
   error?: string;
-}) {
+}>) {
   const p = usePalette();
   return (
     <Controller
@@ -418,7 +423,7 @@ export function ActivityFields({
                 borderWidth: 2,
                 borderColor: value === option.value ? p.brand : p['line-strong'],
                 backgroundColor: value === option.value ? p['brand-soft'] : p['surface-200'],
-                opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
+                opacity: fieldOpacity(disabled, pressed),
               })}
             >
               <Text
@@ -457,6 +462,8 @@ function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial') {
       ? `${values.height_ft} ft ${Number(values.height_in).toFixed(2)} in`
       : `${Number(values.height_cm).toFixed(2)} cm`;
   const weightUnit = unit === 'imperial' ? 'lb' : 'kg';
+  const sexLabels = { male: 'Male', female: 'Female' } as const;
+  const sex = values.sex ? (sexLabels[values.sex] ?? '—') : '—';
   return [
     ['Name', values.display_name],
     ['Age', `${values.age} years`],
@@ -464,7 +471,7 @@ function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial') {
       'Activity',
       activityOptions.find((option) => option.value === values.activity_level)?.label ?? '—',
     ],
-    ['Sex', values.sex === 'male' ? 'Male' : values.sex === 'female' ? 'Female' : '—'],
+    ['Sex', sex],
     ['System', unit === 'metric' ? 'Metric' : 'Imperial'],
     ['Height', height],
     ['Weight', `${Number(values.weight).toFixed(2)} ${weightUnit}`],
@@ -492,6 +499,12 @@ function ProfileReview({ account, draft, form, unit }: ProfileReviewProps) {
       ))}
     </>
   );
+}
+
+function fieldsForStep(step: number): string[] {
+  if (step === 0) return ['display_name'];
+  if (step === 2) return ['activity_level'];
+  return ['age', 'sex', 'measurement_system', 'weight', 'height_cm', 'height_ft', 'height_in'];
 }
 
 export function ProfileEditor({
@@ -532,15 +545,9 @@ export function ProfileEditor({
     },
     active && (step > 0 || Boolean(onCancel)),
   );
-  const currentFields =
-    step === 0
-      ? ['display_name']
-      : step === 2
-        ? ['activity_level']
-        : ['age', 'sex', 'measurement_system', 'weight', 'height_cm', 'height_ft', 'height_in'];
   function advance() {
     clearErrors();
-    const issues = currentStepIssues(getValues(), currentFields);
+    const issues = currentStepIssues(getValues(), fieldsForStep(step));
     issues.forEach((issue) =>
       setError(issue.path[0] as keyof ProfileFormValues, { message: issue.message }),
     );

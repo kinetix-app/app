@@ -25,6 +25,123 @@ const weeklyActivityLabels: Record<string, string> = {
   '1.9': 'Very high',
 };
 
+const macroLabels = { protein: 'Protein', carbohydrates: 'Carbohydrates', fats: 'Fat' } as const;
+
+function targetComparison(suggestion: number, saved: number): string {
+  if (saved === suggestion) return 'Matches your saved target.';
+  const difference = Number(Math.abs(suggestion - saved).toFixed(2));
+  const direction = suggestion > saved ? 'above' : 'below';
+  return `Suggestion: ${difference} kcal/day ${direction} your saved target.`;
+}
+
+function adjustmentText(percent: number | null): string {
+  if (percent === 0) return 'Calories to maintain your weight.';
+  const direction = Number(percent) < 0 ? 'fewer' : 'more';
+  return `${Math.abs(percent ?? 0)}% ${direction} calories for your goal.`;
+}
+
+type RecommendationData = Awaited<ReturnType<typeof nutritionApi.recommendation>>;
+type SavedGoal = Awaited<ReturnType<typeof nutritionApi.goal>>;
+
+function RecommendationContent({
+  data,
+  saved,
+  eligible,
+  setEligible,
+  pending,
+  onAccept,
+}: Readonly<{
+  data: RecommendationData;
+  saved: SavedGoal | undefined;
+  eligible: boolean;
+  setEligible: (value: boolean) => void;
+  pending: boolean;
+  onAccept: () => void;
+}>) {
+  const p = usePalette();
+  const goal = data.goal;
+  return (
+    <>
+      {data.available && goal ? (
+        <>
+          <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>
+              {data.objective ? objectiveLabels[data.objective] : 'Daily target'}
+            </Text>
+            <Text style={[textStyles['metric-lg'], { color: p['brand-ink'] }]}>
+              {goal.calories} kcal/day
+            </Text>
+            {(['protein', 'carbohydrates', 'fats'] as const).map((macro) => (
+              <Text key={macro} style={[textStyles.body, { color: p.ink }]}>
+                {macroLabels[macro]}: {Math.round(goal[macro])} g{' · '}
+                {Math.round(((goal[macro] * (macro === 'fats' ? 9 : 4)) / goal.calories) * 100)}%
+              </Text>
+            ))}
+            {saved ? (
+              <View style={{ gap: spacing['space-1'] }}>
+                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                  Your saved target: {saved.calories} kcal/day
+                </Text>
+                <Text style={[textStyles['body-sm'], { color: p.ink }]}>
+                  {targetComparison(goal.calories, saved.calories)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
+            <Text style={[textStyles.body, { color: p.ink }]}>
+              Weekly activity: {weeklyActivityLabels[String(data.activity_factor)] ?? 'Not set'}
+            </Text>
+            <Text style={[textStyles.body, { color: p.ink }]}>
+              Maintenance: {Math.round(data.maintenance_calories ?? 0)} kcal/day
+            </Text>
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+              {adjustmentText(data.adjustment_percent)}
+            </Text>
+          </View>
+          <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+            A starting estimate. Review your progress in 2–4 weeks.
+          </Text>
+          <View style={styles.confirm}>
+            <Switch
+              accessibilityLabel="This adult estimate is appropriate for me"
+              value={eligible}
+              onValueChange={setEligible}
+              disabled={pending}
+            />
+            <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
+              Not pregnant or breastfeeding. No prescribed diet.
+            </Text>
+          </View>
+          <Button
+            title={pending ? 'Saving…' : 'Accept suggestion'}
+            disabled={!eligible || pending}
+            onPress={() => {
+              onAccept();
+            }}
+          />
+          {saved ? (
+            <Text style={{ color: p['ink-muted'] }}>This replaces your current targets.</Text>
+          ) : null}
+        </>
+      ) : (
+        <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
+          <Text style={[textStyles.body, { color: p.ink }]}>{data.reason}</Text>
+          {data.missing_fields.length ? (
+            <Text style={{ color: p['ink-muted'] }}>
+              Missing: {data.missing_fields.map((field) => field.replaceAll('_', ' ')).join(', ')}.
+              Update these in Profile, then return here.
+            </Text>
+          ) : null}
+        </View>
+      )}
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+        For healthy adults. Includes exercise calories.
+      </Text>
+    </>
+  );
+}
+
 export function NutritionGoalRecommendation(
   props: Readonly<{
     accountId: number;
@@ -85,7 +202,6 @@ function Recommendation({
   const data = recommendation.data;
   const loading = recommendation.isPending || saved.isPending;
   const failed = recommendation.isError || saved.isError;
-  const goal = data?.goal;
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView contentContainerStyle={[screenContentStyle, styles.content]}>
@@ -122,96 +238,18 @@ function Recommendation({
           </View>
         ) : null}
         {!loading && !failed && data ? (
-          <>
-            {data.available && goal ? (
-              <>
-                <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-                  <Text style={[textStyles['title-md'], { color: p.ink }]}>
-                    {data.objective ? objectiveLabels[data.objective] : 'Daily target'}
-                  </Text>
-                  <Text style={[textStyles['metric-lg'], { color: p['brand-ink'] }]}>
-                    {goal.calories} kcal/day
-                  </Text>
-                  {(['protein', 'carbohydrates', 'fats'] as const).map((macro) => (
-                    <Text key={macro} style={[textStyles.body, { color: p.ink }]}>
-                      {macro === 'protein' ? 'Protein' : macro === 'fats' ? 'Fat' : 'Carbohydrates'}
-                      : {Math.round(goal[macro])} g{' · '}
-                      {Math.round(
-                        ((goal[macro] * (macro === 'fats' ? 9 : 4)) / goal.calories) * 100,
-                      )}
-                      %
-                    </Text>
-                  ))}
-                  {saved.data ? (
-                    <View style={{ gap: spacing['space-1'] }}>
-                      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                        Your saved target: {saved.data.calories} kcal/day
-                      </Text>
-                      <Text style={[textStyles['body-sm'], { color: p.ink }]}>
-                        {saved.data.calories === goal.calories
-                          ? 'Matches your saved target.'
-                          : `Suggestion: ${Number(Math.abs(goal.calories - saved.data.calories).toFixed(2))} kcal/day ${goal.calories > saved.data.calories ? 'above' : 'below'} your saved target.`}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-                <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-                  <Text style={[textStyles.body, { color: p.ink }]}>
-                    Weekly activity:{' '}
-                    {weeklyActivityLabels[String(data.activity_factor)] ?? 'Not set'}
-                  </Text>
-                  <Text style={[textStyles.body, { color: p.ink }]}>
-                    Maintenance: {Math.round(data.maintenance_calories ?? 0)} kcal/day
-                  </Text>
-                  <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {data.adjustment_percent === 0
-                      ? 'Calories to maintain your weight.'
-                      : `${Math.abs(data.adjustment_percent ?? 0)}% ${Number(data.adjustment_percent) < 0 ? 'fewer' : 'more'} calories for your goal.`}
-                  </Text>
-                </View>
-                <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                  A starting estimate. Review your progress in 2–4 weeks.
-                </Text>
-                <View style={styles.confirm}>
-                  <Switch
-                    accessibilityLabel="This adult estimate is appropriate for me"
-                    value={eligible}
-                    onValueChange={setEligible}
-                    disabled={accept.isPending}
-                  />
-                  <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-                    Not pregnant or breastfeeding. No prescribed diet.
-                  </Text>
-                </View>
-                <Button
-                  title={accept.isPending ? 'Saving…' : 'Accept suggestion'}
-                  disabled={!eligible || accept.isPending}
-                  onPress={() => {
-                    if (busy.current) return;
-                    busy.current = true;
-                    accept.mutate();
-                  }}
-                />
-                {saved.data ? (
-                  <Text style={{ color: p['ink-muted'] }}>This replaces your current targets.</Text>
-                ) : null}
-              </>
-            ) : (
-              <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-                <Text style={[textStyles.body, { color: p.ink }]}>{data.reason}</Text>
-                {data.missing_fields.length ? (
-                  <Text style={{ color: p['ink-muted'] }}>
-                    Missing:{' '}
-                    {data.missing_fields.map((field) => field.replaceAll('_', ' ')).join(', ')}.
-                    Update these in Profile, then return here.
-                  </Text>
-                ) : null}
-              </View>
-            )}
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              For healthy adults. Includes exercise calories.
-            </Text>
-          </>
+          <RecommendationContent
+            data={data}
+            saved={saved.data}
+            eligible={eligible}
+            setEligible={setEligible}
+            pending={accept.isPending}
+            onAccept={() => {
+              if (busy.current) return;
+              busy.current = true;
+              accept.mutate();
+            }}
+          />
         ) : null}
         {accept.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>

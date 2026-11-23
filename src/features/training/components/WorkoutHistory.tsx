@@ -49,6 +49,10 @@ export function WorkoutHistory({
     footer = (
       <Failure error={list.error} retry={() => void list.fetchNextPage({ cancelRefetch: false })} />
     );
+  let listHeader = null;
+  if (list.isPending) listHeader = <Loading />;
+  else if (list.isError && !list.isFetchNextPageError)
+    listHeader = <Failure error={list.error} retry={() => void list.refetch()} />;
   useHardwareBack(
     () => {
       onClose();
@@ -84,13 +88,7 @@ export function WorkoutHistory({
         contentContainerStyle={[ui.content, styles.list]}
         data={sessions}
         keyExtractor={(item) => String(item.id)}
-        ListHeaderComponent={
-          list.isPending ? (
-            <Loading />
-          ) : list.isError && !list.isFetchNextPageError ? (
-            <Failure error={list.error} retry={() => void list.refetch()} />
-          ) : null
-        }
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           !list.isPending && !list.isError ? (
             <Text style={{ color: p['ink-muted'] }}>No completed workouts yet.</Text>

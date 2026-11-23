@@ -35,6 +35,18 @@ type Editor =
   | { kind: 'measurement' }
   | { kind: 'target'; objective: Objective; target: PhysicalTarget['target'] };
 
+function updateMeasurementHistory(
+  previous: { items: BodyMeasurement[] } | undefined,
+  measurement: BodyMeasurement,
+) {
+  if (!previous) return previous;
+  return {
+    items: [...previous.items.filter((item) => item.id !== measurement.id), measurement].sort(
+      (a, b) => a.date.localeCompare(b.date) || a.id - b.id,
+    ),
+  };
+}
+
 export function ProgressScreen({
   account,
   onClose,
@@ -69,14 +81,8 @@ export function ProgressScreen({
     setToast('Measurements saved.');
     const queryKey = measurementKey(accountId);
     void cache.cancelQueries({ queryKey, exact: true });
-    cache.setQueryData<typeof measurements.data>(
-      queryKey,
-      (previous) =>
-        previous && {
-          items: [...previous.items.filter((item) => item.id !== measurement.id), measurement].sort(
-            (a, b) => a.date.localeCompare(b.date) || a.id - b.id,
-          ),
-        },
+    cache.setQueryData<typeof measurements.data>(queryKey, (previous) =>
+      updateMeasurementHistory(previous, measurement),
     );
     void cache.invalidateQueries({ queryKey });
     void cache.invalidateQueries({ queryKey: ['accounts', accountId, 'me'], exact: true });
@@ -213,28 +219,62 @@ export function ProgressScreen({
         />
       </View>
       {toast ? <Toast message={toast} onDismiss={dismissToast} /> : null}
-      {editor?.kind === 'measurement' ? (
-        <MeasurementEditor
-          system={system}
-          timeZone={account.profile.timezone}
-          history={items}
-          onClose={() => setEditor(null)}
-          onSaved={measurementSaved}
-        />
-      ) : null}
-      {editor?.kind === 'target' ? (
-        <PhysicalTargetEditor
-          system={system}
-          objective={editor.objective}
-          target={editor.target}
-          timeZone={account.profile.timezone}
-          onClose={() => setEditor(null)}
-          onSaved={targetSaved}
-          onObjectiveChanged={() => void target.refetch()}
-        />
-      ) : null}
+      <ProgressEditor
+        editor={editor}
+        system={system}
+        timezone={account.profile.timezone}
+        history={items}
+        onClose={() => setEditor(null)}
+        onMeasurementSaved={measurementSaved}
+        onTargetSaved={targetSaved}
+        onObjectiveChanged={() => void target.refetch()}
+      />
     </SafeAreaView>
   );
+}
+
+function ProgressEditor({
+  editor,
+  system,
+  timezone,
+  history,
+  onClose,
+  onMeasurementSaved,
+  onTargetSaved,
+  onObjectiveChanged,
+}: Readonly<{
+  editor: Editor | null;
+  system: MeasurementSystem;
+  timezone: Account['profile']['timezone'];
+  history: readonly BodyMeasurement[];
+  onClose: () => void;
+  onMeasurementSaved: (measurement: BodyMeasurement) => void;
+  onTargetSaved: (target: PhysicalTarget) => void;
+  onObjectiveChanged: () => void;
+}>) {
+  if (editor?.kind === 'measurement')
+    return (
+      <MeasurementEditor
+        system={system}
+        timeZone={timezone}
+        history={history}
+        onClose={onClose}
+        onSaved={onMeasurementSaved}
+      />
+    );
+  if (editor?.kind === 'target')
+    return (
+      <PhysicalTargetEditor
+        system={system}
+        objective={editor.objective}
+        target={editor.target}
+        timeZone={timezone}
+        onClose={onClose}
+        onSaved={onTargetSaved}
+        onObjectiveChanged={onObjectiveChanged}
+      />
+    );
+  return null;
 }
 
 function MeasurementHeadline({

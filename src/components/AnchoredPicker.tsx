@@ -35,35 +35,7 @@ export type PickerOption<Value> = {
   action?: OptionAction;
 };
 
-export function AnchoredPicker<Value extends string | number | null>({
-  selection,
-  options,
-  onSelect,
-  labelPrefix,
-  fallbackLabel,
-  closeLabel,
-  menuTestId,
-  icon,
-  disabled = false,
-  menuFooter,
-  triggerAction,
-  showTriggerDetail = true,
-}: Readonly<{
-  selection: Value;
-  options: readonly PickerOption<Value>[];
-  onSelect: (selection: Value) => void;
-  labelPrefix: string;
-  fallbackLabel: string;
-  closeLabel: string;
-  menuTestId?: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  disabled?: boolean;
-  menuFooter?: React.ReactNode;
-  triggerAction?: OptionAction | null;
-  showTriggerDetail?: boolean;
-}>) {
-  const p = usePalette();
-  const viewport = useWindowDimensions();
+function usePickerMenu() {
   const trigger = useRef<View>(null);
   const pendingAction = useRef<(() => void) | null>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -71,13 +43,6 @@ export function AnchoredPicker<Value extends string | number | null>({
   const [reduceMotion, setReduceMotion] = useState(true);
   const [progress] = useState(() => new Animated.Value(0));
   const expanded = anchor !== null && !closing;
-  const selected = options.find((option) => option.value === selection);
-  const label = selected?.label ?? fallbackLabel;
-  const inlinePreview = triggerAction !== undefined;
-  const chevron = (
-    <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={p['ink-muted']} />
-  );
-
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
     const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
@@ -127,10 +92,57 @@ export function AnchoredPicker<Value extends string | number | null>({
     });
   }
 
-  const spaceAbove = (anchor?.y ?? 0) - gap - margin;
-  const spaceBelow = viewport.height - (anchor ? anchor.y + anchor.height : 0) - gap - margin;
-  const above = spaceBelow < maxMenuHeight && spaceAbove > spaceBelow;
-  const width = Math.min(anchor?.width ?? 0, viewport.width - margin * 2);
+  return {
+    trigger,
+    pendingAction,
+    anchor,
+    closing,
+    reduceMotion,
+    progress,
+    expanded,
+    animate,
+    openMenu,
+    closeMenu,
+    runPendingAction,
+  };
+}
+
+export function AnchoredPicker<Value extends string | number | null>({
+  selection,
+  options,
+  onSelect,
+  labelPrefix,
+  fallbackLabel,
+  closeLabel,
+  menuTestId,
+  icon,
+  disabled = false,
+  menuFooter,
+  triggerAction,
+  showTriggerDetail = true,
+}: Readonly<{
+  selection: Value;
+  options: readonly PickerOption<Value>[];
+  onSelect: (selection: Value) => void;
+  labelPrefix: string;
+  fallbackLabel: string;
+  closeLabel: string;
+  menuTestId?: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  disabled?: boolean;
+  menuFooter?: React.ReactNode;
+  triggerAction?: OptionAction | null;
+  showTriggerDetail?: boolean;
+}>) {
+  const p = usePalette();
+  const menu = usePickerMenu();
+  const { trigger, expanded, openMenu } = menu;
+  const selected = options.find((option) => option.value === selection);
+  const label = selected?.label ?? fallbackLabel;
+  const inlinePreview = triggerAction !== undefined;
+  const chevron = (
+    <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={p['ink-muted']} />
+  );
 
   return (
     <>
@@ -196,132 +208,201 @@ export function AnchoredPicker<Value extends string | number | null>({
           </Pressable>
         ) : null}
       </View>
-      <Modal
-        transparent
-        visible={anchor !== null}
-        statusBarTranslucent
-        navigationBarTranslucent
-        onShow={() => {
-          if (expanded && !reduceMotion) animate(1, 180).start();
-        }}
-        onRequestClose={closeMenu}
-        onDismiss={runPendingAction}
-      >
-        {anchor ? (
-          <View
-            style={{ flex: 1 }}
-            accessibilityViewIsModal
-            accessibilityElementsHidden={closing}
-            importantForAccessibility={closing ? 'no-hide-descendants' : 'auto'}
-            aria-hidden={closing}
+      <PickerMenu
+        menu={menu}
+        options={options}
+        selection={selection}
+        onSelect={onSelect}
+        inlinePreview={inlinePreview}
+        closeLabel={closeLabel}
+        menuTestId={menuTestId}
+        menuFooter={menuFooter}
+      />
+    </>
+  );
+}
+
+function PickerMenu<Value extends string | number | null>({
+  menu,
+  options,
+  selection,
+  onSelect,
+  inlinePreview,
+  closeLabel,
+  menuTestId,
+  menuFooter,
+}: Readonly<{
+  menu: ReturnType<typeof usePickerMenu>;
+  options: readonly PickerOption<Value>[];
+  selection: Value;
+  onSelect: (value: Value) => void;
+  inlinePreview: boolean;
+  closeLabel: string;
+  menuTestId?: string;
+  menuFooter?: React.ReactNode;
+}>) {
+  const p = usePalette();
+  const viewport = useWindowDimensions();
+  const {
+    pendingAction,
+    anchor,
+    closing,
+    reduceMotion,
+    progress,
+    expanded,
+    animate,
+    closeMenu,
+    runPendingAction,
+  } = menu;
+  const spaceAbove = (anchor?.y ?? 0) - gap - margin;
+  const spaceBelow = viewport.height - (anchor ? anchor.y + anchor.height : 0) - gap - margin;
+  const above = spaceBelow < maxMenuHeight && spaceAbove > spaceBelow;
+  const width = Math.min(anchor?.width ?? 0, viewport.width - margin * 2);
+
+  return (
+    <Modal
+      transparent
+      visible={anchor !== null}
+      statusBarTranslucent
+      navigationBarTranslucent
+      onShow={() => {
+        if (expanded && !reduceMotion) animate(1, 180).start();
+      }}
+      onRequestClose={closeMenu}
+      onDismiss={runPendingAction}
+    >
+      {anchor ? (
+        <View
+          style={{ flex: 1 }}
+          accessibilityViewIsModal
+          accessibilityElementsHidden={closing}
+          importantForAccessibility={closing ? 'no-hide-descendants' : 'auto'}
+          aria-hidden={closing}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+            tabIndex={-1}
+            onPress={closeMenu}
+            style={StyleSheet.absoluteFill}
+          />
+          <Animated.View
+            testID={menuTestId}
+            pointerEvents={closing ? 'none' : 'auto'}
+            style={{
+              position: 'absolute',
+              width,
+              left: Math.max(margin, Math.min(anchor.x, viewport.width - width - margin)),
+              ...(above
+                ? { bottom: viewport.height - anchor.y + gap }
+                : { top: anchor.y + anchor.height + gap }),
+              opacity: progress,
+              transform: [
+                {
+                  translateY: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [above ? gap : -gap, 0],
+                  }),
+                },
+              ],
+              borderWidth: 1,
+              borderRadius: radii['radius-lg'],
+              borderColor: p['line-strong'],
+              backgroundColor: p['surface-200'],
+              boxShadow: shadows()['shadow-pop'],
+            }}
           >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={closeLabel}
-              tabIndex={-1}
-              onPress={closeMenu}
-              style={StyleSheet.absoluteFill}
-            />
-            <Animated.View
-              testID={menuTestId}
-              pointerEvents={closing ? 'none' : 'auto'}
+            <ScrollView
               style={{
-                position: 'absolute',
-                width,
-                left: Math.max(margin, Math.min(anchor.x, viewport.width - width - margin)),
-                ...(above
-                  ? { bottom: viewport.height - anchor.y + gap }
-                  : { top: anchor.y + anchor.height + gap }),
-                opacity: progress,
-                transform: [
-                  {
-                    translateY: progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [above ? gap : -gap, 0],
-                    }),
-                  },
-                ],
-                borderWidth: 1,
-                borderRadius: radii['radius-lg'],
-                borderColor: p['line-strong'],
-                backgroundColor: p['surface-200'],
-                boxShadow: shadows()['shadow-pop'],
+                maxHeight: Math.min(maxMenuHeight, Math.max(0, above ? spaceAbove : spaceBelow)),
               }}
+              contentContainerStyle={{ padding: spacing['space-2'], gap: spacing['space-1'] }}
             >
-              <ScrollView
-                style={{
-                  maxHeight: Math.min(maxMenuHeight, Math.max(0, above ? spaceAbove : spaceBelow)),
-                }}
-                contentContainerStyle={{ padding: spacing['space-2'], gap: spacing['space-1'] }}
-              >
-                {options.map((option) => {
-                  const checked = option.value === selection;
-                  const action = checked ? undefined : option.action;
-                  return (
-                    <View key={String(option.value)} style={styles.row}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={option.label}
-                        accessibilityHint={option.detail}
-                        accessibilityState={{ selected: checked }}
-                        aria-selected={checked}
-                        onPress={() => {
-                          onSelect(option.value);
-                          closeMenu();
-                        }}
-                        style={({ pressed }) => [
-                          styles.row,
-                          {
-                            flex: 1,
-                            minHeight: sizes['tap-min'],
-                            padding: spacing['space-2'],
-                            borderRadius: radii['radius-md'],
-                            backgroundColor: checked || pressed ? p['surface-300'] : undefined,
-                          },
-                        ]}
-                      >
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={[textStyles.label, { color: p.ink }]}>{option.label}</Text>
-                          {option.detail ? (
-                            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                              {option.detail}
-                            </Text>
-                          ) : null}
-                        </View>
-                        {inlinePreview || action || checked ? (
-                          <View style={(inlinePreview || Boolean(action)) && styles.action}>
-                            {checked ? (
-                              <Ionicons
-                                testID="picker-option-check"
-                                name="checkmark"
-                                size={checkSize}
-                                color={p.ink}
-                              />
-                            ) : null}
-                          </View>
-                        ) : null}
-                      </Pressable>
-                      {action ? (
-                        <View style={styles.trailingAction}>
-                          <OptionActionButton
-                            action={action}
-                            onPress={(action) => {
-                              pendingAction.current = action;
-                              closeMenu();
-                            }}
-                          />
-                        </View>
-                      ) : null}
-                    </View>
-                  );
-                })}
-                {menuFooter}
-              </ScrollView>
-            </Animated.View>
+              {options.map((option) => (
+                <PickerOptionRow
+                  key={String(option.value)}
+                  option={option}
+                  checked={option.value === selection}
+                  inlinePreview={inlinePreview}
+                  onSelect={() => {
+                    onSelect(option.value);
+                    closeMenu();
+                  }}
+                  onAction={(action) => {
+                    pendingAction.current = action;
+                    closeMenu();
+                  }}
+                />
+              ))}
+              {menuFooter}
+            </ScrollView>
+          </Animated.View>
+        </View>
+      ) : null}
+    </Modal>
+  );
+}
+
+function PickerOptionRow<Value>({
+  option,
+  checked,
+  inlinePreview,
+  onSelect,
+  onAction,
+}: Readonly<{
+  option: PickerOption<Value>;
+  checked: boolean;
+  inlinePreview: boolean;
+  onSelect: () => void;
+  onAction: (action: () => void) => void;
+}>) {
+  const p = usePalette();
+  const action = checked ? undefined : option.action;
+  return (
+    <View style={styles.row}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={option.label}
+        accessibilityHint={option.detail}
+        accessibilityState={{ selected: checked }}
+        aria-selected={checked}
+        onPress={onSelect}
+        style={({ pressed }) => [
+          styles.row,
+          {
+            flex: 1,
+            minHeight: sizes['tap-min'],
+            padding: spacing['space-2'],
+            borderRadius: radii['radius-md'],
+            backgroundColor: checked || pressed ? p['surface-300'] : undefined,
+          },
+        ]}
+      >
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[textStyles.label, { color: p.ink }]}>{option.label}</Text>
+          {option.detail ? (
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{option.detail}</Text>
+          ) : null}
+        </View>
+        {inlinePreview || action || checked ? (
+          <View style={(inlinePreview || Boolean(action)) && styles.action}>
+            {checked ? (
+              <Ionicons
+                testID="picker-option-check"
+                name="checkmark"
+                size={checkSize}
+                color={p.ink}
+              />
+            ) : null}
           </View>
         ) : null}
-      </Modal>
-    </>
+      </Pressable>
+      {action ? (
+        <View style={styles.trailingAction}>
+          <OptionActionButton action={action} onPress={onAction} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 

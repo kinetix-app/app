@@ -293,8 +293,8 @@ function DeleteConfirmation({
     try {
       await feedApi.remove(post.id);
       onDeleted(post);
-    } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 404) onDeleted(post);
+    } catch (error_) {
+      if (error_ instanceof ApiError && error_.status === 404) onDeleted(post);
       else setError('Could not delete the post. Try again.');
     } finally {
       setPending(false);

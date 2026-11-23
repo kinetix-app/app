@@ -18,12 +18,12 @@ export function ActivityEditor({
   onSaved,
   onCancel,
   active = true,
-}: {
+}: Readonly<{
   account: Account;
   onSaved: (account: Account) => void;
   onCancel: () => void;
   active?: boolean;
-}) {
+}>) {
   const p = usePalette();
   const form = useForm<ProfileFormValues>({ defaultValues: profileDefaults(account) });
   const [pending, setPending] = useState(false);

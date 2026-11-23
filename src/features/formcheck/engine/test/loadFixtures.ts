@@ -1,7 +1,7 @@
 /** Parity fixtures exported by the Python reference (model/export_fixtures.py). */
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { gunzipSync } from 'zlib';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { gunzipSync } from 'node:zlib';
 
 import type { PoseSeries } from '../prepare';
 import type { Locale } from '../spec';
@@ -31,15 +31,19 @@ export function load(name: string): Fixture {
   return JSON.parse(gunzipSync(readFileSync(join(dir, `${name}.json.gz`))).toString('utf8'));
 }
 
-const num = (v: number | null) => (v === null ? NaN : v);
+const num = (v: number | null) => v ?? Number.NaN;
 
 /** Back to 33 landmarks per frame; the ones the engine does not read are invisible. */
 export function toSeries(s: Fixture['series']): PoseSeries {
   const frames = s.t.length;
-  const xy = Array.from({ length: frames }, () => Array.from({ length: 33 }, () => [NaN, NaN]));
+  const xy = Array.from({ length: frames }, () =>
+    Array.from({ length: 33 }, () => [Number.NaN, Number.NaN]),
+  );
   const visibility = Array.from({ length: frames }, () => new Array<number>(33).fill(0));
   const world = s.world
-    ? Array.from({ length: frames }, () => Array.from({ length: 33 }, () => [NaN, NaN, NaN]))
+    ? Array.from({ length: frames }, () =>
+        Array.from({ length: 33 }, () => [Number.NaN, Number.NaN, Number.NaN]),
+      )
     : null;
   for (let f = 0; f < frames; f++) {
     s.landmarks.forEach((k, c) => {

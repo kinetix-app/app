@@ -27,7 +27,7 @@ export function roundTo(x: number, decimals: number): number {
 }
 
 export function mean(xs: readonly number[]): number {
-  if (xs.length === 0) return NaN;
+  if (xs.length === 0) return Number.NaN;
   let s = 0;
   for (const x of xs) s += x;
   return s / xs.length;
@@ -43,7 +43,7 @@ function sortedFinite(xs: readonly number[]): number[] {
 
 /** np.median (NaN in → NaN out). */
 export function median(xs: readonly number[]): number {
-  if (xs.length === 0 || xs.some((x) => !isNum(x))) return NaN;
+  if (xs.length === 0 || xs.some((x) => !isNum(x))) return Number.NaN;
   return nanmedian(xs);
 }
 
@@ -51,7 +51,7 @@ export function median(xs: readonly number[]): number {
 export function nanmedian(xs: readonly number[]): number {
   const s = sortedFinite(xs);
   const n = s.length;
-  if (n === 0) return NaN;
+  if (n === 0) return Number.NaN;
   const h = n >> 1;
   return n % 2 ? s[h] : (s[h - 1] + s[h]) / 2;
 }
@@ -60,7 +60,7 @@ export function nanmedian(xs: readonly number[]): number {
 export function nanpercentile(xs: readonly number[], q: number): number {
   const s = sortedFinite(xs);
   const n = s.length;
-  if (n === 0) return NaN;
+  if (n === 0) return Number.NaN;
   const pos = (q / 100) * (n - 1);
   const lo = Math.floor(pos);
   const hi = Math.min(lo + 1, n - 1);
@@ -70,14 +70,14 @@ export function nanpercentile(xs: readonly number[], q: number): number {
 }
 
 export function nanmax(xs: readonly number[]): number {
-  let m = NaN;
-  for (const x of xs) if (isNum(x) && !(x <= m)) m = x;
+  let m = Number.NaN;
+  for (const x of xs) if (isNum(x) && (Number.isNaN(m) || x > m)) m = x;
   return m;
 }
 
 export function nanmin(xs: readonly number[]): number {
-  let m = NaN;
-  for (const x of xs) if (isNum(x) && !(x >= m)) m = x;
+  let m = Number.NaN;
+  for (const x of xs) if (isNum(x) && (Number.isNaN(m) || x < m)) m = x;
   return m;
 }
 
@@ -99,7 +99,7 @@ export function diff(xs: readonly number[]): number[] {
 /** np.gradient(f, t) with non-uniform spacing (second order inside, first order at the edges). */
 export function gradient(f: readonly number[], t: readonly number[]): number[] {
   const n = f.length;
-  const out = new Array<number>(n).fill(NaN);
+  const out = new Array<number>(n).fill(Number.NaN);
   if (n < 2) return out;
   out[0] = (f[1] - f[0]) / (t[1] - t[0]);
   out[n - 1] = (f[n - 1] - f[n - 2]) / (t[n - 1] - t[n - 2]);
@@ -129,10 +129,12 @@ export function formatFixed(x: number, decimals: number): string {
   const [whole, frac = ''] = exact.split('.');
   const kept = whole + frac.slice(0, decimals);
   const rest = frac.slice(decimals);
-  const first = rest.charCodeAt(0) - 48;
-  const tail = rest.slice(1).replace(/0+$/, '');
-  let roundUp = first > 5 || (first === 5 && tail.length > 0);
-  if (first === 5 && tail.length === 0) roundUp = (kept.charCodeAt(kept.length - 1) - 48) % 2 === 1;
+  const first = (rest.codePointAt(0) ?? Number.NaN) - 48;
+  const tail = rest.slice(1);
+  const hasTail = /[1-9]/.test(tail);
+  let roundUp = first > 5 || (first === 5 && hasTail);
+  if (first === 5 && !hasTail)
+    roundUp = ((kept.codePointAt(kept.length - 1) ?? Number.NaN) - 48) % 2 === 1;
   let digits = kept;
   if (roundUp) {
     const n = BigInt(kept) + 1n;
