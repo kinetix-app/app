@@ -20,6 +20,7 @@ type Anchor = { x: number; y: number; width: number; height: number };
 const maxMenuHeight = 248;
 const gap = spacing['space-2'];
 const margin = spacing['space-4'];
+const checkSize = 20;
 
 type OptionAction = {
   label: string;
@@ -191,11 +192,6 @@ export function AnchoredPicker<Value extends string | number | null>({
             size={18}
             color={p['ink-muted']}
           />
-          {triggerAction !== undefined ? (
-            <View style={styles.checkSlot}>
-              {triggerAction ? <Ionicons name="checkmark" size={20} color={p.brand} /> : null}
-            </View>
-          ) : null}
         </Pressable>
       </View>
       <Modal
@@ -260,18 +256,6 @@ export function AnchoredPicker<Value extends string | number | null>({
                   const checked = option.value === selection;
                   return (
                     <View key={String(option.value)} style={styles.row}>
-                      {option.action ? (
-                        <OptionActionButton
-                          action={option.action}
-                          onPress={(action) => {
-                            pendingAction.current = action;
-                            closeMenu();
-                          }}
-                        />
-                      ) : null}
-                      {!option.action && triggerAction !== undefined ? (
-                        <View style={styles.action} />
-                      ) : null}
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={option.label}
@@ -301,8 +285,29 @@ export function AnchoredPicker<Value extends string | number | null>({
                             </Text>
                           ) : null}
                         </View>
-                        {checked ? <Ionicons name="checkmark" size={20} color={p.ink} /> : null}
+                        {option.action ? <View style={styles.action} /> : null}
+                        {checked ? (
+                          <Ionicons
+                            testID="picker-option-check"
+                            name="checkmark"
+                            size={checkSize}
+                            color={p.ink}
+                          />
+                        ) : option.action ? (
+                          <View style={styles.checkSlot} />
+                        ) : null}
                       </Pressable>
+                      {option.action ? (
+                        <View style={styles.trailingAction}>
+                          <OptionActionButton
+                            action={option.action}
+                            onPress={(action) => {
+                              pendingAction.current = action;
+                              closeMenu();
+                            }}
+                          />
+                        </View>
+                      ) : null}
                     </View>
                   );
                 })}
@@ -350,7 +355,11 @@ const styles = StyleSheet.create({
     minHeight: sizes['control-height'],
     padding: spacing['space-3'],
   },
-  checkSlot: { width: 20, alignItems: 'center' },
+  checkSlot: { width: checkSize },
+  trailingAction: {
+    position: 'absolute',
+    right: spacing['space-2'] + checkSize + spacing['space-3'],
+  },
   action: {
     width: sizes['tap-min'],
     height: sizes['tap-min'],
