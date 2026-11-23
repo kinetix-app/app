@@ -100,6 +100,7 @@ export function FormCheckFlow({
         <RecordingPlayer
           uri={entry.recording.uri}
           title={`${exerciseName} · set ${setNumber}`}
+          pose={entry.analysis.pose}
           onBack={() => setStep('result')}
         />
       );

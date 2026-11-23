@@ -66,3 +66,18 @@ export function getAuthMode(): AuthMode {
     typeof __DEV__ !== 'undefined' && __DEV__,
   );
 }
+
+/** engine: real on-device analysis where a pose source exists (the web today); demo: placeholders. */
+export type FormCheckAnalyzerMode = 'engine' | 'demo';
+
+export function resolveFormCheckAnalyzer(value: string | undefined): FormCheckAnalyzerMode {
+  const mode = value?.trim() || 'engine';
+  if (mode !== 'engine' && mode !== 'demo') {
+    throw new Error('EXPO_PUBLIC_FORM_CHECK_ANALYZER must be engine or demo.');
+  }
+  return mode;
+}
+
+export function getFormCheckAnalyzer(): FormCheckAnalyzerMode {
+  return resolveFormCheckAnalyzer(process.env.EXPO_PUBLIC_FORM_CHECK_ANALYZER);
+}

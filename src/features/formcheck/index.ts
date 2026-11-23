@@ -1,5 +1,6 @@
 export type { FormAnalyzer } from './analyzer';
 export { createDemoAnalyzer } from './demoAnalyzer';
+export { createDefaultAnalyzer, createOnDeviceAnalyzer } from './onDeviceAnalyzer';
 export { FormCheckFlow } from './components/FormCheckFlow';
 export {
   FormCheckProvider,

@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { FormCheckProfile } from '../profiles';
 import type { Recording } from '../schemas';
+import { createCameraRecorder, type CameraRecorder } from '../webRecorder';
 import { FormCheckScreen } from './FormCheckScreen';
 
 const MAX_SECONDS = 180;
@@ -31,12 +33,27 @@ export function RecordScreen({
 }>) {
   const p = usePalette();
   const camera = useRef<CameraView>(null);
+  const frame = useRef<View>(null);
+  const [webRecorder, setWebRecorder] = useState<CameraRecorder | null>(null);
   const capture = useRef<Promise<{ uri: string } | undefined> | null>(null);
   const cancelled = useRef(false);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [failed, setFailed] = useState(false);
-  const canKeepVideo = Platform.OS !== 'web';
+  // expo-camera cannot record on the web: there the preview's stream is recorded by the browser.
+  const isWeb = Platform.OS === 'web';
+  const canKeepVideo = !isWeb || webRecorder !== null;
+
+  useEffect(() => {
+    if (!isWeb) return;
+    const recorder = createCameraRecorder(frame.current);
+    setWebRecorder(recorder);
+    return () => {
+      void recorder?.stop().then((uri) => {
+        if (uri) URL.revokeObjectURL(uri);
+      });
+    };
+  }, [isWeb]);
 
   useEffect(() => {
     if (!recording) return;
@@ -57,6 +74,10 @@ export function RecordScreen({
     setSeconds(0);
     setRecording(true);
     if (!canKeepVideo) return;
+    if (isWeb) {
+      webRecorder?.start();
+      return;
+    }
     // Audio is not recorded: the form check only needs the picture.
     capture.current = (
       camera.current?.recordAsync({ maxDuration: MAX_SECONDS }) ?? Promise.resolve(undefined)
@@ -69,6 +90,16 @@ export function RecordScreen({
       onFinish({ uri: null, durationSeconds: duration });
       return;
     }
+    if (isWeb) {
+      const uri = (await webRecorder?.stop()) ?? null;
+      if (cancelled.current) return;
+      if (!uri) {
+        setFailed(true);
+        return;
+      }
+      onFinish({ uri, durationSeconds: duration });
+      return;
+    }
     camera.current?.stopRecording();
     const video = await capture.current;
     capture.current = null;
@@ -78,6 +109,13 @@ export function RecordScreen({
       return;
     }
     onFinish({ uri: video.uri, durationSeconds: duration });
+  }
+  /** Development only: analyze an existing video instead of recording one. */
+  async function pickVideo() {
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'] });
+    const asset = picked.canceled ? undefined : picked.assets[0];
+    if (!asset || cancelled.current) return;
+    onFinish({ uri: asset.uri, durationSeconds: Math.round((asset.duration ?? 0) / 1000) });
   }
   const chip = {
     flexDirection: 'row' as const,
@@ -122,11 +160,21 @@ export function RecordScreen({
               </Text>
             ) : null}
             <Button title="Start recording" icon="video" onPress={start} />
+            {__DEV__ ? (
+              <Button
+                title="Use a video"
+                icon="upload"
+                secondary
+                accessibilityLabel="Analyze a video file (development only)"
+                onPress={() => void pickVideo()}
+              />
+            ) : null}
           </>
         )
       }
     >
       <View
+        ref={frame}
         style={{
           flex: 1,
           borderRadius: radii['radius-xl'],

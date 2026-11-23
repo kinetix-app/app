@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormAnalyzer } from '../analyzer';
-import { createDemoAnalyzer } from '../demoAnalyzer';
+import { createDefaultAnalyzer } from '../onDeviceAnalyzer';
+import { PoseWebViewHost } from '../pose/PoseWebViewHost';
 import { recordingFiles } from '../recordingFiles';
 import type { FormAnalysis, FormCheckEntry, Recording } from '../schemas';
 import { formCheckStorage, type RecordingFiles } from '../store';
@@ -42,7 +43,7 @@ export function FormCheckProvider({
   const [entries, setEntries] = useState<FormCheckEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const current = useRef<FormCheckEntry[]>([]);
-  const [fallback] = useState(() => createDemoAnalyzer());
+  const [fallback] = useState(() => createDefaultAnalyzer());
   const install = (next: FormCheckEntry[]) => {
     current.current = next;
     setEntries(next);
@@ -116,5 +117,10 @@ export function FormCheckProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [analyzer, fallback, loaded, entries],
   );
-  return <FormCheckContext.Provider value={value}>{children}</FormCheckContext.Provider>;
+  return (
+    <FormCheckContext.Provider value={value}>
+      {children}
+      <PoseWebViewHost />
+    </FormCheckContext.Provider>
+  );
 }

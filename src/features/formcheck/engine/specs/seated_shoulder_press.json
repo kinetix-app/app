@@ -1,0 +1,371 @@
+{
+  "id": "seated_shoulder_press",
+  "version": 2,
+  "catalog": "seated-shoulder-press",
+  "name": {
+    "es": "Press militar sentado",
+    "en": "Seated shoulder press"
+  },
+  "view": "side",
+  "side_joints": ["shoulder", "elbow", "wrist", "hip"],
+  "camera": {
+    "es": "De lado, con el móvil a la altura del pecho y los brazos estirados dentro del encuadre.",
+    "en": "Side-on, phone at chest height, arms fully extended still in frame."
+  },
+  "required": ["shoulder", "wrist", "hip"],
+  "signals": {
+    "press": {
+      "type": "relative_height",
+      "points": ["shoulder", "wrist"],
+      "scale": ["hip", "shoulder"]
+    },
+    "stack": {
+      "type": "forward_offset",
+      "points": ["wrist", "shoulder"],
+      "scale": ["hip", "shoulder"]
+    },
+    "trunk": {
+      "type": "inclination",
+      "points": ["hip", "shoulder"]
+    }
+  },
+  "rep": {
+    "signal": "press",
+    "rest": "low",
+    "start_delta": 0.5,
+    "end_delta": 0.4,
+    "min_rom": 0.45,
+    "near": 0.03,
+    "min_duration": 0.6,
+    "max_duration": 8.0
+  },
+  "metrics": {
+    "lockout": {
+      "signal": "press",
+      "phase": "rep",
+      "agg": "max"
+    },
+    "depth": {
+      "signal": "press",
+      "phase": "end_window",
+      "agg": "min"
+    },
+    "stack": {
+      "signal": "stack",
+      "phase": "rep",
+      "agg": "max"
+    },
+    "arch": {
+      "signal": "trunk",
+      "phase": "rep",
+      "agg": "range"
+    },
+    "lower_time": {
+      "type": "recovery_time",
+      "signal": "press",
+      "fraction": 0.8
+    },
+    "press_speed": {
+      "type": "mean_speed",
+      "signal": "press",
+      "phase": "out"
+    }
+  },
+  "criteria": [
+    {
+      "id": "lockout",
+      "metric": "lockout",
+      "ideal_min": 0.842,
+      "tolerance": 0.3,
+      "weight": 0.35,
+      "severity": "invalidates",
+      "points": ["shoulder", "wrist"],
+      "unit": "scale",
+      "scale": ["hip", "shoulder"]
+    },
+    {
+      "id": "depth",
+      "metric": "depth",
+      "ideal_max": 0.3,
+      "tolerance": 0.3,
+      "weight": 0.2,
+      "severity": "technique",
+      "points": ["shoulder", "wrist"],
+      "unit": "scale",
+      "scale": ["hip", "shoulder"]
+    },
+    {
+      "id": "stack",
+      "metric": "stack",
+      "ideal_max": 0.35,
+      "tolerance": 0.2,
+      "weight": 0.2,
+      "severity": "technique",
+      "points": ["shoulder", "wrist"],
+      "unit": "scale",
+      "scale": ["hip", "shoulder"]
+    },
+    {
+      "id": "arch",
+      "metric": "arch",
+      "ideal_max": 11.808,
+      "tolerance": 10.0,
+      "weight": 0.15,
+      "severity": "technique",
+      "points": ["hip", "shoulder"],
+      "unit": "deg"
+    },
+    {
+      "id": "tempo",
+      "metric": "lower_time",
+      "ideal_min": 0.416,
+      "tolerance": 0.5,
+      "weight": 0.1,
+      "severity": "detail",
+      "points": ["shoulder", "wrist"],
+      "unit": "s"
+    }
+  ],
+  "effort_metric": "press_speed",
+  "cues": {
+    "lockout": {
+      "label": {
+        "es": "el bloqueo",
+        "en": "lockout"
+      },
+      "trend": {
+        "es": "dejaste de estirar los brazos arriba",
+        "en": "you stopped locking out"
+      },
+      "live": {
+        "es": "Brazos al techo",
+        "en": "Arms to the ceiling"
+      },
+      "fix": {
+        "es": "Empuja hasta estirar los brazos del todo encima de la cabeza.",
+        "en": "Press until your arms are fully straight overhead."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones las mancuernas se quedaron ~{mag} cm por debajo del bloqueo.",
+        "en": "In {n} of {total} reps the dumbbells stopped ~{mag} cm short of lockout."
+      },
+      "good": {
+        "es": "Bloqueaste arriba en cada repetición.",
+        "en": "You locked out every rep."
+      }
+    },
+    "depth": {
+      "label": {
+        "es": "la bajada",
+        "en": "the bottom"
+      },
+      "trend": {
+        "es": "dejaste de bajar del todo",
+        "en": "you stopped coming all the way down"
+      },
+      "live": {
+        "es": "Baja a los hombros",
+        "en": "Down to your shoulders"
+      },
+      "fix": {
+        "es": "Baja las mancuernas hasta la altura de los hombros.",
+        "en": "Lower the dumbbells to shoulder height."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones las mancuernas se quedaron ~{value} cm por encima de los hombros.",
+        "en": "In {n} of {total} reps the dumbbells stayed ~{value} cm above your shoulders."
+      },
+      "good": {
+        "es": "Bajaste hasta los hombros en cada repetición.",
+        "en": "You came down to your shoulders every rep."
+      }
+    },
+    "stack": {
+      "label": {
+        "es": "la trayectoria",
+        "en": "the bar path"
+      },
+      "trend": {
+        "es": "las mancuernas se fueron hacia delante",
+        "en": "the dumbbells drifted forward"
+      },
+      "live": {
+        "es": "Encima de la cabeza",
+        "en": "Over your head"
+      },
+      "fix": {
+        "es": "Termina con las mancuernas justo encima de los hombros, no por delante.",
+        "en": "Finish with the dumbbells right over your shoulders, not in front."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones las mancuernas acabaron ~{value} cm por delante de los hombros.",
+        "en": "In {n} of {total} reps the dumbbells finished ~{value} cm in front of your shoulders."
+      },
+      "good": {
+        "es": "Terminaste con las mancuernas sobre los hombros en cada repetición.",
+        "en": "You finished over your shoulders every rep."
+      }
+    },
+    "arch": {
+      "label": {
+        "es": "la espalda",
+        "en": "your back"
+      },
+      "trend": {
+        "es": "empezaste a arquear la espalda",
+        "en": "you started arching back"
+      },
+      "live": {
+        "es": "Espalda al respaldo",
+        "en": "Back on the bench"
+      },
+      "fix": {
+        "es": "Mantén la espalda apoyada y el abdomen firme; no te eches hacia atrás.",
+        "en": "Keep your back on the bench and your core tight; don't lean back."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones el tronco se echó ~{value}° hacia atrás.",
+        "en": "In {n} of {total} reps your torso leaned back ~{value}°."
+      },
+      "good": {
+        "es": "Mantuviste la espalda quieta en toda la serie.",
+        "en": "You kept your back still all set."
+      }
+    },
+    "tempo": {
+      "label": {
+        "es": "el ritmo de bajada",
+        "en": "your lowering"
+      },
+      "trend": {
+        "es": "bajaste más rápido",
+        "en": "you lowered faster"
+      },
+      "live": {
+        "es": "Baja en dos",
+        "en": "Two counts down"
+      },
+      "fix": {
+        "es": "Cuenta «uno, dos» mientras bajas.",
+        "en": "Count «one, two» on the way down."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones bajaste en ~{value} s.",
+        "en": "In {n} of {total} reps you lowered in ~{value} s."
+      },
+      "good": {
+        "es": "Bajaste con control en todas las repeticiones.",
+        "en": "You lowered with control on every rep."
+      }
+    }
+  },
+  "calibration": {
+    "source": "Mendeley 'Seven Fitness Exercises' (CC BY 4.0), side view: 23 good and 23 bad sets",
+    "rule": "loosen band edges until ~10% of good reps are flagged, at most one tolerance; disable if still > 15% flagged and AUC < 0.55",
+    "cross_validated": {
+      "separation": [0.62, 0.64],
+      "good_flagged": [0.33, 0.11]
+    },
+    "criteria": {
+      "lockout": {
+        "from": 1.0,
+        "to": 0.842,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.13,
+        "auc": 0.51,
+        "status": "calibrated"
+      },
+      "depth": {
+        "from": 0.3,
+        "to": 0.3,
+        "flagged_good": 0.04,
+        "flagged_bad": 0.01,
+        "auc": 0.43,
+        "status": "unchanged"
+      },
+      "stack": {
+        "from": 0.15,
+        "to": 0.35,
+        "flagged_good": 0.14,
+        "flagged_bad": 0.24,
+        "auc": 0.62,
+        "status": "capped",
+        "why": "good sets would need more than one tolerance: review with a coach"
+      },
+      "arch": {
+        "from": 6.0,
+        "to": 11.808,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.15,
+        "auc": 0.58,
+        "status": "calibrated"
+      },
+      "tempo": {
+        "from": 0.8,
+        "to": 0.416,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.12,
+        "auc": 0.56,
+        "status": "calibrated"
+      }
+    }
+  },
+  "calibrated_from": {
+    "version": 1,
+    "criteria": [
+      {
+        "id": "lockout",
+        "metric": "lockout",
+        "ideal_min": 1.0,
+        "tolerance": 0.3,
+        "weight": 0.35,
+        "severity": "invalidates",
+        "points": ["shoulder", "wrist"],
+        "unit": "scale",
+        "scale": ["hip", "shoulder"]
+      },
+      {
+        "id": "depth",
+        "metric": "depth",
+        "ideal_max": 0.3,
+        "tolerance": 0.3,
+        "weight": 0.2,
+        "severity": "technique",
+        "points": ["shoulder", "wrist"],
+        "unit": "scale",
+        "scale": ["hip", "shoulder"]
+      },
+      {
+        "id": "stack",
+        "metric": "stack",
+        "ideal_max": 0.15,
+        "tolerance": 0.2,
+        "weight": 0.2,
+        "severity": "technique",
+        "points": ["shoulder", "wrist"],
+        "unit": "scale",
+        "scale": ["hip", "shoulder"]
+      },
+      {
+        "id": "arch",
+        "metric": "arch",
+        "ideal_max": 6.0,
+        "tolerance": 10.0,
+        "weight": 0.15,
+        "severity": "technique",
+        "points": ["hip", "shoulder"],
+        "unit": "deg"
+      },
+      {
+        "id": "tempo",
+        "metric": "lower_time",
+        "ideal_min": 0.8,
+        "tolerance": 0.5,
+        "weight": 0.1,
+        "severity": "detail",
+        "points": ["shoulder", "wrist"],
+        "unit": "s"
+      }
+    ]
+  }
+}

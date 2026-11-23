@@ -12,6 +12,7 @@ prove delivery. Update the relevant page when feature behavior changes.
 | [Goals](goals.md)                   | Profile Progress records body measurements, charts history and manages a weight target for the selected objective. Nutrition targets have their own editor. |
 | [Nutrition](nutrition.md)           | Diary, food/recipe entry and nutrition-goal screens consume backend APIs.                                                                                   |
 | [Training](training.md)             | Routine, exercise catalogue, workout drafts and completed-history flows are implemented.                                                                    |
+| [Form check](form-check.md)         | Partial: on-device analysis of five exercises on web, Android and iOS (WebView); only the web build has been run.                                           |
 
 Detailed interaction contracts live in [home](../home.md), [routines](../routines.md),
 [workouts](../workouts.md), and [Clerk setup](../clerk-setup.md). The backend owns

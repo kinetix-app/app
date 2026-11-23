@@ -1,0 +1,19 @@
+[
+  "synthetic-back_squat",
+  "synthetic-push_up",
+  "synthetic-hammer_curl",
+  "synthetic-seated_shoulder_press",
+  "synthetic-dumbbell_row",
+  "synthetic-hammer_curl-calibrated-es",
+  "synthetic-back_squat-roll",
+  "unassessable-not_side_view",
+  "unassessable-missing_joints",
+  "unassessable-too_short",
+  "unassessable-no_reps",
+  "real-squat-good-subject_010",
+  "real-push_up-bad-subject_018",
+  "real-bicep_curl-good-subject_010",
+  "real-shoulder-bad-subject_018",
+  "real-back-good-subject_018",
+  "real-squat-bad-subject_002"
+]

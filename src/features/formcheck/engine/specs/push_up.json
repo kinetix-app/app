@@ -1,0 +1,359 @@
+{
+  "id": "push_up",
+  "catalog": "push-up",
+  "version": 2,
+  "name": {
+    "es": "Flexiones",
+    "en": "Push-ups"
+  },
+  "view": "side",
+  "signals": {
+    "elbow": {
+      "type": "angle",
+      "points": ["shoulder", "elbow", "wrist"]
+    },
+    "body_line": {
+      "type": "line_offset",
+      "points": ["hip", "shoulder", "ankle"]
+    },
+    "shoulder_height": {
+      "type": "height",
+      "point": "shoulder",
+      "scale": ["shoulder", "ankle"]
+    }
+  },
+  "rep": {
+    "signal": "elbow",
+    "rest": "high",
+    "start_delta": 20,
+    "end_delta": 10,
+    "min_rom": 30,
+    "min_duration": 0.5,
+    "max_duration": 8.0
+  },
+  "metrics": {
+    "depth": {
+      "signal": "elbow",
+      "phase": "rep",
+      "agg": "min"
+    },
+    "sag": {
+      "signal": "body_line",
+      "phase": "rep",
+      "agg": "max"
+    },
+    "pike": {
+      "signal": "body_line",
+      "phase": "rep",
+      "agg": "min"
+    },
+    "lockout": {
+      "signal": "elbow",
+      "phase": "end_window",
+      "agg": "max"
+    },
+    "descent_time": {
+      "type": "duration",
+      "phase": "out"
+    },
+    "ascent_speed": {
+      "type": "mean_speed",
+      "signal": "shoulder_height",
+      "phase": "return"
+    }
+  },
+  "criteria": [
+    {
+      "id": "depth",
+      "metric": "depth",
+      "ideal_max": 112.359,
+      "tolerance": 30.0,
+      "weight": 0.4,
+      "severity": "invalidates",
+      "points": ["shoulder", "elbow", "wrist"],
+      "unit": "deg"
+    },
+    {
+      "id": "sag",
+      "metric": "sag",
+      "ideal_max": 0.031,
+      "tolerance": 0.07,
+      "weight": 0.3,
+      "severity": "technique",
+      "points": ["hip", "shoulder", "ankle"],
+      "unit": "scale",
+      "scale": ["shoulder", "ankle"]
+    },
+    {
+      "id": "pike",
+      "metric": "pike",
+      "ideal_min": -0.05,
+      "tolerance": 0.07,
+      "weight": 0.1,
+      "severity": "technique",
+      "points": ["hip", "shoulder", "ankle"],
+      "unit": "scale",
+      "scale": ["shoulder", "ankle"]
+    },
+    {
+      "id": "lockout",
+      "metric": "lockout",
+      "ideal_min": 152.461,
+      "tolerance": 15.0,
+      "weight": 0.1,
+      "severity": "detail",
+      "points": ["shoulder", "elbow", "wrist"],
+      "unit": "deg"
+    },
+    {
+      "id": "tempo",
+      "metric": "descent_time",
+      "ideal_min": 0.55,
+      "tolerance": 0.5,
+      "weight": 0.1,
+      "severity": "detail",
+      "points": ["shoulder", "elbow", "wrist"],
+      "unit": "s"
+    }
+  ],
+  "effort_metric": "ascent_speed",
+  "cues": {
+    "depth": {
+      "label": {
+        "es": "la profundidad",
+        "en": "depth"
+      },
+      "trend": {
+        "es": "dejaste de bajar lo suficiente",
+        "en": "you stopped going deep enough"
+      },
+      "live": {
+        "es": "Pecho al suelo",
+        "en": "Chest to the floor"
+      },
+      "fix": {
+        "es": "Baja hasta que el pecho quede a un puño del suelo.",
+        "en": "Lower until your chest is a fist away from the floor."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones el codo solo se dobló hasta ~{value}°, sin bajar lo suficiente.",
+        "en": "In {n} of {total} reps your elbow only bent to ~{value}°, not deep enough."
+      },
+      "good": {
+        "es": "Bajaste lo suficiente en todas las repeticiones.",
+        "en": "You went deep enough on every rep."
+      }
+    },
+    "sag": {
+      "label": {
+        "es": "la cadera",
+        "en": "your hips"
+      },
+      "trend": {
+        "es": "la cadera se hundió",
+        "en": "your hips sagged"
+      },
+      "live": {
+        "es": "Cuerpo de tabla",
+        "en": "Plank body"
+      },
+      "fix": {
+        "es": "Mantente rígido como una tabla de los talones a la cabeza.",
+        "en": "Stay rigid like a plank from heels to head."
+      },
+      "finding": {
+        "es": "La cadera cayó ~{mag} cm por debajo de la línea hombro–tobillo en {n} de {total} repeticiones.",
+        "en": "Your hips dropped ~{mag} cm below the shoulder–ankle line in {n} of {total} reps."
+      },
+      "good": {
+        "es": "Mantuviste el cuerpo en línea en todas las repeticiones.",
+        "en": "You kept your body in line on every rep."
+      }
+    },
+    "pike": {
+      "label": {
+        "es": "la cadera alta",
+        "en": "high hips"
+      },
+      "trend": {
+        "es": "subiste la cadera",
+        "en": "your hips piked up"
+      },
+      "live": {
+        "es": "Cadera abajo",
+        "en": "Hips down"
+      },
+      "fix": {
+        "es": "Baja la cadera hasta alinear hombros, cadera y tobillos.",
+        "en": "Lower your hips until shoulders, hips and ankles line up."
+      },
+      "finding": {
+        "es": "La cadera quedó ~{mag} cm por encima de la línea en {n} de {total} repeticiones.",
+        "en": "Your hips stayed ~{mag} cm above the line in {n} of {total} reps."
+      },
+      "good": {
+        "es": "No levantaste la cadera en ninguna repetición.",
+        "en": "Your hips never piked up."
+      }
+    },
+    "lockout": {
+      "label": {
+        "es": "el bloqueo",
+        "en": "lockout"
+      },
+      "trend": {
+        "es": "dejaste de estirar los brazos",
+        "en": "you stopped locking out"
+      },
+      "live": {
+        "es": "Brazos largos",
+        "en": "Long arms"
+      },
+      "fix": {
+        "es": "Estira los brazos del todo arriba, alejando el suelo.",
+        "en": "Fully straighten your arms at the top, pushing the floor away."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones no estiraste del todo los brazos (~{value}°).",
+        "en": "In {n} of {total} reps you didn't fully straighten your arms (~{value}°)."
+      },
+      "good": {
+        "es": "Estiraste los brazos del todo en cada repetición.",
+        "en": "You locked out every rep."
+      }
+    },
+    "tempo": {
+      "label": {
+        "es": "el ritmo de bajada",
+        "en": "your descent"
+      },
+      "trend": {
+        "es": "bajaste más rápido",
+        "en": "you dropped faster"
+      },
+      "live": {
+        "es": "Baja en dos",
+        "en": "Two counts down"
+      },
+      "fix": {
+        "es": "Cuenta «uno, dos» mientras bajas.",
+        "en": "Count «one, two» on the way down."
+      },
+      "finding": {
+        "es": "En {n} de {total} repeticiones bajaste en ~{value} s.",
+        "en": "In {n} of {total} reps you dropped in ~{value} s."
+      },
+      "good": {
+        "es": "Bajaste con control en todas las repeticiones.",
+        "en": "You lowered with control on every rep."
+      }
+    }
+  },
+  "calibration": {
+    "source": "Mendeley 'Seven Fitness Exercises' (CC BY 4.0), side view: 24 good and 22 bad sets",
+    "rule": "loosen band edges until ~10% of good reps are flagged, at most one tolerance; disable if still > 15% flagged and AUC < 0.55",
+    "cross_validated": {
+      "separation": [0.67, 0.64],
+      "good_flagged": [0.24, 0.1]
+    },
+    "criteria": {
+      "depth": {
+        "from": 90.0,
+        "to": 112.359,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.09,
+        "auc": 0.54,
+        "status": "calibrated"
+      },
+      "sag": {
+        "from": 0.03,
+        "to": 0.031,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.27,
+        "auc": 0.51,
+        "status": "calibrated"
+      },
+      "pike": {
+        "from": -0.05,
+        "to": -0.05,
+        "flagged_good": 0.03,
+        "flagged_bad": 0.26,
+        "auc": 0.6,
+        "status": "unchanged"
+      },
+      "lockout": {
+        "from": 160.0,
+        "to": 152.461,
+        "flagged_good": 0.1,
+        "flagged_bad": 0.03,
+        "auc": 0.32,
+        "status": "calibrated"
+      },
+      "tempo": {
+        "from": 0.8,
+        "to": 0.55,
+        "flagged_good": 0.08,
+        "flagged_bad": 0.1,
+        "auc": 0.38,
+        "status": "calibrated"
+      }
+    }
+  },
+  "calibrated_from": {
+    "version": 1,
+    "criteria": [
+      {
+        "id": "depth",
+        "metric": "depth",
+        "ideal_max": 90.0,
+        "tolerance": 30.0,
+        "weight": 0.4,
+        "severity": "invalidates",
+        "points": ["shoulder", "elbow", "wrist"],
+        "unit": "deg"
+      },
+      {
+        "id": "sag",
+        "metric": "sag",
+        "ideal_max": 0.03,
+        "tolerance": 0.07,
+        "weight": 0.3,
+        "severity": "technique",
+        "points": ["hip", "shoulder", "ankle"],
+        "unit": "scale",
+        "scale": ["shoulder", "ankle"]
+      },
+      {
+        "id": "pike",
+        "metric": "pike",
+        "ideal_min": -0.05,
+        "tolerance": 0.07,
+        "weight": 0.1,
+        "severity": "technique",
+        "points": ["hip", "shoulder", "ankle"],
+        "unit": "scale",
+        "scale": ["shoulder", "ankle"]
+      },
+      {
+        "id": "lockout",
+        "metric": "lockout",
+        "ideal_min": 160.0,
+        "tolerance": 15.0,
+        "weight": 0.1,
+        "severity": "detail",
+        "points": ["shoulder", "elbow", "wrist"],
+        "unit": "deg"
+      },
+      {
+        "id": "tempo",
+        "metric": "descent_time",
+        "ideal_min": 0.8,
+        "tolerance": 0.5,
+        "weight": 0.1,
+        "severity": "detail",
+        "points": ["shoulder", "elbow", "wrist"],
+        "unit": "s"
+      }
+    ]
+  }
+}

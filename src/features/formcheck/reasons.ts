@@ -27,6 +27,16 @@ export const genericReasons: Record<string, NotAssessableReason> = {
     explanation: 'There was not enough light to follow your movement.',
     fixes: ['Face a light source or switch on more lights'],
   },
+  low_confidence: {
+    title: "We couldn't see you clearly enough",
+    explanation: 'Your reps were visible, but not clearly enough to score them.',
+    fixes: ['Face a light source or switch on more lights', 'Film against a plain background'],
+  },
+  no_recording: {
+    title: 'The video was not saved',
+    explanation: 'This device could not keep the recording, so there was nothing to check.',
+    fixes: ['Record the set again', 'Use the app on your phone if it keeps happening'],
+  },
   multiple_people: {
     title: 'More than one person is in the frame',
     explanation: 'We cannot tell whose movement to check.',

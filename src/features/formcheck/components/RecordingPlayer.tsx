@@ -1,18 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Text, View } from 'react-native';
-import { radii, textStyles, usePalette } from '@/theme/tokens';
+import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { Button } from '@/features/training/components/ui';
+import { containRect } from '../poseTrack';
+import type { PoseTrack } from '../schemas';
 import { FormCheckScreen } from './FormCheckScreen';
+import { PoseOverlay } from './PoseOverlay';
 
-/** Plays the user's own recording. The file can be gone, so a failed load says so. */
+/**
+ * Plays the user's own recording, with the joints the analysis tracked drawn on top when they
+ * are available. The file can be gone, so a failed load says so.
+ */
 export function RecordingPlayer({
   uri,
   title,
+  pose,
   onBack,
 }: Readonly<{
   uri: string;
   title: string;
+  pose?: PoseTrack;
   onBack: () => void;
 }>) {
   const p = usePalette();
@@ -20,6 +29,26 @@ export function RecordingPlayer({
     value.loop = false;
   });
   const { status } = useEvent(player, 'statusChange', { status: player.status });
+  const [box, setBox] = useState({ width: 0, height: 0 });
+  const [showJoints, setShowJoints] = useState(true);
+  // The skeleton follows the video on every screen refresh, not only on the player's time events.
+  const [currentTime, setCurrentTime] = useState(0);
+  const tracking = Boolean(pose) && showJoints;
+  useEffect(() => {
+    if (!tracking) return;
+    let frameId = 0;
+    const tick = () => {
+      const time = player.currentTime;
+      if (typeof time === 'number')
+        setCurrentTime((previous) => (previous === time ? previous : time));
+      frameId = requestAnimationFrame(tick);
+    };
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [player, tracking]);
+  const frame = pose && box.width && box.height ? containRect(box, pose.width, pose.height) : null;
+  const hasFaults = pose?.reps.some((rep) => rep.faultJoints.length > 0) ?? false;
+
   return (
     <FormCheckScreen
       overline={title.toUpperCase()}
@@ -27,6 +56,23 @@ export function RecordingPlayer({
       backLabel="Back to analysis"
       onBack={onBack}
       scroll={false}
+      footer={
+        pose && status !== 'error' ? (
+          <>
+            {showJoints && hasFaults ? (
+              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                Joints turn red during a rep with a fault there.
+              </Text>
+            ) : null}
+            <Button
+              title={showJoints ? 'Hide joints' : 'Show joints'}
+              icon={showJoints ? 'eye-off' : 'eye'}
+              secondary
+              onPress={() => setShowJoints((value) => !value)}
+            />
+          </>
+        ) : undefined
+      }
     >
       {status === 'error' ? (
         <Text accessibilityRole="alert" style={[textStyles.body, { color: p['ink-muted'] }]}>
@@ -34,20 +80,40 @@ export function RecordingPlayer({
         </Text>
       ) : (
         <View
+          onLayout={(event) => {
+            const { width, height } = event.nativeEvent.layout;
+            setBox({ width, height });
+          }}
           style={{
             flex: 1,
+            minHeight: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
             borderRadius: radii['radius-xl'],
             overflow: 'hidden',
             backgroundColor: p['surface-300'],
+            marginBottom: pose ? spacing['space-2'] : 0,
           }}
         >
-          <VideoView
-            player={player}
-            style={{ flex: 1 }}
-            contentFit="contain"
-            nativeControls
-            accessibilityLabel="Recorded set"
-          />
+          {/* With poses, the video gets a box of its exact shape so the joints share its frame. */}
+          <View
+            style={
+              frame
+                ? { width: frame.width, height: frame.height }
+                : { flex: 1, alignSelf: 'stretch' }
+            }
+          >
+            <VideoView
+              player={player}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="contain"
+              nativeControls
+              accessibilityLabel="Recorded set"
+            />
+            {pose && frame && showJoints ? (
+              <PoseOverlay track={pose} time={currentTime} box={frame} />
+            ) : null}
+          </View>
         </View>
       )}
     </FormCheckScreen>
