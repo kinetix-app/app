@@ -43,9 +43,9 @@ export function PostOptions({
       if (!workout.exercises.length || (!accepted && workout.skipped_exercises.length)) return;
       if (await workoutActions.start(workout)) onClose();
       else setError('Could not start this workout. Try again or resume your active workout.');
-    } catch (failure) {
+    } catch (error_) {
       setError(
-        failure instanceof ApiError && failure.status === 404
+        error_ instanceof ApiError && error_.status === 404
           ? 'This shared workout is no longer available.'
           : 'Could not load this workout. Try again.',
       );
@@ -59,8 +59,6 @@ export function PostOptions({
     if (!busy.current) onClose();
   }
 
-  const partial = template && template.skipped_exercises.length > 0;
-  const canPerform = Boolean(post.workout && workoutActions);
   return (
     <Modal
       visible={!workoutActions?.expandedDraft}
@@ -80,38 +78,17 @@ export function PostOptions({
             {post.is_mine ? (
               <Button title="Edit post · Coming soon" secondary disabled onPress={() => {}} />
             ) : null}
-            {canPerform && workoutActions?.activeDraft ? (
-              <>
-                <Text style={{ color: p.ink }}>You already have an active workout.</Text>
-                <Button
-                  title="Resume active workout"
-                  disabled={!workoutActions.available || pending}
-                  onPress={() => {
-                    onClose();
-                    workoutActions.resume();
-                  }}
-                />
-              </>
-            ) : canPerform && template && !template.exercises.length ? (
-              <Text accessibilityRole="alert" style={{ color: p.ink }}>
-                None of the exercises in this workout are available to you.
-              </Text>
-            ) : canPerform && partial ? (
-              <>
-                <Text style={{ color: p.ink }}>
-                  These exercises will be skipped: {template.skipped_exercises.join(', ')}.
-                </Text>
-                <Button
-                  title="Start available exercises"
-                  disabled={!workoutActions?.available || pending}
-                  onPress={() => void perform(template)}
-                />
-              </>
-            ) : canPerform ? (
-              <Button
-                title={post.is_mine ? 'Perform again' : 'Perform workout'}
-                disabled={!workoutActions?.available || pending}
-                onPress={() => void perform()}
+            {post.workout && workoutActions ? (
+              <PerformAction
+                mine={post.is_mine}
+                activeDraft={workoutActions.activeDraft}
+                disabled={!workoutActions.available || pending}
+                template={template}
+                onPerform={(accepted) => void perform(accepted)}
+                onResume={() => {
+                  onClose();
+                  workoutActions.resume();
+                }}
               />
             ) : null}
             {pending ? <Text accessibilityRole="progressbar">Starting workout…</Text> : null}
@@ -133,6 +110,60 @@ export function PostOptions({
         </View>
       </View>
     </Modal>
+  );
+}
+
+function PerformAction({
+  mine,
+  activeDraft,
+  disabled,
+  template,
+  onPerform,
+  onResume,
+}: Readonly<{
+  mine: boolean;
+  activeDraft: boolean;
+  disabled: boolean;
+  template: WorkoutTemplate | null;
+  onPerform: (accepted?: WorkoutTemplate) => void;
+  onResume: () => void;
+}>) {
+  const p = usePalette();
+  if (activeDraft) {
+    return (
+      <>
+        <Text style={{ color: p.ink }}>You already have an active workout.</Text>
+        <Button title="Resume active workout" disabled={disabled} onPress={onResume} />
+      </>
+    );
+  }
+  if (template && !template.exercises.length) {
+    return (
+      <Text accessibilityRole="alert" style={{ color: p.ink }}>
+        None of the exercises in this workout are available to you.
+      </Text>
+    );
+  }
+  if (template?.skipped_exercises.length) {
+    return (
+      <>
+        <Text style={{ color: p.ink }}>
+          These exercises will be skipped: {template.skipped_exercises.join(', ')}.
+        </Text>
+        <Button
+          title="Start available exercises"
+          disabled={disabled}
+          onPress={() => onPerform(template)}
+        />
+      </>
+    );
+  }
+  return (
+    <Button
+      title={mine ? 'Perform again' : 'Perform workout'}
+      disabled={disabled}
+      onPress={() => onPerform()}
+    />
   );
 }
 

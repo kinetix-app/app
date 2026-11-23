@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useRef, useState } from 'react';
 import {
@@ -58,14 +58,12 @@ export function ShareWorkoutScreen({
   const [detailSessionId, setDetailSessionId] = useState<number | null>(null);
   const [caption, setCaption] = useState('');
   const [description, setDescription] = useState('');
-  const [photoInfoOpen, setPhotoInfoOpen] = useState(false);
   const [photos, setPhotos] = useState<PostPhoto[]>([]);
   const [error, setError] = useState('');
   const [photoError, setPhotoError] = useState('');
   const [discardOpen, setDiscardOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
-  const recent = workouts.data?.items ?? [];
   const selected = chosen === undefined ? (workouts.data?.selected ?? null) : chosen;
   const unresolvedSelection = requestedSessionId !== null && chosen === undefined && !workouts.data;
   const canShare =
@@ -79,15 +77,20 @@ export function ShareWorkoutScreen({
     (selected?.session_id ?? null) !== (workouts.data?.selected?.session_id ?? null);
 
   function back() {
-    if (busy.current) return true;
+    if (busy.current) return;
     if (detailSessionId !== null) setDetailSessionId(null);
     else if (dropdownOpen) setDropdownOpen(false);
     else if (dirty) setDiscardOpen(true);
     else onClose();
-    return true;
   }
 
-  useHardwareBack(back, active && !discardOpen && detailSessionId === null);
+  useHardwareBack(
+    () => {
+      back();
+      return true;
+    },
+    active && !discardOpen && detailSessionId === null,
+  );
 
   async function pickPhotos() {
     setPhotoError('');
@@ -203,159 +206,32 @@ export function ShareWorkoutScreen({
           </Text>
         </View>
 
-        <View style={ui.gap}>
-          <Text style={[textStyles['title-md'], { color: p.ink }]}>Workout · optional</Text>
-          <View style={ui.row}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Workout to share: ${selected?.title ?? 'No workout'}`}
-              accessibilityState={{ expanded: dropdownOpen, disabled: pending }}
-              onPress={() => setDropdownOpen(!dropdownOpen)}
-              disabled={pending}
-              style={[
-                styles.option,
-                { flex: 1, backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-              ]}
-            >
-              <Text style={[textStyles.label, { color: p.ink, flex: 1 }]} numberOfLines={1}>
-                {selected?.title ?? 'No workout'}
-              </Text>
-              <Feather
-                name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
-                size={22}
-                color={p.ink}
-              />
-            </Pressable>
-            {selected ? (
-              <IconButton
-                icon="eye"
-                label="Preview workout"
-                disabled={pending}
-                onPress={() => {
-                  setDropdownOpen(false);
-                  setDetailSessionId(selected.session_id);
-                }}
-              />
-            ) : null}
-          </View>
-          {unresolvedSelection && workouts.isPending ? <Loading /> : null}
-          {requestedSessionId !== null && workouts.data && !workouts.data.selected ? (
-            <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-              The workout you opened is unavailable to share. Choose another workout or post without
-              one.
-            </Text>
-          ) : null}
-          {workouts.isError ? (
-            <View style={ui.gap}>
-              <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                Could not load your workouts.
-              </Text>
-              <Button title="Retry" secondary onPress={() => void workouts.refetch()} />
-            </View>
-          ) : null}
-          {dropdownOpen ? (
-            <View
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Workout options"
-              style={ui.gap}
-            >
-              <WorkoutOption
-                checked={selected === null}
-                disabled={pending}
-                onPress={() => {
-                  setChosen(null);
-                  setDropdownOpen(false);
-                }}
-              />
-              {workouts.isPending && !unresolvedSelection ? <Loading /> : null}
-              {workouts.data && !recent.length ? (
-                <Text style={{ color: p['ink-muted'] }}>
-                  No finished workouts available to share.
-                </Text>
-              ) : null}
-              {recent.map((workout) => (
-                <WorkoutOption
-                  key={workout.session_id}
-                  workout={workout}
-                  checked={workout.session_id === selected?.session_id}
-                  disabled={pending}
-                  onPress={() => {
-                    setChosen(workout);
-                    setDropdownOpen(false);
-                  }}
-                />
-              ))}
-            </View>
-          ) : null}
-        </View>
-
-        <View style={ui.gap}>
-          <View style={ui.row}>
-            <Text style={[textStyles['title-md'], { color: p.ink }]}>
-              Photos · {photos.length}/{MAX_POST_IMAGES}
-            </Text>
-            <IconButton
-              icon="info"
-              label="Photo requirements"
-              bare
-              expanded={photoInfoOpen}
-              onPress={() => setPhotoInfoOpen(!photoInfoOpen)}
-            />
-          </View>
-          {photoInfoOpen ? (
-            <Text
-              accessibilityLiveRegion="polite"
-              style={[textStyles['body-sm'], { color: p['ink-muted'] }]}
-            >
-              Use JPEG, PNG or WebP up to 5 MB each. Location and other photo details are removed.
-            </Text>
-          ) : null}
-          <View style={styles.photos}>
-            {photos.map((photo, position) => (
-              <View key={`${photo.uri}-${position}`} style={styles.thumbnail}>
-                <Image
-                  accessibilityLabel={`Selected photo ${position + 1}`}
-                  source={{ uri: photo.uri }}
-                  style={[StyleSheet.absoluteFill, { borderRadius: radii['radius-md'] }]}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove photo ${position + 1}`}
-                  disabled={pending}
-                  onPress={() =>
-                    setPhotos((current) => current.filter((_, index) => index !== position))
-                  }
-                  style={[styles.remove, { backgroundColor: p['surface-300'] }]}
-                >
-                  <Feather name="x" size={18} color={p.ink} />
-                </Pressable>
-              </View>
-            ))}
-            {photos.length < MAX_POST_IMAGES ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Add photos"
-                disabled={pending}
-                onPress={() => {
-                  void pickPhotos();
-                }}
-                style={[
-                  styles.thumbnail,
-                  styles.add,
-                  { backgroundColor: p['brand-soft'], borderColor: p['line-strong'] },
-                ]}
-              >
-                <Feather name="plus" size={26} color={p['brand-ink']} />
-                <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Add</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {photoError ? (
-            <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {photoError}
-            </Text>
-          ) : null}
-        </View>
+        <WorkoutPicker
+          workouts={workouts}
+          selected={selected}
+          unresolvedSelection={unresolvedSelection}
+          unavailableSelection={requestedSessionId !== null && workouts.data?.selected === null}
+          dropdownOpen={dropdownOpen}
+          pending={pending}
+          onToggle={() => setDropdownOpen(!dropdownOpen)}
+          onPreview={(sessionId) => {
+            setDropdownOpen(false);
+            setDetailSessionId(sessionId);
+          }}
+          onSelect={(workout) => {
+            setChosen(workout);
+            setDropdownOpen(false);
+          }}
+        />
+        <PostPhotos
+          photos={photos}
+          pending={pending}
+          photoError={photoError}
+          onPick={() => void pickPhotos()}
+          onRemove={(position) => {
+            setPhotos((current) => current.filter((_, index) => index !== position));
+          }}
+        />
 
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
           Your friends will see this post in their feed.
@@ -427,6 +303,181 @@ export function acceptPhotos(assets: readonly PickedAsset[]) {
     });
   }
   return { accepted, rejected };
+}
+
+function WorkoutPicker({
+  workouts,
+  selected,
+  unresolvedSelection,
+  unavailableSelection,
+  dropdownOpen,
+  pending,
+  onToggle,
+  onPreview,
+  onSelect,
+}: Readonly<{
+  workouts: UseQueryResult<Awaited<ReturnType<typeof feedApi.workoutOptions>>>;
+  selected: WorkoutSummary | null;
+  unresolvedSelection: boolean;
+  unavailableSelection: boolean;
+  dropdownOpen: boolean;
+  pending: boolean;
+  onToggle: () => void;
+  onPreview: (sessionId: number) => void;
+  onSelect: (workout: WorkoutSummary | null) => void;
+}>) {
+  const p = usePalette();
+  const recent = workouts.data?.items ?? [];
+  return (
+    <View style={ui.gap}>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>Workout · optional</Text>
+      <View style={ui.row}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Workout to share: ${selected?.title ?? 'No workout'}`}
+          accessibilityState={{ expanded: dropdownOpen, disabled: pending }}
+          onPress={onToggle}
+          disabled={pending}
+          style={[
+            styles.option,
+            { flex: 1, backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
+          ]}
+        >
+          <Text style={[textStyles.label, { color: p.ink, flex: 1 }]} numberOfLines={1}>
+            {selected?.title ?? 'No workout'}
+          </Text>
+          <Feather name={dropdownOpen ? 'chevron-up' : 'chevron-down'} size={22} color={p.ink} />
+        </Pressable>
+        {selected ? (
+          <IconButton
+            icon="eye"
+            label="Preview workout"
+            disabled={pending}
+            onPress={() => onPreview(selected.session_id)}
+          />
+        ) : null}
+      </View>
+      {unresolvedSelection && workouts.isPending ? <Loading /> : null}
+      {unavailableSelection ? (
+        <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
+          The workout you opened is unavailable to share. Choose another workout or post without
+          one.
+        </Text>
+      ) : null}
+      {workouts.isError ? (
+        <View style={ui.gap}>
+          <Text accessibilityRole="alert" style={{ color: p.danger }}>
+            Could not load your workouts.
+          </Text>
+          <Button title="Retry" secondary onPress={() => void workouts.refetch()} />
+        </View>
+      ) : null}
+      {dropdownOpen ? (
+        <View accessibilityRole="radiogroup" accessibilityLabel="Workout options" style={ui.gap}>
+          <WorkoutOption
+            checked={selected === null}
+            disabled={pending}
+            onPress={() => onSelect(null)}
+          />
+          {workouts.isPending && !unresolvedSelection ? <Loading /> : null}
+          {workouts.data && !recent.length ? (
+            <Text style={{ color: p['ink-muted'] }}>No finished workouts available to share.</Text>
+          ) : null}
+          {recent.map((workout) => (
+            <WorkoutOption
+              key={workout.session_id}
+              workout={workout}
+              checked={workout.session_id === selected?.session_id}
+              disabled={pending}
+              onPress={() => onSelect(workout)}
+            />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function PostPhotos({
+  photos,
+  pending,
+  photoError,
+  onPick,
+  onRemove,
+}: Readonly<{
+  photos: readonly PostPhoto[];
+  pending: boolean;
+  photoError: string;
+  onPick: () => void;
+  onRemove: (position: number) => void;
+}>) {
+  const p = usePalette();
+  const [photoInfoOpen, setPhotoInfoOpen] = useState(false);
+  return (
+    <View style={ui.gap}>
+      <View style={ui.row}>
+        <Text style={[textStyles['title-md'], { color: p.ink }]}>
+          Photos · {photos.length}/{MAX_POST_IMAGES}
+        </Text>
+        <IconButton
+          icon="info"
+          label="Photo requirements"
+          bare
+          expanded={photoInfoOpen}
+          onPress={() => setPhotoInfoOpen(!photoInfoOpen)}
+        />
+      </View>
+      {photoInfoOpen ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[textStyles['body-sm'], { color: p['ink-muted'] }]}
+        >
+          Use JPEG, PNG or WebP up to 5 MB each. Location and other photo details are removed.
+        </Text>
+      ) : null}
+      <View style={styles.photos}>
+        {photos.map((photo, position) => (
+          <View key={`${photo.uri}-${position}`} style={styles.thumbnail}>
+            <Image
+              accessibilityLabel={`Selected photo ${position + 1}`}
+              source={{ uri: photo.uri }}
+              style={[StyleSheet.absoluteFill, { borderRadius: radii['radius-md'] }]}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Remove photo ${position + 1}`}
+              disabled={pending}
+              onPress={() => onRemove(position)}
+              style={[styles.remove, { backgroundColor: p['surface-300'] }]}
+            >
+              <Feather name="x" size={18} color={p.ink} />
+            </Pressable>
+          </View>
+        ))}
+        {photos.length < MAX_POST_IMAGES ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add photos"
+            disabled={pending}
+            onPress={onPick}
+            style={[
+              styles.thumbnail,
+              styles.add,
+              { backgroundColor: p['brand-soft'], borderColor: p['line-strong'] },
+            ]}
+          >
+            <Feather name="plus" size={26} color={p['brand-ink']} />
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Add</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {photoError ? (
+        <Text accessibilityRole="alert" style={{ color: p.danger }}>
+          {photoError}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
 function WorkoutOption({

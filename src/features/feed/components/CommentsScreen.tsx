@@ -45,6 +45,30 @@ export function CommentsScreen({
     if (gone) removePost(cache, accountId, postId);
   }, [gone, cache, accountId, postId]);
 
+  let content: React.ReactNode;
+  if (gone) {
+    content = (
+      <Text accessibilityRole="alert" style={[ui.content, { color: p.ink }]}>
+        This post is no longer available.
+      </Text>
+    );
+  } else if (post.isPending) {
+    content = <Loading />;
+  } else if (post.isError) {
+    content = (
+      <View style={ui.content}>
+        <Text accessibilityRole="alert" style={{ color: p.danger }}>
+          Could not load this post.
+        </Text>
+        <Button title="Retry" secondary onPress={() => void post.refetch()} />
+      </View>
+    );
+  } else {
+    content = (
+      <PostComments accountId={accountId} post={post.data} onUnavailable={markUnavailable} />
+    );
+  }
+
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -56,22 +80,7 @@ export function CommentsScreen({
           Comments
         </Text>
       </View>
-      {gone ? (
-        <Text accessibilityRole="alert" style={[ui.content, { color: p.ink }]}>
-          This post is no longer available.
-        </Text>
-      ) : post.isPending ? (
-        <Loading />
-      ) : post.isError ? (
-        <View style={ui.content}>
-          <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not load this post.
-          </Text>
-          <Button title="Retry" secondary onPress={() => void post.refetch()} />
-        </View>
-      ) : (
-        <PostComments accountId={accountId} post={post.data} onUnavailable={markUnavailable} />
-      )}
+      {content}
     </SafeAreaView>
   );
 }
@@ -127,8 +136,8 @@ function PostComments({
       });
       changeCount(1);
       setDraft('');
-    } catch (failure) {
-      if (postMissing(failure)) onUnavailable();
+    } catch (error_) {
+      if (postMissing(error_)) onUnavailable();
       else setError('Could not post your comment. Your text is kept. Try again.');
     } finally {
       busy.current = false;
@@ -154,8 +163,8 @@ function PostComments({
           : data,
       );
       changeCount(-1);
-    } catch (failure) {
-      if (postMissing(failure)) void comments.refetch();
+    } catch (error_) {
+      if (postMissing(error_)) void comments.refetch();
       else setError('Could not delete the comment. Try again.');
     } finally {
       setRemoving(null);

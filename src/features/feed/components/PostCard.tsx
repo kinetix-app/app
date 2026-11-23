@@ -66,46 +66,71 @@ export function PostCard({
         />
       ) : null}
       {onLike && onComments ? (
-        <View style={styles.actions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`}
-            accessibilityState={{
-              selected: post.liked_by_me,
-              disabled: likePending,
-              busy: likePending,
-            }}
-            disabled={likePending}
-            onPress={() => onLike(post)}
-            style={({ pressed }) => [styles.action, { opacity: likePending || pressed ? 0.55 : 1 }]}
-          >
-            <Ionicons
-              name={post.liked_by_me ? 'heart' : 'heart-outline'}
-              size={24}
-              color={post.liked_by_me ? p.brand : p.ink}
-            />
-            <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-              {countLabel(post.like_count, 'like')}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Comments on post by ${name}, ${countLabel(post.comment_count, 'comment')}`}
-            onPress={() => onComments(post)}
-            style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
-          >
-            <Ionicons name="chatbubble-outline" size={22} color={p.ink} />
-            <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-              {countLabel(post.comment_count, 'comment')}
-            </Text>
-          </Pressable>
-        </View>
+        <PostReactions
+          post={post}
+          name={name}
+          likePending={likePending}
+          onLike={() => onLike(post)}
+          onComments={() => onComments(post)}
+        />
       ) : null}
       {likeError ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
           Could not update your like. Try again.
         </Text>
       ) : null}
+    </View>
+  );
+}
+
+function PostReactions({
+  post,
+  name,
+  likePending,
+  onLike,
+  onComments,
+}: Readonly<{
+  post: Post;
+  name: string;
+  likePending: boolean;
+  onLike: () => void;
+  onComments: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <View style={styles.actions}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`}
+        accessibilityState={{
+          selected: post.liked_by_me,
+          disabled: likePending,
+          busy: likePending,
+        }}
+        disabled={likePending}
+        onPress={onLike}
+        style={({ pressed }) => [styles.action, { opacity: likePending || pressed ? 0.55 : 1 }]}
+      >
+        <Ionicons
+          name={post.liked_by_me ? 'heart' : 'heart-outline'}
+          size={24}
+          color={post.liked_by_me ? p.brand : p.ink}
+        />
+        <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
+          {countLabel(post.like_count, 'like')}
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Comments on post by ${name}, ${countLabel(post.comment_count, 'comment')}`}
+        onPress={onComments}
+        style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
+      >
+        <Ionicons name="chatbubble-outline" size={22} color={p.ink} />
+        <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
+          {countLabel(post.comment_count, 'comment')}
+        </Text>
+      </Pressable>
     </View>
   );
 }
