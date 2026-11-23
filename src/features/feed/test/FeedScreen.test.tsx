@@ -1,5 +1,5 @@
 import React from 'react';
-import { BackHandler, FlatList, Image } from 'react-native';
+import { AccessibilityInfo, BackHandler, FlatList, Image, Modal, View } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   act,
@@ -64,8 +64,8 @@ jest.setTimeout(20000);
 const workout = makePost().workout!;
 async function selectWorkout() {
   fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
-  const option = await screen.findByRole('radio', { name: /Workout finished/ });
-  expect(option).not.toBeChecked();
+  const option = await screen.findByRole('button', { name: workout.title });
+  expect(option.props.accessibilityState.selected).toBe(false);
   fireEvent.press(option);
 }
 
@@ -84,9 +84,14 @@ function renderFeed(props: Partial<React.ComponentProps<typeof FeedScreen>> = {}
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
+  jest.restoreAllMocks();
 });
 
 beforeEach(() => {
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+  jest.spyOn(View.prototype, 'measureInWindow').mockImplementation((measure) => {
+    measure(16, 160, 358, 64);
+  });
   jest.clearAllMocks();
   jest.mocked(feedApi.posts).mockResolvedValue({ items: [makePost()], next_before_id: null });
   jest.mocked(feedApi.post).mockResolvedValue(makePost());
@@ -454,11 +459,14 @@ test('back closes the workout dropdown before prompting to discard composer edit
     fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
     fireEvent.changeText(screen.getByLabelText('Caption'), 'Keep this');
     fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
-    await screen.findByRole('radio', { name: 'No workout' });
-    await act(async () => {
-      [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
-    });
-    expect(screen.queryByRole('radio', { name: 'No workout' })).toBeNull();
+    await screen.findByTestId('post-workout-menu');
+    fireEvent.press(screen.getByRole('button', { name: 'Close workout menu' }));
+    expect(screen.queryByTestId('post-workout-menu')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+    expect(screen.getByTestId('post-workout-menu')).toBeTruthy();
+    const modal = screen.UNSAFE_getAllByType(Modal).find((item) => item.props.statusBarTranslucent);
+    act(() => modal!.props.onRequestClose());
+    expect(screen.queryByTestId('post-workout-menu')).toBeNull();
     expect(screen.queryByText('Discard this post?')).toBeNull();
     await act(async () => {
       [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
@@ -608,7 +616,11 @@ test('without finished workouts a caption alone can be posted', async () => {
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
   fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
   expect(await screen.findByText('No finished workouts available to share.')).toBeTruthy();
-  fireEvent.press(screen.getByRole('radio', { name: 'No workout' }));
+  fireEvent.press(
+    within(screen.getByTestId('post-workout-menu')).getByRole('button', {
+      name: 'No workout',
+    }),
+  );
   const share = screen.getByRole('button', { name: 'Share' });
   expect(share.props.accessibilityState.disabled).toBe(true);
   fireEvent.changeText(screen.getByLabelText('Caption'), 'Rest day');
@@ -634,7 +646,11 @@ test('choosing No workout lets a description stand alone', async () => {
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
   await selectWorkout();
   fireEvent.press(screen.getByRole('button', { name: 'Workout to share: Strength A' }));
-  fireEvent.press(screen.getByRole('radio', { name: 'No workout' }));
+  fireEvent.press(
+    within(screen.getByTestId('post-workout-menu')).getByRole('button', {
+      name: 'No workout',
+    }),
+  );
   fireEvent.changeText(screen.getByLabelText('Description'), 'Just a thought');
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>

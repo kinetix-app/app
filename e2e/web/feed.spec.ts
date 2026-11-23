@@ -118,7 +118,8 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
   const picker = page.getByRole('button', { name: 'Workout to share: No workout', exact: true });
   await picker.click();
   await page
-    .getByRole('radio', { name: /Workout finished/ })
+    .getByTestId('post-workout-menu')
+    .getByRole('button', { name: workout.title, exact: true })
     .first()
     .click();
   await page.getByRole('button', { name: 'Preview workout' }).click();

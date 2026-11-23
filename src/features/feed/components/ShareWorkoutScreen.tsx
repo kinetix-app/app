@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
+import { AnchoredPicker } from '@/components/AnchoredPicker';
 import { TextField } from '@/components/TextField';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
 import { SessionWorkoutDetailModal } from '@/features/training/components/SessionWorkoutDetail';
@@ -54,7 +55,6 @@ export function ShareWorkoutScreen({
     queryFn: ({ signal }) => feedApi.workoutOptions(requestedSessionId, signal),
   });
   const [chosen, setChosen] = useState<WorkoutSummary | null>();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [detailSessionId, setDetailSessionId] = useState<number | null>(null);
   const [caption, setCaption] = useState('');
   const [description, setDescription] = useState('');
@@ -79,7 +79,6 @@ export function ShareWorkoutScreen({
   function back() {
     if (busy.current) return;
     if (detailSessionId !== null) setDetailSessionId(null);
-    else if (dropdownOpen) setDropdownOpen(false);
     else if (dirty) setDiscardOpen(true);
     else onClose();
   }
@@ -211,17 +210,9 @@ export function ShareWorkoutScreen({
           selected={selected}
           unresolvedSelection={unresolvedSelection}
           unavailableSelection={requestedSessionId !== null && workouts.data?.selected === null}
-          dropdownOpen={dropdownOpen}
           pending={pending}
-          onToggle={() => setDropdownOpen(!dropdownOpen)}
-          onPreview={(sessionId) => {
-            setDropdownOpen(false);
-            setDetailSessionId(sessionId);
-          }}
-          onSelect={(workout) => {
-            setChosen(workout);
-            setDropdownOpen(false);
-          }}
+          onPreview={setDetailSessionId}
+          onSelect={setChosen}
         />
         <PostPhotos
           photos={photos}
@@ -310,9 +301,7 @@ function WorkoutPicker({
   selected,
   unresolvedSelection,
   unavailableSelection,
-  dropdownOpen,
   pending,
-  onToggle,
   onPreview,
   onSelect,
 }: Readonly<{
@@ -320,9 +309,7 @@ function WorkoutPicker({
   selected: WorkoutSummary | null;
   unresolvedSelection: boolean;
   unavailableSelection: boolean;
-  dropdownOpen: boolean;
   pending: boolean;
-  onToggle: () => void;
   onPreview: (sessionId: number) => void;
   onSelect: (workout: WorkoutSummary | null) => void;
 }>) {
@@ -332,22 +319,32 @@ function WorkoutPicker({
     <View style={ui.gap}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>Workout · optional</Text>
       <View style={ui.row}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Workout to share: ${selected?.title ?? 'No workout'}`}
-          accessibilityState={{ expanded: dropdownOpen, disabled: pending }}
-          onPress={onToggle}
-          disabled={pending}
-          style={[
-            styles.option,
-            { flex: 1, backgroundColor: p['surface-300'], borderColor: p['line-strong'] },
-          ]}
-        >
-          <Text style={[textStyles.label, { color: p.ink, flex: 1 }]} numberOfLines={1}>
-            {selected?.title ?? 'No workout'}
-          </Text>
-          <Feather name={dropdownOpen ? 'chevron-up' : 'chevron-down'} size={22} color={p.ink} />
-        </Pressable>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AnchoredPicker
+            selection={selected?.session_id ?? null}
+            options={[
+              { value: null, label: 'No workout' },
+              ...recent.map((workout) => ({
+                value: workout.session_id,
+                label: workout.title,
+                detail: new Date(workout.ended_at).toLocaleString(),
+              })),
+            ]}
+            onSelect={(id) => onSelect(recent.find((workout) => workout.session_id === id) ?? null)}
+            labelPrefix="Workout to share"
+            fallbackLabel={selected?.title ?? 'No workout'}
+            closeLabel="Close workout menu"
+            menuTestId="post-workout-menu"
+            icon="barbell-outline"
+            disabled={pending}
+            menuFooter={
+              <WorkoutMenuStatus
+                loading={workouts.isPending}
+                empty={Boolean(workouts.data && !recent.length)}
+              />
+            }
+          />
+        </View>
         {selected ? (
           <IconButton
             icon="eye"
@@ -370,28 +367,6 @@ function WorkoutPicker({
             Could not load your workouts.
           </Text>
           <Button title="Retry" secondary onPress={() => void workouts.refetch()} />
-        </View>
-      ) : null}
-      {dropdownOpen ? (
-        <View accessibilityRole="radiogroup" accessibilityLabel="Workout options" style={ui.gap}>
-          <WorkoutOption
-            checked={selected === null}
-            disabled={pending}
-            onPress={() => onSelect(null)}
-          />
-          {workouts.isPending && !unresolvedSelection ? <Loading /> : null}
-          {workouts.data && !recent.length ? (
-            <Text style={{ color: p['ink-muted'] }}>No finished workouts available to share.</Text>
-          ) : null}
-          {recent.map((workout) => (
-            <WorkoutOption
-              key={workout.session_id}
-              workout={workout}
-              checked={workout.session_id === selected?.session_id}
-              disabled={pending}
-              onPress={() => onSelect(workout)}
-            />
-          ))}
         </View>
       ) : null}
     </View>
@@ -480,48 +455,14 @@ function PostPhotos({
   );
 }
 
-function WorkoutOption({
-  workout,
-  checked,
-  disabled,
-  onPress,
-}: Readonly<{
-  workout?: WorkoutSummary;
-  checked: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}>) {
+function WorkoutMenuStatus({ loading, empty }: Readonly<{ loading: boolean; empty: boolean }>) {
   const p = usePalette();
-  const title = workout?.title ?? 'No workout';
-  const when = workout ? new Date(workout.ended_at).toLocaleString() : null;
+  if (loading) return <Loading />;
+  if (!empty) return null;
   return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityLabel={when ? `${title}. Workout finished ${when}` : title}
-      accessibilityState={{ checked, disabled }}
-      aria-checked={checked}
-      disabled={disabled}
-      onPress={onPress}
-      style={[
-        styles.option,
-        {
-          backgroundColor: checked ? p['brand-soft'] : p['surface-200'],
-          borderColor: checked ? p.brand : p['line-strong'],
-        },
-      ]}
-    >
-      <Feather
-        name={checked ? 'check-circle' : 'circle'}
-        size={20}
-        color={checked ? p['brand-ink'] : p['ink-muted']}
-      />
-      <View style={{ flex: 1 }}>
-        <Text style={[textStyles.label, { color: p.ink }]}>{title}</Text>
-        {when ? (
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{when}</Text>
-        ) : null}
-      </View>
-    </Pressable>
+    <Text style={[textStyles['body-sm'], { color: p['ink-muted'], padding: spacing['space-2'] }]}>
+      No finished workouts available to share.
+    </Text>
   );
 }
 
@@ -543,15 +484,6 @@ export function shareErrorMessage(error: unknown) {
 const styles = StyleSheet.create({
   scrim: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['space-6'] },
   dialog: { width: '100%', maxWidth: 420 },
-  option: {
-    minHeight: sizes['control-height'],
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing['space-3'],
-    padding: spacing['space-3'],
-    borderRadius: radii['radius-md'],
-    borderWidth: 1,
-  },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] },
   thumbnail: { width: 88, height: 88, borderRadius: radii['radius-md'] },
   remove: {
