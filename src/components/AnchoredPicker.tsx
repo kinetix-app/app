@@ -45,6 +45,8 @@ export function AnchoredPicker<Value extends string | number | null>({
   icon,
   disabled = false,
   menuFooter,
+  triggerAction,
+  showTriggerDetail = true,
 }: Readonly<{
   selection: Value;
   options: readonly PickerOption<Value>[];
@@ -56,6 +58,8 @@ export function AnchoredPicker<Value extends string | number | null>({
   icon: React.ComponentProps<typeof Ionicons>['name'];
   disabled?: boolean;
   menuFooter?: React.ReactNode;
+  triggerAction?: OptionAction | null;
+  showTriggerDetail?: boolean;
 }>) {
   const p = usePalette();
   const viewport = useWindowDimensions();
@@ -125,53 +129,64 @@ export function AnchoredPicker<Value extends string | number | null>({
 
   return (
     <>
-      <Pressable
+      <View
         ref={trigger}
-        accessibilityRole="button"
-        accessibilityLabel={`${labelPrefix}: ${label}`}
-        accessibilityHint={selected?.detail}
-        accessibilityState={{ expanded, disabled }}
-        disabled={disabled}
-        aria-expanded={expanded}
-        onPress={openMenu}
-        style={({ pressed }) => [
-          styles.row,
-          {
-            minHeight: sizes['control-height'],
-            padding: spacing['space-3'],
-            borderColor: p.line,
-            borderWidth: 1,
-            borderRadius: radii['radius-lg'],
-            backgroundColor: pressed ? p['surface-300'] : p['surface-200'],
-          },
-        ]}
+        style={[styles.triggerFrame, { borderColor: p.line, backgroundColor: p['surface-200'] }]}
       >
-        <View
-          style={{
-            width: 36,
-            height: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: radii['radius-md'],
-            backgroundColor: p['surface-300'],
-          }}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${labelPrefix}: ${label}`}
+          accessibilityHint={selected?.detail}
+          accessibilityState={{ expanded, disabled }}
+          disabled={disabled}
+          aria-expanded={expanded}
+          onPress={openMenu}
+          style={({ pressed }) => [
+            styles.row,
+            styles.triggerButton,
+            pressed && { backgroundColor: p['surface-300'] },
+          ]}
         >
-          <Ionicons name={icon} size={19} color={p['ink-muted']} />
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
-          {selected?.detail ? (
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {selected.detail}
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: radii['radius-md'],
+              backgroundColor: p['surface-300'],
+            }}
+          >
+            <Ionicons name={icon} size={19} color={p['ink-muted']} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              numberOfLines={showTriggerDetail ? undefined : 1}
+              style={[textStyles.label, { color: p.ink }]}
+            >
+              {label}
             </Text>
-          ) : null}
-        </View>
-        <Ionicons
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={p['ink-muted']}
-        />
-      </Pressable>
+            {showTriggerDetail && selected?.detail ? (
+              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                {selected.detail}
+              </Text>
+            ) : null}
+          </View>
+          <Ionicons
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={p['ink-muted']}
+          />
+        </Pressable>
+        {triggerAction === null ? <View style={styles.action} /> : null}
+        {triggerAction ? (
+          <OptionActionButton
+            action={triggerAction}
+            onPress={(action) => action()}
+            disabled={disabled}
+          />
+        ) : null}
+      </View>
       <Modal
         transparent
         visible={anchor !== null}
@@ -290,12 +305,15 @@ export function AnchoredPicker<Value extends string | number | null>({
 function OptionActionButton({
   action,
   onPress,
-}: Readonly<{ action: OptionAction; onPress: (action: () => void) => void }>) {
+  disabled = false,
+}: Readonly<{ action: OptionAction; onPress: (action: () => void) => void; disabled?: boolean }>) {
   const p = usePalette();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={action.label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={() => onPress(action.onPress)}
       style={styles.action}
     >
@@ -305,6 +323,19 @@ function OptionActionButton({
 }
 
 const styles = StyleSheet.create({
+  triggerFrame: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radii['radius-lg'],
+    overflow: 'hidden',
+  },
+  triggerButton: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: sizes['control-height'],
+    padding: spacing['space-3'],
+  },
   action: {
     width: sizes['tap-min'],
     height: sizes['tap-min'],

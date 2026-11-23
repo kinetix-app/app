@@ -318,47 +318,45 @@ function WorkoutPicker({
   return (
     <View style={ui.gap}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>Workout · optional</Text>
-      <View style={ui.row}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <AnchoredPicker
-            selection={selected?.session_id ?? null}
-            options={[
-              { value: null, label: 'No workout' },
-              ...recent.map((workout) => ({
-                value: workout.session_id,
-                label: workout.title,
-                detail: new Date(workout.ended_at).toLocaleString(),
-                action: {
-                  label: `Preview ${workout.title}`,
-                  icon: 'eye-outline' as const,
-                  onPress: () => onPreview(workout.session_id),
-                },
-              })),
-            ]}
-            onSelect={(id) => onSelect(recent.find((workout) => workout.session_id === id) ?? null)}
-            labelPrefix="Workout to share"
-            fallbackLabel={selected?.title ?? 'No workout'}
-            closeLabel="Close workout menu"
-            menuTestId="post-workout-menu"
-            icon="barbell-outline"
-            disabled={pending}
-            menuFooter={
-              <WorkoutMenuStatus
-                loading={workouts.isPending}
-                empty={Boolean(workouts.data && !recent.length)}
-              />
-            }
+      <AnchoredPicker
+        selection={selected?.session_id ?? null}
+        options={[
+          { value: null, label: 'No workout' },
+          ...recent.map((workout) => ({
+            value: workout.session_id,
+            label: workout.title,
+            detail: new Date(workout.ended_at).toLocaleString(),
+            action: {
+              label: `Preview ${workout.title}`,
+              icon: 'eye-outline' as const,
+              onPress: () => onPreview(workout.session_id),
+            },
+          })),
+        ]}
+        onSelect={(id) => onSelect(recent.find((workout) => workout.session_id === id) ?? null)}
+        labelPrefix="Workout to share"
+        fallbackLabel={selected?.title ?? 'No workout'}
+        closeLabel="Close workout menu"
+        menuTestId="post-workout-menu"
+        icon="barbell-outline"
+        disabled={pending}
+        showTriggerDetail={false}
+        triggerAction={
+          selected
+            ? {
+                label: 'Preview workout',
+                icon: 'eye-outline',
+                onPress: () => onPreview(selected.session_id),
+              }
+            : null
+        }
+        menuFooter={
+          <WorkoutMenuStatus
+            loading={workouts.isPending}
+            empty={Boolean(workouts.data && !recent.length)}
           />
-        </View>
-        {selected ? (
-          <IconButton
-            icon="eye"
-            label="Preview workout"
-            disabled={pending}
-            onPress={() => onPreview(selected.session_id)}
-          />
-        ) : null}
-      </View>
+        }
+      />
       {unresolvedSelection && workouts.isPending ? <Loading /> : null}
       {unavailableSelection ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>

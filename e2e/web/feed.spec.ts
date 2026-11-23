@@ -116,6 +116,7 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
   const description = `Press sets for ${headline}.`;
   await page.getByRole('button', { name: 'New post' }).click();
   const picker = page.getByRole('button', { name: 'Workout to share: No workout', exact: true });
+  const initialPicker = await picker.boundingBox();
   await picker.click();
   await page
     .getByTestId('post-workout-menu')
@@ -131,6 +132,11 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
     .getByRole('button', { name: workout.title, exact: true })
     .first()
     .click();
+  const chosenPicker = await page
+    .getByRole('button', { name: `Workout to share: ${workout.title}`, exact: true })
+    .boundingBox();
+  expect(chosenPicker?.width).toBe(initialPicker?.width);
+  expect(chosenPicker?.height).toBe(initialPicker?.height);
   await page.getByRole('button', { name: 'Preview workout' }).click();
   await expect(page.getByRole('heading', { name: workout.title, exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to new post' }).click();
