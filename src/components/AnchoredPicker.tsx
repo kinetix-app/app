@@ -73,6 +73,10 @@ export function AnchoredPicker<Value extends string | number | null>({
   const expanded = anchor !== null && !closing;
   const selected = options.find((option) => option.value === selection);
   const label = selected?.label ?? fallbackLabel;
+  const inlinePreview = triggerAction !== undefined;
+  const chevron = (
+    <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={p['ink-muted']} />
+  );
 
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -132,20 +136,9 @@ export function AnchoredPicker<Value extends string | number | null>({
     <>
       <View
         ref={trigger}
+        testID="picker-trigger"
         style={[styles.triggerFrame, { borderColor: p.line, backgroundColor: p['surface-200'] }]}
       >
-        {triggerAction === null ? (
-          <View style={styles.action}>
-            <Ionicons name={icon} size={19} color={p['ink-muted']} />
-          </View>
-        ) : null}
-        {triggerAction ? (
-          <OptionActionButton
-            action={triggerAction}
-            onPress={(action) => action()}
-            disabled={disabled}
-          />
-        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${labelPrefix}: ${label}`}
@@ -157,24 +150,16 @@ export function AnchoredPicker<Value extends string | number | null>({
           style={({ pressed }) => [
             styles.row,
             styles.triggerButton,
+            inlinePreview && styles.triggerWithPreview,
             pressed && { backgroundColor: p['surface-300'] },
           ]}
         >
-          {triggerAction === undefined ? (
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: radii['radius-md'],
-                backgroundColor: p['surface-300'],
-              }}
-            >
-              <Ionicons name={icon} size={19} color={p['ink-muted']} />
-            </View>
-          ) : null}
-          <View style={{ flex: 1, minWidth: 0 }}>
+          <View
+            style={[styles.triggerIcon, !inlinePreview && { backgroundColor: p['surface-300'] }]}
+          >
+            <Ionicons testID="picker-trigger-icon" name={icon} size={19} color={p['ink-muted']} />
+          </View>
+          <View style={inlinePreview ? styles.inlineLabel : styles.fillLabel}>
             <Text
               numberOfLines={showTriggerDetail ? undefined : 1}
               style={[textStyles.label, { color: p.ink }]}
@@ -187,12 +172,29 @@ export function AnchoredPicker<Value extends string | number | null>({
               </Text>
             ) : null}
           </View>
-          <Ionicons
-            name={expanded ? 'chevron-up' : 'chevron-down'}
-            size={18}
-            color={p['ink-muted']}
-          />
+          {inlinePreview ? null : chevron}
         </Pressable>
+        {triggerAction ? (
+          <OptionActionButton
+            action={triggerAction}
+            onPress={(action) => action()}
+            disabled={disabled}
+          />
+        ) : null}
+        {inlinePreview ? (
+          <Pressable
+            accessible={false}
+            tabIndex={-1}
+            disabled={disabled}
+            onPress={openMenu}
+            style={({ pressed }) => [
+              styles.triggerChevron,
+              pressed && { backgroundColor: p['surface-300'] },
+            ]}
+          >
+            {chevron}
+          </Pressable>
+        ) : null}
       </View>
       <Modal
         transparent
@@ -254,6 +256,7 @@ export function AnchoredPicker<Value extends string | number | null>({
               >
                 {options.map((option) => {
                   const checked = option.value === selection;
+                  const action = checked ? undefined : option.action;
                   return (
                     <View key={String(option.value)} style={styles.row}>
                       <Pressable
@@ -285,22 +288,23 @@ export function AnchoredPicker<Value extends string | number | null>({
                             </Text>
                           ) : null}
                         </View>
-                        {option.action ? <View style={styles.action} /> : null}
-                        {checked ? (
-                          <Ionicons
-                            testID="picker-option-check"
-                            name="checkmark"
-                            size={checkSize}
-                            color={p.ink}
-                          />
+                        {inlinePreview || action || checked ? (
+                          <View style={(inlinePreview || Boolean(action)) && styles.action}>
+                            {checked ? (
+                              <Ionicons
+                                testID="picker-option-check"
+                                name="checkmark"
+                                size={checkSize}
+                                color={p.ink}
+                              />
+                            ) : null}
+                          </View>
                         ) : null}
                       </Pressable>
-                      {option.action ? (
-                        <View
-                          style={[styles.trailingAction, checked && styles.trailingActionChecked]}
-                        >
+                      {action ? (
+                        <View style={styles.trailingAction}>
                           <OptionActionButton
-                            action={option.action}
+                            action={action}
                             onPress={(action) => {
                               pendingAction.current = action;
                               closeMenu();
@@ -336,7 +340,7 @@ function OptionActionButton({
       onPress={() => onPress(action.onPress)}
       style={styles.action}
     >
-      <Ionicons name={action.icon} size={20} color={p.ink} />
+      <Ionicons name={action.icon} size={checkSize} color={p.ink} />
     </Pressable>
   );
 }
@@ -350,13 +354,34 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   triggerButton: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     minWidth: 0,
     minHeight: sizes['control-height'],
     padding: spacing['space-3'],
   },
+  triggerWithPreview: {
+    flexGrow: 0,
+    paddingVertical: 0,
+    paddingRight: 0,
+  },
+  triggerIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii['radius-md'],
+  },
+  inlineLabel: { flexShrink: 1, minWidth: 0 },
+  fillLabel: { flex: 1, minWidth: 0 },
+  triggerChevron: {
+    flexGrow: 1,
+    minHeight: sizes['control-height'],
+    paddingHorizontal: spacing['space-3'],
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   trailingAction: { position: 'absolute', right: spacing['space-2'] },
-  trailingActionChecked: { right: spacing['space-2'] + checkSize + spacing['space-3'] },
   action: {
     width: sizes['tap-min'],
     height: sizes['tap-min'],
