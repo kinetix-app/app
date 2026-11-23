@@ -25,7 +25,9 @@ export function PrivateQueryProvider({ children }: Readonly<React.PropsWithChild
   }, [network.isConnected, network.isInternetReachable]);
   useEffect(() => {
     focusManager.setFocused(
-      ['background', 'inactive'].includes(AppState.currentState) ? false : undefined,
+      AppState.currentState === 'background' || AppState.currentState === 'inactive'
+        ? false
+        : undefined,
     );
     const subscription = AppState.addEventListener('change', (state) =>
       focusManager.setFocused(state === 'active'),

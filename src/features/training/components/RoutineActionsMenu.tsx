@@ -1,3 +1,4 @@
+import type { ViewInstance } from 'react-native';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -37,7 +38,7 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
   const p = usePalette();
   const busy = deleting || coverPending;
   const insets = useSafeAreaInsets();
-  const first = useRef<View>(null);
+  const first = useRef<ViewInstance>(null);
   const [confirming, setConfirming] = useState(false);
   const error =
     deleteError instanceof ApiError && deleteError.status === 409
@@ -222,7 +223,7 @@ function RoutineActionOptions({
 }: RoutineActionsMenuProps &
   Readonly<{
     busy: boolean;
-    first: React.RefObject<View | null>;
+    first: React.RefObject<ViewInstance | null>;
     onConfirmDelete: () => void;
   }>) {
   const p = usePalette();

@@ -1,3 +1,4 @@
+import type { ViewInstance } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
@@ -33,7 +34,7 @@ export function RecordScreen({
 }>) {
   const p = usePalette();
   const camera = useRef<CameraView>(null);
-  const frame = useRef<View>(null);
+  const frame = useRef<ViewInstance>(null);
   const [webRecorder, setWebRecorder] = useState<CameraRecorder | null>(null);
   const capture = useRef<Promise<{ uri: string } | undefined> | null>(null);
   const cancelled = useRef(false);

@@ -226,11 +226,11 @@ export function LeagueStandings({
         </View>
       }
       ListEmptyComponent={
-        page.isSuccess ? (
+        (page.isSuccess ? (
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
             {showingRankings ? 'No standings yet.' : 'No credited workouts in this period.'}
           </Text>
-        ) : null
+        ) : null) ?? undefined
       }
       renderItem={({ item }) =>
         'position' in item ? (
@@ -254,7 +254,7 @@ export function LeagueStandings({
       onEndReached={() => {
         if (active && page.hasNextPage && !page.isFetching && !page.isFetchNextPageError) next();
       }}
-      ListFooterComponent={renderPagination()}
+      ListFooterComponent={renderPagination() ?? undefined}
     />
   );
 }

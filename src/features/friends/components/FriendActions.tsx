@@ -78,7 +78,9 @@ export function FriendActions({
         visible={confirmRemove}
         transparent
         animationType="fade"
-        onRequestClose={() => !busy && setConfirmRemove(false)}
+        onRequestClose={() => {
+          if (!busy) setConfirmRemove(false);
+        }}
       >
         <View
           style={{

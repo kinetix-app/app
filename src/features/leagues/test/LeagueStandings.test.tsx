@@ -51,7 +51,7 @@ const client = new QueryClient({
 beforeEach(() => {
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
   jest.spyOn(View.prototype, 'measureInWindow').mockImplementation((measure) => {
-    measure(16, 160, 358, 64);
+    if (typeof measure === 'function') measure(16, 160, 358, 64);
   });
 });
 

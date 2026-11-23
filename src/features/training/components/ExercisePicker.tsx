@@ -162,11 +162,11 @@ export function ExercisePicker({
               />
             }
             ListEmptyComponent={
-              !query.isPending && !query.isError ? (
+              (!query.isPending && !query.isError ? (
                 <Text style={{ color: p['ink-muted'] }}>
                   No exercises found. Try another name or body part.
                 </Text>
-              ) : null
+              ) : null) ?? undefined
             }
             renderItem={({ item }) => (
               <ExercisePickerRow
@@ -183,7 +183,7 @@ export function ExercisePicker({
               if (query.hasNextPage && !query.isFetching && !query.isFetchNextPageError)
                 void query.fetchNextPage({ cancelRefetch: false });
             }}
-            ListFooterComponent={listFooter}
+            ListFooterComponent={listFooter ?? undefined}
           />
           <ExerciseSelectionAction
             count={selection.length}

@@ -137,35 +137,32 @@ test('displays meal quantities and caps progress at the goal; navigation callbac
   expect(onEditGoal).toHaveBeenCalledTimes(1);
 });
 test('deletes only the chosen logged item and refreshes the day', async () => {
-  // Drive Query's notification timers instead of racing CI's wall-clock timeout.
-  jest.useFakeTimers();
-  try {
-    let finishDelete: () => void = () => {};
-    const deletion = new Promise<void>((resolve) => {
-      finishDelete = resolve;
-    });
-    jest.mocked(nutritionApi.deleteMealItem).mockReturnValue(deletion);
-    open();
-    await screen.findByText('Rice');
-    expect(screen.queryByLabelText('Delete Rice')).toBeNull();
-    fireEvent.press(screen.getByLabelText('Edit Breakfast'));
-    jest.mocked(nutritionApi.day).mockResolvedValue({ ...day, items: day.items.slice(1) });
-    fireEvent.press(screen.getByLabelText('Delete Rice'));
-    await waitFor(() => expect(nutritionApi.deleteMealItem).toHaveBeenCalledWith(1));
-    expect(screen.getByText('Rice')).toBeTruthy();
-    expect(screen.getByLabelText('Delete Rice')).toBeDisabled();
-    expect(nutritionApi.day).toHaveBeenCalledTimes(1);
-    await act(async () => finishDelete());
-    await waitFor(() => expect(screen.queryByText('Rice')).toBeNull());
-    expect(nutritionApi.day).toHaveBeenCalledTimes(2);
-    expect(screen.getByText('Bowl')).toBeTruthy();
-    expect(screen.getByText('Two bowls')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Finish editing Breakfast'));
-    expect(screen.getByLabelText('Edit Breakfast')).toBeTruthy();
-  } finally {
-    jest.useRealTimers();
-  }
-});
+  let finishDelete: () => void = () => {};
+  const deletion = new Promise<void>((resolve) => {
+    finishDelete = resolve;
+  });
+  jest.mocked(nutritionApi.deleteMealItem).mockReturnValue(deletion);
+  open();
+  await screen.findByText('Rice');
+  expect(screen.queryByLabelText('Delete Rice')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Edit Breakfast'));
+  jest.mocked(nutritionApi.day).mockResolvedValue({ ...day, items: day.items.slice(1) });
+  fireEvent.press(screen.getByLabelText('Delete Rice'));
+  await waitFor(() => expect(nutritionApi.deleteMealItem).toHaveBeenCalledWith(1));
+  expect(screen.getByText('Rice')).toBeTruthy();
+  expect(screen.getByLabelText('Delete Rice')).toBeDisabled();
+  expect(nutritionApi.day).toHaveBeenCalledTimes(1);
+  await act(async () => finishDelete());
+  await waitFor(() => expect(nutritionApi.day).toHaveBeenCalledTimes(2), { timeout: 5000 });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+  expect(screen.queryByText('Rice')).toBeNull();
+  expect(screen.getByText('Bowl')).toBeTruthy();
+  expect(screen.getByText('Two bowls')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Finish editing Breakfast'));
+  expect(screen.getByLabelText('Edit Breakfast')).toBeTruthy();
+}, 20000);
 test('edits food grams and recipe servings from the diary', async () => {
   open();
   await screen.findByText('Rice');

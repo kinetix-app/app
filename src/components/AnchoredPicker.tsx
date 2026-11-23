@@ -1,3 +1,4 @@
+import type { ViewInstance } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -36,7 +37,7 @@ export type PickerOption<Value> = {
 };
 
 function usePickerMenu() {
-  const trigger = useRef<View>(null);
+  const trigger = useRef<ViewInstance>(null);
   const pendingAction = useRef<(() => void) | null>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [closing, setClosing] = useState(false);

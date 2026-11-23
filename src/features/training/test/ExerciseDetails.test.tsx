@@ -1,6 +1,6 @@
 import React from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ExerciseDetails } from '../components/ExerciseDetails';
 import { rangeStart, duration } from '../components/ExerciseEvolution';
@@ -106,8 +106,14 @@ test('retries history and loads the next page with explicit set units', async ()
   expect(await screen.findByText('1 · 12 reps · 40 kg')).toBeTruthy();
   expect(screen.getByText('2 · 12 reps · 40 kg')).toBeTruthy();
   expect(screen.getByText('3 · 1.25 km · 00:12:30')).toBeTruthy();
-  fireEvent.press(screen.getByText('Load more history'));
-  await waitFor(() => expect(screen.queryByText('Load more history')).toBeNull());
+  fireEvent.press(screen.getByRole('button', { name: 'Load more history' }));
+  await waitFor(() =>
+    expect(trainingApi.exerciseHistory).toHaveBeenLastCalledWith(1, 1, expect.anything()),
+  );
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+  expect(screen.queryByText('Load more history')).toBeNull();
   expect(screen.getByText('Workout')).toBeTruthy();
   expect(trainingApi.exerciseHistory).toHaveBeenLastCalledWith(1, 1, expect.anything());
 });

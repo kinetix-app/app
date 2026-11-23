@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { FlatList, View, type CellRendererProps } from 'react-native';
+import { FlatList, View, type FlatListProps } from 'react-native';
 import type { DraggableFlatListProps } from 'react-native-draggable-flatlist';
 import { usePalette } from '@/theme/tokens';
+
+type CellRendererProps<T> = React.ComponentProps<
+  NonNullable<FlatListProps<T>['CellRendererComponent']>
+>;
 
 const ActiveCell = createContext<number | null>(null);
 type DragState = {

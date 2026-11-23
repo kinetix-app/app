@@ -161,7 +161,7 @@ export function FeedScreen({
           keyExtractor={(item) => String(item.id)}
           ListHeaderComponent={header}
           ListEmptyComponent={
-            feed.data ? (
+            (feed.data ? (
               <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
                 <Text style={[textStyles['title-md'], { color: p.ink }]}>No posts yet</Text>
                 <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
@@ -181,7 +181,7 @@ export function FeedScreen({
                   onPress={() => setPanel({ kind: 'share' })}
                 />
               </View>
-            ) : null
+            ) : null) ?? undefined
           }
           renderItem={({ item }) => (
             <PostCard
@@ -213,7 +213,7 @@ export function FeedScreen({
             if (feed.hasNextPage && !feed.isFetching && !feed.isFetchNextPageError)
               void feed.fetchNextPage({ cancelRefetch: false });
           }}
-          ListFooterComponent={footer}
+          ListFooterComponent={footer ?? undefined}
         />
       </SafeAreaView>
       {view.kind === 'person' ? (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, Pressable, Text, View } from 'react-native';
+import { Image, Platform, Pressable, Text, View, type PressableProps } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { formatCardioTime, type CardioValues } from '../cardio';
@@ -300,5 +300,6 @@ function exerciseReorderKeys(onMove: ((delta: number) => void) | undefined, disa
       event.preventDefault();
       onMove(event.key === 'ArrowUp' ? -1 : 1);
     },
-  };
+    // React Native Web passes a DOM keyboard event; native's public type omits DOM fields.
+  } as unknown as Pick<PressableProps, 'onKeyDown'>;
 }

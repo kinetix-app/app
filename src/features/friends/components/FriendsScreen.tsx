@@ -165,7 +165,7 @@ function FriendList({
         </>
       }
       ListEmptyComponent={
-        list.data ? (
+        (list.data ? (
           <View style={[ui.card, { backgroundColor: p['surface-200'], alignItems: 'center' }]}>
             <Text style={[textStyles['title-md'], { color: p.ink }]}>No friends yet</Text>
             <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>
@@ -173,7 +173,7 @@ function FriendList({
             </Text>
             <Button title="Find friends" tone="positive" icon="search" onPress={onFind} />
           </View>
-        ) : null
+        ) : null) ?? undefined
       }
       renderItem={({ item }) => (
         <PersonRow
@@ -187,7 +187,7 @@ function FriendList({
       onEndReached={() => {
         if (list.hasNextPage && !list.isFetching) void list.fetchNextPage({ cancelRefetch: false });
       }}
-      ListFooterComponent={list.isFetchingNextPage ? <Loading /> : null}
+      ListFooterComponent={(list.isFetchingNextPage ? <Loading /> : null) ?? undefined}
     />
   );
 }
@@ -221,7 +221,9 @@ function RequestList({
         </>
       }
       ListEmptyComponent={
-        data ? <Text style={{ color: p['ink-muted'] }}>No pending friend requests.</Text> : null
+        (data ? (
+          <Text style={{ color: p['ink-muted'] }}>No pending friend requests.</Text>
+        ) : null) ?? undefined
       }
       renderItem={({ item }) => (
         <PersonRow
@@ -288,9 +290,9 @@ function FindPeople({
         </View>
       }
       ListEmptyComponent={
-        ready && results.data ? (
+        (ready && results.data ? (
           <Text style={{ color: p['ink-muted'] }}>No one found with that name.</Text>
-        ) : null
+        ) : null) ?? undefined
       }
       renderItem={({ item }) => (
         <PersonRow accountId={accountId} person={item} onOpen={onOpen}>

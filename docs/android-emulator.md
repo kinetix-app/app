@@ -6,7 +6,7 @@ This guide uses Android Studio to install the Android SDK, ADB and emulator on m
 
 1. Install [Android Studio](https://developer.android.com/studio) and complete its setup wizard.
 2. Open **Settings** (macOS: **Preferences**) → **Languages & Frameworks** → **Android SDK**. Note the Android SDK Location.
-3. In **SDK Platforms**, install Android SDK Platform 36. In **SDK Tools**, install Android SDK Platform-Tools (includes `adb`), Android Emulator, Build-Tools 36.0.0 and NDK 27.1.12297006. Enable **Show Package Details** to select specific versions. Apply the changes and accept the licenses.
+3. In **SDK Platforms**, install Android SDK Platform 37. In **SDK Tools**, install Android SDK Platform-Tools (includes `adb`), Android Emulator, Build-Tools 37.0.0 and NDK 27.1.12297006. Enable **Show Package Details** to select specific versions. Apply the changes and accept the licenses.
 4. Install JDK 17 and ensure `java -version` reports it. Enable hardware virtualization if Android Studio requests it; installation steps depend on your operating system.
 
 See the [Android Studio installation guide](https://developer.android.com/studio/install) and [React Native environment setup](https://reactnative.dev/docs/set-up-your-environment) for platform-specific details.

@@ -1,3 +1,4 @@
+import type { ViewInstance } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -456,7 +457,7 @@ function RoutineRow({
   onRetry: () => void;
 }>) {
   const p = usePalette();
-  const trigger = useRef<View>(null);
+  const trigger = useRef<ViewInstance>(null);
   const performed = item.last_performed_at ? new Date(item.last_performed_at) : null;
   const date = performed
     ? performed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })

@@ -1,3 +1,4 @@
+import type { ScrollViewInstance } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
@@ -211,12 +212,14 @@ function FoodCatalogueList({
             />
           )}
           ListEmptyComponent={
-            visibleFoodSearch && debouncedSearch && !results.isPending && !results.isError ? (
+            (visibleFoodSearch && debouncedSearch && !results.isPending && !results.isError ? (
               <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
-            ) : null
+            ) : null) ?? undefined
           }
           ListFooterComponent={
-            visibleFoodSearch ? <CatalogueStatus catalogue={results} collection="foods" /> : null
+            (visibleFoodSearch ? (
+              <CatalogueStatus catalogue={results} collection="foods" />
+            ) : null) ?? undefined
           }
           onEndReachedThreshold={0.5}
           onEndReached={results.loadMore}
@@ -454,7 +457,7 @@ function CatalogueFormModal({
   onSaved: (entry: EntrySource) => void;
 }>) {
   const p = usePalette();
-  const scroll = React.useRef<ScrollView>(null);
+  const scroll = React.useRef<ScrollViewInstance>(null);
   const editing = form.kind === 'edit';
   let type: EntityType;
   if (form.kind === 'edit') type = form.entry.kind === 'food' ? 'Food' : 'Recipe';
@@ -1184,12 +1187,13 @@ function RecipePicker({
           </View>
         )}
         ListEmptyComponent={
-          visibleSearch && !recipes.isPending && !recipes.isError ? (
+          (visibleSearch && !recipes.isPending && !recipes.isError ? (
             <EmptyRecipes searching={Boolean(debouncedSearch)} />
-          ) : null
+          ) : null) ?? undefined
         }
         ListFooterComponent={
-          visibleSearch ? <CatalogueStatus catalogue={recipes} collection="recipes" /> : null
+          (visibleSearch ? <CatalogueStatus catalogue={recipes} collection="recipes" /> : null) ??
+          undefined
         }
         onEndReachedThreshold={0.5}
         onEndReached={recipes.loadMore}
