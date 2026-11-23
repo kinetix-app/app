@@ -104,6 +104,7 @@ function HomeNavigation({
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
+  const [composerOpen, setComposerOpen] = useState(false);
   const [composeSessionId, setComposeSessionId] = useState<number | null>(null);
   const [viewingFinished, setViewingFinished] = useState(false);
   /** Opens the Feed's new-post screen with a completed workout selected. */
@@ -261,6 +262,7 @@ function HomeNavigation({
           }}
           composeSessionId={composeSessionId}
           onComposeClosed={() => setComposeSessionId(null)}
+          onComposerOpenChange={setComposerOpen}
           onFindFriends={() => openProfile('friends')}
           profileButton={
             <Pressable
@@ -338,6 +340,7 @@ function HomeNavigation({
         ))}
       </SessionHost>
       {!addingFood &&
+      (tab !== 'home' || (!composerOpen && composeSessionId === null)) &&
       (tab !== 'workout' || !routineEditing) &&
       (tab !== 'league' || !leagueDetailOpen) &&
       (tab !== 'profile' || profilePanel !== 'progress') ? (

@@ -149,7 +149,7 @@ export function ShareWorkoutScreen({
 
   return (
     <SafeAreaView
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
       style={[ui.screen, { backgroundColor: p['surface-100'] }]}
     >
       <ScrollView

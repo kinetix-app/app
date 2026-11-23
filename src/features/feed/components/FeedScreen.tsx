@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -33,6 +33,7 @@ type FeedScreenProps = Readonly<{
   /** Opens the new-post screen with this completed workout selected (e.g. from history). */
   composeSessionId?: number | null;
   onComposeClosed?: () => void;
+  onComposerOpenChange?: (open: boolean) => void;
   /** Opens the shell's friends screen. */
   onFindFriends?: () => void;
   workoutActions?: WorkoutActions;
@@ -44,6 +45,7 @@ export function FeedScreen({
   profileButton,
   composeSessionId = null,
   onComposeClosed,
+  onComposerOpenChange,
   onFindFriends,
   workoutActions,
 }: FeedScreenProps) {
@@ -64,6 +66,10 @@ export function FeedScreen({
   // A share request from the shell takes over until the composer closes.
   const view: Panel =
     composeSessionId !== null ? { kind: 'share', sessionId: composeSessionId } : panel;
+  const isComposing = view.kind === 'share';
+  useEffect(() => {
+    onComposerOpenChange?.(isComposing);
+  }, [isComposing, onComposerOpenChange]);
   const closePanel = useCallback(() => {
     setPanel({ kind: 'feed' });
     onComposeClosed?.();
