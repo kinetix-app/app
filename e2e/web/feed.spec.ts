@@ -182,6 +182,13 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
     await expect(context.getByRole('heading', { name: headline })).toBeVisible();
     await expect(context.getByText(description)).toBeVisible();
     await expect(context.getByLabel('Photo 1 of 1 by Feed owner')).toBeVisible();
+    const thumbnail = context.getByRole('button', { name: 'View Photo 1 of 1 by Feed owner' });
+    await expect(thumbnail).toBeVisible();
+    expect((await thumbnail.boundingBox())?.height).toBeLessThanOrEqual(160);
+    await thumbnail.click();
+    await expect(peer.getByLabel('Enlarged Photo 1 of 1 by Feed owner')).toBeVisible();
+    await peer.getByRole('button', { name: 'Close photo' }).click();
+    await expect(peer.getByLabel('Enlarged Photo 1 of 1 by Feed owner')).toHaveCount(0);
     const send = peer.getByRole('button', { name: 'Send comment' });
     await expect(send).toBeDisabled();
     const comment = `Nice workout ${randomUUID().slice(0, 8)}`;

@@ -180,10 +180,7 @@ function MediaCarousel({
   const total = post.media.length;
   if (!total) return null;
   return (
-    <View
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      style={{ borderRadius: radii['radius-md'], overflow: 'hidden', gap: spacing['space-2'] }}
-    >
+    <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={styles.media}>
       {width ? (
         <ScrollView
           horizontal
@@ -200,12 +197,12 @@ function MediaCarousel({
               accountId={accountId}
               path={item.url}
               label={`Photo ${position + 1} of ${total} by ${name}`}
-              style={{ width, height: width, borderRadius: radii['radius-md'] }}
+              style={{ width, height: 160, borderRadius: radii['radius-md'] }}
             />
           ))}
         </ScrollView>
       ) : (
-        <View style={{ aspectRatio: 1 }} />
+        <View style={styles.photoPlaceholder} />
       )}
       {total > 1 ? (
         <View style={styles.dots} accessibilityLabel={`Photo ${index + 1} of ${total}`}>
@@ -278,6 +275,8 @@ const styles = StyleSheet.create({
     gap: spacing['space-2'],
   },
   tabular: { fontVariant: ['tabular-nums'] },
+  media: { width: '100%', maxWidth: 300, gap: spacing['space-2'] },
+  photoPlaceholder: { height: 160 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: spacing['space-1'] },
   dot: { width: 8, height: 8, borderRadius: radii['radius-pill'] },
 });
