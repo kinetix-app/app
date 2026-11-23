@@ -44,6 +44,7 @@ jest.mock('../api', () => ({
   ...jest.requireActual('../api'),
   feedApi: {
     posts: jest.fn(),
+    post: jest.fn(),
     create: jest.fn(),
     remove: jest.fn(),
     like: jest.fn(),
@@ -88,6 +89,7 @@ afterEach(() => {
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(feedApi.posts).mockResolvedValue({ items: [makePost()], next_before_id: null });
+  jest.mocked(feedApi.post).mockResolvedValue(makePost());
   jest.mocked(feedApi.comments).mockResolvedValue({ items: [], next_after_id: null });
   jest.mocked(feedApi.workoutOptions).mockImplementation(async (selected) => ({
     items: [workout],
@@ -213,6 +215,43 @@ test('comments open, post a trimmed comment and update the feed count', async ()
   expect(screen.getByLabelText('Write a comment').props.value).toBe('');
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(await screen.findByText('1 comment')).toBeTruthy();
+});
+
+test('comments show the current post content without feed actions', async () => {
+  jest.mocked(feedApi.post).mockResolvedValue(makePost({ caption: 'Current caption' }));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  const summary = within(await screen.findByTestId('post-10'));
+  expect(summary.getByText('Bob')).toBeTruthy();
+  expect(summary.getByRole('header', { name: 'Current caption' })).toBeTruthy();
+  expect(summary.getByText('Leg day done')).toBeTruthy();
+  expect(summary.getByText('Strength A')).toBeTruthy();
+  expect(summary.queryByRole('button', { name: 'Post options' })).toBeNull();
+  expect(screen.getByLabelText('Write a comment')).toBeTruthy();
+  expect(feedApi.post).toHaveBeenCalledWith(10, expect.any(AbortSignal));
+});
+
+test('a post that has become unavailable is removed from the feed before commenting', async () => {
+  jest.mocked(feedApi.post).mockRejectedValueOnce(new ApiError(404));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  expect(await screen.findByText('This post is no longer available.')).toBeTruthy();
+  expect(screen.queryByLabelText('Write a comment')).toBeNull();
+  expect(feedApi.comments).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(await screen.findByText('No posts yet')).toBeTruthy();
+});
+
+test('losing access while commenting removes the composer and post context', async () => {
+  jest.mocked(feedApi.addComment).mockRejectedValueOnce(new ApiError(404));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  await screen.findByText('No comments yet. Start the conversation.');
+  fireEvent.changeText(screen.getByLabelText('Write a comment'), 'My message');
+  fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+  expect(await screen.findByText('This post is no longer available.')).toBeTruthy();
+  expect(screen.queryByLabelText('Write a comment')).toBeNull();
+  expect(screen.queryByTestId('post-10')).toBeNull();
 });
 
 test('tapping a shared workout shows every exercise and set', async () => {

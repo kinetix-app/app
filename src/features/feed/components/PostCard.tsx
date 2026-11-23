@@ -12,19 +12,19 @@ import { PostImage } from './PostImage';
 type PostCardProps = Readonly<{
   accountId: number;
   post: Post;
-  likePending: boolean;
-  likeError: boolean;
-  onLike: (post: Post) => void;
-  onComments: (post: Post) => void;
+  likePending?: boolean;
+  likeError?: boolean;
+  onLike?: (post: Post) => void;
+  onComments?: (post: Post) => void;
   onOptions?: (post: Post) => void;
-  onAuthor: (post: Post) => void;
+  onAuthor?: (post: Post) => void;
   onWorkout?: (post: Post) => void;
 }>;
 
 export function PostCard({
   accountId,
   post,
-  likePending,
+  likePending = false,
   likeError,
   onLike,
   onComments,
@@ -40,23 +40,7 @@ export function PostCard({
       style={[styles.card, { backgroundColor: p['surface-200'], borderColor: p.line }]}
     >
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${name}’s profile`}
-          onPress={() => onAuthor(post)}
-          style={({ pressed }) => [styles.author, { opacity: pressed ? 0.65 : 1 }]}
-        >
-          <PersonAvatar accountId={accountId} person={post.author} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={[textStyles['title-md'], { color: p.ink }]}>
-              {name}
-            </Text>
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {relativeTime(post.created_at)}
-              {visibilityNote[post.visibility] ?? ''}
-            </Text>
-          </View>
-        </Pressable>
+        <PostByline accountId={accountId} post={post} name={name} onAuthor={onAuthor} />
         {onOptions && (post.is_mine || post.workout) ? (
           <IconButton icon="more-horizontal" label="Post options" onPress={() => onOptions(post)} />
         ) : null}
@@ -81,46 +65,82 @@ export function PostCard({
           onPress={onWorkout ? () => onWorkout(post) : undefined}
         />
       ) : null}
-      <View style={styles.actions}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`}
-          accessibilityState={{
-            selected: post.liked_by_me,
-            disabled: likePending,
-            busy: likePending,
-          }}
-          disabled={likePending}
-          onPress={() => onLike(post)}
-          style={({ pressed }) => [styles.action, { opacity: likePending || pressed ? 0.55 : 1 }]}
-        >
-          <Ionicons
-            name={post.liked_by_me ? 'heart' : 'heart-outline'}
-            size={24}
-            color={post.liked_by_me ? p.brand : p.ink}
-          />
-          <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-            {countLabel(post.like_count, 'like')}
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Comments on post by ${name}, ${countLabel(post.comment_count, 'comment')}`}
-          onPress={() => onComments(post)}
-          style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
-        >
-          <Ionicons name="chatbubble-outline" size={22} color={p.ink} />
-          <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-            {countLabel(post.comment_count, 'comment')}
-          </Text>
-        </Pressable>
-      </View>
+      {onLike && onComments ? (
+        <View style={styles.actions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`}
+            accessibilityState={{
+              selected: post.liked_by_me,
+              disabled: likePending,
+              busy: likePending,
+            }}
+            disabled={likePending}
+            onPress={() => onLike(post)}
+            style={({ pressed }) => [styles.action, { opacity: likePending || pressed ? 0.55 : 1 }]}
+          >
+            <Ionicons
+              name={post.liked_by_me ? 'heart' : 'heart-outline'}
+              size={24}
+              color={post.liked_by_me ? p.brand : p.ink}
+            />
+            <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
+              {countLabel(post.like_count, 'like')}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Comments on post by ${name}, ${countLabel(post.comment_count, 'comment')}`}
+            onPress={() => onComments(post)}
+            style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
+          >
+            <Ionicons name="chatbubble-outline" size={22} color={p.ink} />
+            <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
+              {countLabel(post.comment_count, 'comment')}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
       {likeError ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
           Could not update your like. Try again.
         </Text>
       ) : null}
     </View>
+  );
+}
+
+function PostByline({
+  accountId,
+  post,
+  name,
+  onAuthor,
+}: Readonly<{ accountId: number; post: Post; name: string; onAuthor?: (post: Post) => void }>) {
+  const p = usePalette();
+  const byline = (
+    <>
+      <PersonAvatar accountId={accountId} person={post.author} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={[textStyles['title-md'], { color: p.ink }]}>
+          {name}
+        </Text>
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          {relativeTime(post.created_at)}
+          {visibilityNote[post.visibility] ?? ''}
+        </Text>
+      </View>
+    </>
+  );
+  if (!onAuthor) return <View style={styles.author}>{byline}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${name}’s profile`}
+      onPress={() => onAuthor(post)}
+      style={({ pressed }) => [styles.author, { opacity: pressed ? 0.65 : 1 }]}
+    >
+      {byline}
+    </Pressable>
   );
 }
 

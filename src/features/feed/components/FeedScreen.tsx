@@ -225,7 +225,7 @@ export function FeedScreen({
         />
       ) : null}
       {view.kind === 'comments' ? (
-        <CommentsScreen accountId={accountId} post={view.post} onBack={closePanel} />
+        <CommentsScreen accountId={accountId} postId={view.post.id} onBack={closePanel} />
       ) : null}
       {view.kind === 'workout' ? (
         <SharedWorkoutDetail accountId={accountId} post={view.post} onBack={closePanel} />

@@ -64,6 +64,8 @@ export const feedApi = {
       schema: postPageSchema,
       signal,
     }),
+  post: (postId: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/posts/${postId}`, { schema: postSchema, signal }),
   create: (input: PostInput, signal?: AbortSignal) =>
     apiClient.postMultipart('/api/v1/posts', buildPostForm(input), { schema: postSchema, signal }),
   workout: (postId: number, signal?: AbortSignal) =>
