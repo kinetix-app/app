@@ -293,12 +293,12 @@ export function AnchoredPicker<Value extends string | number | null>({
                             size={checkSize}
                             color={p.ink}
                           />
-                        ) : option.action ? (
-                          <View style={styles.checkSlot} />
                         ) : null}
                       </Pressable>
                       {option.action ? (
-                        <View style={styles.trailingAction}>
+                        <View
+                          style={[styles.trailingAction, checked && styles.trailingActionChecked]}
+                        >
                           <OptionActionButton
                             action={option.action}
                             onPress={(action) => {
@@ -355,11 +355,8 @@ const styles = StyleSheet.create({
     minHeight: sizes['control-height'],
     padding: spacing['space-3'],
   },
-  checkSlot: { width: checkSize },
-  trailingAction: {
-    position: 'absolute',
-    right: spacing['space-2'] + checkSize + spacing['space-3'],
-  },
+  trailingAction: { position: 'absolute', right: spacing['space-2'] },
+  trailingActionChecked: { right: spacing['space-2'] + checkSize + spacing['space-3'] },
   action: {
     width: sizes['tap-min'],
     height: sizes['tap-min'],

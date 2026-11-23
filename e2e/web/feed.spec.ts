@@ -127,11 +127,11 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
   await page.getByRole('button', { name: 'Back to new post' }).click();
   await expect(picker).toBeVisible();
   await picker.click();
-  await page
-    .getByTestId('post-workout-menu')
-    .getByRole('button', { name: workout.title, exact: true })
-    .first()
-    .click();
+  const workoutMenu = page.getByTestId('post-workout-menu');
+  const option = workoutMenu.getByRole('button', { name: workout.title, exact: true }).first();
+  const optionEye = workoutMenu.getByRole('button', { name: `Preview ${workout.title}` }).first();
+  const unselectedEye = await optionEye.boundingBox();
+  await option.click();
   const chosenPicker = await page
     .getByRole('button', { name: `Workout to share: ${workout.title}`, exact: true })
     .boundingBox();
@@ -143,9 +143,6 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
   await page
     .getByRole('button', { name: `Workout to share: ${workout.title}`, exact: true })
     .click();
-  const workoutMenu = page.getByTestId('post-workout-menu');
-  const option = workoutMenu.getByRole('button', { name: workout.title, exact: true }).first();
-  const optionEye = workoutMenu.getByRole('button', { name: `Preview ${workout.title}` }).first();
   const optionCheck = option.getByTestId('picker-option-check');
   await expect(optionCheck).toBeVisible();
   const [optionBox, eyeBox, checkBox] = await Promise.all(
@@ -153,6 +150,7 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
   );
   expect(eyeBox!.x).toBeGreaterThan(optionBox!.x + optionBox!.width / 2);
   expect(eyeBox!.x + eyeBox!.width).toBeLessThanOrEqual(checkBox!.x);
+  expect(unselectedEye!.x + unselectedEye!.width).toBeCloseTo(checkBox!.x + checkBox!.width);
   await page.keyboard.press('Escape');
   await selectedPreview.click();
   await expect(page.getByRole('heading', { name: workout.title, exact: true })).toBeVisible();
