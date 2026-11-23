@@ -133,6 +133,18 @@ export function AnchoredPicker<Value extends string | number | null>({
         ref={trigger}
         style={[styles.triggerFrame, { borderColor: p.line, backgroundColor: p['surface-200'] }]}
       >
+        {triggerAction === null ? (
+          <View style={styles.action}>
+            <Ionicons name={icon} size={19} color={p['ink-muted']} />
+          </View>
+        ) : null}
+        {triggerAction ? (
+          <OptionActionButton
+            action={triggerAction}
+            onPress={(action) => action()}
+            disabled={disabled}
+          />
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${labelPrefix}: ${label}`}
@@ -147,18 +159,20 @@ export function AnchoredPicker<Value extends string | number | null>({
             pressed && { backgroundColor: p['surface-300'] },
           ]}
         >
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: radii['radius-md'],
-              backgroundColor: p['surface-300'],
-            }}
-          >
-            <Ionicons name={icon} size={19} color={p['ink-muted']} />
-          </View>
+          {triggerAction === undefined ? (
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: radii['radius-md'],
+                backgroundColor: p['surface-300'],
+              }}
+            >
+              <Ionicons name={icon} size={19} color={p['ink-muted']} />
+            </View>
+          ) : null}
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               numberOfLines={showTriggerDetail ? undefined : 1}
@@ -177,15 +191,12 @@ export function AnchoredPicker<Value extends string | number | null>({
             size={18}
             color={p['ink-muted']}
           />
+          {triggerAction !== undefined ? (
+            <View style={styles.checkSlot}>
+              {triggerAction ? <Ionicons name="checkmark" size={20} color={p.brand} /> : null}
+            </View>
+          ) : null}
         </Pressable>
-        {triggerAction === null ? <View style={styles.action} /> : null}
-        {triggerAction ? (
-          <OptionActionButton
-            action={triggerAction}
-            onPress={(action) => action()}
-            disabled={disabled}
-          />
-        ) : null}
       </View>
       <Modal
         transparent
@@ -249,6 +260,18 @@ export function AnchoredPicker<Value extends string | number | null>({
                   const checked = option.value === selection;
                   return (
                     <View key={String(option.value)} style={styles.row}>
+                      {option.action ? (
+                        <OptionActionButton
+                          action={option.action}
+                          onPress={(action) => {
+                            pendingAction.current = action;
+                            closeMenu();
+                          }}
+                        />
+                      ) : null}
+                      {!option.action && triggerAction !== undefined ? (
+                        <View style={styles.action} />
+                      ) : null}
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={option.label}
@@ -280,15 +303,6 @@ export function AnchoredPicker<Value extends string | number | null>({
                         </View>
                         {checked ? <Ionicons name="checkmark" size={20} color={p.ink} /> : null}
                       </Pressable>
-                      {option.action ? (
-                        <OptionActionButton
-                          action={option.action}
-                          onPress={(action) => {
-                            pendingAction.current = action;
-                            closeMenu();
-                          }}
-                        />
-                      ) : null}
                     </View>
                   );
                 })}
@@ -336,6 +350,7 @@ const styles = StyleSheet.create({
     minHeight: sizes['control-height'],
     padding: spacing['space-3'],
   },
+  checkSlot: { width: 20, alignItems: 'center' },
   action: {
     width: sizes['tap-min'],
     height: sizes['tap-min'],

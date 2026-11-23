@@ -137,7 +137,9 @@ test('compose, perform and comment through the authenticated feed', async ({ pag
     .boundingBox();
   expect(chosenPicker?.width).toBe(initialPicker?.width);
   expect(chosenPicker?.height).toBe(initialPicker?.height);
-  await page.getByRole('button', { name: 'Preview workout' }).click();
+  const selectedPreview = page.getByRole('button', { name: 'Preview workout' });
+  expect((await selectedPreview.boundingBox())!.x).toBeLessThan(chosenPicker!.x);
+  await selectedPreview.click();
   await expect(page.getByRole('heading', { name: workout.title, exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to new post' }).click();
   await caption.fill(headline);
