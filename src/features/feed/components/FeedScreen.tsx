@@ -123,6 +123,7 @@ export function FeedScreen({
           <IconButton
             icon={<Ionicons name="create-outline" size={24} color={p.ink} />}
             label="New post"
+            bare
             onPress={() => setPanel({ kind: 'share' })}
           />
           {profileButton}

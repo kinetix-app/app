@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PersonAvatar } from '@/features/friends/components/PersonAvatar';
@@ -42,7 +42,12 @@ export function PostCard({
       <View style={styles.header}>
         <PostByline accountId={accountId} post={post} name={name} onAuthor={onAuthor} />
         {onOptions && (post.is_mine || post.workout) ? (
-          <IconButton icon="more-horizontal" label="Post options" onPress={() => onOptions(post)} />
+          <IconButton
+            icon={<Feather name="more-horizontal" size={24} color={p.ink} />}
+            label="Post options"
+            bare
+            onPress={() => onOptions(post)}
+          />
         ) : null}
       </View>
       <MediaCarousel accountId={accountId} post={post} name={name} />
