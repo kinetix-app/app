@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ProfileBack } from './ProfileBack';
+import { MeasurementSystemSelector } from '@/components/MeasurementSystemSelector';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { apiClient } from '@/services/apiClient';
@@ -122,7 +123,7 @@ function displayFieldLabel(
 
 function saveButtonTitle(pending: boolean, step: number) {
   if (pending) return 'Saving…';
-  if (step === 2) return 'Save profile';
+  if (step === 3) return 'Save profile';
   return 'Continue';
 }
 
@@ -179,42 +180,14 @@ function MeasurementSystemFields({
         control={form.control}
         name="measurement_system"
         render={({ field: { value, onChange } }) => (
-          <View
-            accessibilityRole="radiogroup"
-            accessibilityLabel="Measurement system"
-            style={{ flexDirection: 'row', gap: 12 }}
-          >
-            {(['metric', 'imperial'] as const).map((unit) => (
-              <Pressable
-                key={unit}
-                accessibilityRole="radio"
-                accessibilityLabel={unit === 'metric' ? 'Metric' : 'Imperial'}
-                accessibilityState={{
-                  selected: value === unit,
-                  checked: value === unit,
-                  disabled,
-                }}
-                disabled={disabled}
-                onPress={() => {
-                  updateMeasurementsForUnit(unit, value, account, form);
-                  onChange(unit);
-                }}
-                style={[
-                  s.field,
-                  {
-                    flex: 1,
-                    borderColor: value === unit ? p.brand : p['line-strong'],
-                    backgroundColor: value === unit ? p['brand-soft'] : p['surface-300'],
-                  },
-                ]}
-              >
-                <Text style={{ color: value === unit ? p['brand-ink'] : p.ink }}>
-                  {unit === 'metric' ? 'Metric' : 'Imperial'}
-                  {value === unit ? ' ✓' : ''}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <MeasurementSystemSelector
+            value={value}
+            disabled={disabled}
+            onChange={(unit) => {
+              updateMeasurementsForUnit(unit, value, account, form);
+              onChange(unit);
+            }}
+          />
         )}
       />
       {error ? (
@@ -262,7 +235,10 @@ function ProfileFields({
     .map(([name, label]) => (
       <View
         key={name}
-        style={[{ gap: spacing['space-2'] }, compact && { flexGrow: 1, flexBasis: 140 }]}
+        style={[
+          { gap: spacing['space-2'], marginTop: compact ? 0 : spacing['space-2'] },
+          compact && { flexGrow: 1, flexBasis: 140 },
+        ]}
       >
         <Text style={[textStyles.label, { color: p.ink }]}>
           {displayFieldLabel(name, label, unit)}
@@ -309,6 +285,171 @@ function accountForPictureDraft(account: Account, draft: ProfilePictureDraft) {
   return { ...account, profile: { ...account.profile, picture_url: null } };
 }
 
+function SexFields({
+  form,
+  disabled,
+  error,
+}: {
+  form: ProfileFormApi;
+  disabled: boolean;
+  error?: string;
+}) {
+  const p = usePalette();
+  return (
+    <View style={{ gap: spacing['space-3'], marginTop: spacing['space-2'] }}>
+      <Text style={[textStyles.label, { color: p.ink }]}>Sex</Text>
+      <Controller
+        control={form.control}
+        name="sex"
+        render={({ field: { value, onChange } }) => (
+          <View
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Sex"
+            style={{ flexDirection: 'row', gap: 12 }}
+          >
+            {(['male', 'female'] as const).map((sex) => (
+              <Pressable
+                key={sex}
+                accessibilityRole="radio"
+                accessibilityLabel={sex === 'male' ? 'Male' : 'Female'}
+                accessibilityState={{ checked: value === sex, disabled }}
+                disabled={disabled}
+                onPress={() => onChange(sex)}
+                style={({ pressed }) => [
+                  s.field,
+                  {
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 999,
+                    borderWidth: 2,
+                    borderColor: value === sex ? p.brand : p['line-strong'],
+                    backgroundColor: value === sex ? p.brand : p['surface-200'],
+                    opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    textStyles.label,
+                    { color: value === sex ? p['on-brand'] : p.ink, textAlign: 'center' },
+                  ]}
+                >
+                  {sex === 'male' ? 'Male' : 'Female'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      />
+      {error ? (
+        <Text accessibilityRole="alert" style={{ color: p.danger }}>
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+export const activityOptions = [
+  {
+    value: 'sedentary',
+    label: 'Sedentary',
+    description: 'Little movement or office work, no strength training and no weekly cardio.',
+  },
+  {
+    value: 'light',
+    label: 'Light',
+    description: '1–3 strength sessions per week, office work and no cardio.',
+  },
+  {
+    value: 'moderate',
+    label: 'Moderate',
+    description:
+      '3–5 strength sessions per week, office work, plus one cardio session or daily walking.',
+  },
+  {
+    value: 'high',
+    label: 'High',
+    description:
+      '5+ strength sessions per week, plus standing work or more than 2 cardio sessions per week.',
+  },
+  {
+    value: 'very_high',
+    label: 'Very high',
+    description:
+      '5+ strength sessions per week, intense physical activity and physical work, plus more than 3 cardio sessions per week.',
+  },
+] as const;
+
+export function ActivityFields({
+  form,
+  disabled,
+  error,
+}: {
+  form: ProfileFormApi;
+  disabled: boolean;
+  error?: string;
+}) {
+  const p = usePalette();
+  return (
+    <Controller
+      control={form.control}
+      name="activity_level"
+      render={({ field: { value, onChange } }) => (
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Usual activity"
+          style={{ gap: spacing['space-3'] }}
+        >
+          {activityOptions.map((option) => (
+            <Pressable
+              key={option.value}
+              accessibilityRole="radio"
+              accessibilityLabel={`${option.label}. ${option.description}`}
+              accessibilityState={{ checked: value === option.value, disabled }}
+              disabled={disabled}
+              onPress={() => onChange(option.value)}
+              style={({ pressed }) => ({
+                padding: spacing['space-4'],
+                gap: spacing['space-2'],
+                borderRadius: radii['radius-md'],
+                borderWidth: 2,
+                borderColor: value === option.value ? p.brand : p['line-strong'],
+                backgroundColor: value === option.value ? p['brand-soft'] : p['surface-200'],
+                opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
+              })}
+            >
+              <Text
+                style={[
+                  textStyles.label,
+                  { color: value === option.value ? p['brand-ink'] : p.ink },
+                ]}
+              >
+                {option.label}
+              </Text>
+              <Text
+                style={[
+                  textStyles['body-sm'],
+                  { color: value === option.value ? p['brand-ink'] : p['ink-muted'] },
+                ]}
+              >
+                {option.description}
+              </Text>
+            </Pressable>
+          ))}
+          {error ? (
+            <Text accessibilityRole="alert" style={{ color: p.danger }}>
+              {error}
+            </Text>
+          ) : null}
+        </View>
+      )}
+    />
+  );
+}
+
 function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial') {
   const values = form.getValues();
   const height =
@@ -319,6 +460,11 @@ function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial') {
   return [
     ['Name', values.display_name],
     ['Age', `${values.age} years`],
+    [
+      'Activity',
+      activityOptions.find((option) => option.value === values.activity_level)?.label ?? '—',
+    ],
+    ['Sex', values.sex === 'male' ? 'Male' : values.sex === 'female' ? 'Female' : '—'],
     ['System', unit === 'metric' ? 'Metric' : 'Imperial'],
     ['Height', height],
     ['Weight', `${Number(values.weight).toFixed(2)} ${weightUnit}`],
@@ -372,7 +518,7 @@ export function ProfileEditor({
   const appliedPhoto = useRef<ProfilePictureDraft | undefined>(undefined);
   const [photoAccount, setPhotoAccount] = useState(account);
   const [step, setStep] = useState(0);
-  const steps = ['About you', 'Personal information', 'Confirmation'];
+  const steps = ['About you', 'Personal information', 'Usual activity', 'Confirmation'];
   const disabled = pending || photoBusy;
   function back() {
     if (disabled) return;
@@ -389,7 +535,9 @@ export function ProfileEditor({
   const currentFields =
     step === 0
       ? ['display_name']
-      : ['age', 'measurement_system', 'weight', 'height_cm', 'height_ft', 'height_in'];
+      : step === 2
+        ? ['activity_level']
+        : ['age', 'sex', 'measurement_system', 'weight', 'height_cm', 'height_ft', 'height_in'];
   function advance() {
     clearErrors();
     const issues = currentStepIssues(getValues(), currentFields);
@@ -417,6 +565,8 @@ export function ProfileEditor({
           height_cm: savedHeight(value, value.measurement_system, account.profile.height_cm),
           weight_kg: savedWeight(value.weight, value.measurement_system, account.profile.weight_kg),
           measurement_system: value.measurement_system,
+          sex: value.sex,
+          activity_level: value.activity_level,
         });
         onSaved(result);
       } catch {
@@ -463,12 +613,12 @@ export function ProfileEditor({
               accessibilityLiveRegion="polite"
               style={[textStyles.label, { color: p['ink-muted'] }]}
             >
-              Step {step + 1} of 3 · {steps[step]}
+              Step {step + 1} of 4 · {steps[step]}
             </Text>
             <View
               accessibilityRole="progressbar"
               accessibilityLabel="Profile setup progress"
-              accessibilityValue={{ min: 1, max: 3, now: step + 1 }}
+              accessibilityValue={{ min: 1, max: 4, now: step + 1 }}
               style={wizard.progress}
             >
               {steps.map((label, index) => (
@@ -491,6 +641,7 @@ export function ProfileEditor({
                 [
                   'Start with your name and an optional profile picture.',
                   'Add your age, choose your measurement system and enter your measurements.',
+                  'Choose the option that best describes your usual week. We’ll use it to estimate your daily calorie needs.',
                   'Take a moment to check your details before saving.',
                 ][step]
               }
@@ -522,12 +673,22 @@ export function ProfileEditor({
               unit={unit}
             />
             {step === 2 ? (
+              <ActivityFields
+                form={form}
+                disabled={disabled}
+                error={errors.activity_level?.message}
+              />
+            ) : null}
+            {step === 3 ? (
               <ProfileReview
                 account={photoAccount}
                 draft={photoDraft}
                 form={form}
                 unit={unit ?? 'metric'}
               />
+            ) : null}
+            {step === 1 ? (
+              <SexFields form={form} disabled={disabled} error={errors.sex?.message} />
             ) : null}
           </View>
           {failure ? (
@@ -539,7 +700,7 @@ export function ProfileEditor({
             title={saveButtonTitle(pending, step)}
             disabled={disabled}
             onPress={() => {
-              if (step === 2) void save();
+              if (step === 3) void save();
               else advance();
             }}
           />
@@ -670,6 +831,8 @@ function ProfileEditForm({
               />
             </View>
           ))}
+          <SexFields form={form} disabled={disabled} error={errors.sex?.message} />
+          <ActivityFields form={form} disabled={disabled} error={errors.activity_level?.message} />
           {failure ? (
             <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
               {failure}

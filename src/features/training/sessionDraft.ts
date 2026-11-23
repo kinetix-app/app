@@ -9,6 +9,7 @@ import {
   weightSchema,
   type CompletionInput,
   type Routine,
+  type ExerciseSummary,
   type DraftSnapshot,
   type ServerDraft,
   type WeightUnit,
@@ -108,14 +109,30 @@ export const emptyActualSet = (unit: WeightUnit): ActualSet => ({
   value: '',
   unit,
 });
-export function createSessionDraft(accountId: number, routine?: Routine): SessionDraft {
+export type SharedWorkoutSeed = Readonly<{
+  title: string;
+  exercises: readonly {
+    exercise: ExerciseSummary;
+    sets: readonly {
+      reps: number | null;
+      weight_kg: string | null;
+      duration_seconds?: number | null;
+      distance_km?: string | null;
+    }[];
+  }[];
+}>;
+
+export function createSessionDraft(
+  accountId: number,
+  routine?: Routine | SharedWorkoutSeed,
+): SessionDraft {
   return {
     version: 1,
     accountId,
     clientId: randomUUID(),
     startedAt: new Date().toISOString(),
-    routineId: routine?.id ?? null,
-    name: routine?.name ?? 'Workout',
+    routineId: routine && 'id' in routine ? routine.id : null,
+    name: routine && 'title' in routine ? routine.title : (routine?.name ?? 'Workout'),
     minimized: false,
     displayUnit: 'kg',
     frozen: null,

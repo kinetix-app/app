@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { measurementSystemSchema, type Account } from './schemas';
+import { activityLevelSchema, measurementSystemSchema, type Account } from './schemas';
 
 export type MeasurementSystem = 'metric' | 'imperial';
 const decimalInput = /^\d+(?:\.\d{1,2})?$/;
@@ -25,17 +25,32 @@ export function displayWeight(kg: string, system: MeasurementSystem) {
   );
 }
 
+function inchesToCm(inches: bigint) {
+  return fixed((inches * 254n + 50n) / 100n);
+}
+
+function cmToInches(cm: string) {
+  return (cents(cm) * 100n + 127n) / 254n;
+}
+
 /** 1 inch = exactly 2.54 cm; canonical cm rounds half-up to two places. */
+export function canonicalLength(value: string, system: MeasurementSystem) {
+  return system === 'metric' ? fixed(cents(value)) : inchesToCm(cents(value));
+}
+
+export function displayLength(cm: string, system: MeasurementSystem) {
+  return fixed(system === 'metric' ? cents(cm) : cmToInches(cm));
+}
+
 export function canonicalHeight(
   value: Pick<ProfileFormValues, 'height_cm' | 'height_ft' | 'height_in'>,
   system: MeasurementSystem,
 ) {
-  if (system === 'metric') return fixed(cents(value.height_cm));
-  const inches = BigInt(value.height_ft) * 1200n + cents(value.height_in);
-  return fixed((inches * 254n + 50n) / 100n);
+  if (system === 'metric') return canonicalLength(value.height_cm, system);
+  return inchesToCm(BigInt(value.height_ft) * 1200n + cents(value.height_in));
 }
 export function displayHeight(cm: string) {
-  const totalInches = (cents(cm) * 100n + 127n) / 254n;
+  const totalInches = cmToInches(cm);
   return {
     height_cm: fixed(cents(cm)),
     height_ft: String(totalInches / 1200n),
@@ -54,6 +69,8 @@ const profileFormShape = z.object({
   height_in: z.string(),
   weight: z.string(),
   measurement_system: measurementSystemSchema.nullable(),
+  sex: z.enum(['male', 'female']).nullable(),
+  activity_level: activityLevelSchema.nullable(),
 });
 export type ProfileFormValues = z.infer<typeof profileFormShape>;
 
@@ -104,6 +121,8 @@ function validateProfileForm(value: ProfileFormValues, context: z.RefinementCtx)
   const issue: AddProfileIssue = (field, message) =>
     context.addIssue({ code: 'custom', path: [field], message });
   const system = value.measurement_system;
+  if (!value.sex) issue('sex', 'Choose Male or Female.');
+  if (!value.activity_level) issue('activity_level', 'Choose your usual activity level.');
   if (!system) {
     issue('measurement_system', 'Choose Metric or Imperial.');
     return;
@@ -126,6 +145,8 @@ export function profileDefaults(account: Account): ProfileFormValues {
     weight:
       p.weight_kg === null ? '' : displayWeight(p.weight_kg, p.measurement_system ?? 'metric'),
     measurement_system: p.measurement_system,
+    sex: p.sex ?? null,
+    activity_level: p.activity_level ?? null,
   };
 }
 

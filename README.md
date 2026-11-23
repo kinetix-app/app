@@ -1,5 +1,8 @@
 # Kinetix — frontend
 
+Nutrition's Edit goal opens a recommendation preview with explicit acceptance and
+a manual-entry alternative. See [nutrition](docs/features/nutrition.md).
+
 The authenticated [onboarding flow](docs/onboarding.md) requires a complete profile and selected objective; manual nutrition targets remain optional.
 
 The Android and iOS client for a university fitness project, built with **React Native, Expo, Expo Router and TypeScript**. The product brings together goals, nutrition, workout/activity tracking, shared training, a social feed, FriendsLeague competitions, reusable community content, exercise-form analysis and an AI personal trainer.
@@ -183,16 +186,20 @@ Stop the server with `docker compose --env-file .env.sonar --profile sonar stop 
 
 ## CI
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and on pushes to `master`, using Node from `.node-version` and pnpm from `package.json`. It has two jobs:
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and on pushes to `master`, using Node from `.node-version` and pnpm from `package.json`. It runs these jobs:
 
-- **Frontend checks:** checks out GitHub's merge commit on Ubuntu 24.04, restores the pnpm store, installs with `--frozen-lockfile`, then runs TypeScript, ESLint, Prettier, Jest with coverage, Expo Doctor and Android/iOS/web export. The job stops on failure and uploads the Jest LCOV report. Coverage appears in the test logs and has no percentage threshold yet.
+- **Detect code changes** compares the pull request merge commit with its base, or a push with its previous commit. Changes outside `docs/` and Markdown files count as code changes, including assets, dependencies, configuration and workflows. If the base is unavailable, checks run.
+- **Static checks** always run TypeScript, ESLint and Prettier. When code changes, **Tests and coverage** and **Expo checks** also run, in parallel with static checks. Each restores the pnpm store and installs with `--frozen-lockfile`. Tests upload the LCOV report; Expo runs Doctor and the Android/iOS/web export. Coverage appears in the test logs and has no percentage threshold yet.
+- **Frontend checks:** waits for change detection and the check jobs; it accepts skipped test and Expo jobs only when there are no code changes, preserving the required branch-protection check.
 - **SonarCloud:** uploads the analysis and coverage report to SonarCloud, then waits up to 300 seconds for the quality gate. Both pull-request and main-branch scans fail the job when the project's configured coverage or analysis requirements fail, or when the gate result cannot be obtained before the timeout. Quality gate thresholds are managed in SonarCloud; confirm that the assigned gate includes the required coverage and analysis conditions.
+
+For code changes, SonarCloud starts after the tests job uploads coverage, independently of the other checks. For documentation-only changes, its job reports success without running analysis because there is no new coverage report. Parallel jobs repeat setup, so elapsed time and total runner minutes depend on runner availability and job durations.
 
 The workflow uses commit-pinned actions, a read-only repository token and no persisted checkout credentials. A newer commit cancels the previous run for the same PR; each job has a timeout. No branch/path filters are used, so the required check can run for every PR.
 
 Once the workflow has run on GitHub, configure branch protection/rulesets to require **Frontend checks**, **SonarCloud** and a teammate's review. Creating this workflow does not configure repository protection. Read the failed step's logs, reproduce its command from this repository root and push the fix; keep CI commands aligned with local development scripts.
 
-This workflow verifies code, tests and bundling. Native compilation/device testing, API integration and release signing/distribution require their own verification. On 4 October 2026, actionlint validated the workflow and all run commands passed in a clean temporary checkout with the pinned toolchain. Its first GitHub-hosted run is still pending.
+This workflow verifies code, tests and bundling. Native compilation/device testing, API integration and release signing/distribution require their own verification. The parallel workflow must be verified on GitHub to measure elapsed time and runner usage.
 
 ### SonarCloud setup
 
@@ -204,7 +211,7 @@ CI-based analysis needs a SonarCloud project bound to the GitHub repository and 
 2. Confirm `sonar.projectKey` in [sonar-project.properties](sonar-project.properties) matches the imported project (`kinetix-frontend`) and the `-Dsonar.organization` value in the workflow matches (`kinetix-app`).
 3. Create a personal access token and store it as the `SONAR_TOKEN` repository secret.
 
-Pull requests from forks do not receive repository secrets, so the SonarCloud job is skipped for fork pull requests; the **Frontend checks** job still runs. The scanner needs full history, so the SonarCloud job checks out with `fetch-depth: 0` and downloads the coverage artifact produced by **Frontend checks**. Pull-request runs are analyzed in the pull-request context, and pushes to `master` update the project's main branch.
+Pull requests from forks do not receive repository secrets, so the SonarCloud job is skipped for fork pull requests; the **Frontend checks** job still runs. The scanner needs full history, so the SonarCloud job checks out with `fetch-depth: 0` and downloads the coverage artifact produced by **Tests and coverage**. Pull-request runs are analyzed in the pull-request context, and pushes to `master` update the project's main branch.
 
 ## Verification and known limits
 
@@ -268,5 +275,5 @@ for AsyncStorage. Sprint 2 measurement formats remain outside this increment.
 
 The authenticated [Home shell](docs/home.md) shows profile and objective information after setup.
 Nutrition-goal editing is optional and available from Home and Nutrition.
-Its shared bottom bar connects Home, Workout, blank workout start (+), Nutrition and a disabled League placeholder; the Home header's profile picture opens Profile. Profile groups account editing, sign-out, completed training history and a prepared Progress screen.
+Its shared bottom bar connects Home, Workout, blank workout start (+), Nutrition and the FriendsLeague tab (see [league behavior](docs/leagues.md)); the Home header's profile picture opens Profile. Profile groups account editing, sign-out, completed training history and a prepared Progress screen.
 Feature components live in `components/`; tests and fixtures live in `test/`.

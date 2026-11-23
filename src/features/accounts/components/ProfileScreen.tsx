@@ -3,18 +3,27 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { countLabel } from '@/features/feed/format';
 import { textStyles, spacing, usePalette } from '@/theme/tokens';
 import { getObjective } from '../api';
 import { profileDefaults } from '../profileForm';
 import type { Account } from '../schemas';
 import { objectiveOptions } from './ObjectiveEditor';
+import { activityOptions } from './ProfileEditor';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileBack } from './ProfileBack';
 import { ProfileGroup, ProfileRow } from './ProfileRows';
 import { setupStyles as s } from './SetupUI';
 
 export type ProfilePanel =
-  'overview' | 'profile' | 'objective' | 'nutrition' | 'progress' | 'history';
+  | 'overview'
+  | 'profile'
+  | 'objective'
+  | 'nutrition'
+  | 'activity'
+  | 'progress'
+  | 'history'
+  | 'friends';
 export function ProfileScreen({
   account,
   onOpen,
@@ -23,6 +32,7 @@ export function ProfileScreen({
   onSignOut,
   signingOut,
   signOutError,
+  friendRequests = 0,
 }: Readonly<{
   account: Account;
   onOpen: (panel: ProfilePanel) => void;
@@ -31,6 +41,8 @@ export function ProfileScreen({
   onSignOut: () => void;
   signingOut: boolean;
   signOutError: string;
+  /** Incoming friend requests, shown on the Friends row. */
+  friendRequests?: number;
 }>) {
   const p = usePalette();
   const objective = useQuery({
@@ -87,6 +99,15 @@ export function ProfileScreen({
         </ProfileGroup>
         <ProfileGroup title="Your plan">
           <ProfileRow
+            title="Weekly activity"
+            detail={
+              activityOptions.find((item) => item.value === account.profile.activity_level)
+                ?.label ?? 'Choose your activity level'
+            }
+            icon="activity"
+            onPress={() => onOpen('activity')}
+          />
+          <ProfileRow
             title="Change objective"
             detail={objective.isPending ? 'Loading…' : (goal ?? 'Objective unavailable')}
             icon="target"
@@ -105,6 +126,18 @@ export function ProfileScreen({
             title="Edit nutrition goal"
             icon="pie-chart"
             onPress={() => onOpen('nutrition')}
+          />
+        </ProfileGroup>
+        <ProfileGroup title="Social">
+          <ProfileRow
+            title="Friends"
+            detail={
+              friendRequests
+                ? countLabel(friendRequests, 'new request', 'new requests')
+                : 'Your friends, requests and people search'
+            }
+            icon="users"
+            onPress={() => onOpen('friends')}
           />
         </ProfileGroup>
         <ProfileGroup title="Activity">

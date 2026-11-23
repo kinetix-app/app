@@ -1,2 +1,2 @@
 export { NutritionDiaryScreen } from './components/NutritionDiaryScreen';
-export { NutritionGoalEditor } from './components/NutritionGoalEditor';
+export { NutritionGoalRecommendation as NutritionGoalEditor } from './components/NutritionGoalRecommendation';

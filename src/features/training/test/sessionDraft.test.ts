@@ -7,7 +7,7 @@ import {
   restoreServerDraft,
   refreshDraftExercises,
 } from '../sessionDraft';
-import { exampleRoutine } from './fixtures';
+import { exampleExercise, exampleRoutine } from './fixtures';
 
 jest.mock('expo-crypto', () => ({
   randomUUID: jest.fn(() => '3e17c183-38a9-4b5c-b953-7ae49433af17'),
@@ -30,6 +30,28 @@ test('both origins use a versioned account draft and routine actuals begin empty
   expect(routine.routineId).toBe(10);
   expect(sessionDraftSchema.parse(routine)).toEqual(routine);
 });
+test('a shared workout has no routine source and preserves gym and cardio targets without ticking sets', () => {
+  const draft = createSessionDraft(11, {
+    title: 'Shared workout',
+    exercises: [
+      { exercise: exampleExercise, sets: [{ reps: 6, weight_kg: '82.50' }] },
+      {
+        exercise: { ...exampleExercise, id: 8, name: 'Row', activity_type: 'cardio' },
+        sets: [{ reps: null, weight_kg: null, duration_seconds: 60, distance_km: '0.25' }],
+      },
+    ],
+  });
+  expect(draft.name).toBe('Shared workout');
+  expect(draft.routineId).toBeNull();
+  expect(draft.exercises.map((slot) => slot.exercise.id)).toEqual([exampleExercise.id, 8]);
+  expect(draft.exercises[0].guidance[0]).toMatchObject({ reps: 6, weightKg: '82.50' });
+  expect(draft.exercises[1].guidance[0]).toMatchObject({ durationSeconds: 60, distanceKm: '0.25' });
+  expect(draftSnapshot(draft).exercises.map((slot) => slot.sets[0].completed)).toEqual([
+    false,
+    false,
+  ]);
+});
+
 test('unit presentation retains original decimal input and never drifts on toggles', () => {
   const original = { value: '100.00', unit: 'lb' as const };
   for (let i = 0; i < 30; i++) {

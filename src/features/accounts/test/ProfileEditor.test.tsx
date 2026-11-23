@@ -2,6 +2,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ProfileEditor } from '../components/ProfileEditor';
+import { ActivityEditor } from '../components/ActivityEditor';
 import * as ImagePicker from 'expo-image-picker';
 import { removeProfilePicture, uploadProfilePicture, updateProfile } from '../api';
 import { completeAccount, incompleteAccount } from './fixtures';
@@ -19,6 +20,18 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
 }));
 beforeEach(() => jest.clearAllMocks());
+test('activity editor updates only the activity category', async () => {
+  const onSaved = jest.fn();
+  jest.mocked(updateProfile).mockResolvedValueOnce(completeAccount);
+  render(<ActivityEditor account={completeAccount} onSaved={onSaved} onCancel={jest.fn()} />);
+  expect(screen.getByRole('radio', { name: /^Moderate\./ }).props.accessibilityState.checked).toBe(
+    true,
+  );
+  fireEvent.press(screen.getByRole('radio', { name: /^Light\./ }));
+  fireEvent.press(screen.getByText('Save activity'));
+  await waitFor(() => expect(onSaved).toHaveBeenCalledWith(completeAccount));
+  expect(updateProfile).toHaveBeenCalledWith(expect.anything(), { activity_level: 'light' });
+});
 function show(
   account = completeAccount,
   onSaved = jest.fn(),
@@ -40,7 +53,28 @@ function next() {
 function review() {
   next();
   next();
+  next();
 }
+
+test('activity step requires a category and saves it with the profile', async () => {
+  jest.mocked(updateProfile).mockResolvedValueOnce(completeAccount);
+  show({ ...completeAccount, profile: { ...completeAccount.profile, activity_level: null } });
+  next();
+  next();
+  expect(screen.getByText('Step 3 of 4 · Usual activity')).toBeTruthy();
+  next();
+  expect(screen.getByText('Choose your usual activity level.')).toBeTruthy();
+  fireEvent.press(screen.getByRole('radio', { name: /^Moderate\./ }));
+  next();
+  expect(screen.getByText('Step 4 of 4 · Confirmation')).toBeTruthy();
+  fireEvent.press(screen.getByText('Save profile'));
+  await waitFor(() =>
+    expect(updateProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ activity_level: 'moderate' }),
+    ),
+  );
+});
 
 test('step validation requires explicit units and back retains values', async () => {
   show(incompleteAccount);
@@ -57,8 +91,12 @@ test('step validation requires explicit units and back retains values', async ()
   fireEvent.press(screen.getByRole('radio', { name: 'Metric' }));
   fireEvent.changeText(screen.getByLabelText('Weight'), '70');
   fireEvent.changeText(screen.getByLabelText('Height (cm)'), '170');
+  fireEvent.press(screen.getByRole('radio', { name: 'Female' }));
+  next();
+  fireEvent.press(screen.getByRole('radio', { name: /^Moderate\./ }));
   next();
   expect(screen.getByText('Confirmation')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Back'));
   fireEvent.press(screen.getByLabelText('Back'));
   expect(screen.getByLabelText('Age (years)').props.value).toBe('25');
   fireEvent.press(screen.getByLabelText('Back'));
@@ -76,6 +114,7 @@ test('failed save retains entries and retry omits picture field', async () => {
   next();
   fireEvent.press(screen.getByRole('radio', { name: 'Imperial' }));
   fireEvent.changeText(screen.getByLabelText('Weight'), '100');
+  next();
   next();
   fireEvent.press(screen.getByText('Save profile'));
   await screen.findByText(
@@ -138,6 +177,7 @@ test('switching systems without editing preserves canonical height and weight pr
   expect(screen.getByLabelText('Height (inches)').props.value).toBe('0.00');
   fireEvent.press(screen.getByRole('radio', { name: 'Metric' }));
   expect(screen.getByLabelText('Height (cm)').props.value).toBe('182.87');
+  next();
   next();
   fireEvent.press(screen.getByText('Save profile'));
   await waitFor(() => expect(updateProfile).toHaveBeenCalled());

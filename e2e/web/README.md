@@ -119,3 +119,29 @@ units, retry, reload, history immutability and second-account isolation. Run it 
 `pnpm exec playwright test --config e2e/web/playwright.config.ts exercise-evolution.spec.ts`.
 `exercise-history.spec.ts` covers the separate paginated History tab. Browser
 acceptance does not establish Android/iOS or screen-reader behavior.
+
+## Body progress acceptance
+
+Run `pnpm exec playwright test --config e2e/web/playwright.config.ts body-progress.spec.ts`
+with two fresh private synthetic identities and the migrated run-owned `_test`
+database above. The test creates its own complete profiles through the real API and
+needs no exercise catalogue or media setup. It verifies the empty chart, check-ins,
+a lost response and safe retry, chronological backdating, profile changes, a saved
+weight target, reload, light and dark layouts and account isolation.
+
+## Completed workout details
+
+Run `pnpm exec playwright test --config e2e/web/playwright.config.ts workout-detail.spec.ts`
+with two fresh private synthetic identities and the seeded Acceptance catalogue
+in a run-owned `_test` database. The scenario finishes a workout, previews and
+shares it, reopens it after reload, retries a failed history fetch, and checks
+the links from exercise history and league score history. The second account
+can open the authorized Feed post and receives a 404 for the private session.
+
+## Feed acceptance
+
+Run `pnpm exec playwright test --config e2e/web/playwright.config.ts feed.spec.ts`
+after the isolated API and catalogue setup above. It uses both synthetic accounts,
+plus Azurite with the post-media container enabled. The flow publishes a photo and
+completed workout, resumes a new draft after reload, reopens a saved comment, and
+exercises denied access after unfriending and after deletion.

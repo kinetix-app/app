@@ -1,0 +1,23 @@
+appId: cat.udl.kinetix
+---
+# An expired run-owned round is prepared by the fixture before this flow.
+- scrollUntilVisible:
+    element: Back to leagues
+    direction: UP
+- tapOn: Back to leagues
+- tapOn: ${MAESTRO_LEAGUE_NAME}
+- extendedWaitUntil:
+    visible: Round result
+    timeout: 20000
+- assertVisible: Final standings
+- tapOn: Got it
+- assertNotVisible: Round result
+- scrollUntilVisible:
+    element: Back to leagues
+    direction: UP
+- tapOn: Back to leagues
+- tapOn: ${MAESTRO_LEAGUE_NAME}
+- extendedWaitUntil:
+    visible: Standings
+    timeout: 20000
+- assertNotVisible: Round result

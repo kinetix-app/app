@@ -28,7 +28,7 @@ async function signIn(page: Page, second = false) {
   await expect(page.getByRole('button', { name: 'Open profile', exact: true })).toBeVisible();
 }
 async function openProfile(page: Page) {
-  await page.getByRole('tab', { name: 'Home', exact: true }).click();
+  await page.getByRole('tab', { name: 'Feed', exact: true }).click();
   await page.getByRole('button', { name: 'Open profile', exact: true }).click();
 }
 async function signOut(page: Page) {
@@ -41,6 +41,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
   page,
 }) => {
   test.setTimeout(120000);
+  page.setDefaultTimeout(10000);
   if (process.env.APP_ENV !== 'test' || !process.env.DATABASE_URL?.endsWith('_test'))
     throw new Error('Use a run-owned isolated test database and APP_ENV=test');
   for (const second of [false, true]) {
@@ -65,6 +66,8 @@ test('private Profile edits persist, history and Progress navigate correctly, an
           {
             display_name: second ? 'Acceptance Bob' : 'Acceptance Alice',
             age: 30,
+            sex: 'female',
+            activity_level: 'moderate',
             height_cm: '170.00',
             weight_kg: '70.000000',
             measurement_system: 'metric',
@@ -126,7 +129,6 @@ test('private Profile edits persist, history and Progress navigate correctly, an
     measurement_system: 'imperial',
     weight_kg: '70.000000',
   });
-  await page.getByRole('tab', { name: 'Home', exact: true }).click();
   await expect(
     page.getByText('Acceptance Alice updated', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
@@ -137,11 +139,12 @@ test('private Profile edits persist, history and Progress navigate correctly, an
     page.getByText('Acceptance Alice updated', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Progress', exact: true }).click();
-  await expect(page.getByText('154.32 lb', { exact: true })).toBeVisible();
-  await expect(page.getByText('Measurement recording is not available yet.')).toBeVisible();
+  await expect(page.getByText('154.32 lb', { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId('body-measurement-chart')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Log measurements', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
   await page.getByRole('button', { name: 'Training history', exact: true }).click();
-  await page.getByRole('button', { name: `View workout ${completed.id}`, exact: true }).click();
+  await page.getByTestId(`history-workout-${completed.id}`).click();
   await expect(page.getByText('1. Acceptance press', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to history', exact: true }).click();
   await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
@@ -167,6 +170,7 @@ test('private Profile edits persist, history and Progress navigate correctly, an
     draft.client_session_id,
   );
   await page.getByRole('button', { name: 'Resume workout', exact: true }).click();
+  await page.getByRole('button', { name: 'More actions', exact: true }).click();
   await page.getByRole('button', { name: 'Discard workout', exact: true }).click();
   await page.getByRole('button', { name: 'Discard', exact: true }).click();
   // Leave the shared synthetic identity ready for the photo regression.

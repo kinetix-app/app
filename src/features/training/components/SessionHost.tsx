@@ -10,9 +10,11 @@ import { Button, IconButton, Loading, ui } from './ui';
 export function SessionHost({
   children,
   hideMinimized = false,
+  reserveMinimizedSpace = false,
 }: Readonly<
   React.PropsWithChildren<{
     hideMinimized?: boolean;
+    reserveMinimizedSpace?: boolean;
   }>
 >) {
   const session = useSession();
@@ -33,7 +35,7 @@ export function SessionHost({
         {session.ready && session.storageError && !session.draft ? <StorageErrorState /> : null}
       </View>
       {session.draft?.minimized && !discard && !hideMinimized ? (
-        <MinimizedWorkoutCard onDiscard={() => setDiscard(true)} />
+        <MinimizedWorkoutCard inFlow={reserveMinimizedSpace} onDiscard={() => setDiscard(true)} />
       ) : null}
       <Modal
         transparent
@@ -94,7 +96,10 @@ function StorageErrorState() {
   );
 }
 
-function MinimizedWorkoutCard({ onDiscard }: Readonly<{ onDiscard: () => void }>) {
+function MinimizedWorkoutCard({
+  inFlow,
+  onDiscard,
+}: Readonly<{ inFlow: boolean; onDiscard: () => void }>) {
   const session = useSession();
   const p = usePalette();
   const draft = session.draft;
@@ -103,15 +108,19 @@ function MinimizedWorkoutCard({ onDiscard }: Readonly<{ onDiscard: () => void }>
     <SafeAreaView
       pointerEvents="box-none"
       edges={['bottom']}
-      style={{
-        position: 'absolute',
-        bottom: spacing['space-4'],
-        left: spacing['space-4'],
-        right: spacing['space-4'],
-        maxWidth: 640,
-        alignSelf: 'center',
-        zIndex: 10,
-      }}
+      style={
+        inFlow
+          ? { paddingHorizontal: spacing['space-4'], paddingBottom: spacing['space-4'] }
+          : {
+              position: 'absolute',
+              bottom: spacing['space-4'],
+              left: spacing['space-4'],
+              right: spacing['space-4'],
+              maxWidth: 640,
+              alignSelf: 'center',
+              zIndex: 10,
+            }
+      }
     >
       <View
         testID="ongoing-workout-card"
@@ -124,6 +133,7 @@ function MinimizedWorkoutCard({ onDiscard }: Readonly<{ onDiscard: () => void }>
             borderColor: p.brand,
             backgroundColor: p['surface-overlay'],
           },
+          inFlow && { width: '100%', maxWidth: 640, alignSelf: 'center' },
         ]}
       >
         <View style={ui.row}>

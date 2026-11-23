@@ -13,8 +13,8 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 .env
-.env.*
 !.env.example
+.env*.local
 *.jks
 *.keystore
 *.p8

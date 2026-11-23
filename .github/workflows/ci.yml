@@ -13,8 +13,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  checks:
-    name: Frontend checks
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.detect.outputs.code }}
+    steps:
+      - name: Check out the current commit and history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect changes outside documentation
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # Missing history (for example, a newly created branch) must run checks.
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+          elif git diff --quiet --no-renames "$BASE_SHA" HEAD -- . ':(exclude,glob)**/*.md' ':(exclude)docs/**'; then
+            echo 'code=false' >> "$GITHUB_OUTPUT"
+          else
+            status=$?
+            if [[ "$status" -ne 1 ]]; then exit "$status"; fi
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+          fi
+
+  static:
+    name: Static checks
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -54,6 +83,40 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
+  tests:
+    name: Tests and coverage
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      EXPO_NO_TELEMETRY: '1'
+      # The starter is standalone; PR checks do not need a live backend or secrets.
+      EXPO_PUBLIC_API_URL: ''
+
+    steps:
+      - name: Check out the PR merge commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned pnpm version
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+          standalone: true
+
+      - name: Install the pinned Node version and restore the pnpm store
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies from the lockfile
+        run: pnpm install --frozen-lockfile
+
       - name: Run tests with coverage
         run: pnpm test --ci --coverage
 
@@ -64,34 +127,103 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: error
 
+  expo:
+    name: Expo checks
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      EXPO_NO_TELEMETRY: '1'
+      # The starter is standalone; PR checks do not need a live backend or secrets.
+      EXPO_PUBLIC_API_URL: ''
+
+    steps:
+      - name: Check out the PR merge commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned pnpm version
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+          standalone: true
+
+      - name: Install the pinned Node version and restore the pnpm store
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies from the lockfile
+        run: pnpm install --frozen-lockfile
+
       - name: Check Expo compatibility
         run: pnpm run doctor
 
       - name: Bundle Android, iOS and web
         run: pnpm export --platform all
 
+  checks:
+    name: Frontend checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [changes, static, tests, expo]
+    if: ${{ always() }}
+    steps:
+      - name: Require applicable frontend jobs to succeed
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          STATIC_RESULT: ${{ needs.static.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+          EXPO_RESULT: ${{ needs.expo.result }}
+        run: |
+          [[ "$CHANGES_RESULT" == success && "$STATIC_RESULT" == success ]] || exit 1
+          case "$CODE_CHANGED:$TESTS_RESULT:$EXPO_RESULT" in
+            true:success:success|false:skipped:skipped) ;;
+            *) echo 'Required frontend jobs did not succeed'; exit 1 ;;
+          esac
+
   sonar:
     name: SonarCloud
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    needs: checks
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == false
+    needs: [changes, tests]
+    if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.fork == false)
 
     steps:
+      - name: Check whether analysis is applicable
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+        run: |
+          [[ "$CHANGES_RESULT" == success ]] || exit 1
+          case "$CODE_CHANGED:$TESTS_RESULT" in
+            true:success|false:skipped) ;;
+            *) echo 'Coverage job did not succeed'; exit 1 ;;
+          esac
+
       - name: Check out the full history
+        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Download coverage report
+        if: needs.changes.outputs.code == 'true'
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: coverage-lcov
           path: coverage
 
       - name: SonarCloud scan (pull request)
-        if: github.event_name == 'pull_request'
+        if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -106,7 +238,7 @@ jobs:
             -Dsonar.pullrequest.base=${{ github.base_ref }}
 
       - name: SonarCloud scan (main branch)
-        if: github.event_name == 'push'
+        if: needs.changes.outputs.code == 'true' && github.event_name == 'push'
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -118,7 +250,7 @@ jobs:
             -Dsonar.links.ci=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Summarize SonarCloud analysis context
-        if: always()
+        if: always() && needs.changes.outputs.code == 'true'
         env:
           ANALYSIS_REPOSITORY: ${{ github.repository }}
           ANALYSIS_BRANCH: ${{ github.head_ref || github.ref_name }}
