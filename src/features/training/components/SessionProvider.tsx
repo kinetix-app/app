@@ -18,6 +18,7 @@ import {
   restoreServerDraft,
   refreshDraftExercises,
   type SessionDraft,
+  type SharedWorkoutSeed,
 } from '../sessionDraft';
 import { sessionStorage } from '../sessionStorage';
 import { randomUUID } from 'expo-crypto';
@@ -31,6 +32,7 @@ type Controller = {
   error: string;
   storageError: boolean;
   start: (routine?: Routine) => void;
+  startShared: (seed: SharedWorkoutSeed) => Promise<boolean>;
   change: (edit: (draft: SessionDraft) => SessionDraft) => void;
   saveSet: (slotId: string, setId: string) => Promise<boolean>;
   sync: () => Promise<void>;
@@ -232,6 +234,20 @@ export function SessionProvider({
       void syncValue(value);
     },
     [ready, storageError, accountId, install, showStorageError, syncValue],
+  );
+  const startShared = useCallback(
+    async (seed: SharedWorkoutSeed) => {
+      if (!ready || closing.current || busy.current || storageError || current.current)
+        return false;
+      const value = createSessionDraft(accountId, seed);
+      const started = await syncValue(value);
+      if (!started && alive.current && !closing.current && !current.current) {
+        // Another device may have started a workout, or this request's reply may be lost.
+        await restore(request.current?.signal).catch(() => {});
+      }
+      return started;
+    },
+    [accountId, ready, restore, storageError, syncValue],
   );
   const sync = useCallback(async () => {
     if (current.current) await syncValue(current.current);
@@ -543,6 +559,7 @@ export function SessionProvider({
       error,
       storageError,
       start,
+      startShared,
       change,
       saveSet,
       sync,
@@ -561,6 +578,7 @@ export function SessionProvider({
       error,
       storageError,
       start,
+      startShared,
       change,
       saveSet,
       sync,

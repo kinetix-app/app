@@ -82,7 +82,7 @@ jest.mock('@/features/friends/api', () => ({
   friendsApi: { requests: jest.fn(), friends: jest.fn() },
 }));
 jest.mock('@/features/feed/api', () => ({
-  feedApi: { posts: jest.fn(), comments: jest.fn(), media: jest.fn() },
+  feedApi: { posts: jest.fn(), comments: jest.fn(), media: jest.fn(), workoutOptions: jest.fn() },
 }));
 jest.mock('@/features/training/api', () => ({
   trainingApi: {
@@ -131,6 +131,7 @@ beforeEach(() => {
   }));
   jest.mocked(trainingApi.routines).mockResolvedValue({ items: [], limit: 20, offset: 0 });
   jest.mocked(feedApi.posts).mockResolvedValue({ items: [], next_before_id: null });
+  jest.mocked(feedApi.workoutOptions).mockResolvedValue({ items: [], selected: null });
   jest.mocked(friendsApi.requests).mockResolvedValue({ incoming: [], outgoing: [] });
   jest.mocked(friendsApi.friends).mockResolvedValue({ items: [], limit: 50, offset: 0 });
 });
@@ -508,6 +509,14 @@ test('hardware back closes editing and ignores hidden Profile panels', async () 
   listener.mockRestore();
 });
 
+test('the Feed composer hides and restores bottom navigation', async () => {
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+  expect(screen.queryByRole('tab', { name: 'Feed' })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(await screen.findByRole('tab', { name: 'Feed', selected: true })).toBeTruthy();
+});
+
 test('a workout from Training history can be shared and opens the Feed composer', async () => {
   const finished = {
     id: 5,
@@ -522,13 +531,32 @@ test('a workout from Training history can be shared and opens the Feed composer'
   };
   jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [finished], limit: 50, offset: 0 });
   jest.mocked(trainingApi.session).mockResolvedValue(finished);
+  jest.mocked(feedApi.workoutOptions).mockResolvedValue({
+    items: [],
+    selected: {
+      session_id: finished.id,
+      title: finished.title,
+      started_at: finished.started_at,
+      ended_at: finished.ended_at,
+      activity_type: finished.activity_type,
+      duration_seconds: 3600,
+      exercise_count: 0,
+      set_count: 0,
+      total_reps: 0,
+      total_volume_kg: '0',
+      exercises: [],
+    },
+  });
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await screen.findByText('No posts yet', undefined, { timeout: 10000 });
   fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
   fireEvent.press(screen.getByText('Training history'));
   fireEvent.press(await screen.findByTestId('history-workout-5'));
   fireEvent.press(await screen.findByRole('button', { name: 'Share to feed' }));
-  expect(screen.getByRole('tab', { name: 'Feed' }).props.accessibilityState.selected).toBe(true);
-  const option = await screen.findByRole('radio', { name: /Workout finished/ });
-  expect(option.props.accessibilityState.checked).toBe(true);
+  expect(screen.queryByRole('tab', { name: 'Feed' })).toBeNull();
+  expect(
+    await screen.findByRole('button', { name: 'Workout to share: Training session' }),
+  ).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(await screen.findByRole('tab', { name: 'Feed', selected: true })).toBeTruthy();
 });

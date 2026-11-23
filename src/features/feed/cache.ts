@@ -6,6 +6,9 @@ export type FeedScope = 'everyone' | 'friends';
 export const feedKey = (accountId: number) => ['feed', accountId, 'posts'] as const;
 export const scopedFeedKey = (accountId: number, scope: FeedScope) =>
   [...feedKey(accountId), scope] as const;
+// The training prefix also refreshes composer options after a workout finishes.
+export const workoutOptionsKey = (accountId: number) =>
+  ['training', accountId, 'post-workout-options'] as const;
 export const commentsKey = (accountId: number, postId: number) =>
   ['feed', accountId, 'comments', postId] as const;
 

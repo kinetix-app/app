@@ -104,6 +104,7 @@ function HomeNavigation({
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
     setTab(next);
   }
+  const [composerOpen, setComposerOpen] = useState(false);
   const [composeSessionId, setComposeSessionId] = useState<number | null>(null);
   const [viewingFinished, setViewingFinished] = useState(false);
   /** Opens the Feed's new-post screen with a completed workout selected. */
@@ -252,8 +253,16 @@ function HomeNavigation({
         <FeedScreen
           accountId={accountId}
           active={tab === 'home' && (!session.draft || session.draft.minimized)}
+          workoutActions={{
+            activeDraft: Boolean(session.draft),
+            expandedDraft: Boolean(session.draft && !session.draft.minimized),
+            available: session.ready && !session.pending && !session.storageError,
+            start: session.startShared,
+            resume: () => session.change((value) => ({ ...value, minimized: false })),
+          }}
           composeSessionId={composeSessionId}
           onComposeClosed={() => setComposeSessionId(null)}
+          onComposerOpenChange={setComposerOpen}
           onFindFriends={() => openProfile('friends')}
           profileButton={
             <Pressable
@@ -331,6 +340,7 @@ function HomeNavigation({
         ))}
       </SessionHost>
       {!addingFood &&
+      (tab !== 'home' || (!composerOpen && composeSessionId === null)) &&
       (tab !== 'workout' || !routineEditing) &&
       (tab !== 'league' || !leagueDetailOpen) &&
       (tab !== 'profile' || profilePanel !== 'progress') ? (

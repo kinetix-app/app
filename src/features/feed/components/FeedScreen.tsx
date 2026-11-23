@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -9,8 +10,9 @@ import { ApiError } from '@/services/apiClient';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { PersonScreen } from '@/features/friends';
 import { feedApi } from '../api';
-import { prependPost, removePost, scopedFeedKey, updatePost } from '../cache';
+import { prependPost, removePost, scopedFeedKey, updatePost, workoutOptionsKey } from '../cache';
 import type { Post } from '../schemas';
+import { PostOptions, type WorkoutActions } from './PostOptions';
 import { CommentsScreen } from './CommentsScreen';
 import { PostCard } from './PostCard';
 import { ShareWorkoutScreen } from './ShareWorkoutScreen';
@@ -31,8 +33,10 @@ type FeedScreenProps = Readonly<{
   /** Opens the new-post screen with this completed workout selected (e.g. from history). */
   composeSessionId?: number | null;
   onComposeClosed?: () => void;
+  onComposerOpenChange?: (open: boolean) => void;
   /** Opens the shell's friends screen. */
   onFindFriends?: () => void;
+  workoutActions?: WorkoutActions;
 }>;
 
 export function FeedScreen({
@@ -41,13 +45,16 @@ export function FeedScreen({
   profileButton,
   composeSessionId = null,
   onComposeClosed,
+  onComposerOpenChange,
   onFindFriends,
+  workoutActions,
 }: FeedScreenProps) {
   const p = usePalette();
   const cache = useQueryClient();
   const [panel, setPanel] = useState<Panel>({ kind: 'feed' });
   const [liking, setLiking] = useState<ReadonlySet<number>>(new Set());
   const [likeErrors, setLikeErrors] = useState<ReadonlySet<number>>(new Set());
+  const [options, setOptions] = useState<Post | null>(null);
   const [deleting, setDeleting] = useState<Post | null>(null);
   // The feed shows only the person's own posts and their friends' posts.
   const feed = useInfiniteQuery({
@@ -59,6 +66,10 @@ export function FeedScreen({
   // A share request from the shell takes over until the composer closes.
   const view: Panel =
     composeSessionId !== null ? { kind: 'share', sessionId: composeSessionId } : panel;
+  const isComposing = view.kind === 'share';
+  useEffect(() => {
+    onComposerOpenChange?.(isComposing);
+  }, [isComposing, onComposerOpenChange]);
   const closePanel = useCallback(() => {
     setPanel({ kind: 'feed' });
     onComposeClosed?.();
@@ -67,7 +78,7 @@ export function FeedScreen({
     closePanel();
     return true;
   }, [closePanel]);
-  useHardwareBack(onBack, active && view.kind !== 'feed' && !deleting);
+  useHardwareBack(onBack, active && view.kind !== 'feed' && view.kind !== 'share' && !deleting);
 
   async function toggleLike(post: Post) {
     if (liking.has(post.id)) return;
@@ -110,8 +121,9 @@ export function FeedScreen({
       <ScreenHeader title="Feed">
         <View style={ui.row}>
           <IconButton
-            icon="plus-square"
+            icon={<Ionicons name="create-outline" size={24} color={p.ink} />}
             label="New post"
+            bare
             onPress={() => setPanel({ kind: 'share' })}
           />
           {profileButton}
@@ -137,10 +149,10 @@ export function FeedScreen({
           ui.screen,
           { backgroundColor: p['surface-100'], display: view.kind === 'feed' ? 'flex' : 'none' },
         ]}
-        aria-hidden={view.kind !== 'feed' || Boolean(deleting)}
-        accessibilityElementsHidden={view.kind !== 'feed' || Boolean(deleting)}
+        aria-hidden={view.kind !== 'feed' || Boolean(options || deleting)}
+        accessibilityElementsHidden={view.kind !== 'feed' || Boolean(options || deleting)}
         importantForAccessibility={
-          view.kind !== 'feed' || deleting ? 'no-hide-descendants' : 'auto'
+          view.kind !== 'feed' || options || deleting ? 'no-hide-descendants' : 'auto'
         }
       >
         <FlatList
@@ -182,7 +194,7 @@ export function FeedScreen({
               }}
               onComments={(post) => setPanel({ kind: 'comments', post })}
               onWorkout={(post) => setPanel({ kind: 'workout', post })}
-              onDelete={setDeleting}
+              onOptions={setOptions}
               onAuthor={(post) =>
                 setPanel({ kind: 'person', id: post.author.id, name: post.author.display_name })
               }
@@ -214,7 +226,7 @@ export function FeedScreen({
         />
       ) : null}
       {view.kind === 'comments' ? (
-        <CommentsScreen accountId={accountId} post={view.post} onBack={closePanel} />
+        <CommentsScreen accountId={accountId} postId={view.post.id} onBack={closePanel} />
       ) : null}
       {view.kind === 'workout' ? (
         <SharedWorkoutDetail accountId={accountId} post={view.post} onBack={closePanel} />
@@ -224,11 +236,26 @@ export function FeedScreen({
           key={`share-${view.sessionId ?? 'new'}`}
           accountId={accountId}
           initialSessionId={view.sessionId}
+          active={active}
           onClose={closePanel}
           onShared={(post) => {
             prependPost(cache, accountId, post);
+            if (post.workout)
+              void cache.invalidateQueries({ queryKey: workoutOptionsKey(accountId) });
             if (!feed.data) void feed.refetch();
             closePanel();
+          }}
+        />
+      ) : null}
+      {options ? (
+        <PostOptions
+          key={options.id}
+          post={options}
+          workoutActions={workoutActions}
+          onClose={() => setOptions(null)}
+          onDelete={(post) => {
+            setOptions(null);
+            setDeleting(post);
           }}
         />
       ) : null}
@@ -237,6 +264,8 @@ export function FeedScreen({
         onCancel={() => setDeleting(null)}
         onDeleted={(post) => {
           removePost(cache, accountId, post.id);
+          if (post.workout)
+            void cache.invalidateQueries({ queryKey: workoutOptionsKey(accountId) });
           setDeleting(null);
         }}
       />

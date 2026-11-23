@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
+test.use({ actionTimeout: 10000 });
+
 const api = process.env.KINETIX_API_URL ?? 'http://127.0.0.1:18016';
 const identities = [
   {
@@ -161,7 +163,9 @@ test('reopens the same completed workout from private screens and an authorized 
   await expect(privateSet).toBeVisible();
   await expect(page.getByRole('heading', { name: routineName, exact: true })).toBeVisible();
   await expect(workoutDetail).toBeVisible();
-  await expect(page.getByText('Duration', { exact: true })).toBeVisible();
+  await expect(
+    page.getByTestId('workout-detail-primary-metrics').getByText('Duration', { exact: true }),
+  ).toBeVisible();
   await expect(shareWorkout).toBeVisible();
   await page.getByRole('button', { name: 'Back to workout saved' }).click();
   await expect(shareWorkout).toHaveCount(0);
@@ -171,7 +175,7 @@ test('reopens the same completed workout from private screens and an authorized 
   await expect(page.getByLabel('Caption', { exact: true })).toHaveValue('');
   await page.getByLabel('Caption', { exact: true }).fill('An acceptance workout');
   await page.getByLabel('Description', { exact: true }).fill('Three screens share this result.');
-  await page.getByRole('button', { name: 'View workout', exact: true }).click();
+  await page.getByRole('button', { name: 'Preview workout', exact: true }).click();
   await expect(workoutDetail).toBeVisible();
   await expect(privateSet).toBeVisible();
   await expect(shareWorkout).toHaveCount(0);
@@ -184,8 +188,10 @@ test('reopens the same completed workout from private screens and an authorized 
     (response) => response.url().endsWith('/posts') && response.request().method() === 'POST',
   );
   await page.getByRole('button', { name: 'Share', exact: true }).click();
-  expect((await posted).status()).toBe(201);
-  expect(await (await posted).json()).toMatchObject({
+  const published = await posted;
+  expect(published.status()).toBe(201);
+  const sharedPost = await published.json();
+  expect(sharedPost).toMatchObject({
     caption: 'An acceptance workout',
     description: 'Three screens share this result.',
     workout: { title: routineName },
@@ -246,11 +252,10 @@ test('reopens the same completed workout from private screens and an authorized 
   try {
     await peerPage.setViewportSize({ width: 320, height: 740 });
     await signIn(peerPage, peer);
-    const postWorkout = peerPage.getByRole('button', { name: 'See Workout Alice’s workout' });
-    await expect(peerPage.getByText('An acceptance workout', { exact: true })).toBeVisible();
-    await expect(
-      peerPage.getByText('Three screens share this result.', { exact: true }),
-    ).toBeVisible();
+    const post = peerPage.getByTestId(`post-${sharedPost.id}`);
+    const postWorkout = post.getByRole('button', { name: 'See Workout Alice’s workout' });
+    await expect(post.getByText('An acceptance workout', { exact: true })).toBeVisible();
+    await expect(post.getByText('Three screens share this result.', { exact: true })).toBeVisible();
     await expect(postWorkout.getByText(routineName, { exact: true })).toBeVisible();
     await expect(postWorkout.getByText('340 kg', { exact: true })).toBeVisible();
     await expect(postWorkout.getByText('Acceptance press', { exact: true })).toHaveCount(0);

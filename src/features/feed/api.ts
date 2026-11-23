@@ -8,6 +8,8 @@ import {
   postPageSchema,
   postSchema,
   workoutDetailSchema,
+  workoutOptionsSchema,
+  workoutTemplateSchema,
   type PostVisibility,
 } from './schemas';
 
@@ -62,10 +64,20 @@ export const feedApi = {
       schema: postPageSchema,
       signal,
     }),
+  post: (postId: number, signal?: AbortSignal) =>
+    apiClient.get(`/api/v1/posts/${postId}`, { schema: postSchema, signal }),
   create: (input: PostInput, signal?: AbortSignal) =>
     apiClient.postMultipart('/api/v1/posts', buildPostForm(input), { schema: postSchema, signal }),
   workout: (postId: number, signal?: AbortSignal) =>
     apiClient.get(`/api/v1/posts/${postId}/workout`, { schema: workoutDetailSchema, signal }),
+  workoutOptions: (selectedSessionId: number | null, signal?: AbortSignal) =>
+    apiClient.get(
+      '/api/v1/posts/workout-options' +
+        (selectedSessionId === null ? '' : `?selected_session_id=${selectedSessionId}`),
+      { schema: workoutOptionsSchema, signal },
+    ),
+  workoutTemplate: (postId: number) =>
+    apiClient.get(`/api/v1/posts/${postId}/workout-template`, { schema: workoutTemplateSchema }),
   remove: (postId: number) => apiClient.delete(`/api/v1/posts/${postId}`),
   like: (postId: number, liked: boolean) =>
     liked

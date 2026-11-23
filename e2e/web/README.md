@@ -137,3 +137,11 @@ in a run-owned `_test` database. The scenario finishes a workout, previews and
 shares it, reopens it after reload, retries a failed history fetch, and checks
 the links from exercise history and league score history. The second account
 can open the authorized Feed post and receives a 404 for the private session.
+
+## Feed acceptance
+
+Run `pnpm exec playwright test --config e2e/web/playwright.config.ts feed.spec.ts`
+after the isolated API and catalogue setup above. It uses both synthetic accounts,
+plus Azurite with the post-media container enabled. The flow publishes a photo and
+completed workout, resumes a new draft after reload, reopens a saved comment, and
+exercises denied access after unfriending and after deletion.

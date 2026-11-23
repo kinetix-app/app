@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Image } from 'react-native';
+import { AccessibilityInfo, BackHandler, FlatList, Image, Modal, View } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   act,
@@ -10,6 +10,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react-native';
+import { textStyles } from '@/theme/tokens';
 import { ApiError } from '@/services/apiClient';
 import { trainingApi } from '@/features/training/api';
 import { exampleExercise } from '@/features/training/test/fixtures';
@@ -43,6 +44,7 @@ jest.mock('../api', () => ({
   ...jest.requireActual('../api'),
   feedApi: {
     posts: jest.fn(),
+    post: jest.fn(),
     create: jest.fn(),
     remove: jest.fn(),
     like: jest.fn(),
@@ -51,18 +53,21 @@ jest.mock('../api', () => ({
     removeComment: jest.fn(),
     media: jest.fn(),
     workout: jest.fn(),
+    workoutTemplate: jest.fn(),
+    workoutOptions: jest.fn(),
   },
 }));
 
 // Composer flows have many interactions; allow for slower machines.
 jest.setTimeout(20000);
 
-const workout = {
-  id: 7,
-  title: 'Strength A',
-  ended_at: '2026-11-09T16:45:00Z',
-  exercises: [{ id: 1, exercise: { name: 'Bench press' }, sets: [{}, {}] }],
-};
+const workout = makePost().workout!;
+async function selectWorkout() {
+  fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+  const option = await screen.findByRole('button', { name: workout.title });
+  expect(option.props.accessibilityState.selected).toBe(false);
+  fireEvent.press(option);
+}
 
 const clients: QueryClient[] = [];
 
@@ -79,15 +84,22 @@ function renderFeed(props: Partial<React.ComponentProps<typeof FeedScreen>> = {}
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
+  jest.restoreAllMocks();
 });
 
 beforeEach(() => {
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+  jest.spyOn(View.prototype, 'measureInWindow').mockImplementation((measure) => {
+    measure(16, 160, 358, 64);
+  });
   jest.clearAllMocks();
   jest.mocked(feedApi.posts).mockResolvedValue({ items: [makePost()], next_before_id: null });
+  jest.mocked(feedApi.post).mockResolvedValue(makePost());
   jest.mocked(feedApi.comments).mockResolvedValue({ items: [], next_after_id: null });
-  jest
-    .mocked(trainingApi.sessions)
-    .mockResolvedValue({ items: [workout], limit: 50, offset: 0 } as never);
+  jest.mocked(feedApi.workoutOptions).mockImplementation(async (selected) => ({
+    items: [workout],
+    selected: selected === workout.session_id ? workout : null,
+  }));
 });
 
 test('feed shows the author, description, workout title, summary and counts', async () => {
@@ -101,8 +113,23 @@ test('feed shows the author, description, workout title, summary and counts', as
   expect(screen.getByText('Exercises')).toBeTruthy();
   expect(screen.queryByText('Bench press · Squat')).toBeNull();
   expect(screen.getByText('2 likes')).toBeTruthy();
-  expect(screen.queryByLabelText('Delete your post')).toBeNull();
   expect(feedApi.posts).toHaveBeenCalledWith(null, expect.any(AbortSignal), 'friends');
+});
+
+test('captions are headings while descriptions keep body typography', async () => {
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [
+      makePost({ caption: 'A bigger caption', description: '' }),
+      makePost({ id: 11, caption: '', description: 'Description only' }),
+    ],
+    next_before_id: null,
+  });
+  renderFeed();
+  expect(await screen.findByRole('header', { name: 'A bigger caption' })).toHaveStyle(
+    textStyles['title-lg'],
+  );
+  expect(screen.getByText('Description only')).toHaveStyle(textStyles.body);
+  expect(screen.queryByRole('header', { name: 'Description only' })).toBeNull();
 });
 
 test('a workout without lifting volume shows its exercise count and recorded duration', async () => {
@@ -187,12 +214,49 @@ test('comments open, post a trimmed comment and update the feed count', async ()
   fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
   expect(await screen.findByText('No comments yet. Start the conversation.')).toBeTruthy();
   fireEvent.changeText(screen.getByLabelText('Write a comment'), '  Strong work  ');
-  fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Send comment' }));
   expect(await screen.findByText('Strong work')).toBeTruthy();
   expect(feedApi.addComment).toHaveBeenCalledWith(10, 'Strong work');
   expect(screen.getByLabelText('Write a comment').props.value).toBe('');
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(await screen.findByText('1 comment')).toBeTruthy();
+});
+
+test('comments show the current post content without feed actions', async () => {
+  jest.mocked(feedApi.post).mockResolvedValue(makePost({ caption: 'Current caption' }));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  const summary = within(await screen.findByTestId('post-10'));
+  expect(summary.getByText('Bob')).toBeTruthy();
+  expect(summary.getByRole('header', { name: 'Current caption' })).toBeTruthy();
+  expect(summary.getByText('Leg day done')).toBeTruthy();
+  expect(summary.getByText('Strength A')).toBeTruthy();
+  expect(summary.queryByRole('button', { name: 'Post options' })).toBeNull();
+  expect(screen.getByLabelText('Write a comment')).toBeTruthy();
+  expect(feedApi.post).toHaveBeenCalledWith(10, expect.any(AbortSignal));
+});
+
+test('a post that has become unavailable is removed from the feed before commenting', async () => {
+  jest.mocked(feedApi.post).mockRejectedValueOnce(new ApiError(404));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  expect(await screen.findByText('This post is no longer available.')).toBeTruthy();
+  expect(screen.queryByLabelText('Write a comment')).toBeNull();
+  expect(feedApi.comments).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(await screen.findByText('No posts yet')).toBeTruthy();
+});
+
+test('losing access while commenting removes the composer and post context', async () => {
+  jest.mocked(feedApi.addComment).mockRejectedValueOnce(new ApiError(404));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  await screen.findByText('No comments yet. Start the conversation.');
+  fireEvent.changeText(screen.getByLabelText('Write a comment'), 'My message');
+  fireEvent.press(screen.getByRole('button', { name: 'Send comment' }));
+  expect(await screen.findByText('This post is no longer available.')).toBeTruthy();
+  expect(screen.queryByLabelText('Write a comment')).toBeNull();
+  expect(screen.queryByTestId('post-10')).toBeNull();
 });
 
 test('tapping a shared workout shows every exercise and set', async () => {
@@ -269,12 +333,34 @@ test('a workout that is no longer available says so', async () => {
   expect(await screen.findByText('This workout is no longer available.')).toBeTruthy();
 });
 
+test('the send icon is disabled for blank text and while submitting', async () => {
+  let reject = (_: Error) => {};
+  jest.mocked(feedApi.addComment).mockImplementation(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+  );
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  const send = await screen.findByRole('button', { name: 'Send comment' });
+  expect(send).toBeDisabled();
+  fireEvent.changeText(screen.getByLabelText('Write a comment'), 'A comment');
+  fireEvent.press(send);
+  expect(send).toBeDisabled();
+  expect(send.props.accessibilityState.busy).toBe(true);
+  await act(async () => reject(new Error('offline')));
+  expect(send).not.toBeDisabled();
+  expect(send.props.accessibilityState.busy).toBe(false);
+  expect(screen.getByLabelText('Write a comment').props.value).toBe('A comment');
+});
+
 test('failed comment keeps the text', async () => {
   jest.mocked(feedApi.addComment).mockRejectedValue(new Error('offline'));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
   fireEvent.changeText(await screen.findByLabelText('Write a comment'), 'Nice');
-  fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Send comment' }));
   expect(
     await screen.findByText('Could not post your comment. Your text is kept. Try again.'),
   ).toBeTruthy();
@@ -304,12 +390,24 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   renderFeed();
   await screen.findByText('Leg day done');
   fireEvent.press(screen.getByRole('button', { name: 'New post' }));
-  const option = await screen.findByRole('radio', { name: /Workout finished/ });
-  expect(option.props.accessibilityState.checked).toBe(true);
+  expect(screen.queryByRole('button', { name: 'Preview workout' })).toBeNull();
+  const picker = screen.getByRole('button', { name: 'Workout to share: No workout' });
+  fireEvent.press(picker);
+  const menu = await screen.findByTestId('post-workout-menu');
+  expect(within(menu).queryByRole('button', { name: 'Preview No workout' })).toBeNull();
+  fireEvent.press(await within(menu).findByRole('button', { name: `Preview ${workout.title}` }));
+  const pickerModal = screen
+    .UNSAFE_getAllByType(Modal)
+    .find((item) => item.props.statusBarTranslucent);
+  act(() => pickerModal?.props.onDismiss?.());
+  expect(await screen.findByRole('header', { name: workout.title })).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Back to new post' }));
+  expect(screen.getByRole('button', { name: 'Workout to share: No workout' })).toBeTruthy();
+  await selectWorkout();
   expect(screen.getByLabelText('Caption').props.value).toBe('');
   fireEvent.changeText(screen.getByLabelText('Caption'), 'New PR');
   fireEvent.changeText(screen.getByLabelText('Description'), 'Two extra reps on the final set.');
-  fireEvent.press(screen.getByRole('button', { name: 'View workout' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Preview workout' }));
   expect(await screen.findByText('1. Bench press')).toBeTruthy();
   expect(screen.getByRole('header', { name: 'Workout detail' })).toBeTruthy();
   expect(screen.getByRole('header', { name: workout.title })).toBeTruthy();
@@ -318,7 +416,7 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   fireEvent.press(screen.getByRole('button', { name: 'Back to new post' }));
   expect(screen.getByLabelText('Caption').props.value).toBe('New PR');
   expect(screen.getByLabelText('Description').props.value).toBe('Two extra reps on the final set.');
-  expect(screen.getByRole('radio', { name: /Workout finished/, checked: true })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Workout to share: Strength A' })).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith({
@@ -334,14 +432,14 @@ test('sharing a workout posts it and shows it first in the feed', async () => {
   expect(cards[0].props.testID).toBe('post-11');
   expect(within(cards[0]).getByText('Two extra reps on the final set.')).toBeTruthy();
   expect(within(cards[0]).getByText('Strength A')).toBeTruthy();
-  expect(within(cards[0]).getByLabelText('Delete your post')).toBeTruthy();
+  expect(within(cards[0]).getByLabelText('Post options')).toBeTruthy();
 });
 
 test('an already shared workout keeps the caption and description and explains the conflict', async () => {
   jest.mocked(feedApi.create).mockRejectedValue(new ApiError(409));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
-  await screen.findByRole('radio', { name: /Workout finished/ });
+  await selectWorkout();
   fireEvent.changeText(screen.getByLabelText('Caption'), 'Keep me');
   fireEvent.changeText(screen.getByLabelText('Description'), 'Keep these notes too');
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
@@ -355,11 +453,142 @@ test('an already shared workout keeps the caption and description and explains t
 test('a share request opens the new post screen with that workout selected', async () => {
   const onComposeClosed = jest.fn();
   renderFeed({ composeSessionId: 7, onComposeClosed });
-  const option = await screen.findByRole('radio', { name: /Workout finished/ });
-  expect(option.props.accessibilityState.checked).toBe(true);
+  expect(await screen.findByRole('button', { name: 'Workout to share: Strength A' })).toBeTruthy();
+  expect(feedApi.workoutOptions).toHaveBeenCalledWith(7, expect.any(AbortSignal));
   expect(screen.queryByText('Workout saved')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(onComposeClosed).toHaveBeenCalledTimes(1);
+});
+
+test('back closes the workout dropdown before prompting to discard composer edits', async () => {
+  const callbacks = new Set<Parameters<typeof BackHandler.addEventListener>[1]>();
+  const listener = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, callback) => {
+    callbacks.add(callback);
+    return { remove: () => callbacks.delete(callback) };
+  });
+  try {
+    renderFeed();
+    fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+    fireEvent.changeText(screen.getByLabelText('Caption'), 'Keep this');
+    fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+    await screen.findByTestId('post-workout-menu');
+    fireEvent.press(screen.getByRole('button', { name: 'Close workout menu' }));
+    expect(screen.queryByTestId('post-workout-menu')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+    expect(screen.getByTestId('post-workout-menu')).toBeTruthy();
+    const modal = screen.UNSAFE_getAllByType(Modal).find((item) => item.props.statusBarTranslucent);
+    act(() => modal!.props.onRequestClose());
+    expect(screen.queryByTestId('post-workout-menu')).toBeNull();
+    expect(screen.queryByText('Discard this post?')).toBeNull();
+    await act(async () => {
+      [...callbacks].at(-1)?.({ type: 'hardwareBackPress', timeStamp: 0 });
+    });
+    fireEvent.press(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByLabelText('Caption').props.value).toBe('Keep this');
+    fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Discard' }));
+    expect(await screen.findByText('Leg day done')).toBeTruthy();
+  } finally {
+    listener.mockRestore();
+  }
+});
+
+test('back during a publish request leaves the composer open and preserves the draft on failure', async () => {
+  let reject = (_: Error) => {};
+  jest.mocked(feedApi.create).mockImplementation(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+  );
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+  fireEvent.changeText(screen.getByLabelText('Caption'), 'An edited caption');
+  fireEvent.press(screen.getByRole('button', { name: 'Share' }));
+  expect(screen.getByRole('button', { name: 'Back to feed' })).toBeDisabled();
+  await act(async () => reject(new Error('offline')));
+  expect(screen.getByLabelText('Caption').props.value).toBe('An edited caption');
+  fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
+  expect(screen.getByText('Discard this post?')).toBeTruthy();
+});
+
+test('an unavailable history workout is explained without selecting another one', async () => {
+  renderFeed({ composeSessionId: 123 });
+  expect(await screen.findByText(/The workout you opened is unavailable/)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Workout to share: No workout' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Share' })).toBeDisabled();
+});
+
+test('a friend must confirm before starting a workout with skipped exercises', async () => {
+  const seed = {
+    title: 'Strength A',
+    exercises: [{ exercise: exampleExercise, sets: [] }],
+    skipped_exercises: ['Private move'],
+  };
+  jest.mocked(feedApi.workoutTemplate).mockResolvedValue(seed);
+  const start = jest.fn().mockResolvedValue(true);
+  renderFeed({
+    workoutActions: {
+      activeDraft: false,
+      expandedDraft: false,
+      available: true,
+      start,
+      resume: jest.fn(),
+    },
+  });
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  expect(screen.queryByRole('button', { name: 'Delete post' })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Perform workout' }));
+  expect(await screen.findByText(/Private move/)).toBeTruthy();
+  expect(start).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Start available exercises' }));
+  await waitFor(() => expect(start).toHaveBeenCalledWith(seed));
+  expect(feedApi.workoutTemplate).toHaveBeenCalledTimes(1);
+});
+
+test('post options offer to resume an active workout without requesting a template', async () => {
+  const start = jest.fn();
+  const resume = jest.fn();
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [makePost({ is_mine: true })],
+    next_before_id: null,
+  });
+  renderFeed({
+    workoutActions: { activeDraft: true, expandedDraft: false, available: true, start, resume },
+  });
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  fireEvent.press(screen.getByRole('button', { name: 'Resume active workout' }));
+  expect(resume).toHaveBeenCalledTimes(1);
+  expect(start).not.toHaveBeenCalled();
+  expect(feedApi.workoutTemplate).not.toHaveBeenCalled();
+});
+
+test('cannot start a shared workout when all exercises are unavailable', async () => {
+  jest.mocked(feedApi.workoutTemplate).mockResolvedValue({
+    title: 'Strength A',
+    exercises: [],
+    skipped_exercises: ['Private move'],
+  });
+  const start = jest.fn();
+  jest.mocked(feedApi.posts).mockResolvedValue({
+    items: [makePost({ is_mine: true })],
+    next_before_id: null,
+  });
+  renderFeed({
+    workoutActions: {
+      activeDraft: false,
+      expandedDraft: false,
+      available: true,
+      start,
+      resume: jest.fn(),
+    },
+  });
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  fireEvent.press(screen.getByRole('button', { name: 'Perform again' }));
+  expect(
+    await screen.findByText('None of the exercises in this workout are available to you.'),
+  ).toBeTruthy();
+  expect(start).not.toHaveBeenCalled();
 });
 
 test('deleting your post asks first and removes it after confirmation', async () => {
@@ -368,11 +597,14 @@ test('deleting your post asks first and removes it after confirmation', async ()
     .mockResolvedValue({ items: [makePost({ is_mine: true })], next_before_id: null });
   jest.mocked(feedApi.remove).mockRejectedValueOnce(new Error('offline')).mockResolvedValue();
   renderFeed();
-  fireEvent.press(await screen.findByLabelText('Delete your post'));
+  fireEvent.press(await screen.findByLabelText('Post options'));
+  expect(screen.getByRole('button', { name: 'Edit post · Coming soon' })).toBeDisabled();
+  fireEvent.press(screen.getByRole('button', { name: 'Delete post' }));
   expect(screen.getByText('Delete this post?')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
   expect(feedApi.remove).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByLabelText('Delete your post'));
+  fireEvent.press(screen.getByLabelText('Post options'));
+  fireEvent.press(screen.getByRole('button', { name: 'Delete post' }));
   fireEvent.press(screen.getByRole('button', { name: 'Delete' }));
   expect(await screen.findByText('Could not delete the post. Try again.')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Delete' }));
@@ -382,7 +614,7 @@ test('deleting your post asks first and removes it after confirmation', async ()
 });
 
 test('without finished workouts a caption alone can be posted', async () => {
-  jest.mocked(trainingApi.sessions).mockResolvedValue({ items: [], limit: 50, offset: 0 } as never);
+  jest.mocked(feedApi.workoutOptions).mockResolvedValue({ items: [], selected: null });
   const free = makePost({
     id: 12,
     caption: 'Rest day',
@@ -394,11 +626,13 @@ test('without finished workouts a caption alone can be posted', async () => {
   jest.mocked(feedApi.create).mockResolvedValue(free);
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
-  expect(
-    await screen.findByText(
-      'No finished workouts yet. You can still post a caption, description or photos.',
-    ),
-  ).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Workout to share: No workout' }));
+  expect(await screen.findByText('No finished workouts available to share.')).toBeTruthy();
+  fireEvent.press(
+    within(screen.getByTestId('post-workout-menu')).getByRole('button', {
+      name: 'No workout',
+    }),
+  );
   const share = screen.getByRole('button', { name: 'Share' });
   expect(share.props.accessibilityState.disabled).toBe(true);
   fireEvent.changeText(screen.getByLabelText('Caption'), 'Rest day');
@@ -422,8 +656,13 @@ test('choosing No workout lets a description stand alone', async () => {
   jest.mocked(feedApi.create).mockResolvedValue(makePost({ id: 13, workout: null }));
   renderFeed();
   fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
-  await screen.findByRole('radio', { name: /Workout finished/ });
-  fireEvent.press(screen.getByRole('radio', { name: /No workout/ }));
+  await selectWorkout();
+  fireEvent.press(screen.getByRole('button', { name: 'Workout to share: Strength A' }));
+  fireEvent.press(
+    within(screen.getByTestId('post-workout-menu')).getByRole('button', {
+      name: 'No workout',
+    }),
+  );
   fireEvent.changeText(screen.getByLabelText('Description'), 'Just a thought');
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
@@ -494,7 +733,7 @@ test('shared posts are sent to friends and not labelled on every card', async ()
   renderFeed();
   expect(await screen.findByText('2 h ago')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'New post' }));
-  await screen.findByRole('radio', { name: /Workout finished/ });
+  await selectWorkout();
   fireEvent.press(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() =>
     expect(feedApi.create).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'FRIENDS' })),
@@ -572,6 +811,18 @@ test('photos can be picked, filtered by type and size, removed and shared', asyn
   expect(input.photos).toEqual([
     { uri: 'file:///a.jpg', name: 'a.jpg', type: 'image/jpeg', file: undefined },
   ]);
+});
+
+test('photo requirements are available on demand', async () => {
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: 'New post' }));
+  const info = screen.getByRole('button', { name: 'Photo requirements' });
+  expect(screen.queryByText(/Location and other photo details/)).toBeNull();
+  fireEvent.press(info);
+  expect(info.props.accessibilityState.expanded).toBe(true);
+  expect(screen.getByText(/Location and other photo details/)).toBeTruthy();
+  fireEvent.press(info);
+  expect(screen.queryByText(/Location and other photo details/)).toBeNull();
 });
 
 test('photo access denial, cancellation and picker failures are explained', async () => {

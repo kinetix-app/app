@@ -1,23 +1,95 @@
-import { useInfiniteQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
-import React, { useRef, useState } from 'react';
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PersonAvatar } from '@/features/friends/components/PersonAvatar';
 import { TextField } from '@/components/TextField';
 import { Button, IconButton, Loading, ui } from '@/features/training/components/ui';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
+import { ApiError } from '@/services/apiClient';
+import { PostCard } from './PostCard';
 import { feedApi } from '../api';
-import { commentsKey, updatePost } from '../cache';
+import { commentsKey, removePost, updatePost } from '../cache';
 import { authorName, relativeTime } from '../format';
 import { MAX_COMMENT_TEXT, type Comment, type CommentPage, type Post } from '../schemas';
 
 type Comments = InfiniteData<CommentPage, number | null>;
 
+function postMissing(error: unknown) {
+  return error instanceof ApiError && error.status === 404;
+}
+
 export function CommentsScreen({
   accountId,
-  post,
+  postId,
   onBack,
-}: Readonly<{ accountId: number; post: Post; onBack: () => void }>) {
+}: Readonly<{ accountId: number; postId: number; onBack: () => void }>) {
+  const p = usePalette();
+  const cache = useQueryClient();
+  const post = useQuery({
+    queryKey: ['feed', accountId, 'post', postId],
+    queryFn: ({ signal }) => feedApi.post(postId, signal),
+    gcTime: 0,
+    retry: (attempt, error) => !postMissing(error) && attempt < 1,
+  });
+  const [unavailable, setUnavailable] = useState(false);
+  const markUnavailable = useCallback(() => setUnavailable(true), []);
+  const gone = unavailable || postMissing(post.error);
+
+  useEffect(() => {
+    if (gone) removePost(cache, accountId, postId);
+  }, [gone, cache, accountId, postId]);
+
+  let content: React.ReactNode;
+  if (gone) {
+    content = (
+      <Text accessibilityRole="alert" style={[ui.content, { color: p.ink }]}>
+        This post is no longer available.
+      </Text>
+    );
+  } else if (post.isPending) {
+    content = <Loading />;
+  } else if (post.isError) {
+    content = (
+      <View style={ui.content}>
+        <Text accessibilityRole="alert" style={{ color: p.danger }}>
+          Could not load this post.
+        </Text>
+        <Button title="Retry" secondary onPress={() => void post.refetch()} />
+      </View>
+    );
+  } else {
+    content = (
+      <PostComments accountId={accountId} post={post.data} onUnavailable={markUnavailable} />
+    );
+  }
+
+  return (
+    <SafeAreaView
+      edges={['top', 'left', 'right']}
+      style={[ui.screen, { backgroundColor: p['surface-100'] }]}
+    >
+      <View style={[ui.row, styles.header]}>
+        <IconButton icon="arrow-left" label="Back to feed" onPress={onBack} />
+        <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
+          Comments
+        </Text>
+      </View>
+      {content}
+    </SafeAreaView>
+  );
+}
+
+function PostComments({
+  accountId,
+  post,
+  onUnavailable,
+}: Readonly<{ accountId: number; post: Post; onUnavailable: () => void }>) {
   const p = usePalette();
   const cache = useQueryClient();
   const key = commentsKey(accountId, post.id);
@@ -26,13 +98,17 @@ export function CommentsScreen({
     initialPageParam: null as number | null,
     queryFn: ({ pageParam, signal }) => feedApi.comments(post.id, pageParam, signal),
     getNextPageParam: (page) => page.next_after_id ?? undefined,
+    retry: false,
   });
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [removing, setRemoving] = useState<number | null>(null);
   const busy = useRef(false);
-  const name = authorName(post.author.display_name);
+  const gone = postMissing(comments.error);
+  useEffect(() => {
+    if (gone) onUnavailable();
+  }, [gone, onUnavailable]);
 
   function changeCount(delta: number) {
     updatePost(cache, accountId, post.id, (item) => ({
@@ -60,8 +136,9 @@ export function CommentsScreen({
       });
       changeCount(1);
       setDraft('');
-    } catch {
-      setError('Could not post your comment. Your text is kept. Try again.');
+    } catch (error_) {
+      if (postMissing(error_)) onUnavailable();
+      else setError('Could not post your comment. Your text is kept. Try again.');
     } finally {
       busy.current = false;
       setSending(false);
@@ -86,8 +163,9 @@ export function CommentsScreen({
           : data,
       );
       changeCount(-1);
-    } catch {
-      setError('Could not delete the comment. Try again.');
+    } catch (error_) {
+      if (postMissing(error_)) void comments.refetch();
+      else setError('Could not delete the comment. Try again.');
     } finally {
       setRemoving(null);
     }
@@ -110,114 +188,104 @@ export function CommentsScreen({
       </View>
     );
 
+  if (gone) return null;
+
   return (
-    <SafeAreaView
-      edges={['top', 'left', 'right']}
-      style={[ui.screen, { backgroundColor: p['surface-100'] }]}
+    <KeyboardAvoidingView
+      style={ui.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <KeyboardAvoidingView
-        style={ui.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <FlatList
-          contentContainerStyle={ui.content}
-          keyboardShouldPersistTaps="handled"
-          data={items}
-          keyExtractor={(item) => String(item.id)}
-          ListHeaderComponent={
-            <View style={ui.gap}>
-              <View style={ui.row}>
-                <IconButton icon="arrow-left" label="Back to feed" onPress={onBack} />
-                <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                  Comments
+      <FlatList
+        contentContainerStyle={ui.content}
+        keyboardShouldPersistTaps="handled"
+        data={items}
+        keyExtractor={(item) => String(item.id)}
+        ListHeaderComponent={
+          <View style={ui.gap}>
+            <PostCard accountId={accountId} post={post} />
+            {comments.isPending ? <Loading /> : null}
+            {comments.isError && !comments.data ? (
+              <View style={ui.gap}>
+                <Text accessibilityRole="alert" style={{ color: p.danger }}>
+                  Could not load comments.
                 </Text>
+                <Button title="Retry" secondary onPress={() => void comments.refetch()} />
               </View>
-              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                On {name}’s workout
-              </Text>
-              {comments.isPending ? <Loading /> : null}
-              {comments.isError && !comments.data ? (
-                <View style={ui.gap}>
-                  <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                    Could not load comments.
-                  </Text>
-                  <Button title="Retry" secondary onPress={() => void comments.refetch()} />
-                </View>
-              ) : null}
-            </View>
-          }
-          ListEmptyComponent={
-            comments.data ? (
-              <Text style={{ color: p['ink-muted'] }}>
-                No comments yet. Start the conversation.
-              </Text>
-            ) : null
-          }
-          renderItem={({ item }) => (
-            <View style={styles.comment}>
-              <PersonAvatar accountId={accountId} person={item.author} size={36} />
-              <View style={{ flex: 1, gap: spacing['space-1'] }}>
-                <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  <Text style={[textStyles.label, { color: p.ink }]}>
-                    {authorName(item.author.display_name)}
-                  </Text>
-                  {' · '}
-                  {relativeTime(item.created_at)}
-                </Text>
-                <Text style={[textStyles.body, { color: p.ink }]}>{item.comment}</Text>
-              </View>
-              {item.is_mine || post.is_mine ? (
-                <IconButton
-                  icon="trash-2"
-                  label={`Delete comment by ${authorName(item.author.display_name)}`}
-                  disabled={removing !== null}
-                  onPress={() => {
-                    void remove(item);
-                  }}
-                />
-              ) : null}
-            </View>
-          )}
-          onEndReachedThreshold={0.5}
-          onEndReached={() => {
-            if (comments.hasNextPage && !comments.isFetching && !comments.isFetchNextPageError)
-              void comments.fetchNextPage({ cancelRefetch: false });
-          }}
-          ListFooterComponent={footer}
-        />
-        <View style={[styles.composer, { borderColor: p.line, backgroundColor: p['surface-200'] }]}>
-          {error ? (
-            <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {error}
-            </Text>
-          ) : null}
-          <View style={ui.row}>
-            <TextField
-              accessibilityLabel="Write a comment"
-              placeholder="Write a comment"
-              value={draft}
-              onChangeText={setDraft}
-              maxLength={MAX_COMMENT_TEXT}
-              multiline
-              editable={!sending}
-              containerStyle={{ flex: 1 }}
-            />
-            <Button
-              title={sending ? 'Sending…' : 'Send'}
-              tone="positive"
-              disabled={sending || !draft.trim()}
-              onPress={() => {
-                void send();
-              }}
-            />
+            ) : null}
           </View>
+        }
+        ListEmptyComponent={
+          comments.data ? (
+            <Text style={{ color: p['ink-muted'] }}>No comments yet. Start the conversation.</Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <View style={styles.comment}>
+            <PersonAvatar accountId={accountId} person={item.author} size={36} />
+            <View style={{ flex: 1, gap: spacing['space-1'] }}>
+              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                <Text style={[textStyles.label, { color: p.ink }]}>
+                  {authorName(item.author.display_name)}
+                </Text>
+                {' · '}
+                {relativeTime(item.created_at)}
+              </Text>
+              <Text style={[textStyles.body, { color: p.ink }]}>{item.comment}</Text>
+            </View>
+            {item.is_mine || post.is_mine ? (
+              <IconButton
+                icon="trash-2"
+                label={`Delete comment by ${authorName(item.author.display_name)}`}
+                disabled={removing !== null}
+                onPress={() => {
+                  void remove(item);
+                }}
+              />
+            ) : null}
+          </View>
+        )}
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (comments.hasNextPage && !comments.isFetching && !comments.isFetchNextPageError)
+            void comments.fetchNextPage({ cancelRefetch: false });
+        }}
+        ListFooterComponent={footer}
+      />
+      <View style={[styles.composer, { borderColor: p.line, backgroundColor: p['surface-200'] }]}>
+        {error ? (
+          <Text accessibilityRole="alert" style={{ color: p.danger }}>
+            {error}
+          </Text>
+        ) : null}
+        <View style={ui.row}>
+          <TextField
+            accessibilityLabel="Write a comment"
+            placeholder="Write a comment"
+            value={draft}
+            onChangeText={setDraft}
+            maxLength={MAX_COMMENT_TEXT}
+            multiline
+            editable={!sending}
+            containerStyle={{ flex: 1 }}
+          />
+          <IconButton
+            icon={sending ? 'clock' : 'send'}
+            label="Send comment"
+            onOverlay
+            busy={sending}
+            disabled={sending || !draft.trim()}
+            onPress={() => {
+              void send();
+            }}
+          />
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  header: { paddingHorizontal: spacing['space-4'], paddingTop: spacing['space-2'] },
   comment: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing['space-3'] },
   composer: {
     borderTopWidth: 1,

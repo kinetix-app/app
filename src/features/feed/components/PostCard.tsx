@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PersonAvatar } from '@/features/friends/components/PersonAvatar';
@@ -12,23 +12,23 @@ import { PostImage } from './PostImage';
 type PostCardProps = Readonly<{
   accountId: number;
   post: Post;
-  likePending: boolean;
-  likeError: boolean;
-  onLike: (post: Post) => void;
-  onComments: (post: Post) => void;
-  onDelete: (post: Post) => void;
-  onAuthor: (post: Post) => void;
+  likePending?: boolean;
+  likeError?: boolean;
+  onLike?: (post: Post) => void;
+  onComments?: (post: Post) => void;
+  onOptions?: (post: Post) => void;
+  onAuthor?: (post: Post) => void;
   onWorkout?: (post: Post) => void;
 }>;
 
 export function PostCard({
   accountId,
   post,
-  likePending,
+  likePending = false,
   likeError,
   onLike,
   onComments,
-  onDelete,
+  onOptions,
   onAuthor,
   onWorkout,
 }: PostCardProps) {
@@ -40,32 +40,23 @@ export function PostCard({
       style={[styles.card, { backgroundColor: p['surface-200'], borderColor: p.line }]}
     >
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${name}’s profile`}
-          onPress={() => onAuthor(post)}
-          style={({ pressed }) => [styles.author, { opacity: pressed ? 0.65 : 1 }]}
-        >
-          <PersonAvatar accountId={accountId} person={post.author} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={[textStyles['title-md'], { color: p.ink }]}>
-              {name}
-            </Text>
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {relativeTime(post.created_at)}
-              {visibilityNote[post.visibility] ?? ''}
-            </Text>
-          </View>
-        </Pressable>
-        {post.is_mine ? (
-          <IconButton icon="trash-2" label="Delete your post" onPress={() => onDelete(post)} />
+        <PostByline accountId={accountId} post={post} name={name} onAuthor={onAuthor} />
+        {onOptions && (post.is_mine || post.workout) ? (
+          <IconButton
+            icon={<Feather name="more-horizontal" size={24} color={p.ink} />}
+            label="Post options"
+            bare
+            onPress={() => onOptions(post)}
+          />
         ) : null}
       </View>
       <MediaCarousel accountId={accountId} post={post} name={name} />
       {post.caption || post.description ? (
         <View style={styles.copy}>
           {post.caption ? (
-            <Text style={[textStyles['title-md'], { color: p.ink }]}>{post.caption}</Text>
+            <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
+              {post.caption}
+            </Text>
           ) : null}
           {post.description ? (
             <Text style={[textStyles.body, { color: p.ink }]}>{post.description}</Text>
@@ -79,46 +70,107 @@ export function PostCard({
           onPress={onWorkout ? () => onWorkout(post) : undefined}
         />
       ) : null}
-      <View style={styles.actions}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`}
-          accessibilityState={{
-            selected: post.liked_by_me,
-            disabled: likePending,
-            busy: likePending,
-          }}
-          disabled={likePending}
-          onPress={() => onLike(post)}
-          style={({ pressed }) => [styles.action, { opacity: likePending || pressed ? 0.55 : 1 }]}
-        >
-          <Ionicons
-            name={post.liked_by_me ? 'heart' : 'heart-outline'}
-            size={24}
-            color={post.liked_by_me ? p.brand : p.ink}
-          />
-          <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-            {countLabel(post.like_count, 'like')}
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Comments on post by ${name}, ${countLabel(post.comment_count, 'comment')}`}
-          onPress={() => onComments(post)}
-          style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
-        >
-          <Ionicons name="chatbubble-outline" size={22} color={p.ink} />
-          <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-            {countLabel(post.comment_count, 'comment')}
-          </Text>
-        </Pressable>
-      </View>
+      {onLike && onComments ? (
+        <PostReactions
+          post={post}
+          name={name}
+          likePending={likePending}
+          onLike={() => onLike(post)}
+          onComments={() => onComments(post)}
+        />
+      ) : null}
       {likeError ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
           Could not update your like. Try again.
         </Text>
       ) : null}
     </View>
+  );
+}
+
+function PostReactions({
+  post,
+  name,
+  likePending,
+  onLike,
+  onComments,
+}: Readonly<{
+  post: Post;
+  name: string;
+  likePending: boolean;
+  onLike: () => void;
+  onComments: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <View style={styles.actions}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`}
+        accessibilityState={{
+          selected: post.liked_by_me,
+          disabled: likePending,
+          busy: likePending,
+        }}
+        disabled={likePending}
+        onPress={onLike}
+        style={({ pressed }) => [styles.action, { opacity: likePending || pressed ? 0.55 : 1 }]}
+      >
+        <Ionicons
+          name={post.liked_by_me ? 'heart' : 'heart-outline'}
+          size={24}
+          color={post.liked_by_me ? p.brand : p.ink}
+        />
+        <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
+          {countLabel(post.like_count, 'like')}
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Comments on post by ${name}, ${countLabel(post.comment_count, 'comment')}`}
+        onPress={onComments}
+        style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
+      >
+        <Ionicons name="chatbubble-outline" size={22} color={p.ink} />
+        <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
+          {countLabel(post.comment_count, 'comment')}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function PostByline({
+  accountId,
+  post,
+  name,
+  onAuthor,
+}: Readonly<{ accountId: number; post: Post; name: string; onAuthor?: (post: Post) => void }>) {
+  const p = usePalette();
+  const byline = (
+    <>
+      <PersonAvatar accountId={accountId} person={post.author} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={[textStyles['title-md'], { color: p.ink }]}>
+          {name}
+        </Text>
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          {relativeTime(post.created_at)}
+          {visibilityNote[post.visibility] ?? ''}
+        </Text>
+      </View>
+    </>
+  );
+  if (!onAuthor) return <View style={styles.author}>{byline}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${name}’s profile`}
+      onPress={() => onAuthor(post)}
+      style={({ pressed }) => [styles.author, { opacity: pressed ? 0.65 : 1 }]}
+    >
+      {byline}
+    </Pressable>
   );
 }
 
@@ -133,10 +185,7 @@ function MediaCarousel({
   const total = post.media.length;
   if (!total) return null;
   return (
-    <View
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      style={{ borderRadius: radii['radius-md'], overflow: 'hidden', gap: spacing['space-2'] }}
-    >
+    <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={styles.media}>
       {width ? (
         <ScrollView
           horizontal
@@ -153,12 +202,12 @@ function MediaCarousel({
               accountId={accountId}
               path={item.url}
               label={`Photo ${position + 1} of ${total} by ${name}`}
-              style={{ width, height: width, borderRadius: radii['radius-md'] }}
+              style={{ width, height: 160, borderRadius: radii['radius-md'] }}
             />
           ))}
         </ScrollView>
       ) : (
-        <View style={{ aspectRatio: 1 }} />
+        <View style={styles.photoPlaceholder} />
       )}
       {total > 1 ? (
         <View style={styles.dots} accessibilityLabel={`Photo ${index + 1} of ${total}`}>
@@ -231,6 +280,8 @@ const styles = StyleSheet.create({
     gap: spacing['space-2'],
   },
   tabular: { fontVariant: ['tabular-nums'] },
+  media: { width: '100%', maxWidth: 300, gap: spacing['space-2'] },
+  photoPlaceholder: { height: 160 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: spacing['space-1'] },
   dot: { width: 8, height: 8, borderRadius: radii['radius-pill'] },
 });
