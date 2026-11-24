@@ -58,14 +58,14 @@ export function WorkoutDetail({
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={ExerciseSeparator}
         ListHeaderComponent={
-          workout ? (
+          (workout ? (
             <View style={styles.summarySection}>
               <WorkoutSummary workout={workout} author={author} />
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
                 Exercise results
               </Text>
             </View>
-          ) : null
+          ) : null) ?? undefined
         }
         ListEmptyComponent={
           workout ? (

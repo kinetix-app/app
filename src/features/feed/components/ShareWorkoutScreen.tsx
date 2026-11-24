@@ -136,10 +136,10 @@ export function ShareWorkoutScreen({
         visibility: 'FRIENDS',
         photos,
       });
-    } catch (failure) {
+    } catch (error_) {
       // Keep every entered value so the person can correct and retry.
-      setError(shareErrorMessage(failure));
-      if (failure instanceof ApiError && failure.status === 409) void workouts.refetch();
+      setError(shareErrorMessage(error_));
+      if (error_ instanceof ApiError && error_.status === 409) void workouts.refetch();
       busy.current = false;
       setPending(false);
       return;

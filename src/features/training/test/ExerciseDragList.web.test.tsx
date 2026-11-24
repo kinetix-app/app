@@ -1,10 +1,19 @@
-/** @jest-environment jsdom */
 import React from 'react';
+import { JSDOM } from 'jsdom';
 import { Platform, Text } from 'react-native';
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import ExerciseDragList from '../components/ExerciseDragList.web';
 import { WorkoutExerciseCard } from '../components/WorkoutEditor';
 import { exampleExercise } from './fixtures';
+
+jest.mock('@expo/vector-icons', () => ({ Feather: 'Icon' }));
+
+beforeAll(() => {
+  const dom = new JSDOM();
+  globalThis.window = dom.window as unknown as Window & typeof globalThis;
+  globalThis.document = dom.window.document;
+  globalThis.Element = dom.window.Element;
+});
 
 const items = [{ id: 'bench' }, { id: 'squat' }];
 const nativePlatform = Platform.OS;

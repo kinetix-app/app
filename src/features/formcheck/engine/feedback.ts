@@ -174,16 +174,52 @@ export function liveCues(
   return timeline;
 }
 
-export function buildFeedback(
+function positiveFeedback(
   spec: ExerciseSpec,
-  repResults: RepCriteria[],
-  scores: (number | null)[],
-  valid: boolean[],
   stats: Stats,
+  scores: (number | null)[],
   breakdown: number | null,
-  velocityLoss: number | null,
-  locale: Locale = 'en',
-): Feedback {
+  locale: Locale,
+  total: number,
+): string {
+  const { criteria, cues } = spec;
+  const msg = MESSAGES[locale];
+  const clean = criteria.filter(
+    (c) => stats[c.id].evaluated >= total / 2 && !stats[c.id].affected_reps.length,
+  );
+  if (breakdown !== null && breakdown >= 2) {
+    const early = mean(scores.slice(0, breakdown).filter((s): s is number => s !== null));
+    return fill(msg.early_good, { k: breakdown, score: fmt(early, 0, locale) });
+  } else if (clean.length) {
+    const best = clean.slice(1).reduce((a, c) => (c.weight > a.weight ? c : a), clean[0]);
+    return cues[best.id].good[locale];
+  } else {
+    const ranked = scores.map((s) => s ?? -1);
+    return fill(msg.best_rep, { rep: ranked.indexOf(Math.max(...ranked)) + 1 });
+  }
+}
+
+type FeedbackInput = {
+  spec: ExerciseSpec;
+  repResults: RepCriteria[];
+  scores: (number | null)[];
+  valid: boolean[];
+  stats: Stats;
+  breakdown: number | null;
+  velocityLoss: number | null;
+  locale?: Locale;
+};
+
+export function buildFeedback({
+  spec,
+  repResults,
+  scores,
+  valid,
+  stats,
+  breakdown,
+  velocityLoss,
+  locale = 'en',
+}: FeedbackInput): Feedback {
   const { cues, criteria } = spec;
   const msg = MESSAGES[locale];
   const byId = Object.fromEntries(criteria.map((c) => [c.id, c]));
@@ -201,25 +237,13 @@ export function buildFeedback(
     ([cid, s]) =>
       byId[cid].severity !== 'detail' && s.frequency >= 0.25 && s.affected_reps.length >= 2,
   );
-  let label: string =
-    setScore >= 85 && !repeated.length ? msg.solid : setScore >= 70 ? msg.good : msg.weak;
+  let label: string = msg.weak;
+  if (setScore >= 85 && !repeated.length) label = msg.solid;
+  else if (setScore >= 70) label = msg.good;
   if (breakdown !== null) label += fill(msg.until, { k: breakdown });
   else if (main) label += fill(msg.watch, { label: cues[main].label[locale] });
 
-  const clean = criteria.filter(
-    (c) => stats[c.id].evaluated >= total / 2 && !stats[c.id].affected_reps.length,
-  );
-  let good: string;
-  if (breakdown !== null && breakdown >= 2) {
-    const early = mean(scores.slice(0, breakdown).filter((s): s is number => s !== null));
-    good = fill(msg.early_good, { k: breakdown, score: fmt(early, 0, locale) });
-  } else if (clean.length) {
-    const best = clean.reduce((a, c) => (c.weight > a.weight ? c : a));
-    good = cues[best.id].good[locale];
-  } else {
-    const ranked = scores.map((s) => (s === null ? -1 : s));
-    good = fill(msg.best_rep, { rep: ranked.indexOf(Math.max(...ranked)) + 1 });
-  }
+  const good = positiveFeedback(spec, stats, scores, breakdown, locale, total);
 
   const findingFor = (cid: string) => {
     const s = stats[cid];

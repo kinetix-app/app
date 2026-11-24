@@ -10,9 +10,8 @@ export function roundRange(start: string, end: string, timezone: string) {
 }
 
 function formatThousandths(value: bigint) {
-  const fraction = String(value % 1000n)
-    .padStart(3, '0')
-    .replace(/0+$/, '');
+  let fraction = String(value % 1000n).padStart(3, '0');
+  while (fraction.endsWith('0')) fraction = fraction.slice(0, -1);
   const whole = String(value / 1000n);
   return fraction ? `${whole}.${fraction}` : whole;
 }

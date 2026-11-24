@@ -40,6 +40,16 @@ function message(error: unknown) {
   return 'Something went wrong. Please try again.';
 }
 
+function handlesLeagueBack(
+  active: boolean,
+  detailOpen: boolean,
+  information: boolean,
+  hasData: boolean,
+  isError: boolean,
+) {
+  return active && detailOpen && (information || !hasData || isError);
+}
+
 export function LeaguesScreen({
   accountId,
   initialInvitation,
@@ -232,7 +242,7 @@ export function LeaguesScreen({
       back();
       return true;
     },
-    active && detailOpen && (information || !detail.data || detail.isError),
+    handlesLeagueBack(active, detailOpen, information, Boolean(detail.data), detail.isError),
   );
   const leagueTitle =
     detail.data?.name ?? list.data?.find((item) => item.id === selected)?.name ?? 'League';
@@ -244,9 +254,16 @@ export function LeaguesScreen({
     setError('');
     setEditing(true);
   };
+  function openInformation() {
+    setInformation(true);
+    if (detail.isStale) void detail.refetch();
+  }
+
   function renderHeader() {
     const informationSubtitle = information ? 'League information' : undefined;
     const informationBackLabel = information ? 'Back to league' : 'Back to leagues';
+    let navigationLabel = information ? 'Standings' : 'Leagues';
+    if (editing) navigationLabel = 'Cancel';
     if (selected !== null)
       return (
         <LeaguePageHeader
@@ -257,15 +274,8 @@ export function LeaguesScreen({
           backLabel={editing ? 'Cancel editing' : informationBackLabel}
           onBack={back}
           disabled={pending}
-          onOpen={
-            !information && detail.data
-              ? () => {
-                  setInformation(true);
-                  if (detail.isStale) void detail.refetch();
-                }
-              : undefined
-          }
-          navigationLabel={editing ? 'Cancel' : information ? 'Standings' : 'Leagues'}
+          onOpen={!information && detail.data ? openInformation : undefined}
+          navigationLabel={navigationLabel}
           onEdit={information && !editing && detail.data?.role === 'admin' ? beginEdit : undefined}
         />
       );
@@ -651,28 +661,28 @@ export function LeaguesScreen({
           timezone={league.timezone}
         />
       ) : null}
-      {league && (historyMember || !information) ? (
-        historyMember ? (
-          <LeagueScoreHistory
-            accountId={accountId}
-            leagueId={league.id}
-            member={historyMember}
-            timezone={league.timezone ?? 'UTC'}
-            active={active}
-            backTo="League information"
-            onBack={back}
-          />
-        ) : (
-          <LeagueStandings
-            key={league.id}
-            accountId={accountId}
-            leagueId={league.id}
-            active={active}
-            header={header}
-            onBack={back}
-          />
-        )
-      ) : (
+      {league && historyMember ? (
+        <LeagueScoreHistory
+          accountId={accountId}
+          leagueId={league.id}
+          member={historyMember}
+          timezone={league.timezone ?? 'UTC'}
+          active={active}
+          backTo="League information"
+          onBack={back}
+        />
+      ) : null}
+      {league && !historyMember && !information ? (
+        <LeagueStandings
+          key={league.id}
+          accountId={accountId}
+          leagueId={league.id}
+          active={active}
+          header={header}
+          onBack={back}
+        />
+      ) : null}
+      {!(league && (historyMember || !information)) ? (
         <>
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -691,7 +701,7 @@ export function LeaguesScreen({
           </ScrollView>
           {renderDialogs()}
         </>
-      )}
+      ) : null}
     </SafeAreaView>
   );
 }

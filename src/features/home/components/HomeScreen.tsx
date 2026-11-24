@@ -366,7 +366,8 @@ function HomeNavigation({
             showShare
             onShare={shareFinishedWorkout}
           />
-        ) : finishedSessionId !== null ? (
+        ) : null}
+        {!viewingFinished && finishedSessionId !== null ? (
           <View
             style={{
               flex: 1,

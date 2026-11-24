@@ -56,7 +56,7 @@ The installed development app supplies native capabilities, while Metro supplies
 
 ## Development prerequisites
 
-Everyone needs Git, **Node 24.21.0 LTS**, **pnpm 11.23.0**, an editor with TypeScript support, and access to this repository. Node is pinned in `.node-version`/`.nvmrc`; pnpm is pinned in `package.json`. Install pnpm using its [official installation guide](https://pnpm.io/installation), then check the versions below. The application uses Expo SDK 57, React 19.2.3 and React Native 0.86.3; keep their versions aligned. [Expo system requirements](https://docs.expo.dev/get-started/create-a-project/)
+Everyone needs Git, **Node 24.21.0 LTS**, **pnpm 11.23.0**, an editor with TypeScript support, and access to this repository. Node is pinned in `.node-version`/`.nvmrc`; pnpm is pinned in `package.json`. Install pnpm using its [official installation guide](https://pnpm.io/installation), then check the versions below. The application uses Expo SDK 58, React 19.3.0 and React Native 0.88.1; keep their versions aligned. [Expo system requirements](https://docs.expo.dev/get-started/create-a-project/)
 
 Docker Compose v2 is optional for the local SonarQube verification described below. The app's type, lint, test and bundle checks do not require Docker.
 
@@ -64,13 +64,13 @@ pnpm reuses a shared dependency store across installations. We use the hoisted d
 
 | Target                             | Additional local requirements                                                                                                                                   |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Android on Linux, Windows or macOS | Android Studio, SDK Platform 36, Build Tools 36.0.0, NDK 27.1.12297006, SDK environment configuration, JDK 17, and an emulator or physical device               |
+| Android on Linux, Windows or macOS | Android Studio, SDK Platform 37, Build Tools 37.0.0, NDK 27.1.12297006, SDK environment configuration, JDK 17, and an emulator or physical device               |
 | Android physical device            | USB debugging/device authorization for the initial local installation, or the agreed team distribution method; network access to Metro and the development API  |
 | iOS local build                    | macOS, a supported Xcode version and its command-line tools, and CocoaPods for native dependency installation; an iOS simulator or signed physical-device build |
 | iOS from another operating system  | An agreed Mac/cloud build and installation route; cloud build access and signing are not configured yet                                                         |
 | Optional browser preview           | A modern browser and compatible web dependencies; native-only APIs still need native testing                                                                    |
 
-Use the [React Native environment guide](https://reactnative.dev/docs/set-up-your-environment) and [Expo environment guide](https://docs.expo.dev/get-started/set-up-your-environment/) for platform-specific installation. The generated baseline targets Android API 24+ (Android 7+) and iOS 16.4+. Confirm the team's demo devices meet these minimums; generated project settings remain the source of truth after SDK upgrades. On Windows, use one supported shell/toolchain consistently; avoid mixing Windows and WSL installations.
+Use the [React Native environment guide](https://reactnative.dev/docs/set-up-your-environment) and [Expo environment guide](https://docs.expo.dev/get-started/set-up-your-environment/) for platform-specific installation. The SDK 58 baseline targets Android API 24+ (Android 7+) and iOS 16.4+; it compiles with Android SDK 37 and targets SDK 36. Confirm the team's demo devices meet these minimums; generated project settings remain the source of truth after SDK upgrades. On Windows, use one supported shell/toolchain consistently; avoid mixing Windows and WSL installations.
 
 Check `node --version` and `pnpm --version`; for local Android builds also check `java -version` and `adb devices`. The emulator/device should appear as authorized. Tool installation alone is not proof that the project builds.
 

@@ -78,6 +78,11 @@ function hasCardio(set: RecordedSet) {
   return set.distance_km !== null || set.duration_seconds !== null;
 }
 
+function setRepetitions(set: RecordedSet, cardio: boolean): string | number {
+  if (!cardio) return set.reps ?? '—';
+  return set.duration_seconds === null ? '—' : formatCardioDuration(set.duration_seconds);
+}
+
 function SetTable({
   sets,
   cardio = false,
@@ -116,11 +121,7 @@ function SetTable({
             {(cardio ? set.distance_km : set.weight_kg) ?? '—'}
           </Text>
           <Text role="cell" style={[value, styles.measurement]}>
-            {cardio
-              ? set.duration_seconds === null
-                ? '—'
-                : formatCardioDuration(set.duration_seconds)
-              : (set.reps ?? '—')}
+            {setRepetitions(set, cardio)}
           </Text>
         </View>
       ))}

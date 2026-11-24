@@ -97,11 +97,11 @@ export function LeagueScoreHistory({
           </View>
         }
         ListEmptyComponent={
-          history.isSuccess ? (
+          (history.isSuccess ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
               No credited scores yet.
             </Text>
-          ) : null
+          ) : null) ?? undefined
         }
         renderItem={({ item }) => (
           <LeagueContributionRow
@@ -118,7 +118,7 @@ export function LeagueScoreHistory({
           if (history.hasNextPage && !history.isFetching && !history.isFetchNextPageError)
             following();
         }}
-        ListFooterComponent={renderPagination()}
+        ListFooterComponent={renderPagination() ?? undefined}
       />
       {active && ownHistory && workoutId !== null ? (
         <SessionWorkoutDetailModal

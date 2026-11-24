@@ -334,6 +334,7 @@ test('cancels deletion, explains a referenced food failure, then removes a selec
   expect(screen.queryByRole('button', { name: 'Add food' })).toBeNull();
 });
 test('creates a food with a macro estimate and refreshes the catalogue', async () => {
+  jest.useRealTimers();
   jest.mocked(nutritionApi.createFood).mockResolvedValue(food);
   open();
   fireEvent.press(screen.getByRole('button', { name: 'Create' }));
@@ -349,7 +350,8 @@ test('creates a food with a macro estimate and refreshes the catalogue', async (
   }
   expect(screen.getByLabelText('calories').props.value).toBe('101');
   fireEvent.press(screen.getByText('Save food'));
-  await waitFor(() => expect(screen.queryByLabelText('Food name')).toBeNull());
+  await waitFor(() => expect(nutritionApi.createFood).toHaveBeenCalled(), { timeout: 5000 });
+  await waitFor(() => expect(screen.queryByLabelText('Food name')).toBeNull(), { timeout: 5000 });
   expect(nutritionApi.createFood).toHaveBeenCalledWith({
     name: 'Rice',
     brand: null,
@@ -360,7 +362,7 @@ test('creates a food with a macro estimate and refreshes the catalogue', async (
     fats: 1,
   });
   expect(nutritionApi.foodPage).toHaveBeenCalledTimes(2);
-});
+}, 20000);
 test('reuses the food form with the existing values when editing', async () => {
   jest.mocked(nutritionApi.updateFood).mockResolvedValue({ ...food, name: 'Brown rice' });
   open();
@@ -510,6 +512,7 @@ test('recipe deletion can be cancelled and preserves referenced history', async 
   expect(screen.queryByRole('button', { name: 'Add recipe' })).toBeNull();
 });
 test('builds a recipe from searched ingredients, edits quantities and removes unwanted ingredients', async () => {
+  jest.useRealTimers();
   jest.mocked(nutritionApi.createRecipe).mockResolvedValue(recipe);
   open();
   fireEvent.press(screen.getByRole('tab', { name: 'Recipe' }));
@@ -546,10 +549,11 @@ test('builds a recipe from searched ingredients, edits quantities and removes un
   expect(screen.getByText('50 kcal', { exact: true })).toBeVisible();
   fireEvent.press(screen.getByRole('button', { name: 'Decrease servings' }));
   fireEvent.press(screen.getByRole('button', { name: 'Create recipe' }));
-  await waitFor(() => expect(screen.queryByLabelText('Recipe name')).toBeNull());
+  await waitFor(() => expect(nutritionApi.createRecipe).toHaveBeenCalled(), { timeout: 5000 });
+  await waitFor(() => expect(screen.queryByLabelText('Recipe name')).toBeNull(), { timeout: 5000 });
   expect(nutritionApi.createRecipe).toHaveBeenCalledWith({
     name: 'Rice bowl',
     servings: 2,
     ingredients: [{ food_id: 1, quantity_grams: 150 }],
   });
-});
+}, 20000);

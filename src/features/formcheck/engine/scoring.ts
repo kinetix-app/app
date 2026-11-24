@@ -47,7 +47,7 @@ export function scoreRep(
       results[c.id] = { value: null, sub: null, conf: null, disabled: true };
       continue;
     }
-    const value = metrics[c.metric] ?? NaN;
+    const value = metrics[c.metric] ?? Number.NaN;
     const perFrame: number[] = [];
     for (let i = rep.start; i <= rep.end; i++) {
       perFrame.push(Math.min(...c.points.map((p) => prep.vis[p][i])));

@@ -215,9 +215,9 @@ function PostComments({
           </View>
         }
         ListEmptyComponent={
-          comments.data ? (
+          (comments.data ? (
             <Text style={{ color: p['ink-muted'] }}>No comments yet. Start the conversation.</Text>
-          ) : null
+          ) : null) ?? undefined
         }
         renderItem={({ item }) => (
           <View style={styles.comment}>
@@ -249,7 +249,7 @@ function PostComments({
           if (comments.hasNextPage && !comments.isFetching && !comments.isFetchNextPageError)
             void comments.fetchNextPage({ cancelRefetch: false });
         }}
-        ListFooterComponent={footer}
+        ListFooterComponent={footer ?? undefined}
       />
       <View style={[styles.composer, { borderColor: p.line, backgroundColor: p['surface-200'] }]}>
         {error ? (

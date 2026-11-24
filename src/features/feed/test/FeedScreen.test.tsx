@@ -90,7 +90,7 @@ afterEach(() => {
 beforeEach(() => {
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
   jest.spyOn(View.prototype, 'measureInWindow').mockImplementation((measure) => {
-    measure(16, 160, 358, 64);
+    if (typeof measure === 'function') measure(16, 160, 358, 64);
   });
   jest.clearAllMocks();
   jest.mocked(feedApi.posts).mockResolvedValue({ items: [makePost()], next_before_id: null });

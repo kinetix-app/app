@@ -78,7 +78,7 @@ export function detectReps(
   const dt = t.length > 1 ? median(diff(t)) : 1 / 30;
   const k = Math.max(3, roundHalfEven(REP_FILTER_S / dt) | 1);
   const y = medianFilter(signal, k).map((v) => sign * v);
-  if (!y.some(isNum)) return { reps: [], rest: NaN };
+  if (!y.some(isNum)) return { reps: [], rest: Number.NaN };
   const span = nanpercentile(y, 95) - nanpercentile(y, 5);
   const minProm = Math.max(cfg.min_rom, REP_PROMINENCE * span);
   const valleys = prominentValleys(y, minProm);
@@ -86,7 +86,7 @@ export function detectReps(
   // Two valleys with no real rise between them are one rep (a wobble at the bottom): keep the deeper.
   const merged: number[] = [];
   for (const v of valleys) {
-    const last = merged[merged.length - 1];
+    const last = merged.at(-1)!;
     if (merged.length && nanmax(y.slice(last, v + 1)) - Math.max(y[last], y[v]) < minProm) {
       if (y[v] < y[last]) merged[merged.length - 1] = v;
       continue;

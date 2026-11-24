@@ -69,11 +69,11 @@ type Job = {
 
 /** JSON turns NaN (frames or joints without a pose) into null; the engine expects NaN back. */
 function revive(series: PoseSeries): PoseSeries {
-  const nan = (v: number | null) => (v === null ? NaN : v);
+  const nan = (v: number | null) => v ?? Number.NaN;
   return {
     ...series,
     xy: series.xy.map((frame) => frame.map((p) => p.map(nan))),
-    visibility: series.visibility.map((frame) => frame.map((v) => (v === null ? 0 : v))),
+    visibility: series.visibility.map((frame) => frame.map((v) => v ?? 0)),
     world: series.world?.map((frame) => frame.map((p) => p.map(nan))),
   };
 }
@@ -85,11 +85,9 @@ function abortError() {
 }
 
 export function mimeFor(uri: string): string {
-  return /\.mov$/i.test(uri)
-    ? 'video/quicktime'
-    : /\.webm$/i.test(uri)
-      ? 'video/webm'
-      : 'video/mp4';
+  if (/\.mov$/i.test(uri)) return 'video/quicktime';
+  if (/\.webm$/i.test(uri)) return 'video/webm';
+  return 'video/mp4';
 }
 
 export class WebViewPoseBridge {
@@ -97,9 +95,9 @@ export class WebViewPoseBridge {
   private ready = false;
   private wanted = false;
   private waiting: { resolve: () => void; reject: (e: unknown) => void }[] = [];
-  private jobs = new Map<number, Job>();
+  private readonly jobs = new Map<number, Job>();
   private nextId = 1;
-  private listeners = new Set<() => void>();
+  private readonly listeners = new Set<() => void>();
 
   /** The host mounts the WebView only once a recording needs it, then keeps it for later sets. */
   subscribe = (listener: () => void) => {

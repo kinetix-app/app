@@ -10,9 +10,9 @@ import {
 import { metricValue } from './metrics';
 import { isNum, nanmax, nanmedian, nanpercentile, roundTo, type Series } from './numeric';
 import { MAX_SIDE_RATIO, prepare, type PoseSeries, type Prepared, type Side } from './prepare';
-import { detectReps } from './reps';
+import { detectReps, type Rep } from './reps';
 import { findBreakdown, scoreRep, type RepCriteria } from './scoring';
-import { computeSignals } from './signals';
+import { computeSignals, type Signals } from './signals';
 import type { ExerciseSpec, Joint, Locale } from './spec';
 
 /** Same version as the Python reference this port matches (model/kinetix_technique.py). */
@@ -147,9 +147,12 @@ function checkInput(
   locale: Locale,
 ): Unassessable | null {
   const t = series.t;
-  if (t.length < 2 || t[t.length - 1] - t[0] < MIN_SET_SECONDS)
+  if (t.length < 2 || t.at(-1)! - t[0] < MIN_SET_SECONDS)
     return unassessable('too_short', spec, locale);
-  if ((spec.view ?? 'side') === 'side' && !(prep.sideViewRatio <= MAX_SIDE_RATIO)) {
+  if (
+    (spec.view ?? 'side') === 'side' &&
+    (Number.isNaN(prep.sideViewRatio) || prep.sideViewRatio > MAX_SIDE_RATIO)
+  ) {
     return unassessable('not_side_view', spec, locale, prep.warnings, {
       side_view_ratio: roundTo(prep.sideViewRatio, 2),
     });
@@ -169,6 +172,23 @@ function checkInput(
   return null;
 }
 
+function adjustRestBaselines(
+  spec: ExerciseSpec,
+  signals: Signals,
+  reps: Rep[],
+  frameCount: number,
+) {
+  const inside = new Array<boolean>(frameCount).fill(false);
+  for (const r of reps) for (let i = r.start; i <= r.end; i++) inside[i] = true;
+  for (const [name, s] of Object.entries(spec.signals)) {
+    if (s.baseline !== 'rest') continue;
+    const outside = signals[name].filter((_, i) => !inside[i]);
+    // No rest frames (reps back to back): use the calmest values instead.
+    const base = outside.some(isNum) ? nanmedian(outside) : nanpercentile(signals[name], 5);
+    signals[name] = signals[name].map((v) => v - base);
+  }
+}
+
 /** Turns the landmarks of one set into reps, a score per rep, a set score and one tip. */
 export function analyze(
   series: PoseSeries,
@@ -183,15 +203,7 @@ export function analyze(
   const { reps, rest } = detectReps(repSignal, prep.t, spec.rep);
   if (!reps.length) return unassessable('no_reps', spec, locale, prep.warnings);
 
-  const inside = new Array<boolean>(prep.t.length).fill(false);
-  for (const r of reps) for (let i = r.start; i <= r.end; i++) inside[i] = true;
-  for (const [name, s] of Object.entries(spec.signals)) {
-    if (s.baseline !== 'rest') continue;
-    const outside = signals[name].filter((_, i) => !inside[i]);
-    // No rest frames (reps back to back): use the calmest values instead.
-    const base = outside.some(isNum) ? nanmedian(outside) : nanpercentile(signals[name], 5);
-    signals[name] = signals[name].map((v) => v - base);
-  }
+  adjustRestBaselines(spec, signals, reps, prep.t.length);
 
   const repMetrics = reps.map((r) =>
     Object.fromEntries(
@@ -216,13 +228,13 @@ export function analyze(
   if (spec.effort_metric) {
     const speeds = repMetrics.map((m) => m[spec.effort_metric as string]);
     const first = speeds.slice(0, 2);
-    const top = first.some(isNum) ? nanmax(first) : NaN;
-    const last = speeds[speeds.length - 1];
+    const top = first.some(isNum) ? nanmax(first) : Number.NaN;
+    const last = speeds.at(-1)!;
     velocityLoss = top > 0 && isNum(last) ? 1 - last / top : null;
   }
 
   const stats = faultStats(repResults, spec.criteria, prep);
-  const feedback = buildFeedback(
+  const feedback = buildFeedback({
     spec,
     repResults,
     scores,
@@ -231,7 +243,7 @@ export function analyze(
     breakdown,
     velocityLoss,
     locale,
-  );
+  });
   return {
     exercise: spec.id,
     spec_version: spec.version,

@@ -29,6 +29,8 @@ export function LeagueContributionRow({
   const own = member.user_id === accountId;
   const name = member.display_name ?? 'Member';
   const calculation = own ? item.calculation : undefined;
+  const memberName = own ? `${name} (you)` : name;
+  const title = showMember ? memberName : `Workout #${item.session_id}`;
   const heading = (
     <>
       {showMember ? (
@@ -54,9 +56,7 @@ export function LeagueContributionRow({
         </View>
       )}
       <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
-        <Text style={[textStyles.label, { color: p.ink }]}>
-          {showMember ? `${name}${own ? ' (you)' : ''}` : `Workout #${item.session_id}`}
-        </Text>
+        <Text style={[textStyles.label, { color: p.ink }]}>{title}</Text>
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
           {roundRange(item.start_at, item.end_at, timezone)}
         </Text>

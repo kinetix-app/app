@@ -9,6 +9,33 @@ import type { PoseTrack } from '../schemas';
 import { FormCheckScreen } from './FormCheckScreen';
 import { PoseOverlay } from './PoseOverlay';
 
+function RecordingFooter({
+  showJoints,
+  hasFaults,
+  onToggle,
+}: Readonly<{
+  showJoints: boolean;
+  hasFaults: boolean;
+  onToggle: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <>
+      {showJoints && hasFaults ? (
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          Joints turn red during a rep with a fault there.
+        </Text>
+      ) : null}
+      <Button
+        title={showJoints ? 'Hide joints' : 'Show joints'}
+        icon={showJoints ? 'eye-off' : 'eye'}
+        secondary
+        onPress={onToggle}
+      />
+    </>
+  );
+}
+
 /**
  * Plays the user's own recording, with the joints the analysis tracked drawn on top when they
  * are available. The file can be gone, so a failed load says so.
@@ -58,19 +85,11 @@ export function RecordingPlayer({
       scroll={false}
       footer={
         pose && status !== 'error' ? (
-          <>
-            {showJoints && hasFaults ? (
-              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                Joints turn red during a rep with a fault there.
-              </Text>
-            ) : null}
-            <Button
-              title={showJoints ? 'Hide joints' : 'Show joints'}
-              icon={showJoints ? 'eye-off' : 'eye'}
-              secondary
-              onPress={() => setShowJoints((value) => !value)}
-            />
-          </>
+          <RecordingFooter
+            showJoints={showJoints}
+            hasFaults={hasFaults}
+            onToggle={() => setShowJoints((value) => !value)}
+          />
         ) : undefined
       }
     >

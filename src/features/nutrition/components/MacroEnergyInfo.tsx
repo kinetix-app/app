@@ -1,3 +1,4 @@
+import type { ViewInstance } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -11,7 +12,7 @@ const arrowSize = spacing['space-3'];
 export function MacroEnergyInfo({ label, factor }: Props) {
   const p = usePalette();
   const { width, height } = useWindowDimensions();
-  const anchor = React.useRef<View>(null);
+  const anchor = React.useRef<ViewInstance>(null);
   const [position, setPosition] = React.useState<Anchor | null>(null);
   const [tooltipHeight, setTooltipHeight] = React.useState(72);
   const margin = spacing['space-4'];

@@ -51,18 +51,18 @@ export function metricValue(m: MetricSpec, rep: Rep, signals: Signals, t: Series
     const sig = need(signals, m.signal);
     const start = sig[rep.end];
     const ext = sig[rep.extreme];
-    if (!isNum(start) || !isNum(ext)) return NaN;
+    if (!isNum(start) || !isNum(ext)) return Number.NaN;
     const target = ext + (m.fraction ?? 0.8) * (start - ext);
     const dir = Math.sign(start - ext);
     for (let i = rep.extreme; i <= rep.end; i++) {
       if ((sig[i] - target) * dir >= 0) return t[i] - t[rep.extreme];
     }
-    return NaN;
+    return Number.NaN;
   }
   const sig = need(signals, m.signal);
   const window = (m.type === 'mean_speed' ? gradient(sig, t) : sig).slice(a, b + 1);
   if (window.length === 0 || window.filter((x) => !isNum(x)).length / window.length > 0.3)
-    return NaN;
+    return Number.NaN;
   const agg = m.agg ?? 'mean';
   if (m.type === 'mean_speed' || agg === 'mean') return nanmean(window);
   switch (agg) {
@@ -75,6 +75,6 @@ export function metricValue(m: MetricSpec, rep: Rep, signals: Signals, t: Series
     case 'value':
       return window[0];
     case 'rise_from_start':
-      return isNum(window[0]) ? nanmax(window) - window[0] : NaN;
+      return isNum(window[0]) ? nanmax(window) - window[0] : Number.NaN;
   }
 }
