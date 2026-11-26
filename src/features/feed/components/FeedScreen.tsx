@@ -220,7 +220,7 @@ function FeedList({
   posts: Post[];
   hasData: boolean;
   pending: boolean;
-  error: unknown | null;
+  error: Error | null;
   refetching: boolean;
   fetchingNextPage: boolean;
   nextPageError: boolean;
@@ -313,7 +313,7 @@ function FeedHeader({
   language: 'en' | 'es';
   profileButton?: React.ReactNode;
   pending: boolean;
-  error: unknown | null;
+  error: Error | null;
   onCreate: () => void;
   onRetry: () => void;
 }>) {
