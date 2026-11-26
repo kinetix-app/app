@@ -68,32 +68,37 @@ export function Failure({ error, retry }: Readonly<{ error: unknown; retry?: () 
         {text}
       </Text>
       {retry ? (
-        <Button title={language === 'es' ? 'Reintentar' : 'Retry'} onPress={retry} secondary />
+        <Button
+          title={getTranslation(language)('training.retry_95b6f5')}
+          onPress={retry}
+          secondary
+        />
       ) : null}
     </View>
   );
 }
 
 function getFailureMessage(error: unknown, language: Language) {
-  const es = language === 'es';
-  const connectionError = getTranslation(es)('training.couldNotConnectOrReadTheResponse_9c6b90');
+  const connectionError = getTranslation(language)(
+    'training.couldNotConnectOrReadTheResponse_9c6b90',
+  );
   if (!(error instanceof ApiError)) return connectionError;
   if ([401, 403].includes(error.status))
-    return getTranslation(es)('training.yourAccountCannotAccessThisDataSign_9b133b');
+    return getTranslation(language)('training.yourAccountCannotAccessThisDataSign_9b133b');
   if (error.status === 404)
-    return getTranslation(es)('training.thisRoutineOrExerciseIsNoLonger_871e69');
+    return getTranslation(language)('training.thisRoutineOrExerciseIsNoLonger_871e69');
   if (error.status === 422)
-    return getTranslation(es)('training.someFieldsOrExercisesAreUnavailableCheck_4fe74a');
+    return getTranslation(language)('training.someFieldsOrExercisesAreUnavailableCheck_4fe74a');
   return connectionError;
 }
 
 export function Loading() {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <ActivityIndicator
       color={p.brand}
-      accessibilityLabel={getTranslation(es)('training.loadingTraining_a32005')}
+      accessibilityLabel={getTranslation(language)('training.loadingTraining_a32005')}
     />
   );
 }

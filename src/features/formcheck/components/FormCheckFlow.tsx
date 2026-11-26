@@ -107,7 +107,7 @@ export function FormCheckFlow({
       return (
         <RecordingPlayer
           uri={entry.recording.uri}
-          title={`${exerciseName} · ${getTranslation(language === 'es' ? 'es' : 'en')('formcheck.FormCheckFlow.set')} ${setNumber}`}
+          title={`${exerciseName} · ${getTranslation(language)('formcheck.FormCheckFlow.set')} ${setNumber}`}
           pose={entry.analysis.pose}
           onBack={() => setStep('result')}
         />

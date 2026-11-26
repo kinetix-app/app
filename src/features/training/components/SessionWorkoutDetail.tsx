@@ -40,8 +40,9 @@ export function SessionWorkoutDetail({
     queryFn: ({ signal }) => getAccount(undefined, signal),
     enabled: false,
   });
-  const es = useLanguage() === 'es';
-  const name = account?.profile.display_name?.trim() || getTranslation(es)('training.you_715a9a');
+  const language = useLanguage();
+  const name =
+    account?.profile.display_name?.trim() || getTranslation(language)('training.you_715a9a');
   return (
     <WorkoutDetail
       workout={detail.isSuccess ? detail.data : undefined}

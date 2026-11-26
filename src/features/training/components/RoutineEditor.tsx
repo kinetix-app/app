@@ -73,7 +73,8 @@ function RoutineExerciseEditor({
   >
 >) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const unit: WeightUnit = 'kg';
   const exercise = useWatch({ control, name: `exercises.${index}.exercise` });
   const cardio = exercise.activity_type === 'cardio';
@@ -98,7 +99,7 @@ function RoutineExerciseEditor({
                   /^\d+$/.test(value.reps) &&
                   Number(value.reps) >= 1 &&
                   Number(value.reps) <= 2147483647) ||
-              getTranslation(es)('training.enterValidSetValues_af628f'),
+              getTranslation(language)('training.enterValidSetValues_af628f'),
           }}
           render={({ field, fieldState }) => (
             <View style={ui.gap}>
@@ -170,7 +171,8 @@ export function RoutineEditor({
   onClose: () => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
@@ -267,7 +269,7 @@ export function RoutineEditor({
       setError('root', {
         message:
           parsed.error.issues[0]?.message ??
-          getTranslation(es)('training.checkTheRoutineFields_d1d993'),
+          getTranslation(language)('training.checkTheRoutineFields_d1d993'),
       });
       return;
     }
@@ -286,18 +288,18 @@ export function RoutineEditor({
         <View style={[ui.row, { padding: spacing['space-4'] }]}>
           <IconButton
             icon="arrow-left"
-            label={getTranslation(es)('training.backToRoutines_ca811d')}
+            label={getTranslation(language)('training.backToRoutines_ca811d')}
             onPress={close}
             disabled={disabled}
           />
           <Text accessibilityRole="header" style={[ui.heading, { flex: 1, color: p.ink }]}>
             {routine
-              ? getTranslation(es)('training.editRoutine_47c2f4')
-              : getTranslation(es)('training.newRoutine_128760')}
+              ? getTranslation(language)('training.editRoutine_47c2f4')
+              : getTranslation(language)('training.newRoutine_128760')}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es)('training.saveRoutine_043f48')}
+            accessibilityLabel={getTranslation(language)('training.saveRoutine_043f48')}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={() => void submit()}
@@ -311,8 +313,8 @@ export function RoutineEditor({
           >
             <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
               {save.isPending
-                ? getTranslation(es)('training.saving_444c23')
-                : getTranslation(es)('training.save_5bd05a')}
+                ? getTranslation(language)('training.saving_444c23')
+                : getTranslation(language)('training.save_5bd05a')}
             </Text>
           </Pressable>
         </View>
@@ -340,17 +342,17 @@ export function RoutineEditor({
                 rules={{
                   validate: (value) =>
                     value.trim().length > 0 ||
-                    getTranslation(es)('training.enterARoutineName_0a0181'),
+                    getTranslation(language)('training.enterARoutineName_0a0181'),
                   maxLength: {
                     value: 150,
-                    message: getTranslation(es)('training.useAtMost150Characters_12750f'),
+                    message: getTranslation(language)('training.useAtMost150Characters_12750f'),
                   },
                 }}
                 render={({ field, fieldState }) => (
                   <>
                     <TextField
-                      accessibilityLabel={getTranslation(es)('training.routineName_ccb21b')}
-                      placeholder={getTranslation(es)('training.nameYourRoutine_078a84')}
+                      accessibilityLabel={getTranslation(language)('training.routineName_ccb21b')}
+                      placeholder={getTranslation(language)('training.nameYourRoutine_078a84')}
                       maxLength={150}
                       inputStyle={textStyles['title-lg']}
                       containerStyle={{
@@ -377,8 +379,8 @@ export function RoutineEditor({
                 accessibilityRole="button"
                 accessibilityLabel={
                   notesOpen
-                    ? getTranslation(es)('training.hideRoutineNotes_95c76f')
-                    : getTranslation(es)('training.addRoutineNotes_9d28ec')
+                    ? getTranslation(language)('training.hideRoutineNotes_95c76f')
+                    : getTranslation(language)('training.addRoutineNotes_9d28ec')
                 }
                 accessibilityState={{ expanded: notesOpen, disabled }}
                 disabled={disabled}
@@ -387,8 +389,8 @@ export function RoutineEditor({
               >
                 <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                   {notesOpen
-                    ? getTranslation(es)('training.notesOptional_be0f4c')
-                    : getTranslation(es)('training.addNotes_a2d3d1')}
+                    ? getTranslation(language)('training.notesOptional_be0f4c')
+                    : getTranslation(language)('training.addNotes_a2d3d1')}
                 </Text>
               </Pressable>
               {notesOpen ? (
@@ -398,14 +400,16 @@ export function RoutineEditor({
                   rules={{
                     maxLength: {
                       value: 1000,
-                      message: getTranslation(es)('training.useAtMost1000Characters_732c2d'),
+                      message: getTranslation(language)('training.useAtMost1000Characters_732c2d'),
                     },
                   }}
                   render={({ field, fieldState }) => (
                     <View style={ui.gap}>
                       <TextField
-                        accessibilityLabel={getTranslation(es)('training.routineNotes_580086')}
-                        placeholder={getTranslation(es)(
+                        accessibilityLabel={getTranslation(language)(
+                          'training.routineNotes_580086',
+                        )}
+                        placeholder={getTranslation(language)(
                           'training.focusRemindersOrAPlanForThis_430fdd',
                         )}
                         value={field.value}
@@ -471,7 +475,7 @@ export function RoutineEditor({
           ListFooterComponent={
             <View style={ui.gap}>
               <Button
-                title={getTranslation(es)('training.addExercise_89dbcf')}
+                title={getTranslation(language)('training.addExercise_89dbcf')}
                 onPress={() => setPicker(true)}
                 disabled={disabled || fields.length >= 500}
                 tone="positive"
@@ -537,18 +541,18 @@ export function RoutineEditor({
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {getTranslation(es)('training.discardYourUnsavedChanges_ec01af')}
+              {getTranslation(language)('training.discardYourUnsavedChanges_ec01af')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {getTranslation(es)('training.yourChangesHaveNotBeenSaved_5fa8fc')}
+              {getTranslation(language)('training.yourChangesHaveNotBeenSaved_5fa8fc')}
             </Text>
             <Button
-              title={getTranslation(es)('training.keepEditing_ba7ea4')}
+              title={getTranslation(language)('training.keepEditing_ba7ea4')}
               onPress={() => setDiscard(false)}
               secondary
             />
             <Button
-              title={getTranslation(es)('training.discard_671592')}
+              title={getTranslation(language)('training.discard_671592')}
               onPress={onClose}
               tone="danger"
             />

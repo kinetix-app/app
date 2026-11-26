@@ -74,7 +74,7 @@ export function CalendarGrid({
             <Pressable
               key={id}
               accessibilityRole="button"
-              accessibilityLabel={`${getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.select')} ${calendarLabel(id, language)}${isToday ? getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.today') : ''}`}
+              accessibilityLabel={`${getTranslation(language)('accountsUi.select')} ${calendarLabel(id, language)}${isToday ? getTranslation(language)('accountsUi.today') : ''}`}
               accessibilityState={{ selected: isSelected, disabled }}
               disabled={disabled}
               onPress={() => onSelect(id)}

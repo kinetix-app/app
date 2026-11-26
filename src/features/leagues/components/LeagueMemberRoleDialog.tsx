@@ -24,7 +24,7 @@ export function LeagueMemberRoleDialog({
   onCancel: () => void;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -52,8 +52,8 @@ export function LeagueMemberRoleDialog({
   }
 
   const actionLabel = promoting
-    ? t('Make admin', 'Hacer administrador')
-    : t('Make member', 'Hacer miembro');
+    ? getTranslation(language)('socialAdditional.makeAdmin_51fc5d')
+    : getTranslation(language)('socialAdditional.makeMember_81600a');
   return (
     <Modal visible transparent animationType="fade" onRequestClose={close}>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing['space-4'] }}>
@@ -88,7 +88,7 @@ export function LeagueMemberRoleDialog({
                 accessibilityRole="header"
                 style={[textStyles['title-md'], { flex: 1, color: p.ink }]}
               >
-                {t('Change member role', 'Cambiar rol del miembro')}
+                {getTranslation(language)('socialAdditional.changeMemberRole_91137c')}
               </Text>
             </View>
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
@@ -96,21 +96,24 @@ export function LeagueMemberRoleDialog({
             </Text>
             {error ? (
               <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-                {t(
-                  'Could not change this role. Please try again.',
-                  'No se pudo cambiar este rol. Inténtalo de nuevo.',
-                )}
+                {getTranslation(language)('socialAdditional.couldNotChangeThisRolePlease_772cd7')}
               </Text>
             ) : null}
             <LeagueAction
-              label={busy ? t('Saving…', 'Guardando…') : actionLabel}
+              label={
+                busy ? getTranslation(language)('socialAdditional.saving_444c23') : actionLabel
+              }
               disabled={busy}
               variant="primary"
               onPress={() => {
                 void confirm();
               }}
             />
-            <LeagueAction label={t('Cancel', 'Cancelar')} disabled={busy} onPress={close} />
+            <LeagueAction
+              label={getTranslation(language)('socialAdditional.cancel_a25d0b')}
+              disabled={busy}
+              onPress={close}
+            />
           </ScrollView>
         </View>
       </SafeAreaView>

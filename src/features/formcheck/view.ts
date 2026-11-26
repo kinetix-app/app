@@ -56,8 +56,8 @@ function repLabel(
 }
 
 function repStatusLabel(ok: boolean, language: Language) {
-  if (ok) return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.good');
-  return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.check');
+  if (ok) return getTranslation(language)('formcheck.view.good');
+  return getTranslation(language)('formcheck.view.check');
 }
 
 function issueTitle(
@@ -108,14 +108,14 @@ function firstTip(
 
 function verdict(score: number | null, language: Language) {
   if (score !== null && score >= GREAT_SCORE)
-    return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.greatSet');
-  return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.solidSet');
+    return getTranslation(language)('formcheck.view.greatSet');
+  return getTranslation(language)('formcheck.view.solidSet');
 }
 
 /** "4", "4 and 5", "1, 3 and 4". */
 export function listReps(reps: number[], language: Language = 'en'): string {
   if (reps.length <= 1) return reps.join('');
-  return `${reps.slice(0, -1).join(', ')} ${getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.and')} ${reps.at(-1)}`;
+  return `${reps.slice(0, -1).join(', ')} ${getTranslation(language)('formcheck.view.and')} ${reps.at(-1)}`;
 }
 
 /** Turns stored ids into display text. Unknown ids degrade to generic text instead of failing. */

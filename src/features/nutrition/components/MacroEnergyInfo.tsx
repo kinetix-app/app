@@ -13,7 +13,7 @@ const arrowSize = spacing['space-3'];
 
 export function MacroEnergyInfo({ label, factor }: Props) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const { width, height } = useWindowDimensions();
   const anchor = React.useRef<ViewInstance>(null);
   const [position, setPosition] = React.useState<Anchor | null>(null);
@@ -42,7 +42,9 @@ export function MacroEnergyInfo({ label, factor }: Props) {
       <Pressable
         ref={anchor}
         accessibilityRole="button"
-        accessibilityLabel={es ? `${label}: calorías por gramo` : `${label} calories per gram`}
+        accessibilityLabel={
+          language === 'es' ? `${label}: calorías por gramo` : `${label} calories per gram`
+        }
         accessibilityState={{ expanded: position !== null }}
         onPress={() => {
           anchor.current?.measureInWindow((x, y, anchorWidth, anchorHeight) => {
@@ -58,7 +60,7 @@ export function MacroEnergyInfo({ label, factor }: Props) {
           <View style={styles.overlay} accessibilityViewIsModal>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es)(
+              accessibilityLabel={getTranslation(language)(
                 'nutrition.MacroEnergyInfo.closeMacroInformation',
               )}
               onPress={() => setPosition(null)}
@@ -91,7 +93,8 @@ export function MacroEnergyInfo({ label, factor }: Props) {
                 ]}
               />
               <Text style={[textStyles.body, { color: p.ink }]}>
-                {label}: {factor} {getTranslation(es)('nutrition.MacroEnergyInfo.kcalPerGram')}
+                {label}: {factor}{' '}
+                {getTranslation(language)('nutrition.MacroEnergyInfo.kcalPerGram')}
               </Text>
             </View>
           </View>

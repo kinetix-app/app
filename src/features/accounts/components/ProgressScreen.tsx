@@ -82,7 +82,7 @@ export function ProgressScreen({
     if (measured && measurement[metric] === null) setMetric(measured);
     setSelected(null);
     setEditor(null);
-    setToast(getTranslation(es)('accountsUi.measurements_saved'));
+    setToast(getTranslation(language)('accountsUi.measurements_saved'));
     const queryKey = measurementKey(accountId);
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData<typeof measurements.data>(queryKey, (previous) =>
@@ -97,7 +97,7 @@ export function ProgressScreen({
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData(queryKey, result);
     setEditor(null);
-    setToast(getTranslation(es)('accountsUi.weight_target_saved'));
+    setToast(getTranslation(language)('accountsUi.weight_target_saved'));
   }
 
   return (
@@ -119,11 +119,11 @@ export function ProgressScreen({
           ListHeaderComponent={
             <View style={styles.sections}>
               <ScreenHeader
-                title={getTranslation(es)('accountsUi.progress')}
+                title={getTranslation(language)('accountsUi.progress')}
                 leading={<ProfileBack onPress={onClose} />}
               />
               <Button
-                title={getTranslation(es)('accountsUi.log_measurements')}
+                title={getTranslation(language)('accountsUi.log_measurements')}
                 tone="positive"
                 shape="rounded"
                 icon="plus"
@@ -135,12 +135,12 @@ export function ProgressScreen({
               />
               <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  {getTranslation(es)('accountsUi.measurement_trends')}
+                  {getTranslation(language)('accountsUi.measurement_trends')}
                 </Text>
                 <ChartMetricSelector
                   metrics={measurementMetrics}
                   value={metric}
-                  label={getTranslation(es)('accountsUi.measurement_metric')}
+                  label={getTranslation(language)('accountsUi.measurement_metric')}
                   labelFor={(key) =>
                     es ? measurementDefinitions[key].labelEs : measurementDefinitions[key].label
                   }
@@ -151,13 +151,13 @@ export function ProgressScreen({
                 />
                 {measurements.isPending ? (
                   <ActivityIndicator
-                    accessibilityLabel={getTranslation(es)('accountsUi.loading_measurements')}
+                    accessibilityLabel={getTranslation(language)('accountsUi.loading_measurements')}
                     color={p.brand}
                   />
                 ) : null}
                 {measurements.isError ? (
                   <LoadProblem
-                    message={getTranslation(es)('accountsUi.could_not_load_measurements')}
+                    message={getTranslation(language)('accountsUi.could_not_load_measurements')}
                     onRetry={() => void measurements.refetch()}
                   />
                 ) : null}
@@ -171,11 +171,11 @@ export function ProgressScreen({
                         measurements.isError
                           ? undefined
                           : {
-                              title: getTranslation(es)(
+                              title: getTranslation(language)(
                                 'dynamicMessages.noMeasurementsYet_159e47',
                                 { value1: label.toLowerCase() },
                               ),
-                              hint: getTranslation(es)(
+                              hint: getTranslation(language)(
                                 'accountsUi.log_a_measurement_to_start_tracking',
                               ),
                             }
@@ -198,18 +198,22 @@ export function ProgressScreen({
                     accessibilityRole="header"
                     style={[textStyles['title-md'], { color: p.ink }]}
                   >
-                    {getTranslation(es)('accountsUi.weight_target')}
+                    {getTranslation(language)('accountsUi.weight_target')}
                   </Text>
                 </View>
                 {target.isPending ? (
                   <ActivityIndicator
-                    accessibilityLabel={getTranslation(es)('accountsUi.loading_weight_target')}
+                    accessibilityLabel={getTranslation(language)(
+                      'accountsUi.loading_weight_target',
+                    )}
                     color={p.brand}
                   />
                 ) : null}
                 {target.isError ? (
                   <LoadProblem
-                    message={getTranslation(es)('accountsUi.could_not_load_your_weight_target')}
+                    message={getTranslation(language)(
+                      'accountsUi.could_not_load_your_weight_target',
+                    )}
                     onRetry={() => void target.refetch()}
                   />
                 ) : null}
@@ -226,11 +230,11 @@ export function ProgressScreen({
               </View>
               <View style={styles.historyHead}>
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  {getTranslation(es)('accountsUi.measurement_history')}
+                  {getTranslation(language)('accountsUi.measurement_history')}
                 </Text>
                 {measurements.isSuccess && items.length === 0 ? (
                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {getTranslation(es)('accountsUi.saved_check_ins_will_appear_here')}
+                    {getTranslation(language)('accountsUi.saved_check_ins_will_appear_here')}
                   </Text>
                 ) : null}
               </View>
@@ -316,16 +320,16 @@ function MeasurementHeadline({
 
 function LoadProblem({ message, onRetry }: Readonly<{ message: string; onRetry: () => void }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <View style={styles.metric}>
       <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
         {message}
       </Text>
       <Button
-        title={getTranslation(es)('accountsUi.retry')}
+        title={getTranslation(language)('accountsUi.retry')}
         shape="rounded"
-        accessibilityLabel={`${getTranslation(es)('accountsUi.retry')}. ${message}`}
+        accessibilityLabel={`${getTranslation(language)('accountsUi.retry')}. ${message}`}
         onPress={onRetry}
         secondary
       />
@@ -349,7 +353,9 @@ function TargetCardContent({
   if (!objective) {
     return (
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {getTranslation(es)('accountsUi.choose_an_objective_in_profile_to_set_a_weight_target')}
+        {getTranslation(language)(
+          'accountsUi.choose_an_objective_in_profile_to_set_a_weight_target',
+        )}
       </Text>
     );
   }
@@ -370,22 +376,22 @@ function TargetCardContent({
             </Text>
             {target.target_date ? (
               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                {getTranslation(es)('accountsUi.target_date')} ·{' '}
+                {getTranslation(language)('accountsUi.target_date')} ·{' '}
                 {displayProgressDate(target.target_date, language)}
               </Text>
             ) : null}
           </>
         ) : (
           <Text style={[textStyles.body, { color: p.ink }]}>
-            {getTranslation(es)('accountsUi.no_weight_target_set')}
+            {getTranslation(language)('accountsUi.no_weight_target_set')}
           </Text>
         )}
       </View>
       <Button
         title={
           target
-            ? getTranslation(es)('accountsUi.edit_target')
-            : getTranslation(es)('accountsUi.set_target')
+            ? getTranslation(language)('accountsUi.edit_target')
+            : getTranslation(language)('accountsUi.set_target')
         }
         shape="rounded"
         secondary

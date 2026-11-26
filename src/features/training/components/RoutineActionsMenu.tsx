@@ -38,15 +38,15 @@ type RoutineActionsMenuProps = Readonly<{
 export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
   const { name, onClose, onDelete, deleting, deleteError, coverPending } = props;
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const busy = deleting || coverPending;
   const insets = useSafeAreaInsets();
   const first = useRef<ViewInstance>(null);
   const [confirming, setConfirming] = useState(false);
   const error =
     deleteError instanceof ApiError && deleteError.status === 409
-      ? getTranslation(es)('training.thisRoutineHasAnOngoingWorkoutFinish_9a6722')
-      : getTranslation(es)('training.couldNotDeleteTheRoutineTryAgain_a57a1b');
+      ? getTranslation(language)('training.thisRoutineHasAnOngoingWorkoutFinish_9a6722')
+      : getTranslation(language)('training.couldNotDeleteTheRoutineTryAgain_a57a1b');
   function close() {
     if (!busy) onClose();
   }
@@ -70,8 +70,8 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
           accessibilityViewIsModal
           accessibilityLabel={
             confirming
-              ? getTranslation(es)('dynamicMessages.delete_602940', { value1: name })
-              : getTranslation(es)('dynamicMessages.actionsFor_f7a9e1', {
+              ? getTranslation(language)('dynamicMessages.delete_602940', { value1: name })
+              : getTranslation(language)('dynamicMessages.actionsFor_f7a9e1', {
                   value1: name,
                 })
           }
@@ -107,11 +107,11 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
           >
             <View style={{ gap: spacing['space-1'] }}>
               <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-                {confirming ? getTranslation(es)('training.deleteRoutine_36c655') : name}
+                {confirming ? getTranslation(language)('training.deleteRoutine_36c655') : name}
               </Text>
               {confirming ? (
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  {getTranslation(es)('training.thisRoutineWillBeRemovedFromYour_58f5f1')}
+                  {getTranslation(language)('training.thisRoutineWillBeRemovedFromYour_58f5f1')}
                 </Text>
               ) : null}
             </View>
@@ -136,8 +136,8 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
               accessibilityRole="button"
               accessibilityLabel={
                 confirming
-                  ? getTranslation(es)('training.keepRoutine_c9f850')
-                  : getTranslation(es)('training.closeRoutineActions_0aa88e')
+                  ? getTranslation(language)('training.keepRoutine_c9f850')
+                  : getTranslation(language)('training.closeRoutineActions_0aa88e')
               }
               accessibilityState={{ disabled: busy }}
               disabled={busy}
@@ -151,8 +151,8 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
             >
               <Text style={[textStyles.label, { color: p.ink }]}>
                 {confirming
-                  ? getTranslation(es)('training.keepRoutine_c9f850')
-                  : getTranslation(es)('training.cancel_a25d0b')}
+                  ? getTranslation(language)('training.keepRoutine_c9f850')
+                  : getTranslation(language)('training.cancel_a25d0b')}
               </Text>
             </Pressable>
           </ScrollView>
@@ -178,7 +178,7 @@ function DeleteRoutineConfirmation({
   onDelete: () => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <>
       {deleteError ? (
@@ -188,7 +188,7 @@ function DeleteRoutineConfirmation({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={getTranslation(es)('dynamicMessages.confirmDelete_9870e6', {
+        accessibilityLabel={getTranslation(language)('dynamicMessages.confirmDelete_9870e6', {
           value1: name,
         })}
         accessibilityState={{ disabled: busy, busy }}
@@ -215,8 +215,8 @@ function DeleteRoutineConfirmation({
         )}
         <Text style={[textStyles.label, { color: p.danger }]}>
           {deleting
-            ? getTranslation(es)('training.deleting_467f44')
-            : getTranslation(es)('training.deleteRoutine_ce5d0f')}
+            ? getTranslation(language)('training.deleting_467f44')
+            : getTranslation(language)('training.deleteRoutine_ce5d0f')}
         </Text>
       </Pressable>
     </>
@@ -246,7 +246,7 @@ function RoutineActionOptions({
     onConfirmDelete: () => void;
   }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <>
       <View
@@ -259,7 +259,7 @@ function RoutineActionOptions({
         <Pressable
           ref={canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={getTranslation(es)('dynamicMessages.train_8edf48', {
+          accessibilityLabel={getTranslation(language)('dynamicMessages.train_8edf48', {
             value1: name,
           })}
           accessibilityState={{ disabled: !canStart || busy }}
@@ -277,7 +277,7 @@ function RoutineActionOptions({
         >
           <MaterialIcons name="play-arrow" size={26} color={p['brand-ink']} />
           <Text style={[textStyles.body, { color: p['brand-ink'] }]}>
-            {getTranslation(es)('training.train_73ad48')}
+            {getTranslation(language)('training.train_73ad48')}
           </Text>
         </Pressable>
         <View
@@ -290,7 +290,7 @@ function RoutineActionOptions({
         <Pressable
           ref={!canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={getTranslation(es)('dynamicMessages.edit_a899b6', {
+          accessibilityLabel={getTranslation(language)('dynamicMessages.edit_a899b6', {
             value1: name,
           })}
           accessibilityState={{ disabled: busy }}
@@ -307,7 +307,7 @@ function RoutineActionOptions({
         >
           <Feather name="edit-2" size={22} color={p.ink} />
           <Text style={[textStyles.body, { color: p.ink }]}>
-            {getTranslation(es)('training.edit_dac3da')}
+            {getTranslation(language)('training.edit_dac3da')}
           </Text>
         </Pressable>
       </View>
@@ -326,7 +326,7 @@ function RoutineActionOptions({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={getTranslation(es)('dynamicMessages.delete_602940', {
+        accessibilityLabel={getTranslation(language)('dynamicMessages.delete_602940', {
           value1: name,
         })}
         accessibilityState={{ disabled: !canDelete || busy }}
@@ -345,12 +345,12 @@ function RoutineActionOptions({
       >
         <Feather name="trash-2" size={22} color={p.danger} />
         <Text style={[textStyles.body, { color: p.danger }]}>
-          {getTranslation(es)('training.delete_1eddfa')}
+          {getTranslation(language)('training.delete_1eddfa')}
         </Text>
       </Pressable>
       {!canDelete ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {getTranslation(es)('training.finishOrDiscardThisRoutineSOngoing_f99ca0')}
+          {getTranslation(language)('training.finishOrDiscardThisRoutineSOngoing_f99ca0')}
         </Text>
       ) : null}
     </>
@@ -378,7 +378,7 @@ function RoutineCoverActions({
 > &
   Readonly<{ busy: boolean }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <>
       {' '}
@@ -407,12 +407,12 @@ function RoutineCoverActions({
           <Feather name="image" size={22} color={p.ink} />
           <Text style={[textStyles.body, { color: p.ink }]}>
             {hasCover
-              ? getTranslation(es)('training.changeCover_defe3e')
-              : getTranslation(es)('training.addCover_4bffa4')}
+              ? getTranslation(language)('training.changeCover_defe3e')
+              : getTranslation(language)('training.addCover_4bffa4')}
           </Text>
           {coverPending ? (
             <ActivityIndicator
-              accessibilityLabel={getTranslation(es)('training.updatingCover_dd98d7')}
+              accessibilityLabel={getTranslation(language)('training.updatingCover_dd98d7')}
               color={p.brand}
             />
           ) : null}
@@ -420,7 +420,7 @@ function RoutineCoverActions({
         {hasCover ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es)('dynamicMessages.removeCoverFor_e79cf7', {
+            accessibilityLabel={getTranslation(language)('dynamicMessages.removeCoverFor_e79cf7', {
               value1: name,
             })}
             accessibilityState={{ disabled: busy }}
@@ -437,7 +437,7 @@ function RoutineCoverActions({
           >
             <Feather name="trash-2" size={22} color={p.danger} />
             <Text style={[textStyles.body, { color: p.danger }]}>
-              {getTranslation(es)('training.removeCover_bba977')}
+              {getTranslation(language)('training.removeCover_bba977')}
             </Text>
           </Pressable>
         ) : null}
@@ -450,13 +450,13 @@ function RoutineCoverActions({
           {onRetryCover ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es)('training.retryCoverUpload_8775b7')}
+              accessibilityLabel={getTranslation(language)('training.retryCoverUpload_8775b7')}
               disabled={busy}
               onPress={onRetryCover}
               style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
             >
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                {getTranslation(es)('training.retry_95b6f5')}
+                {getTranslation(language)('training.retry_95b6f5')}
               </Text>
             </Pressable>
           ) : null}

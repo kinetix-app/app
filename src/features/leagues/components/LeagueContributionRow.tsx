@@ -28,21 +28,24 @@ export function LeagueContributionRow({
   onOpenWorkout?: () => void;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const own = member.user_id === accountId;
-  const name = member.display_name ?? t('Member', 'Miembro');
+  const name = member.display_name ?? getTranslation(language)('socialAdditional.member_10100e');
   const calculation = own ? item.calculation : undefined;
   let memberName = name;
   if (own) memberName = getTranslation(language)('leagues.you', { name });
-  const title = showMember ? memberName : `${t('Workout', 'Entrenamiento')} #${item.session_id}`;
-  const completionDate = new Date(item.ended_at).toLocaleString(
-    language === 'es' ? 'es' : undefined,
-    { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone },
-  );
+  const title = showMember
+    ? memberName
+    : `${getTranslation(language)('socialAdditional.workout_c81493')} #${item.session_id}`;
+  const completionDate = new Date(item.ended_at).toLocaleString(language, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: timezone,
+  });
   const detail = showMember
-    ? `${t('Workout', 'Entrenamiento')} #${item.session_id} · ${item.local_day}`
-    : `${t('Completed', 'Completado')} ${completionDate}`;
+    ? `${getTranslation(language)('socialAdditional.workout_c81493')} #${item.session_id} · ${item.local_day}`
+    : `${getTranslation(language)('socialAdditional.completed_185818')} ${completionDate}`;
   const heading = (
     <>
       {showMember ? (
@@ -82,7 +85,9 @@ export function LeagueContributionRow({
         >
           {item.score}
         </Text>
-        <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>{t('points', 'puntos')}</Text>
+        <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
+          {getTranslation(language)('socialAdditional.points_9e8145')}
+        </Text>
       </View>
     </>
   );
@@ -107,17 +112,20 @@ export function LeagueContributionRow({
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{detail}</Text>
       {calculation ? (
         <Text style={[textStyles['body-sm'], { color: p.ink }]}>
-          {t('Volume', 'Volumen')} {formatScoreMeasurement(calculation.volume_kg_reps)} kg{' '}
-          {t('reps', 'reps')} · {t('Duration', 'Duración')} {durationHours(calculation.duration_us)}{' '}
-          h · {t('Body weight', 'Peso corporal')}{' '}
+          {getTranslation(language)('socialAdditional.volume_bbc801')}{' '}
+          {formatScoreMeasurement(calculation.volume_kg_reps)} kg{' '}
+          {getTranslation(language)('socialAdditional.reps_488acf')} ·{' '}
+          {getTranslation(language)('socialAdditional.duration_c00c5f')}{' '}
+          {durationHours(calculation.duration_us)} h ·{' '}
+          {getTranslation(language)('socialAdditional.bodyWeight_dc5637')}{' '}
           {formatScoreMeasurement(calculation.body_weight_kg)} kg
         </Text>
       ) : null}
       {own && onOpenWorkout ? (
         <Button
-          title={t('View workout', 'Ver entrenamiento')}
+          title={getTranslation(language)('socialAdditional.viewWorkout_79f257')}
           secondary
-          accessibilityLabel={`${t('View workout', 'Ver entrenamiento')} ${item.session_id}`}
+          accessibilityLabel={`${getTranslation(language)('socialAdditional.viewWorkout_79f257')} ${item.session_id}`}
           onPress={onOpenWorkout}
         />
       ) : null}

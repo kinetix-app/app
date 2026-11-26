@@ -19,7 +19,7 @@ export function ExerciseHistory({
   onOpenWorkout: (id: number) => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const history = useInfiniteQuery({
     queryKey: ['training', accountId, 'exercise-history', exerciseId, 'kg'],
     initialPageParam: 0,
@@ -35,7 +35,7 @@ export function ExerciseHistory({
     <View style={ui.gap}>
       {items.length === 0 ? (
         <Text style={{ color: p['ink-muted'] }}>
-          {getTranslation(es)('training.noPreviousSessionsForThisExercise_652a75')}
+          {getTranslation(language)('training.noPreviousSessionsForThisExercise_652a75')}
         </Text>
       ) : null}
       {items.map((item) => (
@@ -52,7 +52,7 @@ export function ExerciseHistory({
           style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
         >
           <Text style={{ color: p.brand }}>
-            {getTranslation(es)('training.loadMoreHistory_8923d1')}
+            {getTranslation(language)('training.loadMoreHistory_8923d1')}
           </Text>
         </Pressable>
       ) : null}
@@ -65,7 +65,8 @@ function HistoryCard({
   onOpenWorkout,
 }: Readonly<{ item: ExerciseHistoryItem; onOpenWorkout: (id: number) => void }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const sets = keyedSets(item.sets);
   return (
     <View style={[ui.card, { backgroundColor: p['surface-200'], gap: spacing['space-1'] }]}>
@@ -81,13 +82,13 @@ function HistoryCard({
         ))
       ) : (
         <Text style={{ color: p['ink-muted'] }}>
-          {getTranslation(es)('training.noSetsRecorded_ab2cd2')}
+          {getTranslation(language)('training.noSetsRecorded_ab2cd2')}
         </Text>
       )}
       <Button
-        title={getTranslation(es)('training.viewWorkout_79f257')}
+        title={getTranslation(language)('training.viewWorkout_79f257')}
         secondary
-        accessibilityLabel={getTranslation(es)('dynamicMessages.viewWorkout_d0de35', {
+        accessibilityLabel={getTranslation(language)('dynamicMessages.viewWorkout_d0de35', {
           value1: item.session_id,
         })}
         onPress={() => onOpenWorkout(item.session_id)}

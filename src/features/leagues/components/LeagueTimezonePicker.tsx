@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
@@ -27,7 +28,7 @@ export function LeagueTimezonePicker({
   disabled: boolean;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const { height } = useWindowDimensions();
   const [open, setOpen] = useState(false);
@@ -48,14 +49,14 @@ export function LeagueTimezonePicker({
     if (zones.isPending)
       return (
         <ActivityIndicator
-          accessibilityLabel={t('Loading timezones', 'Cargando zonas horarias')}
+          accessibilityLabel={getTranslation(language)('socialAdditional.loadingTimezones_d2c388')}
           color={p.brand}
         />
       );
     if (zones.isError)
       return (
         <LeagueAction
-          label={t('Retry timezones', 'Reintentar zonas horarias')}
+          label={getTranslation(language)('socialAdditional.retryTimezones_9a659d')}
           onPress={() => {
             void zones.refetch();
           }}
@@ -68,7 +69,7 @@ export function LeagueTimezonePicker({
         keyExtractor={(zone) => zone}
         ListEmptyComponent={
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            {t('No matching timezones.', 'No hay zonas horarias coincidentes.')}
+            {getTranslation(language)('socialAdditional.noMatchingTimezones_c2d5c2')}
           </Text>
         }
         renderItem={({ item }) => (
@@ -96,9 +97,11 @@ export function LeagueTimezonePicker({
 
   return (
     <View style={{ gap: spacing['space-2'] }}>
-      <Text style={[textStyles.label, { color: p.ink }]}>{t('Timezone', 'Zona horaria')}</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>
+        {getTranslation(language)('socialAdditional.timezone_61191c')}
+      </Text>
       <LeagueDropdownTrigger
-        label={`${t('Timezone', 'Zona horaria')}: ${value}`}
+        label={`${getTranslation(language)('socialAdditional.timezone_61191c')}: ${value}`}
         value={value}
         expanded={open}
         disabled={disabled}
@@ -129,17 +132,19 @@ export function LeagueTimezonePicker({
             >
               <View style={[leagueStyles.row, { justifyContent: 'space-between' }]}>
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  {t('Choose timezone', 'Elegir zona horaria')}
+                  {getTranslation(language)('socialAdditional.chooseTimezone_cc3c99')}
                 </Text>
                 <LeagueIconButton
-                  label={t('Close timezone selector', 'Cerrar selector de zona horaria')}
+                  label={getTranslation(language)('socialAdditional.closeTimezoneSelector_3717f5')}
                   icon="close"
                   onPress={close}
                 />
               </View>
               <TextField
-                accessibilityLabel={t('Search timezones', 'Buscar zonas horarias')}
-                placeholder={t('Search city or region', 'Buscar ciudad o región')}
+                accessibilityLabel={getTranslation(language)(
+                  'socialAdditional.searchTimezones_a63fa7',
+                )}
+                placeholder={getTranslation(language)('socialAdditional.searchCityOrRegion_a73bae')}
                 value={search}
                 onChangeText={setSearch}
                 autoCorrect={false}

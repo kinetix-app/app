@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useRef } from 'react';
@@ -14,7 +15,7 @@ export function LeagueResults({
   timezone,
 }: Readonly<{ accountId: number; leagueId: number; active?: boolean; timezone?: string | null }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const cache = useQueryClient();
   const acknowledging = useRef(false);
@@ -43,17 +44,19 @@ export function LeagueResults({
   if (query.isPending)
     return (
       <ActivityIndicator
-        accessibilityLabel={t('Loading league results', 'Cargando resultados de la liga')}
+        accessibilityLabel={getTranslation(language)(
+          'socialAdditional.loadingLeagueResults_335f66',
+        )}
       />
     );
   if (query.isError && !result)
     return (
       <View>
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {t('Could not load league results.', 'No se pudieron cargar los resultados de la liga.')}
+          {getTranslation(language)('socialAdditional.couldNotLoadLeagueResults_df9ef3')}
         </Text>
         <LeagueAction
-          label={t('Retry results', 'Reintentar resultados')}
+          label={getTranslation(language)('socialAdditional.retryResults_057782')}
           onPress={() => {
             void query.refetch();
           }}
@@ -61,7 +64,7 @@ export function LeagueResults({
       </View>
     );
   if (!result) return null;
-  const date = new Intl.DateTimeFormat(language === 'es' ? 'es' : undefined, {
+  const date = new Intl.DateTimeFormat(language, {
     dateStyle: 'medium',
     ...(timezone ? { timeZone: timezone } : {}),
   });
@@ -95,21 +98,18 @@ export function LeagueResults({
             }}
           >
             <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-              {t('Round result', 'Resultado de la ronda')}
+              {getTranslation(language)('socialAdditional.roundResult_e4c4c8')}
             </Text>
             <Text style={[textStyles.body, { color: p.ink }]}>
               {date.format(new Date(result.start_at))} – {date.format(new Date(result.end_at))}
             </Text>
             <Text style={[textStyles.body, { color: p.ink }]}>
               {losers.length
-                ? `${t('Lowest score', 'Puntuación más baja')}: ${losers.map((row) => row.display_name ?? t('Member', 'Miembro')).join(', ')}`
-                : t(
-                    'No losing outcome for this round.',
-                    'No hay resultado perdedor en esta ronda.',
-                  )}
+                ? `${getTranslation(language)('socialAdditional.lowestScore_833e0b')}: ${losers.map((row) => row.display_name ?? getTranslation(language)('socialAdditional.member_10100e')).join(', ')}`
+                : getTranslation(language)('socialAdditional.noLosingOutcomeForThisRound_2d02c6')}
             </Text>
             <Text accessibilityRole="header" style={[textStyles.body, { color: p.ink }]}>
-              {t('Final standings', 'Clasificación final')}
+              {getTranslation(language)('socialAdditional.finalStandings_98dfa9')}
             </Text>
             {result.standings.map((row) => (
               <LeagueRankingRow
@@ -121,14 +121,17 @@ export function LeagueResults({
             ))}
             {acknowledge.isError ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                {t(
-                  'Could not acknowledge this result. Please try again.',
-                  'No se pudo confirmar este resultado. Inténtalo de nuevo.',
+                {getTranslation(language)(
+                  'socialAdditional.couldNotAcknowledgeThisResultPlease_e9b116',
                 )}
               </Text>
             ) : null}
             <LeagueAction
-              label={acknowledge.isPending ? t('Saving…', 'Guardando…') : t('Got it', 'Entendido')}
+              label={
+                acknowledge.isPending
+                  ? getTranslation(language)('socialAdditional.saving_444c23')
+                  : getTranslation(language)('socialAdditional.gotIt_b12e36')
+              }
               variant="primary"
               disabled={acknowledge.isPending}
               onPress={() => {

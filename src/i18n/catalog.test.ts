@@ -27,8 +27,8 @@ test('catalogs have matching keys and interpolation variables', () => {
 test('uses the selected language', () => {
   expect(getTranslation('en')('navigation.home')).toBe('Feed');
   expect(getTranslation('es')('navigation.home')).toBe('Inicio');
-  expect(getTranslation(false)('navigation.home')).toBe('Feed');
-  expect(getTranslation(true)('navigation.home')).toBe('Inicio');
+  // @ts-expect-error Lookups must use language codes, not booleans.
+  if (false) getTranslation(true);
   // @ts-expect-error Unknown keys must fail type checking.
   if (false) getTranslation('en')('navigation.misspelled');
 });

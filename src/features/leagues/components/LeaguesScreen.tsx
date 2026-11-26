@@ -36,8 +36,7 @@ import { LeagueStandings } from './LeagueStandings';
 type LeagueListItemData = Awaited<ReturnType<typeof leaguesApi.list>>[number];
 
 function leagueMemberNoun(count: number, language: 'en' | 'es') {
-  if (language === 'es') return count === 1 ? 'miembro' : 'miembros';
-  return count === 1 ? 'member' : 'members';
+  return getTranslation(language)('socialAdditional.memberNoun', { count });
 }
 
 function LeagueListItem({
@@ -46,20 +45,17 @@ function LeagueListItem({
   onPress,
 }: Readonly<{ accountId: number; league: LeagueListItemData; onPress: () => void }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const position = league.current_week_position;
   let rankHint: string;
   let rankText: string;
   if (position === null) {
-    rankHint = t('Weekly rank unavailable', 'Clasificación semanal no disponible');
+    rankHint = getTranslation(language)('socialAdditional.weeklyRankUnavailable_5528ba');
     rankText = rankHint;
-  } else if (language === 'es') {
-    rankHint = `Tu posición esta semana es ${position}`;
-    rankText = `#${position} esta semana`;
   } else {
-    rankHint = `Your position this week is ${position}`;
-    rankText = `#${position} this week`;
+    rankHint = getTranslation(language)('socialAdditional.weeklyRankHint', { position });
+    rankText = getTranslation(language)('socialAdditional.weeklyRankText', { position });
   }
   const hintVerb = getTranslation(language)('leagues.opensLeagueStandings');
   return (
@@ -150,7 +146,7 @@ export function LeaguesScreen({
   onDetailOpenChange?: (open: boolean) => void;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const cache = useQueryClient();
   const key = ['leagues', accountId];
@@ -287,16 +283,16 @@ export function LeaguesScreen({
   const descriptionField = (value: string) => (
     <View style={{ gap: spacing['space-2'] }}>
       <Text style={[textStyles.label, { color: p.ink }]}>
-        {t('League description', 'Descripción de la liga')}
+        {getTranslation(language)('socialAdditional.leagueDescription_c87668')}
       </Text>
       <TextField
-        accessibilityLabel={t('League description', 'Descripción de la liga')}
+        accessibilityLabel={getTranslation(language)('socialAdditional.leagueDescription_c87668')}
         value={value}
         onChangeText={setDescription}
         multiline
         maxLength={descriptionLimit}
         editable={!pending}
-        placeholder={t('What is your league about?', '¿De qué trata tu liga?')}
+        placeholder={getTranslation(language)('socialAdditional.whatIsYourLeagueAbout_584276')}
         inputStyle={{ minHeight: 88, textAlignVertical: 'top' }}
       />
     </View>
@@ -339,7 +335,7 @@ export function LeaguesScreen({
   const leagueTitle =
     detail.data?.name ??
     list.data?.find((item) => item.id === selected)?.name ??
-    t('League', 'Liga');
+    getTranslation(language)('socialAdditional.league_5e61e1');
   const beginEdit = () => {
     if (detail.data?.role !== 'admin') return;
     setName(detail.data.name);
@@ -355,21 +351,31 @@ export function LeaguesScreen({
 
   function renderHeader() {
     const informationSubtitle = information
-      ? t('League information', 'Información de la liga')
+      ? getTranslation(language)('socialAdditional.leagueInformation_368170')
       : undefined;
     const informationBackLabel = information
-      ? t('Back to league', 'Volver a la liga')
-      : t('Back to leagues', 'Volver a ligas');
-    let navigationLabel = information ? t('Standings', 'Clasificación') : t('Leagues', 'Ligas');
-    if (editing) navigationLabel = t('Cancel', 'Cancelar');
+      ? getTranslation(language)('socialAdditional.backToLeague_945a6d')
+      : getTranslation(language)('socialAdditional.backToLeagues_6a66d5');
+    let navigationLabel = information
+      ? getTranslation(language)('socialAdditional.standings_1527d5')
+      : getTranslation(language)('socialAdditional.leagues_cb2765');
+    if (editing) navigationLabel = getTranslation(language)('socialAdditional.cancel_a25d0b');
     if (selected !== null)
       return (
         <LeaguePageHeader
           accountId={accountId}
           title={leagueTitle}
           picture={detail.data?.picture_url}
-          subtitle={editing ? t('Edit league', 'Editar liga') : informationSubtitle}
-          backLabel={editing ? t('Cancel editing', 'Cancelar edición') : informationBackLabel}
+          subtitle={
+            editing
+              ? getTranslation(language)('socialAdditional.editLeague_6fa700')
+              : informationSubtitle
+          }
+          backLabel={
+            editing
+              ? getTranslation(language)('socialAdditional.cancelEditing_be2d32')
+              : informationBackLabel
+          }
           onBack={back}
           disabled={pending}
           onOpen={!information && detail.data ? openInformation : undefined}
@@ -383,12 +389,16 @@ export function LeaguesScreen({
   function renderListHeader() {
     return (
       <ScreenHeader
-        title={mode === 'create' ? t('Create league', 'Crear liga') : 'FriendsLeague'}
+        title={
+          mode === 'create'
+            ? getTranslation(language)('socialAdditional.createLeague_213b52')
+            : 'FriendsLeague'
+        }
         leading={
           mode !== 'list' ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('Back to leagues', 'Volver a ligas')}
+              accessibilityLabel={getTranslation(language)('socialAdditional.backToLeagues_6a66d5')}
               onPress={back}
               disabled={pending}
               accessibilityState={{ disabled: pending }}
@@ -411,15 +421,19 @@ export function LeaguesScreen({
 
   function renderLeagueList() {
     if (list.isPending)
-      return <ActivityIndicator accessibilityLabel={t('Loading leagues', 'Cargando ligas')} />;
+      return (
+        <ActivityIndicator
+          accessibilityLabel={getTranslation(language)('socialAdditional.loadingLeagues_f65649')}
+        />
+      );
     if (list.isError)
       return (
         <>
-          {button(t('Retry', 'Reintentar'), () => {
+          {button(getTranslation(language)('socialAdditional.retry_95b6f5'), () => {
             void list.refetch();
           })}
           <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-            {t('Could not load leagues.', 'No se pudieron cargar las ligas.')}
+            {getTranslation(language)('socialAdditional.couldNotLoadLeagues_fb5ce8')}
           </Text>
         </>
       );
@@ -444,13 +458,10 @@ export function LeaguesScreen({
       <LeagueCard>
         <Ionicons name="people-outline" size={40} color={p['brand-ink']} />
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          {t('You have no leagues yet.', 'Aún no tienes ligas.')}
+          {getTranslation(language)('socialAdditional.youHaveNoLeaguesYet_aafc83')}
         </Text>
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {t(
-            'Create a league for your friends or join one with an invitation link.',
-            'Crea una liga para tus amigos o únete con un enlace de invitación.',
-          )}
+          {getTranslation(language)('socialAdditional.createALeagueForYourFriends_332ee0')}
         </Text>
       </LeagueCard>
     );
@@ -467,15 +478,19 @@ export function LeaguesScreen({
 
   function renderLeagueDetails() {
     if (detail.isPending)
-      return <ActivityIndicator accessibilityLabel={t('Loading league', 'Cargando liga')} />;
+      return (
+        <ActivityIndicator
+          accessibilityLabel={getTranslation(language)('socialAdditional.loadingLeague_54f84c')}
+        />
+      );
     if (detail.isError || !detail.data)
       return (
         <>
-          {button(t('Retry', 'Reintentar'), () => {
+          {button(getTranslation(language)('socialAdditional.retry_95b6f5'), () => {
             void detail.refetch();
           })}
           <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-            {t('Could not load league.', 'No se pudo cargar la liga.')}
+            {getTranslation(language)('socialAdditional.couldNotLoadLeague_21541a')}
           </Text>
         </>
       );
@@ -495,11 +510,13 @@ export function LeaguesScreen({
               onBusy={setPictureBusy}
               disabled={pending}
             />
-            {field(t('League name', 'Nombre de la liga'), name, setName)}
+            {field(getTranslation(language)('socialAdditional.leagueName_e3b560'), name, setName)}
             {descriptionField(description ?? '')}
             {renderDetailError()}
             {button(
-              save.isPending ? t('Saving…', 'Guardando…') : t('Save', 'Guardar'),
+              save.isPending
+                ? getTranslation(language)('socialAdditional.saving_444c23')
+                : getTranslation(language)('socialAdditional.save_5bd05a'),
               () => {
                 const result = nameSchema.safeParse(name);
                 if (!result.success) {
@@ -533,7 +550,7 @@ export function LeaguesScreen({
             inviteAction={
               isAdmin ? (
                 <LeagueIconButton
-                  label={t('Generate invitation', 'Generar invitación')}
+                  label={getTranslation(language)('socialAdditional.generateInvitation_3e4586')}
                   icon="link-outline"
                   disabled={pending}
                   onPress={() => generate.mutate()}
@@ -561,7 +578,7 @@ export function LeaguesScreen({
             onBusy={setPictureBusy}
             disabled={pending}
           />
-          {field(t('League name', 'Nombre de la liga'), name, setName)}
+          {field(getTranslation(language)('socialAdditional.leagueName_e3b560'), name, setName)}
           {descriptionField(description ?? '')}
           <LeagueTimezonePicker value={timezone} onChange={setTimezone} disabled={pending} />
           {error ? (
@@ -570,13 +587,12 @@ export function LeaguesScreen({
             </Text>
           ) : null}
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {t(
-              'The timezone cannot be changed after creation.',
-              'La zona horaria no se puede cambiar después de crear la liga.',
-            )}
+            {getTranslation(language)('socialAdditional.theTimezoneCannotBeChangedAfter_9dcae3')}
           </Text>
           {button(
-            create.isPending ? t('Creating…', 'Creando…') : t('Create league', 'Crear liga'),
+            create.isPending
+              ? getTranslation(language)('socialAdditional.creating_34c633')
+              : getTranslation(language)('socialAdditional.createLeague_213b52'),
             () => {
               const result = createSchema.safeParse({
                 name,
@@ -603,7 +619,7 @@ export function LeaguesScreen({
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] }}>
           <View style={{ flexGrow: 1, flexBasis: 148 }}>
             <LeagueAction
-              label={t('Create league', 'Crear liga')}
+              label={getTranslation(language)('socialAdditional.createLeague_213b52')}
               icon="add"
               variant="primary"
               onPress={() => {
@@ -614,7 +630,7 @@ export function LeaguesScreen({
           </View>
           <View style={{ flexGrow: 1, flexBasis: 148 }}>
             <LeagueAction
-              label={t('Join a league', 'Unirse a una liga')}
+              label={getTranslation(language)('socialAdditional.joinALeague_e38a3c')}
               icon="link-outline"
               onPress={() => {
                 setJoinOpen(true);
@@ -624,7 +640,7 @@ export function LeaguesScreen({
           </View>
         </View>
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          {t('Your leagues', 'Tus ligas')}
+          {getTranslation(language)('socialAdditional.yourLeagues_e4999e')}
         </Text>
         {renderLeagueList()}
       </>
@@ -636,14 +652,14 @@ export function LeaguesScreen({
       <>
         {active && joinOpen && !token ? (
           <LeagueDialog
-            title={t('Join a league', 'Unirse a una liga')}
+            title={getTranslation(language)('socialAdditional.joinALeague_e38a3c')}
             onClose={() => {
               setJoinOpen(false);
               setError('');
             }}
           >
             {field(
-              t('Invitation link or token', 'Enlace o código de invitación'),
+              getTranslation(language)('socialAdditional.invitationLinkOrToken_536aef'),
               input,
               (value) => {
                 setInput(value);
@@ -656,15 +672,14 @@ export function LeaguesScreen({
               </Text>
             ) : null}
             <LeagueAction
-              label={t('Preview invitation', 'Ver invitación')}
+              label={getTranslation(language)('socialAdditional.previewInvitation_e7f45c')}
               variant="primary"
               onPress={() => {
                 const value = invitationToken(input);
                 if (!value) {
                   setError(
-                    t(
-                      'Enter an invitation link or token.',
-                      'Introduce un enlace o código de invitación.',
+                    getTranslation(language)(
+                      'socialAdditional.enterAnInvitationLinkOrToken_235509',
                     ),
                   );
                   return;

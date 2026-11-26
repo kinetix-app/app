@@ -29,7 +29,6 @@ export function WorkoutExerciseResults({
 }: Readonly<{ exercise: WorkoutExercise; position: number }>) {
   const p = usePalette();
   const language = useLanguage();
-  const es = language === 'es';
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const image = exercise.imageUrl !== failedImage ? exercise.imageUrl : null;
   const { sets } = exercise;
@@ -53,7 +52,7 @@ export function WorkoutExerciseResults({
           {image ? (
             <Image
               source={{ uri: image }}
-              accessibilityLabel={getTranslation(es)('dynamicMessages.imageOf_9bfc5d', {
+              accessibilityLabel={getTranslation(language)('dynamicMessages.imageOf_9bfc5d', {
                 value1: exercise.name,
               })}
               resizeMode="contain"
@@ -69,7 +68,7 @@ export function WorkoutExerciseResults({
           {cardio.length > 0 ? <SetTable sets={cardio} cardio /> : null}
           {sets.length === 0 ? (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {getTranslation(es)('training.noSetsRecorded_bfc086')}
+              {getTranslation(language)('training.noSetsRecorded_bfc086')}
             </Text>
           ) : null}
         </View>
@@ -97,7 +96,6 @@ function SetTable({
 }: Readonly<{ sets: readonly RecordedSet[]; cardio?: boolean }>) {
   const p = usePalette();
   const language = useLanguage();
-  const es = language === 'es';
   const tableLabel = cardio
     ? { en: 'Cardio sets', es: 'Series de cardio' }
     : { en: 'Strength sets', es: 'Series de fuerza' };
@@ -118,7 +116,7 @@ function SetTable({
     <View role="table" accessibilityLabel={tableLabel[language]}>
       <View role="row" style={[styles.row, styles.tableHeader]}>
         <Text role="columnheader" style={[columnTitle, styles.setNumber]}>
-          {getTranslation(es)('training.set_367fa4')}
+          {getTranslation(language)('training.set_367fa4')}
         </Text>
         <Text role="columnheader" style={[columnTitle, styles.measurement]}>
           {measurementLabel[language]}

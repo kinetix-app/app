@@ -14,10 +14,7 @@ import { LeagueRules } from './LeagueRules';
 type Member = LeagueDetail['members'][number];
 
 function memberCountLabel(count: number, language: 'en' | 'es') {
-  let noun: string;
-  if (language === 'es') noun = count === 1 ? 'miembro' : 'miembros';
-  else noun = count === 1 ? 'member' : 'members';
-  return `${count} ${noun}`;
+  return getTranslation(language)('socialAdditional.membersCount', { count });
 }
 
 function memberRoleControlLabel(
@@ -50,19 +47,19 @@ export function LeagueInformation({
   onOpenScoreHistory: (member: Member) => void;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const [tab, setTab] = useState<'about' | 'rules'>('about');
   const [target, setTarget] = useState<Member | null>(null);
   const tabs = (
     <View
       accessibilityRole="tablist"
-      accessibilityLabel={t('League information', 'Información de la liga')}
+      accessibilityLabel={getTranslation(language)('socialAdditional.leagueInformation_368170')}
       style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: p.line }}
     >
       <AnimatedTextSelector
         role="tab"
-        label={t('About', 'Acerca de')}
+        label={getTranslation(language)('socialAdditional.about_b4dfbf')}
         selected={tab === 'about'}
         reduceMotion
         equalWidth
@@ -70,7 +67,7 @@ export function LeagueInformation({
       />
       <AnimatedTextSelector
         role="tab"
-        label={t('League rules', 'Reglas de la liga')}
+        label={getTranslation(language)('socialAdditional.leagueRules_ec816d')}
         selected={tab === 'rules'}
         reduceMotion
         equalWidth
@@ -89,13 +86,10 @@ export function LeagueInformation({
 
   const nextRole = target?.role === 'admin' ? 'member' : 'admin';
   const memberCount = league.members.length;
-  const created = new Date(league.created_at).toLocaleDateString(
-    language === 'es' ? 'es' : undefined,
-    {
-      dateStyle: 'medium',
-      ...(league.timezone ? { timeZone: league.timezone } : {}),
-    },
-  );
+  const created = new Date(league.created_at).toLocaleDateString(language, {
+    dateStyle: 'medium',
+    ...(league.timezone ? { timeZone: league.timezone } : {}),
+  });
 
   const showRoleControl = league.role === 'admin' && Boolean(onRoleChange);
   return (
@@ -104,7 +98,7 @@ export function LeagueInformation({
       <LeagueCard>
         <View style={[leagueStyles.row, { justifyContent: 'space-between' }]}>
           <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-            {t('About', 'Acerca de')}
+            {getTranslation(language)('socialAdditional.about_b4dfbf')}
           </Text>
           {inviteAction}
         </View>
@@ -115,10 +109,14 @@ export function LeagueInformation({
           {[
             {
               icon: 'people-outline' as const,
-              label: t('Membership', 'Miembros'),
+              label: getTranslation(language)('socialAdditional.membership_e12f51'),
               value: memberCountLabel(memberCount, language),
             },
-            { icon: 'calendar-outline' as const, label: t('Created', 'Creada'), value: created },
+            {
+              icon: 'calendar-outline' as const,
+              label: getTranslation(language)('socialAdditional.created_915309'),
+              value: created,
+            },
           ].map(({ icon, label, value }) => (
             <View
               key={label}
@@ -142,24 +140,27 @@ export function LeagueInformation({
         <View style={leagueStyles.row}>
           <Ionicons name="globe-outline" size={20} color={p['ink-muted']} />
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'], flex: 1 }]}>
-            {t('Timezone', 'Zona horaria')}:{' '}
-            {league.timezone ?? t('Not configured', 'Sin configurar')}
+            {getTranslation(language)('socialAdditional.timezone_61191c')}:{' '}
+            {league.timezone ?? getTranslation(language)('socialAdditional.notConfigured_984e5e')}
           </Text>
         </View>
         {children}
       </LeagueCard>
       <LeagueCard>
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          {t('Members', 'Miembros')}
+          {getTranslation(language)('socialAdditional.members_6fc6dd')}
         </Text>
         <View>
           {league.members.map((member, index) => {
-            const name = member.display_name ?? t('Member', 'Miembro');
+            const name =
+              member.display_name ?? getTranslation(language)('socialAdditional.member_10100e');
             const creator = member.user_id === league.creator_id;
             const admin = creator || member.role === 'admin';
             const own = member.user_id === accountId;
             const roleLocked = creator || own;
-            const label = admin ? t('Admin', 'Administrador') : t('Member', 'Miembro');
+            const label = admin
+              ? getTranslation(language)('socialAdditional.admin_4257ee')
+              : getTranslation(language)('socialAdditional.member_10100e');
             const role = (
               <Text style={[textStyles.label, { color: admin ? p['brand-ink'] : p.ink }]}>
                 {label}
@@ -214,11 +215,11 @@ export function LeagueInformation({
                   <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
                     <Text style={[textStyles.body, { color: p.ink }]}>
                       {name}
-                      {own ? t(' (you)', ' (tú)') : ''}
+                      {own ? getTranslation(language)('socialAdditional.you_1e2cca') : ''}
                     </Text>
                     {creator ? (
                       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                        {t('Creator', 'Creador')}
+                        {getTranslation(language)('socialAdditional.creator_ab1482')}
                       </Text>
                     ) : null}
                   </View>
@@ -258,7 +259,9 @@ export function LeagueInformation({
       </LeagueCard>
       {target && onRoleChange ? (
         <LeagueMemberRoleDialog
-          name={target.display_name ?? t('This member', 'Este miembro')}
+          name={
+            target.display_name ?? getTranslation(language)('socialAdditional.thisMember_d15f89')
+          }
           nextRole={nextRole}
           onConfirm={() => onRoleChange(target.user_id, nextRole)}
           onCancel={() => setTarget(null)}

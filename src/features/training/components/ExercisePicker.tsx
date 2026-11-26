@@ -36,7 +36,7 @@ export function ExercisePicker({
   onClose: () => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const insets = useSafeAreaInsets();
   const submitting = useRef(false);
   const list = useRef<FlatList<ExerciseSummary>>(null);
@@ -168,7 +168,7 @@ export function ExercisePicker({
             ListEmptyComponent={
               (!query.isPending && !query.isError ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  {getTranslation(es)('training.noExercisesFoundTryAnotherNameOr_4ddf82')}
+                  {getTranslation(language)('training.noExercisesFoundTryAnotherNameOr_4ddf82')}
                 </Text>
               ) : null) ?? undefined
             }
@@ -255,7 +255,6 @@ function ExercisePickerRow({
 }>) {
   const p = usePalette();
   const language = useLanguage();
-  const es = language === 'es';
   const selectionVerb = selected
     ? { en: 'Deselect', es: 'Deseleccionar' }
     : { en: 'Select', es: 'Seleccionar' };
@@ -275,7 +274,7 @@ function ExercisePickerRow({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={getTranslation(es)('dynamicMessages.detailsFor_43fa13', {
+        accessibilityLabel={getTranslation(language)('dynamicMessages.detailsFor_43fa13', {
           value1: item.name,
         })}
         disabled={adding}
@@ -309,7 +308,7 @@ function ExercisePickerRow({
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {(
               item.body_parts?.map((part) => catalogueLabel(part, language)).join(' · ') ||
-              getTranslation(es)('training.gymExercise_3b38a2')
+              getTranslation(language)('training.gymExercise_3b38a2')
             ).toLowerCase()}
           </Text>
         </View>
@@ -391,11 +390,11 @@ function ExerciseCatalogueHeader({
             accessibilityRole="header"
             style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
           >
-            {getTranslation(es)('training.addExercise_89dbcf')}
+            {getTranslation(language)('training.addExercise_89dbcf')}
           </Text>
           <IconButton
             icon="x"
-            label={getTranslation(es)('training.closeExercisePicker_b009b6')}
+            label={getTranslation(language)('training.closeExercisePicker_b009b6')}
             onPress={onClose}
             disabled={adding}
           />
@@ -408,7 +407,7 @@ function ExerciseCatalogueHeader({
               search ? (
                 <IconButton
                   icon="x"
-                  label={getTranslation(es)('training.clearExerciseSearch_6e8166')}
+                  label={getTranslation(language)('training.clearExerciseSearch_6e8166')}
                   onPress={() => {
                     setSearch('');
                     setName('');
@@ -416,8 +415,8 @@ function ExerciseCatalogueHeader({
                 />
               ) : null
             }
-            accessibilityLabel={getTranslation(es)('training.searchExercises_17d7ef')}
-            placeholder={getTranslation(es)('training.searchByName_27f10c')}
+            accessibilityLabel={getTranslation(language)('training.searchExercises_17d7ef')}
+            placeholder={getTranslation(language)('training.searchByName_27f10c')}
             maxLength={200}
             value={search}
             onChangeText={setSearch}
@@ -465,7 +464,9 @@ function ExerciseCatalogueHeader({
           {bodyParts.length > 1 ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es)('training.clearAllBodyPartFilters_87ef3e')}
+              accessibilityLabel={getTranslation(language)(
+                'training.clearAllBodyPartFilters_87ef3e',
+              )}
               onPress={() => setBodyParts([])}
               style={({ pressed }) => ({
                 alignSelf: 'center',
@@ -476,7 +477,7 @@ function ExerciseCatalogueHeader({
               })}
             >
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                {getTranslation(es)('training.clearAll_715244')}
+                {getTranslation(language)('training.clearAll_715244')}
               </Text>
             </Pressable>
           ) : null}
@@ -504,7 +505,8 @@ function ExerciseSelectionAction({
   onSubmit: () => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const addLabels = es
     ? { adding: 'Añadiendo…', add: `Añadir ejercicios (${count})` }
     : { adding: 'Adding…', add: `Add exercises (${count})` };
@@ -527,7 +529,7 @@ function ExerciseSelectionAction({
     >
       {addError ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {getTranslation(es)('training.couldNotAddAllExercisesYourRemaining_f6542d')}
+          {getTranslation(language)('training.couldNotAddAllExercisesYourRemaining_f6542d')}
         </Text>
       ) : null}
       <Button title={title} onPress={onSubmit} disabled={adding} icon="plus" />
@@ -549,7 +551,7 @@ function CatalogueBodyPartBadges({
     <>
       {bodyParts.length === 0 ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {getTranslation(es)('training.allBodyParts_46db89')}
+          {getTranslation(language)('training.allBodyParts_46db89')}
         </Text>
       ) : (
         bodyParts.map((part) => (

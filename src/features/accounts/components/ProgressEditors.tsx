@@ -109,7 +109,8 @@ function ProgressDialog({
   children: (openCalendar: (request: CalendarRequest) => void) => React.ReactNode;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const { height } = useWindowDimensions();
   const [calendar, setCalendar] = useState<CalendarRequest | null>(null);
   const dialogColors = {
@@ -167,7 +168,7 @@ function ProgressDialog({
             <View style={styles.actionRow}>
               <View style={styles.grow}>
                 <Button
-                  title={getTranslation(es)('accountsUi.cancel')}
+                  title={getTranslation(language)('accountsUi.cancel')}
                   shape="rounded"
                   secondary
                   disabled={busy}
@@ -177,7 +178,7 @@ function ProgressDialog({
               <View style={styles.saveAction}>
                 <Button
                   shape="rounded"
-                  title={busy ? getTranslation(es)('accountsUi.saving') : saveLabel}
+                  title={busy ? getTranslation(language)('accountsUi.saving') : saveLabel}
                   accessibilityLabel={saveLabel}
                   disabled={busy}
                   onPress={onSave}
@@ -210,7 +211,7 @@ function ProgressDialog({
             </ScrollView>
             <View style={[styles.actions, { borderTopColor: p.line }]}>
               <Button
-                title={getTranslation(es)('accountsUi.cancel')}
+                title={getTranslation(language)('accountsUi.cancel')}
                 shape="rounded"
                 secondary
                 onPress={closeCalendar}
@@ -239,7 +240,8 @@ function ProgressField<T extends FieldValues>({
   compact?: boolean;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   return (
     <Controller
       control={control}
@@ -288,7 +290,8 @@ function ProgressDate<T extends FieldValues>({
   openCalendar: (request: CalendarRequest) => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   return (
     <Controller
       control={control}
@@ -346,7 +349,8 @@ export function MeasurementEditor({
   onSaved: (measurement: BodyMeasurement) => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const today = todayForProfile(timeZone);
   const [initial] = useState(() => latestMeasurementDraft(today, system, history));
   const { control, handleSubmit, setError } = useForm<MeasurementFormValues>({
@@ -404,10 +408,10 @@ export function MeasurementEditor({
 
   return (
     <ProgressDialog
-      title={getTranslation(es)('accountsUi.log_measurements')}
+      title={getTranslation(language)('accountsUi.log_measurements')}
       busy={mutation.isPending}
       error={formError}
-      saveLabel={getTranslation(es)('accountsUi.save_measurements')}
+      saveLabel={getTranslation(language)('accountsUi.save_measurements')}
       onClose={dismiss}
       onSave={() => void handleSubmit(save)()}
     >
@@ -417,16 +421,16 @@ export function MeasurementEditor({
             name="date"
             control={control}
             openCalendar={openCalendar}
-            label={getTranslation(es)('accountsUi.measurement_date')}
+            label={getTranslation(language)('accountsUi.measurement_date')}
             today={today}
             disabled={mutation.isPending}
           />
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {Object.keys(initial.previous).length
-              ? getTranslation(es)(
+              ? getTranslation(language)(
                   'accountsUi.previous_values_are_filled_in_clear_any_you_want_to_skip',
                 )
-              : getTranslation(es)(
+              : getTranslation(language)(
                   'accountsUi.add_the_measurements_you_took_leave_the_others_blank',
                 )}
           </Text>
@@ -439,7 +443,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_ft"
                   control={control}
-                  label={getTranslation(es)('accountsUi.height_ft')}
+                  label={getTranslation(language)('accountsUi.height_ft')}
                   compact
                   disabled={mutation.isPending}
                   mode="integer"
@@ -447,7 +451,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_in"
                   control={control}
-                  label={getTranslation(es)('accountsUi.height_in')}
+                  label={getTranslation(language)('accountsUi.height_in')}
                   compact
                   disabled={mutation.isPending}
                 />
@@ -458,7 +462,7 @@ export function MeasurementEditor({
           </View>
           <View style={[styles.section, { borderTopColor: p.line }]}>
             <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-              {getTranslation(es)('accountsUi.circumference')}
+              {getTranslation(language)('accountsUi.circumference')}
             </Text>
             <View style={styles.fieldGroup}>{circumferenceMetrics.map(field)}</View>
           </View>
@@ -487,7 +491,7 @@ export function PhysicalTargetEditor({
   onSaved: (result: PhysicalTarget) => void;
   onObjectiveChanged: () => void;
 }>) {
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const { control, handleSubmit, setError } = useForm<TargetFormValues>({
     defaultValues: {
       weight_kg: target ? displayWeight(target.weight_kg, system) : '',
@@ -532,15 +536,15 @@ export function PhysicalTargetEditor({
     <ProgressDialog
       title={
         target
-          ? getTranslation(es)('accountsUi.edit_weight_target')
-          : getTranslation(es)('accountsUi.set_weight_target')
+          ? getTranslation(language)('accountsUi.edit_weight_target')
+          : getTranslation(language)('accountsUi.set_weight_target')
       }
       busy={mutation.isPending}
       error={formError}
       saveLabel={
         staleObjective
-          ? getTranslation(es)('accountsUi.done')
-          : getTranslation(es)('accountsUi.save_target')
+          ? getTranslation(language)('accountsUi.done')
+          : getTranslation(language)('accountsUi.save_target')
       }
       onSave={staleObjective ? dismiss : () => void handleSubmit(save)()}
       onClose={dismiss}
@@ -550,14 +554,14 @@ export function PhysicalTargetEditor({
           <ProgressField
             name="weight_kg"
             control={control}
-            label={`${getTranslation(es)('accountsUi.target_weight')} (${measurementUnit('weight_kg', system)})`}
+            label={`${getTranslation(language)('accountsUi.target_weight')} (${measurementUnit('weight_kg', system)})`}
             disabled={mutation.isPending || staleObjective}
           />
           <ProgressDate
             name="target_date"
             control={control}
             openCalendar={openCalendar}
-            label={getTranslation(es)('accountsUi.target_date')}
+            label={getTranslation(language)('accountsUi.target_date')}
             today={todayForProfile(timeZone)}
             disabled={mutation.isPending || staleObjective}
             optional

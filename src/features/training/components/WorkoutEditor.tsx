@@ -23,7 +23,7 @@ export function WorkoutTimer({
   onOverlay?: boolean;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const foreground = onOverlay ? p['overlay-ink'] : p['brand-ink'];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -40,7 +40,7 @@ export function WorkoutTimer({
     <View style={ui.row}>
       <Feather name="clock" size={18} color={foreground} />
       <Text
-        accessibilityLabel={getTranslation(es)('dynamicMessages.workoutDuration_6549ff', {
+        accessibilityLabel={getTranslation(language)('dynamicMessages.workoutDuration_6549ff', {
           value1: time,
         })}
         style={[
@@ -72,7 +72,7 @@ export function WorkoutExerciseSummary({
   cardio?: boolean;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   function range(key: 'reps' | 'value') {
     const values = sets
       .map((set) => {
@@ -91,7 +91,7 @@ export function WorkoutExerciseSummary({
       <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
         {savedCount === undefined
           ? `${sets.length} ${setLabel}`
-          : getTranslation(es)('dynamicMessages.setsSaved_d4a1f9', {
+          : getTranslation(language)('dynamicMessages.setsSaved_d4a1f9', {
               value1: savedCount,
               value2: sets.length,
             })}
@@ -169,7 +169,7 @@ export function WorkoutExerciseCard({
   onMove?: (delta: number) => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const [actions, setActions] = useState(false);
   return (
     <>
@@ -182,13 +182,15 @@ export function WorkoutExerciseCard({
         accessible={false}
         accessibilityLabel={
           dragId
-            ? getTranslation(es)('dynamicMessages.reorder_b6370c', {
+            ? getTranslation(language)('dynamicMessages.reorder_b6370c', {
                 value1: exercise.name,
               })
             : undefined
         }
         accessibilityHint={
-          dragId ? getTranslation(es)('training.holdAndDragToReorderUseArrow_80e0a3') : undefined
+          dragId
+            ? getTranslation(language)('training.holdAndDragToReorderUseArrow_80e0a3')
+            : undefined
         }
         disabled={disabled}
         onLongPress={onDrag}
@@ -205,7 +207,7 @@ export function WorkoutExerciseCard({
         <View style={[ui.row, { alignItems: 'flex-start' }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es)('dynamicMessages.detailsFor_43fa13', {
+            accessibilityLabel={getTranslation(language)('dynamicMessages.detailsFor_43fa13', {
               value1: exercise.name,
             })}
             nativeID={dragId ? `${dragId}-drag-details` : undefined}
@@ -233,7 +235,7 @@ export function WorkoutExerciseCard({
                 style={{ minHeight: 100, justifyContent: 'center', padding: spacing['space-3'] }}
               >
                 <Text style={{ color: p['ink-muted'] }}>
-                  {getTranslation(es)('training.noImage_127894')}
+                  {getTranslation(language)('training.noImage_127894')}
                 </Text>
               </View>
             )}
@@ -242,23 +244,25 @@ export function WorkoutExerciseCard({
             <View style={[ui.row, { alignItems: 'flex-start', gap: spacing['space-1'] }]}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={getTranslation(es)('dynamicMessages.editSetsFor_d7f038', {
+                accessibilityLabel={getTranslation(language)('dynamicMessages.editSetsFor_d7f038', {
                   value1: exercise.name,
                 })}
                 nativeID={dragId ? `${dragId}-drag-title` : undefined}
                 accessibilityHint={
-                  dragId ? getTranslation(es)('training.holdAndDragToReorder_e73459') : undefined
+                  dragId
+                    ? getTranslation(language)('training.holdAndDragToReorder_e73459')
+                    : undefined
                 }
                 accessibilityActions={
                   onMove
                     ? [
                         {
                           name: 'increment',
-                          label: getTranslation(es)('training.moveExerciseLater_cd3821'),
+                          label: getTranslation(language)('training.moveExerciseLater_cd3821'),
                         },
                         {
                           name: 'decrement',
-                          label: getTranslation(es)('training.moveExerciseEarlier_7f74db'),
+                          label: getTranslation(language)('training.moveExerciseEarlier_7f74db'),
                         },
                       ]
                     : undefined
@@ -279,7 +283,7 @@ export function WorkoutExerciseCard({
               </Pressable>
               <IconButton
                 icon="more-horizontal"
-                label={getTranslation(es)('dynamicMessages.actionsFor_0dece7', {
+                label={getTranslation(language)('dynamicMessages.actionsFor_0dece7', {
                   value1: exercise.name,
                 })}
                 disabled={disabled}
@@ -296,7 +300,7 @@ export function WorkoutExerciseCard({
             ) : null}
             {children}
             <Button
-              title={getTranslation(es)('training.addSet_11e7f7')}
+              title={getTranslation(language)('training.addSet_11e7f7')}
               accessibilityLabel={addSetLabel}
               onPress={onAddSet}
               tone="positive"
@@ -307,11 +311,11 @@ export function WorkoutExerciseCard({
       </Pressable>
       {actions ? (
         <ActionMenu
-          title={getTranslation(es)('training.exerciseActions_0fee7f')}
+          title={getTranslation(language)('training.exerciseActions_0fee7f')}
           onClose={() => setActions(false)}
           actions={[
             {
-              title: getTranslation(es)('training.removeExercise_6427a5'),
+              title: getTranslation(language)('training.removeExercise_6427a5'),
               tone: 'danger',
               onPress: onRemove,
               disabled,

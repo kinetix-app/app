@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { Feather } from '@expo/vector-icons';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
@@ -22,7 +23,6 @@ import { SessionWorkoutDetailModal } from '@/features/training/components/Sessio
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { feedApi, type PostPhoto } from '../api';
-import { countLabel } from '../format';
 import { workoutOptionsKey } from '../cache';
 import {
   MAX_POST_CAPTION,
@@ -50,7 +50,7 @@ export function ShareWorkoutScreen({
   onShared,
 }: ShareWorkoutScreenProps) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const requestedSessionId = initialSessionId ?? null;
   const workouts = useQuery({
@@ -103,10 +103,7 @@ export function ShareWorkoutScreen({
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
           setPhotoError(
-            t(
-              'Photo access is needed. Allow access in Settings, then try again.',
-              'Se necesita acceso a las fotos. Permítelo en Ajustes e inténtalo de nuevo.',
-            ),
+            getTranslation(language)('socialAdditional.photoAccessIsNeededAllowAccess_ad01e6'),
           );
           return;
         }
@@ -122,17 +119,10 @@ export function ShareWorkoutScreen({
       setPhotos((current) => [...current, ...accepted].slice(0, MAX_POST_IMAGES));
       if (rejected)
         setPhotoError(
-          language === 'es'
-            ? `${countLabel(rejected, 'foto omitida', 'fotos omitidas')}. Usa JPEG, PNG o WebP de hasta 5 MB cada una.`
-            : `${countLabel(rejected, 'photo')} skipped. Use JPEG, PNG or WebP up to 5 MB each.`,
+          getTranslation(language)('socialAdditional.rejectedPhotos', { count: rejected }),
         );
     } catch {
-      setPhotoError(
-        t(
-          'Could not open your photos. Try again.',
-          'No se pudieron abrir tus fotos. Inténtalo de nuevo.',
-        ),
-      );
+      setPhotoError(getTranslation(language)('socialAdditional.couldNotOpenYourPhotosTry_1be001'));
     }
   }
 
@@ -181,23 +171,23 @@ export function ShareWorkoutScreen({
         <View style={ui.row}>
           <IconButton
             icon="arrow-left"
-            label={t('Back to feed', 'Volver al feed')}
+            label={getTranslation(language)('socialAdditional.backToFeed_d3d2e0')}
             disabled={pending}
             onPress={back}
           />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            {t('New post', 'Nueva publicación')}
+            {getTranslation(language)('socialAdditional.newPost_6d3cf1')}
           </Text>
         </View>
 
         <View style={ui.gap}>
           <Text nativeID="caption-label" style={[textStyles['title-md'], { color: p.ink }]}>
-            {t('Caption', 'Título')}
+            {getTranslation(language)('socialAdditional.caption_30b86d')}
           </Text>
           <TextField
-            accessibilityLabel={t('Caption', 'Título')}
+            accessibilityLabel={getTranslation(language)('socialAdditional.caption_30b86d')}
             accessibilityLabelledBy="caption-label"
-            placeholder={t('Add a short caption', 'Añade un título breve')}
+            placeholder={getTranslation(language)('socialAdditional.addAShortCaption_e144e0')}
             value={caption}
             onChangeText={setCaption}
             maxLength={MAX_POST_CAPTION}
@@ -207,12 +197,12 @@ export function ShareWorkoutScreen({
 
         <View style={ui.gap}>
           <Text nativeID="description-label" style={[textStyles['title-md'], { color: p.ink }]}>
-            {t('Description', 'Descripción')}
+            {getTranslation(language)('socialAdditional.description_1a7d6f')}
           </Text>
           <TextField
-            accessibilityLabel={t('Description', 'Descripción')}
+            accessibilityLabel={getTranslation(language)('socialAdditional.description_1a7d6f')}
             accessibilityLabelledBy="description-label"
-            placeholder={t('How did it go?', '¿Cómo ha ido?')}
+            placeholder={getTranslation(language)('socialAdditional.howDidItGo_3f223b')}
             value={description}
             onChangeText={setDescription}
             maxLength={MAX_POST_DESCRIPTION}
@@ -245,10 +235,7 @@ export function ShareWorkoutScreen({
         />
 
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {t(
-            'Your friends will see this post in their feed.',
-            'Tus amigos verán esta publicación en su feed.',
-          )}
+          {getTranslation(language)('socialAdditional.yourFriendsWillSeeThisPost_41a739')}
         </Text>
 
         {error ? (
@@ -257,7 +244,11 @@ export function ShareWorkoutScreen({
           </Text>
         ) : null}
         <Button
-          title={pending ? t('Sharing…', 'Compartiendo…') : t('Share', 'Compartir')}
+          title={
+            pending
+              ? getTranslation(language)('socialAdditional.sharing_f88745')
+              : getTranslation(language)('socialAdditional.share_50b8b4')
+          }
           disabled={pending || !canShare}
           onPress={() => {
             void share();
@@ -276,14 +267,18 @@ export function ShareWorkoutScreen({
             style={[ui.card, styles.dialog, { backgroundColor: p['surface-200'] }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              {t('Discard this post?', '¿Descartar esta publicación?')}
+              {getTranslation(language)('socialAdditional.discardThisPost_8aae79')}
             </Text>
             <Button
-              title={t('Keep editing', 'Seguir editando')}
+              title={getTranslation(language)('socialAdditional.keepEditing_ba7ea4')}
               secondary
               onPress={() => setDiscardOpen(false)}
             />
-            <Button title={t('Discard', 'Descartar')} tone="danger" onPress={onClose} />
+            <Button
+              title={getTranslation(language)('socialAdditional.discard_671592')}
+              tone="danger"
+              onPress={onClose}
+            />
           </View>
         </View>
       </Modal>
@@ -291,7 +286,7 @@ export function ShareWorkoutScreen({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={detailSessionId}
-          backLabel={t('Back to new post', 'Volver a la nueva publicación')}
+          backLabel={getTranslation(language)('socialAdditional.backToNewPost_36b7ab')}
           onBack={() => setDetailSessionId(null)}
           showShare={false}
         />
@@ -341,33 +336,37 @@ function WorkoutPicker({
   onSelect: (workout: WorkoutSummary | null) => void;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const recent = workouts.data?.items ?? [];
   return (
     <View style={ui.gap}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>
-        {t('Workout · optional', 'Entrenamiento · opcional')}
+        {getTranslation(language)('socialAdditional.workoutOptional_8aef2f')}
       </Text>
       <AnchoredPicker
         selection={selected?.session_id ?? null}
         options={[
-          { value: null, label: t('No workout', 'Sin entrenamiento') },
+          { value: null, label: getTranslation(language)('socialAdditional.noWorkout_13744e') },
           ...recent.map((workout) => ({
             value: workout.session_id,
             label: workout.title,
-            detail: new Date(workout.ended_at).toLocaleString(language === 'es' ? 'es' : undefined),
+            detail: new Date(workout.ended_at).toLocaleString(language),
             action: {
-              label: language === 'es' ? `Ver ${workout.title}` : `Preview ${workout.title}`,
+              label: getTranslation(language)('socialAdditional.preview_bc3f4c', {
+                value1: workout.title,
+              }),
               icon: 'eye-outline' as const,
               onPress: () => onPreview(workout.session_id),
             },
           })),
         ]}
         onSelect={(id) => onSelect(recent.find((workout) => workout.session_id === id) ?? null)}
-        labelPrefix={t('Workout to share', 'Entrenamiento para compartir')}
-        fallbackLabel={selected?.title ?? t('No workout', 'Sin entrenamiento')}
-        closeLabel={t('Close workout menu', 'Cerrar menú de entrenamiento')}
+        labelPrefix={getTranslation(language)('socialAdditional.workoutToShare_c75504')}
+        fallbackLabel={
+          selected?.title ?? getTranslation(language)('socialAdditional.noWorkout_13744e')
+        }
+        closeLabel={getTranslation(language)('socialAdditional.closeWorkoutMenu_14a2e5')}
         menuTestId="post-workout-menu"
         icon="barbell-outline"
         disabled={pending}
@@ -375,7 +374,7 @@ function WorkoutPicker({
         triggerAction={
           selected
             ? {
-                label: t('Preview workout', 'Ver entrenamiento'),
+                label: getTranslation(language)('socialAdditional.previewWorkout_fca315'),
                 icon: 'eye-outline',
                 onPress: () => onPreview(selected.session_id),
               }
@@ -391,19 +390,16 @@ function WorkoutPicker({
       {unresolvedSelection && workouts.isPending ? <Loading /> : null}
       {unavailableSelection ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          {t(
-            'The workout you opened is unavailable to share. Choose another workout or post without one.',
-            'El entrenamiento que abriste no se puede compartir. Elige otro o publica sin entrenamiento.',
-          )}
+          {getTranslation(language)('socialAdditional.theWorkoutYouOpenedIsUnavailable_a589d1')}
         </Text>
       ) : null}
       {workouts.isError ? (
         <View style={ui.gap}>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {t('Could not load your workouts.', 'No se pudieron cargar tus entrenamientos.')}
+            {getTranslation(language)('socialAdditional.couldNotLoadYourWorkouts_58731b')}
           </Text>
           <Button
-            title={t('Retry', 'Reintentar')}
+            title={getTranslation(language)('socialAdditional.retry_95b6f5')}
             secondary
             onPress={() => void workouts.refetch()}
           />
@@ -427,18 +423,19 @@ function PostPhotos({
   onRemove: (position: number) => void;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const [photoInfoOpen, setPhotoInfoOpen] = useState(false);
   return (
     <View style={ui.gap}>
       <View style={ui.row}>
         <Text style={[textStyles['title-md'], { color: p.ink }]}>
-          {t('Photos', 'Fotos')} · {photos.length}/{MAX_POST_IMAGES}
+          {getTranslation(language)('socialAdditional.photos_e1cdfd')} · {photos.length}/
+          {MAX_POST_IMAGES}
         </Text>
         <IconButton
           icon="info"
-          label={t('Photo requirements', 'Requisitos de las fotos')}
+          label={getTranslation(language)('socialAdditional.photoRequirements_da972c')}
           bare
           expanded={photoInfoOpen}
           onPress={() => setPhotoInfoOpen(!photoInfoOpen)}
@@ -449,29 +446,25 @@ function PostPhotos({
           accessibilityLiveRegion="polite"
           style={[textStyles['body-sm'], { color: p['ink-muted'] }]}
         >
-          {t(
-            'Use JPEG, PNG or WebP up to 5 MB each. Location and other photo details are removed.',
-            'Usa JPEG, PNG o WebP de hasta 5 MB cada una. Se eliminan la ubicación y otros datos de las fotos.',
-          )}
+          {getTranslation(language)('socialAdditional.useJpegPngOrWebpUp_41952e')}
         </Text>
       ) : null}
       <View style={styles.photos}>
         {photos.map((photo, position) => (
           <View key={`${photo.uri}-${position}`} style={styles.thumbnail}>
             <Image
-              accessibilityLabel={
-                language === 'es'
-                  ? `Foto seleccionada ${position + 1}`
-                  : `Selected photo ${position + 1}`
-              }
+              accessibilityLabel={getTranslation(language)(
+                'socialAdditional.selectedPhoto_079da1',
+                { value1: position + 1 },
+              )}
               source={{ uri: photo.uri }}
               style={[StyleSheet.absoluteFill, { borderRadius: radii['radius-md'] }]}
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={
-                language === 'es' ? `Eliminar foto ${position + 1}` : `Remove photo ${position + 1}`
-              }
+              accessibilityLabel={getTranslation(language)('socialAdditional.removePhoto_03a3f5', {
+                value1: position + 1,
+              })}
               disabled={pending}
               onPress={() => onRemove(position)}
               style={[styles.remove, { backgroundColor: p['surface-300'] }]}
@@ -483,7 +476,7 @@ function PostPhotos({
         {photos.length < MAX_POST_IMAGES ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('Add photos', 'Añadir fotos')}
+            accessibilityLabel={getTranslation(language)('socialAdditional.addPhotos_ddc69d')}
             disabled={pending}
             onPress={onPick}
             style={[
@@ -493,7 +486,9 @@ function PostPhotos({
             ]}
           >
             <Feather name="plus" size={26} color={p['brand-ink']} />
-            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>{t('Add', 'Añadir')}</Text>
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+              {getTranslation(language)('socialAdditional.add_8d5f06')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -508,55 +503,33 @@ function PostPhotos({
 
 function WorkoutMenuStatus({ loading, empty }: Readonly<{ loading: boolean; empty: boolean }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   if (loading) return <Loading />;
   if (!empty) return null;
   return (
     <Text style={[textStyles['body-sm'], { color: p['ink-muted'], padding: spacing['space-2'] }]}>
-      {t(
-        'No finished workouts available to share.',
-        'No hay entrenamientos finalizados para compartir.',
-      )}
+      {getTranslation(language)('socialAdditional.noFinishedWorkoutsAvailableToShare_78a601')}
     </Text>
   );
 }
 
 export function shareErrorMessage(error: unknown, language: 'en' | 'es' = 'en') {
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
   if (error instanceof ApiError) {
     if (error.status === 409)
-      return t(
-        'You already shared this workout. Choose another one.',
-        'Ya compartiste este entrenamiento. Elige otro.',
-      );
+      return getTranslation(language)('socialAdditional.youAlreadySharedThisWorkoutChoose_f81769');
     if (error.status === 413)
-      return t(
-        'Photos are too large. Use up to 5 photos of 5 MB each.',
-        'Las fotos son demasiado grandes. Usa hasta 5 fotos de 5 MB cada una.',
-      );
+      return getTranslation(language)('socialAdditional.photosAreTooLargeUseUp_10a1cb');
     if (error.status === 415)
-      return t('Use JPEG, PNG or WebP photos.', 'Usa fotos JPEG, PNG o WebP.');
+      return getTranslation(language)('socialAdditional.useJpegPngOrWebpPhotos_92cbfa');
     if (error.status === 422)
-      return t(
-        'Add a caption, description, photo or workout. Check any attachments and try again.',
-        'Añade un título, descripción, foto o entrenamiento. Revisa los adjuntos e inténtalo de nuevo.',
-      );
+      return getTranslation(language)('socialAdditional.addACaptionDescriptionPhotoOr_4f9c6c');
     if (error.status === 503)
-      return t(
-        'Photo upload is unavailable right now. Remove the photos or try again later.',
-        'La subida de fotos no está disponible. Elimina las fotos o inténtalo más tarde.',
-      );
+      return getTranslation(language)('socialAdditional.photoUploadIsUnavailableRightNow_285c89');
     if ([401, 403].includes(error.status))
-      return t(
-        'Your account cannot share right now. Sign out and sign in again.',
-        'Tu cuenta no puede compartir ahora. Cierra sesión y vuelve a iniciarla.',
-      );
+      return getTranslation(language)('socialAdditional.yourAccountCannotShareRightNow_6b9e4c');
   }
-  return t(
-    'Could not share your post. Your caption, description and photos are kept. Try again.',
-    'No se pudo compartir la publicación. Se conservan el título, la descripción y las fotos. Inténtalo de nuevo.',
-  );
+  return getTranslation(language)('socialAdditional.couldNotShareYourPostYour_9b1fb4');
 }
 
 const styles = StyleSheet.create({

@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
@@ -29,20 +30,19 @@ export function LeagueScoreHistory({
   onBack: () => void;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
-  const name = member.display_name ?? t('Member', 'Miembro');
-  let backTitle: string = backTo;
-  let backAction: string = `Back to ${backTo.toLowerCase()}`;
-  if (language === 'es') {
-    if (backTo === 'Standings') {
-      backTitle = 'Clasificación';
-      backAction = 'Volver a clasificación';
-    } else {
-      backTitle = 'Información de la liga';
-      backAction = 'Volver a información de la liga';
-    }
-  }
+  const name = member.display_name ?? getTranslation(language)('socialAdditional.member_10100e');
+  const backTitle = getTranslation(language)(
+    backTo === 'Standings'
+      ? 'socialAdditional.standingsBackTitle'
+      : 'socialAdditional.informationBackTitle',
+  );
+  const backAction = getTranslation(language)(
+    backTo === 'Standings'
+      ? 'socialAdditional.standingsBackAction'
+      : 'socialAdditional.informationBackAction',
+  );
   const [workoutId, setWorkoutId] = useState<number | null>(null);
   const ownHistory = member.user_id === accountId;
   const history = useInfiniteQuery({
@@ -62,13 +62,13 @@ export function LeagueScoreHistory({
       return (
         <ActivityIndicator
           color={p.brand}
-          accessibilityLabel={t('Loading more scores', 'Cargando más puntuaciones')}
+          accessibilityLabel={getTranslation(language)('socialAdditional.loadingMoreScores_97cdfb')}
         />
       );
     if (history.isFetchNextPageError)
       return (
         <LeagueAction
-          label={t('Retry more scores', 'Reintentar más puntuaciones')}
+          label={getTranslation(language)('socialAdditional.retryMoreScores_31f8a3')}
           onPress={following}
         />
       );
@@ -100,21 +100,23 @@ export function LeagueScoreHistory({
               onBack={onBack}
             />
             <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-              {t('Score history', 'Historial de puntos')}
+              {getTranslation(language)('socialAdditional.scoreHistory_556af1')}
             </Text>
             {history.isPending ? (
               <ActivityIndicator
                 color={p.brand}
-                accessibilityLabel={t('Loading score history', 'Cargando historial de puntos')}
+                accessibilityLabel={getTranslation(language)(
+                  'socialAdditional.loadingScoreHistory_4c67b5',
+                )}
               />
             ) : null}
             {history.isError && !history.data ? (
               <>
                 <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                  {t('Could not load score history.', 'No se pudo cargar el historial de puntos.')}
+                  {getTranslation(language)('socialAdditional.couldNotLoadScoreHistory_c1012b')}
                 </Text>
                 <LeagueAction
-                  label={t('Retry score history', 'Reintentar historial de puntos')}
+                  label={getTranslation(language)('socialAdditional.retryScoreHistory_a5facd')}
                   onPress={() => {
                     void history.refetch();
                   }}
@@ -126,7 +128,7 @@ export function LeagueScoreHistory({
         ListEmptyComponent={
           (history.isSuccess ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              {t('No credited scores yet.', 'Aún no hay puntuaciones registradas.')}
+              {getTranslation(language)('socialAdditional.noCreditedScoresYet_fcf5d9')}
             </Text>
           ) : null) ?? undefined
         }
@@ -151,7 +153,7 @@ export function LeagueScoreHistory({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={workoutId}
-          backLabel={t('Back to score history', 'Volver al historial de puntos')}
+          backLabel={getTranslation(language)('socialAdditional.backToScoreHistory_a3ed5e')}
           onBack={() => setWorkoutId(null)}
         />
       ) : null}

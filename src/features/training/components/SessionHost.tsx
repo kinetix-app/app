@@ -67,7 +67,7 @@ export function SessionHost({
 function PendingSessionState({ onDiscard }: Readonly<{ onDiscard: () => void }>) {
   const session = useSession();
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   if (!session.storageError) return <Loading />;
   return (
     <View style={ui.content}>
@@ -75,12 +75,12 @@ function PendingSessionState({ onDiscard }: Readonly<{ onDiscard: () => void }>)
         {session.error}
       </Text>
       <Button
-        title={getTranslation(es)('training.retryStorage_13babc')}
+        title={getTranslation(language)('training.retryStorage_13babc')}
         onPress={() => void session.retryStorage()}
         secondary
       />
       <Button
-        title={getTranslation(es)('training.discardStoredWorkout_8ad6fd')}
+        title={getTranslation(language)('training.discardStoredWorkout_8ad6fd')}
         onPress={onDiscard}
         tone="danger"
       />
@@ -91,14 +91,14 @@ function PendingSessionState({ onDiscard }: Readonly<{ onDiscard: () => void }>)
 function StorageErrorState() {
   const session = useSession();
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <View style={ui.content}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
         {session.error}
       </Text>
       <Button
-        title={getTranslation(es)('training.retryStorage_13babc')}
+        title={getTranslation(language)('training.retryStorage_13babc')}
         onPress={() => {
           void session.retryStorage();
         }}
@@ -114,7 +114,7 @@ function MinimizedWorkoutCard({
 }: Readonly<{ inFlow: boolean; onDiscard: () => void }>) {
   const session = useSession();
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const draft = session.draft;
   if (!draft) return null;
   return (
@@ -152,8 +152,8 @@ function MinimizedWorkoutCard({
         <View style={ui.row}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es)('training.ongoingWorkoutOptions_33fd0e')}
-            accessibilityHint={getTranslation(es)(
+            accessibilityLabel={getTranslation(language)('training.ongoingWorkoutOptions_33fd0e')}
+            accessibilityHint={getTranslation(language)(
               'training.opensTheDiscardWorkoutConfirmation_402f0e',
             )}
             disabled={session.pending}
@@ -166,7 +166,7 @@ function MinimizedWorkoutCard({
             }}
           >
             <Text numberOfLines={1} style={{ color: p['overlay-ink'] }}>
-              {getTranslation(es)('training.workoutOngoing_cf2159')}
+              {getTranslation(language)('training.workoutOngoing_cf2159')}
             </Text>
             <WorkoutTimer
               compact
@@ -178,7 +178,7 @@ function MinimizedWorkoutCard({
           <IconButton
             icon="play"
             onOverlay
-            label={getTranslation(es)('training.resumeWorkout_56d326')}
+            label={getTranslation(language)('training.resumeWorkout_56d326')}
             bare
             disabled={session.pending}
             onPress={() => session.change((value) => ({ ...value, minimized: false }))}
@@ -191,7 +191,7 @@ function MinimizedWorkoutCard({
         ) : null}
         {session.storageError ? (
           <Button
-            title={getTranslation(es)('training.retryStorage_13babc')}
+            title={getTranslation(language)('training.retryStorage_13babc')}
             onPress={() => {
               void session.retryStorage();
             }}
@@ -210,7 +210,7 @@ function DiscardConfirmation({
 }: Readonly<{ visible: boolean; onCancel: () => void; onDiscard: () => void }>) {
   const session = useSession();
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View
@@ -228,21 +228,21 @@ function DiscardConfirmation({
         >
           <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
             {session.draft
-              ? getTranslation(es)('training.discardThisWorkout_a7a3ef')
-              : getTranslation(es)('training.discardStoredWorkout_65ff6d')}
+              ? getTranslation(language)('training.discardThisWorkout_a7a3ef')
+              : getTranslation(language)('training.discardStoredWorkout_65ff6d')}
           </Text>
           <Text style={{ color: p['ink-muted'] }}>
             {session.draft?.frozen
-              ? getTranslation(es)('training.finishDeliveryIsPendingResumeTheWorkout_fd46a7')
-              : getTranslation(es)('training.theWorkoutDraftAndItsSavedResults_0faabd')}
+              ? getTranslation(language)('training.finishDeliveryIsPendingResumeTheWorkout_fd46a7')
+              : getTranslation(language)('training.theWorkoutDraftAndItsSavedResults_0faabd')}
           </Text>
           <Button
-            title={getTranslation(es)('training.cancel_a25d0b')}
+            title={getTranslation(language)('training.cancel_a25d0b')}
             secondary
             onPress={onCancel}
           />
           <Button
-            title={getTranslation(es)('training.discard_671592')}
+            title={getTranslation(language)('training.discard_671592')}
             disabled={session.pending || Boolean(session.draft?.frozen)}
             tone="danger"
             onPress={onDiscard}

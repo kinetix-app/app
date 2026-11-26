@@ -40,7 +40,7 @@ export function DatePickerField({
   const language = useLanguage();
   const currentLabel = value
     ? calendarLabel(value, language)
-    : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.choose_a_date');
+    : getTranslation(language)('accountsUi.choose_a_date');
 
   return (
     <View style={styles.container}>
@@ -48,7 +48,7 @@ export function DatePickerField({
         <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
         {optional && !value ? (
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.optional')}
+            {getTranslation(language)('accountsUi.optional')}
           </Text>
         ) : null}
       </View>
@@ -77,7 +77,7 @@ export function DatePickerField({
         {optional && value ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.clear')} ${label.toLowerCase()}`}
+            accessibilityLabel={`${getTranslation(language)('accountsUi.clear')} ${label.toLowerCase()}`}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={onClear}
@@ -120,8 +120,8 @@ export function DatePickerCalendar({
           accessibilityRole="button"
           accessibilityLabel={
             isChoosingMonth
-              ? getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.previous_year')
-              : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.previous_month')
+              ? getTranslation(language)('accountsUi.previous_year')
+              : getTranslation(language)('accountsUi.previous_month')
           }
           onPress={() => setMonth(shiftCalendarMonth(month, isChoosingMonth ? -12 : -1))}
           style={styles.arrow}
@@ -132,8 +132,8 @@ export function DatePickerCalendar({
           accessibilityRole="button"
           accessibilityLabel={
             isChoosingMonth
-              ? getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.show_days')
-              : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.choose_month_and_year')
+              ? getTranslation(language)('accountsUi.show_days')
+              : getTranslation(language)('accountsUi.choose_month_and_year')
           }
           onPress={() => setIsChoosingMonth(!isChoosingMonth)}
           style={styles.period}
@@ -151,8 +151,8 @@ export function DatePickerCalendar({
           accessibilityRole="button"
           accessibilityLabel={
             isChoosingMonth
-              ? getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.next_year')
-              : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.next_month')
+              ? getTranslation(language)('accountsUi.next_year')
+              : getTranslation(language)('accountsUi.next_month')
           }
           accessibilityState={{ disabled: nextDisabled }}
           disabled={nextDisabled}

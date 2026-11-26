@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useLanguage } from '@/i18n/Language';
+import { useLanguage, type Language } from '@/i18n/Language';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { Account } from '../schemas';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -23,20 +23,22 @@ function getPictureStatus(
   draft: ProfilePictureDraft,
   account: Account,
   compact: boolean,
-  es: boolean,
+  language: Language,
 ) {
   if (compact) {
-    if (draft.kind === 'select') return getTranslation(es)('accountsUi.new_picture_save_to_apply');
+    if (draft.kind === 'select')
+      return getTranslation(language)('accountsUi.new_picture_save_to_apply');
     if (draft.kind === 'remove')
-      return getTranslation(es)('accountsUi.picture_removed_save_to_apply');
-    return getTranslation(es)('accountsUi.profile_picture');
+      return getTranslation(language)('accountsUi.picture_removed_save_to_apply');
+    return getTranslation(language)('accountsUi.profile_picture');
   }
   if (draft.kind === 'select')
-    return getTranslation(es)('accountsUi.picture_ready_saved_when_you_confirm');
+    return getTranslation(language)('accountsUi.picture_ready_saved_when_you_confirm');
   if (draft.kind === 'remove')
-    return getTranslation(es)('accountsUi.no_picture_removal_saved_when_you_confirm');
-  if (account.profile.picture_url) return getTranslation(es)('accountsUi.current_profile_picture');
-  return getTranslation(es)('accountsUi.no_picture_optional');
+    return getTranslation(language)('accountsUi.no_picture_removal_saved_when_you_confirm');
+  if (account.profile.picture_url)
+    return getTranslation(language)('accountsUi.current_profile_picture');
+  return getTranslation(language)('accountsUi.no_picture_optional');
 }
 
 export function ProfilePictureEditor({
@@ -48,7 +50,7 @@ export function ProfilePictureEditor({
   compact = false,
 }: ProfilePictureEditorProps) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const busy = useRef(false);
@@ -73,7 +75,7 @@ export function ProfilePictureEditor({
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
           setError(
-            getTranslation(es)(
+            getTranslation(language)(
               'accountsUi.photo_access_is_needed_to_choose_a_picture_allow_access_in_s',
             ),
           );
@@ -90,17 +92,17 @@ export function ProfilePictureEditor({
       if (result.canceled) return;
       const asset = result.assets[0];
       if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024) {
-        setError(getTranslation(es)('accountsUi.choose_a_picture_smaller_than_5_mb'));
+        setError(getTranslation(language)('accountsUi.choose_a_picture_smaller_than_5_mb'));
         return;
       }
       const type = asset.mimeType ?? asset.file?.type;
       if (type && !['image/jpeg', 'image/png', 'image/webp'].includes(type)) {
-        setError(getTranslation(es)('accountsUi.choose_a_jpeg_png_or_webp_picture'));
+        setError(getTranslation(language)('accountsUi.choose_a_jpeg_png_or_webp_picture'));
         return;
       }
       onDraftChange({ kind: 'select', asset });
     } catch {
-      setError(getTranslation(es)('accountsUi.could_not_open_your_photos_try_again'));
+      setError(getTranslation(language)('accountsUi.could_not_open_your_photos_try_again'));
     } finally {
       setBusy(false);
     }
@@ -123,8 +125,8 @@ export function ProfilePictureEditor({
           accessibilityRole="button"
           accessibilityLabel={
             hasPicture
-              ? getTranslation(es)('accountsUi.replace_picture')
-              : getTranslation(es)('accountsUi.choose_picture')
+              ? getTranslation(language)('accountsUi.replace_picture')
+              : getTranslation(language)('accountsUi.choose_picture')
           }
           accessibilityState={{ disabled: locked }}
           disabled={locked}
@@ -141,11 +143,15 @@ export function ProfilePictureEditor({
         {hasPicture ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es)('accountsUi.remove_picture')}
+            accessibilityLabel={getTranslation(language)('accountsUi.remove_picture')}
             accessibilityHint={
               compact
-                ? getTranslation(es)('accountsUi.remove_this_picture_when_you_save_your_profile')
-                : getTranslation(es)('accountsUi.remove_this_picture_when_you_confirm_your_profile')
+                ? getTranslation(language)(
+                    'accountsUi.remove_this_picture_when_you_save_your_profile',
+                  )
+                : getTranslation(language)(
+                    'accountsUi.remove_this_picture_when_you_confirm_your_profile',
+                  )
             }
             accessibilityState={{ disabled: locked }}
             disabled={locked}
@@ -166,7 +172,7 @@ export function ProfilePictureEditor({
         <View style={{ flexDirection: 'row', gap: spacing['space-2'], alignItems: 'center' }}>
           <ActivityIndicator color={p.brand} />
           <Text accessibilityLiveRegion="polite" style={[textStyles.label, { color: p.ink }]}>
-            {getTranslation(es)('accountsUi.opening_photos')}
+            {getTranslation(language)('accountsUi.opening_photos')}
           </Text>
         </View>
       ) : (
@@ -174,12 +180,12 @@ export function ProfilePictureEditor({
           accessibilityLiveRegion="polite"
           style={[textStyles.label, { color: p['ink-muted'] }]}
         >
-          {getPictureStatus(draft, account, compact, es)}
+          {getPictureStatus(draft, account, compact, language)}
         </Text>
       )}
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
-          {getTranslation(es)('accountsUi.jpeg_png_or_webp_up_to_5_mb')}
+          {getTranslation(language)('accountsUi.jpeg_png_or_webp_up_to_5_mb')}
         </Text>
       ) : null}
       {error ? (

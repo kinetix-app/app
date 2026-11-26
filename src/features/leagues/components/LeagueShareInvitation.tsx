@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
@@ -12,7 +13,7 @@ export function LeagueShareInvitation({
   onClose,
 }: Readonly<{ link: string; onClose: () => void }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const [copiedAt, setCopiedAt] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -30,12 +31,7 @@ export function LeagueShareInvitation({
       setCopiedAt(Date.now());
     } catch {
       setCopiedAt(null);
-      setError(
-        t(
-          'Could not copy the link. Try again or use Share.',
-          'No se pudo copiar el enlace. Inténtalo de nuevo o usa Compartir.',
-        ),
-      );
+      setError(getTranslation(language)('socialAdditional.couldNotCopyTheLinkTry_804f28'));
     }
   }
 
@@ -47,12 +43,7 @@ export function LeagueShareInvitation({
       else await copy();
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
-      setError(
-        t(
-          'Could not share the link. Tap it to copy.',
-          'No se pudo compartir el enlace. Púlsalo para copiarlo.',
-        ),
-      );
+      setError(getTranslation(language)('socialAdditional.couldNotShareTheLinkTap_1eae22'));
     }
   }
 
@@ -89,23 +80,22 @@ export function LeagueShareInvitation({
                 accessibilityRole="header"
                 style={[textStyles['title-lg'], { flex: 1, color: p.ink }]}
               >
-                {t('Invitation link', 'Enlace de invitación')}
+                {getTranslation(language)('socialAdditional.invitationLink_4ad248')}
               </Text>
               <LeagueIconButton
-                label={t('Close invitation link', 'Cerrar enlace de invitación')}
+                label={getTranslation(language)('socialAdditional.closeInvitationLink_b76ea1')}
                 icon="close"
                 onPress={onClose}
               />
             </View>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {t(
-                'Anyone with the link can join for the next 48 hours.',
-                'Cualquier persona con el enlace puede unirse durante las próximas 48 horas.',
-              )}
+              {getTranslation(language)('socialAdditional.anyoneWithTheLinkCanJoin_5f47f2')}
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('Copy invitation link', 'Copiar enlace de invitación')}
+              accessibilityLabel={getTranslation(language)(
+                'socialAdditional.copyInvitationLink_940c8f',
+              )}
               onPress={() => {
                 void copy();
               }}
@@ -136,7 +126,7 @@ export function LeagueShareInvitation({
               </Text>
             ) : null}
             <LeagueAction
-              label={t('Share invitation', 'Compartir invitación')}
+              label={getTranslation(language)('socialAdditional.shareInvitation_ab3aa7')}
               icon="share-outline"
               variant="primary"
               onPress={() => {
@@ -166,7 +156,7 @@ export function LeagueShareInvitation({
           >
             <Ionicons name="checkmark-circle-outline" size={20} color={p['brand-ink']} />
             <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-              {t('Link copied', 'Enlace copiado')}
+              {getTranslation(language)('socialAdditional.linkCopied_a5198a')}
             </Text>
           </View>
         ) : null}

@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import React, { useRef, useState } from 'react';
@@ -27,7 +28,7 @@ export function LeaguePictureEditor({
   disabled?: boolean;
 }>) {
   const language = useLanguage();
-  const t = (en: string, es: string) => (language === 'es' ? es : en);
+
   const p = usePalette();
   const choosing = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -64,22 +65,24 @@ export function LeaguePictureEditor({
       <View style={leagueStyles.row}>
         <LeagueAvatar
           accountId={accountId}
-          name={name || t('League', 'Liga')}
+          name={name || getTranslation(language)('socialAdditional.league_5e61e1')}
           path={visiblePath}
           preview={draft?.uri}
           size={64}
         />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[textStyles.label, { color: p.ink }]}>
-            {t('League picture', 'Imagen de la liga')}
+            {getTranslation(language)('socialAdditional.leaguePicture_116b57')}
           </Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {busy ? t('Opening photos…', 'Abriendo fotos…') : 'JPEG, PNG or WebP · up to 5 MB'}
+            {busy
+              ? getTranslation(language)('socialAdditional.openingPhotos_6e286d')
+              : 'JPEG, PNG or WebP · up to 5 MB'}
           </Text>
         </View>
         {hasPicture ? (
           <LeagueIconButton
-            label={t('Remove league picture', 'Eliminar imagen de la liga')}
+            label={getTranslation(language)('socialAdditional.removeLeaguePicture_6ae4dc')}
             icon="trash-outline"
             disabled={busy || disabled}
             onPress={() => {
@@ -91,8 +94,8 @@ export function LeaguePictureEditor({
         <LeagueIconButton
           label={
             hasPicture
-              ? t('Replace league picture', 'Cambiar imagen de la liga')
-              : t('Choose league picture', 'Elegir imagen de la liga')
+              ? getTranslation(language)('socialAdditional.replaceLeaguePicture_c971dd')
+              : getTranslation(language)('socialAdditional.chooseLeaguePicture_387e38')
           }
           icon="image-outline"
           disabled={busy || disabled}

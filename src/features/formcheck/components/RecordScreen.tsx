@@ -35,7 +35,7 @@ export function RecordScreen({
   onFinish: (recording: Recording) => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const camera = useRef<CameraView>(null);
   const frame = useRef<ViewInstance>(null);
   const [webRecorder, setWebRecorder] = useState<CameraRecorder | null>(null);
@@ -132,27 +132,27 @@ export function RecordScreen({
   };
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es)('formcheck.RecordScreen.sET')} ${setNumber}`}
-      title={getTranslation(es)('formcheck.RecordScreen.recordYourSet')}
+      overline={`${exerciseName.toUpperCase()} · ${getTranslation(language)('formcheck.RecordScreen.sET')} ${setNumber}`}
+      title={getTranslation(language)('formcheck.RecordScreen.recordYourSet')}
       backIcon="x"
-      backLabel={getTranslation(es)('formcheck.RecordScreen.cancelRecording')}
+      backLabel={getTranslation(language)('formcheck.RecordScreen.cancelRecording')}
       onBack={onCancel}
       scroll={false}
       footer={
         recording ? (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {getTranslation(es)('formcheck.RecordScreen.doYourSetAsUsualStopWhenYouFinish')}
+              {getTranslation(language)('formcheck.RecordScreen.doYourSetAsUsualStopWhenYouFinish')}
             </Text>
             <Button
-              title={getTranslation(es)('formcheck.RecordScreen.stopAndAnalyze')}
+              title={getTranslation(language)('formcheck.RecordScreen.stopAndAnalyze')}
               onPress={() => void stop()}
             />
           </>
         ) : (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {es
+              {language === 'es'
                 ? ((
                     {
                       'back-squat':
@@ -173,7 +173,7 @@ export function RecordScreen({
               {profile.camera.checklist.map((item) => (
                 <View key={item} style={chip}>
                   <Text style={[textStyles.caption, { color: p.ink }]}>
-                    {es
+                    {language === 'es'
                       ? ((
                           {
                             'Full body': 'Cuerpo entero',
@@ -190,20 +190,22 @@ export function RecordScreen({
             </View>
             {failed ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                {getTranslation(es)('formcheck.RecordScreen.theRecordingCouldNotBeSavedTryAgain')}
+                {getTranslation(language)(
+                  'formcheck.RecordScreen.theRecordingCouldNotBeSavedTryAgain',
+                )}
               </Text>
             ) : null}
             <Button
-              title={getTranslation(es)('formcheck.RecordScreen.startRecording')}
+              title={getTranslation(language)('formcheck.RecordScreen.startRecording')}
               icon="video"
               onPress={start}
             />
             {__DEV__ ? (
               <Button
-                title={getTranslation(es)('formcheck.RecordScreen.useAVideo')}
+                title={getTranslation(language)('formcheck.RecordScreen.useAVideo')}
                 icon="upload"
                 secondary
-                accessibilityLabel={getTranslation(es)(
+                accessibilityLabel={getTranslation(language)(
                   'formcheck.RecordScreen.analyzeAVideoFileDevelopmentOnly',
                 )}
                 onPress={() => void pickVideo()}
@@ -228,7 +230,7 @@ export function RecordScreen({
           facing="back"
           mode="video"
           mute
-          accessibilityLabel={getTranslation(es)('formcheck.RecordScreen.cameraPreview')}
+          accessibilityLabel={getTranslation(language)('formcheck.RecordScreen.cameraPreview')}
         />
         <View
           pointerEvents="none"
@@ -263,7 +265,7 @@ export function RecordScreen({
           >
             <Feather name="circle" size={10} color={p.danger} />
             <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
-              {getTranslation(es)('formcheck.RecordScreen.recording')} · {clock(seconds)}
+              {getTranslation(language)('formcheck.RecordScreen.recording')} · {clock(seconds)}
             </Text>
           </View>
         ) : null}

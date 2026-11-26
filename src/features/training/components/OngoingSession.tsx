@@ -1,6 +1,6 @@
 import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useRef, useState } from 'react';
-import { useLanguage } from '@/i18n/Language';
+import { useLanguage, type Language } from '@/i18n/Language';
 import { BackHandler, KeyboardAvoidingView, Modal, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, usePalette } from '@/theme/tokens';
@@ -19,7 +19,8 @@ export function OngoingSession() {
   const session = useSession();
   const { draft, change } = session;
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [finishPrompt, setFinishPrompt] = useState(false);
@@ -141,7 +142,7 @@ export function OngoingSession() {
     <View style={ui.gap}>
       <View
         testID="workout-pull-handle"
-        accessibilityLabel={getTranslation(es)('training.pullDownToMinimizeWorkout_4ceeb5')}
+        accessibilityLabel={getTranslation(language)('training.pullDownToMinimizeWorkout_4ceeb5')}
         accessibilityState={{ disabled: session.pending }}
         onStartShouldSetResponder={() => !session.pending}
         onResponderTerminationRequest={() => false}
@@ -179,19 +180,19 @@ export function OngoingSession() {
           <WorkoutTimer startedAt={draft.startedAt} endedAt={draft.frozen?.ended_at} compact />
         </View>
         <Button
-          title={finishButtonTitle(session.pending, Boolean(draft.frozen), es)}
+          title={finishButtonTitle(session.pending, Boolean(draft.frozen), language)}
           onPress={finish}
           disabled={session.pending || dragging || session.storageError}
         />
       </View>
       {draft.frozen ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          {getTranslation(es)('training.resultsAreLockedRetryFinishToSave_24e526')}
+          {getTranslation(language)('training.resultsAreLockedRetryFinishToSave_24e526')}
         </Text>
       ) : null}
       {draft.frozen ? (
         <Button
-          title={getTranslation(es)('training.reviewLockedSets_a081f6')}
+          title={getTranslation(language)('training.reviewLockedSets_a081f6')}
           onPress={() => void session.recoverFrozen()}
           disabled={session.pending}
           secondary
@@ -204,7 +205,7 @@ export function OngoingSession() {
       ) : null}
       {session.storageError ? (
         <Button
-          title={getTranslation(es)('training.retryStorage_13babc')}
+          title={getTranslation(language)('training.retryStorage_13babc')}
           onPress={() => {
             void session.retryStorage();
           }}
@@ -307,17 +308,17 @@ export function OngoingSession() {
             <View style={ui.gap}>
               {!draft.exercises.length ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  {getTranslation(es)('training.addExercisesToRecordYourWorkout_9c4148')}
+                  {getTranslation(language)('training.addExercisesToRecordYourWorkout_9c4148')}
                 </Text>
               ) : null}
               <Button
-                title={getTranslation(es)('training.addExercise_89dbcf')}
+                title={getTranslation(language)('training.addExercise_89dbcf')}
                 onPress={() => setPicker(true)}
                 tone="positive"
                 disabled={locked || dragging || draft.exercises.length >= 500}
               />
               <Button
-                title={getTranslation(es)('training.moreActions_80a4a7')}
+                title={getTranslation(language)('training.moreActions_80a4a7')}
                 icon="more-horizontal"
                 onPress={() => setActions(true)}
                 secondary
@@ -346,21 +347,21 @@ export function OngoingSession() {
       ) : null}
       {actions ? (
         <ActionMenu
-          title={getTranslation(es)('training.workoutActions_840795')}
+          title={getTranslation(language)('training.workoutActions_840795')}
           onClose={() => setActions(false)}
           actions={[
             {
-              title: getTranslation(es)('training.syncWorkout_34738a'),
+              title: getTranslation(language)('training.syncWorkout_34738a'),
               onPress: () => void session.sync(),
               disabled: locked,
             },
             {
-              title: finishButtonTitle(false, Boolean(draft.frozen), es),
+              title: finishButtonTitle(false, Boolean(draft.frozen), language),
               onPress: finish,
               disabled: session.storageError,
             },
             {
-              title: getTranslation(es)('training.discardWorkout_2f6be5'),
+              title: getTranslation(language)('training.discardWorkout_2f6be5'),
               onPress: () => setDiscard(true),
               tone: 'danger',
               disabled: locked,
@@ -404,13 +405,15 @@ export function OngoingSession() {
             style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              {getTranslation(es)('training.updateTheRoutine_31c254')}
+              {getTranslation(language)('training.updateTheRoutine_31c254')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {getTranslation(es)('training.finishThisWorkoutUpdateTheOriginalRoutine_974469')}
+              {getTranslation(language)(
+                'training.finishThisWorkoutUpdateTheOriginalRoutine_974469',
+              )}
             </Text>
             <Button
-              title={getTranslation(es)('training.keepRoutine_c9f850')}
+              title={getTranslation(language)('training.keepRoutine_c9f850')}
               onPress={() => {
                 setFinishPrompt(false);
                 void session.finish(false);
@@ -418,7 +421,7 @@ export function OngoingSession() {
               secondary
             />
             <Button
-              title={getTranslation(es)('training.updateRoutine_6be511')}
+              title={getTranslation(language)('training.updateRoutine_6be511')}
               disabled={!draft.exercises.length}
               onPress={() => {
                 setFinishPrompt(false);
@@ -426,7 +429,7 @@ export function OngoingSession() {
               }}
             />
             <Button
-              title={getTranslation(es)('training.cancel_a25d0b')}
+              title={getTranslation(language)('training.cancel_a25d0b')}
               onPress={() => setFinishPrompt(false)}
               secondary
             />
@@ -460,18 +463,18 @@ export function OngoingSession() {
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {getTranslation(es)('training.discardThisWorkout_a7a3ef')}
+              {getTranslation(language)('training.discardThisWorkout_a7a3ef')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {getTranslation(es)('training.theDraftWorkoutAndItsRecordedResults_271fea')}
+              {getTranslation(language)('training.theDraftWorkoutAndItsRecordedResults_271fea')}
             </Text>
             <Button
-              title={getTranslation(es)('training.keepRecording_97af35')}
+              title={getTranslation(language)('training.keepRecording_97af35')}
               onPress={() => setDiscard(false)}
               secondary
             />
             <Button
-              title={getTranslation(es)('training.discard_671592')}
+              title={getTranslation(language)('training.discard_671592')}
               tone="danger"
               onPress={() => {
                 setDiscard(false);
@@ -485,8 +488,8 @@ export function OngoingSession() {
   );
 }
 
-function finishButtonTitle(pending: boolean, frozen: boolean, es: boolean) {
-  if (pending) return getTranslation(es)('training.working_195c9e');
-  if (frozen) return getTranslation(es)('training.retryFinish_24636b');
-  return getTranslation(es)('training.finish_5ad2b2');
+function finishButtonTitle(pending: boolean, frozen: boolean, language: Language) {
+  if (pending) return getTranslation(language)('training.working_195c9e');
+  if (frozen) return getTranslation(language)('training.retryFinish_24636b');
+  return getTranslation(language)('training.finish_5ad2b2');
 }

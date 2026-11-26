@@ -24,12 +24,13 @@ export function MeasurementSystemSelector({
   disabled?: boolean;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
 
   return (
     <View
       accessibilityRole="radiogroup"
-      accessibilityLabel={label ?? getTranslation(es)('accountsUi.measurement_system')}
+      accessibilityLabel={label ?? getTranslation(language)('accountsUi.measurement_system')}
       style={styles.group}
     >
       {systems.map((system) => {

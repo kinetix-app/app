@@ -11,11 +11,11 @@ export function ProfileBack({
   disabled = false,
 }: Readonly<{ onPress: () => void; label?: string; disabled?: boolean }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label ?? getTranslation(es)('accountsUi.back_to_profile')}
+      accessibilityLabel={label ?? getTranslation(language)('accountsUi.back_to_profile')}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}

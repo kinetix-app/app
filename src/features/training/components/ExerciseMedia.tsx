@@ -42,7 +42,6 @@ function ExerciseVideo({
 }>) {
   const p = usePalette();
   const language = useLanguage();
-  const es = language === 'es';
   const view = useRef<VideoView>(null);
   const [muted, setMuted] = useState(true);
   const player = useVideoPlayer(url, (player) => {
@@ -70,7 +69,7 @@ function ExerciseVideo({
     return (
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          {getTranslation(es)('training.videoUnavailable_af9b60')}
+          {getTranslation(language)('training.videoUnavailable_af9b60')}
         </Text>
         <ExerciseMedia name={name} videoUrl={null} imageUrl={imageUrl} />
       </View>
@@ -89,7 +88,7 @@ function ExerciseVideo({
         style={mediaStyle}
         contentFit="contain"
         nativeControls={false}
-        accessibilityLabel={getTranslation(es)('dynamicMessages.videoFor_47fd4e', {
+        accessibilityLabel={getTranslation(language)('dynamicMessages.videoFor_47fd4e', {
           value1: name,
         })}
       />
@@ -123,7 +122,6 @@ function VideoControls({
 }>) {
   const p = usePalette();
   const language = useLanguage();
-  const es = language === 'es';
   const clock = (seconds: number) =>
     `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
   const progress = player.duration ? (currentTime / player.duration) * 100 : 0;
@@ -137,7 +135,7 @@ function VideoControls({
     <View style={{ padding: spacing['space-3'], gap: spacing['space-2'] }}>
       <View
         accessibilityRole="progressbar"
-        accessibilityLabel={getTranslation(es)('training.videoProgress_205c89')}
+        accessibilityLabel={getTranslation(language)('training.videoProgress_205c89')}
         accessibilityValue={{ min: 0, max: player.duration || 1, now: currentTime }}
         style={{ height: 4, borderRadius: radii['radius-pill'], backgroundColor: p['surface-300'] }}
       >
@@ -158,7 +156,7 @@ function VideoControls({
         />
         <IconButton
           icon="rotate-ccw"
-          label={getTranslation(es)('training.replayVideo_70b744')}
+          label={getTranslation(language)('training.replayVideo_70b744')}
           onPress={() => player.replay()}
         />
         <Text
@@ -179,7 +177,7 @@ function VideoControls({
         />
         <IconButton
           icon="maximize"
-          label={getTranslation(es)('training.fullScreenVideo_e239c9')}
+          label={getTranslation(language)('training.fullScreenVideo_e239c9')}
           onPress={() => void view.current?.enterFullscreen()}
         />
       </View>

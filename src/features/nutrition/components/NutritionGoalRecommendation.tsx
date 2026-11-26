@@ -1,3 +1,4 @@
+import type { Language } from '@/i18n/Language';
 import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -77,44 +78,51 @@ const missingLabelsEs: Record<string, string> = {
   birth_date: 'fecha de nacimiento',
 };
 
-function objectiveLabel(objective: RecommendationData['objective'], es: boolean) {
-  if (!objective) return getTranslation(es)('nutrition.NutritionGoalRecommendation.dailyTarget');
-  return es ? objectiveLabelsEs[objective] : objectiveLabels[objective];
+function objectiveLabel(objective: RecommendationData['objective'], language: Language) {
+  if (!objective)
+    return getTranslation(language)('nutrition.NutritionGoalRecommendation.dailyTarget');
+  return language === 'es' ? objectiveLabelsEs[objective] : objectiveLabels[objective];
 }
 
-function translatedReason(data: RecommendationData, es: boolean) {
-  if (!es) return data.reason;
+function translatedReason(data: RecommendationData, language: Language) {
+  if (language !== 'es') return data.reason;
   if (data.reason_code && reasonLabelsEs[data.reason_code]) return reasonLabelsEs[data.reason_code];
   return data.reason ? (reasonTextEs[data.reason] ?? data.reason) : data.reason;
 }
 
-function translatedMissingField(field: string, es: boolean) {
-  if (!es) return field.replaceAll('_', ' ');
+function translatedMissingField(field: string, language: Language) {
+  if (language !== 'es') return field.replaceAll('_', ' ');
   return missingLabelsEs[field] ?? field.replaceAll('_', ' ');
 }
 
-function targetComparison(suggestion: number, saved: number, es: boolean): string {
+function targetComparison(suggestion: number, saved: number, language: Language): string {
   if (saved === suggestion)
-    return getTranslation(es)('nutrition.NutritionGoalRecommendation.matchesYourSavedTarget');
+    return getTranslation(language)('nutrition.NutritionGoalRecommendation.matchesYourSavedTarget');
   const difference = Number(Math.abs(suggestion - saved).toFixed(2));
   const direction = suggestion > saved ? 'above' : 'below';
   const localizedDirection = selectCopy(
-    es,
+    language === 'es',
     suggestion > saved ? 'por encima' : 'por debajo',
     direction,
   );
-  return getTranslation(es)('dynamicMessages.suggestionKcalDayYourSavedTarget_c5d826', {
+  return getTranslation(language)('dynamicMessages.suggestionKcalDayYourSavedTarget_c5d826', {
     value1: difference,
     value2: localizedDirection,
   });
 }
 
-function adjustmentText(percent: number | null, es: boolean): string {
+function adjustmentText(percent: number | null, language: Language): string {
   if (percent === 0)
-    return getTranslation(es)('nutrition.NutritionGoalRecommendation.caloriesToMaintainYourWeight');
+    return getTranslation(language)(
+      'nutrition.NutritionGoalRecommendation.caloriesToMaintainYourWeight',
+    );
   const direction = Number(percent) < 0 ? 'fewer' : 'more';
-  const localizedDirection = selectCopy(es, Number(percent) < 0 ? 'menos' : 'más', direction);
-  return getTranslation(es)('dynamicMessages.caloriesForYourGoal_2a23a6', {
+  const localizedDirection = selectCopy(
+    language === 'es',
+    Number(percent) < 0 ? 'menos' : 'más',
+    direction,
+  );
+  return getTranslation(language)('dynamicMessages.caloriesForYourGoal_2a23a6', {
     value1: Math.abs(percent ?? 0),
     value2: localizedDirection,
   });
@@ -139,7 +147,7 @@ function RecommendationContent({
   onAccept: () => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const goal = data.goal;
   return (
     <>
@@ -147,54 +155,58 @@ function RecommendationContent({
         <>
           <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
             <Text style={[textStyles['title-md'], { color: p.ink }]}>
-              {objectiveLabel(data.objective, es)}
+              {objectiveLabel(data.objective, language)}
             </Text>
             <Text style={[textStyles['metric-lg'], { color: p['brand-ink'] }]}>
-              {goal.calories} {getTranslation(es)('nutrition.NutritionGoalRecommendation.kcalDay')}
+              {goal.calories}{' '}
+              {getTranslation(language)('nutrition.NutritionGoalRecommendation.kcalDay')}
             </Text>
             {(['protein', 'carbohydrates', 'fats'] as const).map((macro) => (
               <Text key={macro} style={[textStyles.body, { color: p.ink }]}>
-                {es ? macroLabelsEs[macro] : macroLabels[macro]}: {Math.round(goal[macro])} g{' · '}
+                {language === 'es' ? macroLabelsEs[macro] : macroLabels[macro]}:{' '}
+                {Math.round(goal[macro])} g{' · '}
                 {Math.round(((goal[macro] * (macro === 'fats' ? 9 : 4)) / goal.calories) * 100)}%
               </Text>
             ))}
             {saved ? (
               <View style={{ gap: spacing['space-1'] }}>
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  {getTranslation(es)('nutrition.NutritionGoalRecommendation.yourSavedTarget')}{' '}
+                  {getTranslation(language)(
+                    'nutrition.NutritionGoalRecommendation.yourSavedTarget',
+                  )}{' '}
                   {saved.calories}{' '}
-                  {getTranslation(es)('nutrition.NutritionGoalRecommendation.kcalDay')}
+                  {getTranslation(language)('nutrition.NutritionGoalRecommendation.kcalDay')}
                 </Text>
                 <Text style={[textStyles['body-sm'], { color: p.ink }]}>
-                  {targetComparison(goal.calories, saved.calories, es)}
+                  {targetComparison(goal.calories, saved.calories, language)}
                 </Text>
               </View>
             ) : null}
           </View>
           <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
             <Text style={[textStyles.body, { color: p.ink }]}>
-              {getTranslation(es)('nutrition.NutritionGoalRecommendation.weeklyActivity')}{' '}
-              {es
+              {getTranslation(language)('nutrition.NutritionGoalRecommendation.weeklyActivity')}{' '}
+              {language === 'es'
                 ? (activityLabelsEs[String(data.activity_factor)] ?? 'Sin definir')
                 : (weeklyActivityLabels[String(data.activity_factor)] ?? 'Not set')}
             </Text>
             <Text style={[textStyles.body, { color: p.ink }]}>
-              {getTranslation(es)('nutrition.NutritionGoalRecommendation.maintenance')}{' '}
+              {getTranslation(language)('nutrition.NutritionGoalRecommendation.maintenance')}{' '}
               {Math.round(data.maintenance_calories ?? 0)}{' '}
-              {getTranslation(es)('nutrition.NutritionGoalRecommendation.kcalDay')}
+              {getTranslation(language)('nutrition.NutritionGoalRecommendation.kcalDay')}
             </Text>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {adjustmentText(data.adjustment_percent, es)}
+              {adjustmentText(data.adjustment_percent, language)}
             </Text>
           </View>
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            {getTranslation(es)(
+            {getTranslation(language)(
               'nutrition.NutritionGoalRecommendation.aStartingEstimateReviewYourProgressIn24Weeks',
             )}
           </Text>
           <View style={styles.confirm}>
             <Switch
-              accessibilityLabel={getTranslation(es)(
+              accessibilityLabel={getTranslation(language)(
                 'nutrition.NutritionGoalRecommendation.thisAdultEstimateIsAppropriateForMe',
               )}
               value={eligible}
@@ -202,7 +214,7 @@ function RecommendationContent({
               disabled={pending}
             />
             <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-              {getTranslation(es)(
+              {getTranslation(language)(
                 'nutrition.NutritionGoalRecommendation.notPregnantOrBreastfeedingNoPrescribedDiet',
               )}
             </Text>
@@ -210,8 +222,8 @@ function RecommendationContent({
           <Button
             title={
               pending
-                ? getTranslation(es)('nutrition.NutritionGoalRecommendation.saving')
-                : getTranslation(es)('nutrition.NutritionGoalRecommendation.acceptSuggestion')
+                ? getTranslation(language)('nutrition.NutritionGoalRecommendation.saving')
+                : getTranslation(language)('nutrition.NutritionGoalRecommendation.acceptSuggestion')
             }
             disabled={!eligible || pending}
             onPress={() => {
@@ -220,7 +232,7 @@ function RecommendationContent({
           />
           {saved ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {getTranslation(es)(
+              {getTranslation(language)(
                 'nutrition.NutritionGoalRecommendation.thisReplacesYourCurrentTargets',
               )}
             </Text>
@@ -228,12 +240,17 @@ function RecommendationContent({
         </>
       ) : (
         <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-          <Text style={[textStyles.body, { color: p.ink }]}>{translatedReason(data, es)}</Text>
+          <Text style={[textStyles.body, { color: p.ink }]}>
+            {translatedReason(data, language)}
+          </Text>
           {data.missing_fields.length ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {getTranslation(es)('nutrition.NutritionGoalRecommendation.missing')}{' '}
-              {data.missing_fields.map((field) => translatedMissingField(field, es)).join(', ')}.{' '}
-              {getTranslation(es)(
+              {getTranslation(language)('nutrition.NutritionGoalRecommendation.missing')}{' '}
+              {data.missing_fields
+                .map((field) => translatedMissingField(field, language))
+                .join(', ')}
+              .{' '}
+              {getTranslation(language)(
                 'nutrition.NutritionGoalRecommendation.updateTheseInProfileThenReturnHere',
               )}
             </Text>
@@ -241,7 +258,7 @@ function RecommendationContent({
         </View>
       )}
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {getTranslation(es)(
+        {getTranslation(language)(
           'nutrition.NutritionGoalRecommendation.forHealthyAdultsIncludesExerciseCalories',
         )}
       </Text>
@@ -269,7 +286,7 @@ function Recommendation({
   active?: boolean;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const cache = useQueryClient();
   const [manual, setManual] = React.useState(false);
   const [eligible, setEligible] = React.useState(false);
@@ -314,11 +331,15 @@ function Recommendation({
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView contentContainerStyle={[screenContentStyle, styles.content]}>
         <ScreenHeader
-          title={getTranslation(es)('nutrition.NutritionGoalRecommendation.yourNutritionPlan')}
+          title={getTranslation(language)(
+            'nutrition.NutritionGoalRecommendation.yourNutritionPlan',
+          )}
           leading={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es)('nutrition.NutritionGoalRecommendation.back')}
+              accessibilityLabel={getTranslation(language)(
+                'nutrition.NutritionGoalRecommendation.back',
+              )}
               disabled={accept.isPending}
               onPress={onClose}
               style={styles.back}
@@ -328,24 +349,26 @@ function Recommendation({
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {getTranslation(es)(
+          {getTranslation(language)(
             'nutrition.NutritionGoalRecommendation.yourSuggestedDailyCaloriesAndMacros',
           )}
         </Text>
         {loading ? (
           <Text style={{ color: p.ink }}>
-            {getTranslation(es)('nutrition.NutritionGoalRecommendation.calculatingYourSuggestion')}
+            {getTranslation(language)(
+              'nutrition.NutritionGoalRecommendation.calculatingYourSuggestion',
+            )}
           </Text>
         ) : null}
         {failed ? (
           <View style={styles.content}>
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {getTranslation(es)(
+              {getTranslation(language)(
                 'nutrition.NutritionGoalRecommendation.couldNotLoadYourSuggestion',
               )}
             </Text>
             <Button
-              title={getTranslation(es)('nutrition.NutritionGoalRecommendation.retry')}
+              title={getTranslation(language)('nutrition.NutritionGoalRecommendation.retry')}
               onPress={() => {
                 void recommendation.refetch();
                 void saved.refetch();
@@ -369,13 +392,13 @@ function Recommendation({
         ) : null}
         {accept.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {getTranslation(es)(
+            {getTranslation(language)(
               'nutrition.NutritionGoalRecommendation.couldNotSaveYourGoalTryAgain',
             )}
           </Text>
         ) : null}
         <Button
-          title={getTranslation(es)('nutrition.NutritionGoalRecommendation.enterManually')}
+          title={getTranslation(language)('nutrition.NutritionGoalRecommendation.enterManually')}
           secondary
           disabled={accept.isPending}
           onPress={() => setManual(true)}

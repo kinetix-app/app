@@ -252,11 +252,11 @@ function MediaCarousel({
               key={item.id}
               accountId={accountId}
               path={item.url}
-              label={
-                language === 'es'
-                  ? `Foto ${position + 1} de ${total} de ${name}`
-                  : `Photo ${position + 1} of ${total} by ${name}`
-              }
+              label={getTranslation(language)('socialAdditional.photoOfBy_370346', {
+                value1: position + 1,
+                value2: total,
+                value3: name,
+              })}
               style={{ width, height: 160, borderRadius: radii['radius-md'] }}
             />
           ))}
@@ -267,9 +267,10 @@ function MediaCarousel({
       {total > 1 ? (
         <View
           style={styles.dots}
-          accessibilityLabel={
-            language === 'es' ? `Foto ${index + 1} de ${total}` : `Photo ${index + 1} of ${total}`
-          }
+          accessibilityLabel={getTranslation(language)('socialAdditional.photoOf_e09e9d', {
+            value1: index + 1,
+            value2: total,
+          })}
         >
           {post.media.map((item, position) => (
             <View
@@ -286,24 +287,17 @@ function MediaCarousel({
   );
 }
 
-const workoutDate = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
-
 function PostWorkoutSummary({
   workout,
   label,
   onPress,
 }: Readonly<{ workout: WorkoutSummary; label: string; onPress?: () => void }>) {
   const language = useLanguage();
-  const date =
-    language === 'es'
-      ? new Intl.DateTimeFormat('es', { month: 'short', day: 'numeric', year: 'numeric' }).format(
-          new Date(workout.ended_at),
-        )
-      : workoutDate.format(new Date(workout.ended_at));
+  const date = new Intl.DateTimeFormat(language, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(workout.ended_at));
   return (
     <WorkoutSummaryCard
       embedded

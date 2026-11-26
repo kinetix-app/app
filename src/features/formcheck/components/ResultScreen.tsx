@@ -1,3 +1,4 @@
+import type { Language } from '@/i18n/Language';
 import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { Text, View } from 'react-native';
@@ -10,31 +11,31 @@ import { FormCheckScreen } from './FormCheckScreen';
 
 type Assessed = Extract<AnalysisView, { kind: 'assessed' }>;
 
-function repSummary(repCount: number, es: boolean) {
-  if (es) return repCount === 1 ? 'repetición detectada' : 'repeticiones detectadas';
+function repSummary(repCount: number, language: Language) {
+  if (language === 'es') return repCount === 1 ? 'repetición detectada' : 'repeticiones detectadas';
   return repCount === 1 ? 'rep detected' : 'reps detected';
 }
 
-function repAccessibilityLabel(index: number, ok: boolean, label: string, es: boolean) {
-  if (es) return `Repetición ${index}: ${ok ? 'sin problemas' : label}`;
+function repAccessibilityLabel(index: number, ok: boolean, label: string, language: Language) {
+  if (language === 'es') return `Repetición ${index}: ${ok ? 'sin problemas' : label}`;
   return `Rep ${index}: ${ok ? 'no issues' : label}`;
 }
 
 function RepResults({
   view,
-  es,
+  language,
   p,
-}: Readonly<{ view: Assessed; es: boolean; p: ReturnType<typeof usePalette> }>) {
+}: Readonly<{ view: Assessed; language: Language; p: ReturnType<typeof usePalette> }>) {
   return (
     <View style={ui.gap}>
       <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-        {getTranslation(es)('formcheck.ResultScreen.rEPBYREP')}
+        {getTranslation(language)('formcheck.ResultScreen.rEPBYREP')}
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
         {view.reps.map((rep) => (
           <View
             key={rep.index}
-            accessibilityLabel={repAccessibilityLabel(rep.index, rep.ok, rep.label, es)}
+            accessibilityLabel={repAccessibilityLabel(rep.index, rep.ok, rep.label, language)}
             style={{
               minWidth: 52,
               alignItems: 'center',
@@ -61,7 +62,7 @@ function RepResults({
 /** Placeholder results must never read as a real assessment. */
 export function DemoNotice() {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <View
       accessibilityRole="alert"
@@ -69,7 +70,7 @@ export function DemoNotice() {
     >
       <Feather name="info" size={18} color={p.info} style={{ marginTop: 2 }} />
       <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-        {getTranslation(es)(
+        {getTranslation(language)(
           'formcheck.ResultScreen.demoAnalysisThisResultIsAPlaceholderNotARealCheckOfYourFormYet',
         )}
       </Text>
@@ -113,27 +114,30 @@ export function ResultScreen({
   onDone: () => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es)('formcheck.ResultScreen.sET')} ${setNumber}`}
-      title={getTranslation(es)('formcheck.ResultScreen.setAnalyzed')}
+      overline={`${exerciseName.toUpperCase()} · ${getTranslation(language)('formcheck.ResultScreen.sET')} ${setNumber}`}
+      title={getTranslation(language)('formcheck.ResultScreen.setAnalyzed')}
       backIcon="x"
-      backLabel={getTranslation(es)('formcheck.ResultScreen.backToWorkout')}
+      backLabel={getTranslation(language)('formcheck.ResultScreen.backToWorkout')}
       onBack={onDone}
       footer={
         <>
-          <Button title={getTranslation(es)('formcheck.ResultScreen.done')} onPress={onDone} />
+          <Button
+            title={getTranslation(language)('formcheck.ResultScreen.done')}
+            onPress={onDone}
+          />
           {hasVideo ? (
             <Button
-              title={getTranslation(es)('formcheck.ResultScreen.watchRecording')}
+              title={getTranslation(language)('formcheck.ResultScreen.watchRecording')}
               icon="play"
               onPress={onWatchVideo}
               secondary
             />
           ) : null}
           <Button
-            title={getTranslation(es)('formcheck.ResultScreen.recordAgain')}
+            title={getTranslation(language)('formcheck.ResultScreen.recordAgain')}
             icon="video"
             onPress={onRecordAgain}
             secondary
@@ -147,25 +151,25 @@ export function ResultScreen({
           {view.repCount}
         </Text>
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {repSummary(view.repCount, es)}
+          {repSummary(view.repCount, language)}
         </Text>
       </View>
       {view.score !== null ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {getTranslation(es)('formcheck.ResultScreen.techniqueScore')}{' '}
+          {getTranslation(language)('formcheck.ResultScreen.techniqueScore')}{' '}
           <Text style={{ color: p.ink, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
             {Math.round(view.score)}
           </Text>{' '}
           / 100
         </Text>
       ) : null}
-      <RepResults view={view} es={es} p={p} />
+      <RepResults view={view} language={language} p={p} />
       {view.issues.length ? (
         <>
           {view.praise.length ? (
             <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
               <Text style={[textStyles.overline, { color: p.success }]}>
-                {getTranslation(es)('formcheck.ResultScreen.wHATWENTWELL')}
+                {getTranslation(language)('formcheck.ResultScreen.wHATWENTWELL')}
               </Text>
               <PraiseList items={view.praise} />
             </View>
@@ -173,7 +177,8 @@ export function ResultScreen({
           {view.issues.map((issue) => (
             <View key={issue.id} style={[ui.card, { backgroundColor: p['surface-200'] }]}>
               <Text style={[textStyles.overline, { color: p.warning }]}>
-                {getTranslation(es)('formcheck.ResultScreen.iSSUE')} · {issue.label.toUpperCase()}
+                {getTranslation(language)('formcheck.ResultScreen.iSSUE')} ·{' '}
+                {issue.label.toUpperCase()}
               </Text>
               <Text style={[textStyles['title-md'], { color: p.ink }]}>{issue.title}</Text>
               {issue.explanation ? (
@@ -194,7 +199,7 @@ export function ResultScreen({
             <PraiseList items={view.praise} />
           ) : (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {getTranslation(es)('formcheck.ResultScreen.everyRepLookedGoodKeepItUp')}
+              {getTranslation(language)('formcheck.ResultScreen.everyRepLookedGoodKeepItUp')}
             </Text>
           )}
         </View>
@@ -202,13 +207,13 @@ export function ResultScreen({
       {view.tip ? (
         <View style={[ui.card, { backgroundColor: p['brand-soft'], gap: spacing['space-1'] }]}>
           <Text style={[textStyles.overline, { color: p['brand-ink'] }]}>
-            {getTranslation(es)('formcheck.ResultScreen.nEXTSET')}
+            {getTranslation(language)('formcheck.ResultScreen.nEXTSET')}
           </Text>
           <Text style={[textStyles.body, { color: p['brand-ink'] }]}>{view.tip}</Text>
         </View>
       ) : null}
       <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
-        {getTranslation(es)('formcheck.ResultScreen.wrongCountYouCanEditTheRepsInTheSet')}
+        {getTranslation(language)('formcheck.ResultScreen.wrongCountYouCanEditTheRepsInTheSet')}
       </Text>
     </FormCheckScreen>
   );

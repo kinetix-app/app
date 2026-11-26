@@ -34,12 +34,11 @@ export function BodyPartFilter({
 }>) {
   const p = usePalette();
   const language = useLanguage();
-  const es = language === 'es';
   const [activity, setActivity] = useState(activityType);
   const [draft, setDraft] = useState(selected);
   const selectionSummary = draft.length
-    ? getTranslation(es)('dynamicMessages.selected_ab1f2e', { value1: draft.length })
-    : getTranslation(es)('training.allBodyParts_46db89');
+    ? getTranslation(language)('dynamicMessages.selected_ab1f2e', { value1: draft.length })
+    : getTranslation(language)('training.allBodyParts_46db89');
   const available = [...new Set([...selected, ...options])].sort((a, b) =>
     catalogueLabel(a, language).localeCompare(catalogueLabel(b, language), language),
   );
@@ -66,17 +65,17 @@ export function BodyPartFilter({
               accessibilityRole="header"
               style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
             >
-              {getTranslation(es)('training.filters_31c8f6')}
+              {getTranslation(language)('training.filters_31c8f6')}
             </Text>
             <IconButton
               icon="x"
-              label={getTranslation(es)('training.closeBodyPartFilters_65c708')}
+              label={getTranslation(language)('training.closeBodyPartFilters_65c708')}
               onPress={onClose}
             />
           </View>
           <View style={{ gap: spacing['space-2'] }}>
             <Text style={[textStyles.label, { color: p.ink }]}>
-              {getTranslation(es)('training.activity_9b1999')}
+              {getTranslation(language)('training.activity_9b1999')}
             </Text>
             <View
               style={[
@@ -122,7 +121,7 @@ export function BodyPartFilter({
           {activity !== 'cardio' ? (
             <>
               <Text style={[textStyles.label, { color: p.ink }]}>
-                {getTranslation(es)('training.bodyParts_aa2a01')}
+                {getTranslation(language)('training.bodyParts_aa2a01')}
               </Text>
               <ScrollView
                 style={{ flexShrink: 1 }}
@@ -177,7 +176,7 @@ export function BodyPartFilter({
                 })}
                 {!pending && !error && available.length === 0 ? (
                   <Text style={{ color: p['ink-muted'] }}>
-                    {getTranslation(es)('training.noBodyPartsAvailable_b6d395')}
+                    {getTranslation(language)('training.noBodyPartsAvailable_b6d395')}
                   </Text>
                 ) : null}
               </ScrollView>
@@ -190,7 +189,7 @@ export function BodyPartFilter({
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={getTranslation(es)(
+                  accessibilityLabel={getTranslation(language)(
                     'training.clearDraftBodyPartFilters_ffd524',
                   )}
                   accessibilityState={{ disabled: draft.length === 0 }}
@@ -204,7 +203,7 @@ export function BodyPartFilter({
                   })}
                 >
                   <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                    {getTranslation(es)('training.clear_fb96ea')}
+                    {getTranslation(language)('training.clear_fb96ea')}
                   </Text>
                 </Pressable>
               </View>
@@ -213,15 +212,15 @@ export function BodyPartFilter({
           <View style={ui.row}>
             <View style={{ flex: 1 }}>
               <Button
-                title={getTranslation(es)('training.cancel_a25d0b')}
+                title={getTranslation(language)('training.cancel_a25d0b')}
                 onPress={onClose}
                 secondary
               />
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                title={getTranslation(es)('training.save_5bd05a')}
-                accessibilityLabel={getTranslation(es)('training.saveFilters_3c178d')}
+                title={getTranslation(language)('training.save_5bd05a')}
+                accessibilityLabel={getTranslation(language)('training.saveFilters_3c178d')}
                 onPress={() =>
                   onApply(
                     activity === 'cardio' ? [] : [...draft].sort((a, b) => a.localeCompare(b)),

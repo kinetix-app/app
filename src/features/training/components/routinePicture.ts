@@ -11,9 +11,7 @@ export async function pickRoutinePicture(
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted)
         return {
-          error: getTranslation(language === 'es' ? 'es' : 'en')(
-            'training.allowPhotoAccessInSettingsToChoose_e96f35',
-          ),
+          error: getTranslation(language)('training.allowPhotoAccessInSettingsToChoose_e96f35'),
         };
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -26,22 +24,16 @@ export async function pickRoutinePicture(
     if (!asset) return null;
     if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024)
       return {
-        error: getTranslation(language === 'es' ? 'es' : 'en')(
-          'training.chooseACoverSmallerThan5Mb_e3f9e7',
-        ),
+        error: getTranslation(language)('training.chooseACoverSmallerThan5Mb_e3f9e7'),
       };
     if (asset.mimeType && !['image/jpeg', 'image/png', 'image/webp'].includes(asset.mimeType))
       return {
-        error: getTranslation(language === 'es' ? 'es' : 'en')(
-          'training.chooseAJpegPngOrWebpCover_6b72e2',
-        ),
+        error: getTranslation(language)('training.chooseAJpegPngOrWebpCover_6b72e2'),
       };
     return { asset };
   } catch {
     return {
-      error: getTranslation(language === 'es' ? 'es' : 'en')(
-        'training.couldNotOpenYourPhotosTryAgain_1be001',
-      ),
+      error: getTranslation(language)('training.couldNotOpenYourPhotosTryAgain_1be001'),
     };
   }
 }

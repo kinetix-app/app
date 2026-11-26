@@ -42,7 +42,7 @@ export function WorkoutDetail({
   onShare,
 }: WorkoutDetailProps) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const unavailable = error instanceof ApiError && error.status === 404;
 
   return (
@@ -51,7 +51,7 @@ export function WorkoutDetail({
         <View style={[styles.frame, ui.row, styles.headerContent]}>
           <IconButton icon="arrow-left" label={backLabel} onPress={onBack} />
           <Text accessibilityRole="header" style={[ui.heading, styles.fill, { color: p.ink }]}>
-            {getTranslation(es)('training.workoutDetail_716d83')}
+            {getTranslation(language)('training.workoutDetail_716d83')}
           </Text>
         </View>
       </View>
@@ -65,7 +65,7 @@ export function WorkoutDetail({
             <View style={styles.summarySection}>
               <WorkoutSummary workout={workout} author={author} />
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                {getTranslation(es)('training.exerciseResults_5824c0')}
+                {getTranslation(language)('training.exerciseResults_5824c0')}
               </Text>
             </View>
           ) : null) ?? undefined
@@ -73,14 +73,14 @@ export function WorkoutDetail({
         ListEmptyComponent={
           workout ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              {getTranslation(es)('training.noExercisesWereRecorded_539dc3')}
+              {getTranslation(language)('training.noExercisesWereRecorded_539dc3')}
             </Text>
           ) : (
             <View style={ui.gap}>
               {!error ? <Loading /> : null}
               {unavailable ? (
                 <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                  {getTranslation(es)('training.thisWorkoutIsNoLongerAvailable_ac92e6')}
+                  {getTranslation(language)('training.thisWorkoutIsNoLongerAvailable_ac92e6')}
                 </Text>
               ) : null}
               {error && !unavailable ? <Failure error={error} retry={onRetry} /> : null}
@@ -97,7 +97,7 @@ export function WorkoutDetail({
         >
           <View style={[styles.frame, styles.footerContent]}>
             <Button
-              title={getTranslation(es)('training.shareToFeed_97c2f4')}
+              title={getTranslation(language)('training.shareToFeed_97c2f4')}
               icon="share"
               onPress={onShare}
             />
@@ -113,7 +113,8 @@ function WorkoutSummary({
   author,
 }: Readonly<{ workout: WorkoutDetailData; author: WorkoutAuthor }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const completed = new Date(workout.endedAt);
   const elapsedSeconds = Math.max(
     0,
@@ -157,15 +158,15 @@ function WorkoutSummary({
           testID="workout-detail-primary-metrics"
           metrics={[
             {
-              label: getTranslation(es)('training.duration_c00c5f'),
+              label: getTranslation(language)('training.duration_c00c5f'),
               value: formatElapsedDuration(elapsedSeconds),
             },
             {
-              label: getTranslation(es)('training.volume_bbc801'),
+              label: getTranslation(language)('training.volume_bbc801'),
               value: formatWorkoutVolume(workout.volumeKg),
             },
             {
-              label: getTranslation(es)('training.exercises_3f75d2'),
+              label: getTranslation(language)('training.exercises_3f75d2'),
               value: workout.exercises.length.toLocaleString(es ? 'es' : undefined),
             },
           ]}
@@ -175,11 +176,11 @@ function WorkoutSummary({
           divided
           metrics={[
             {
-              label: getTranslation(es)('training.sets_3ae183'),
+              label: getTranslation(language)('training.sets_3ae183'),
               value: sets.toLocaleString(),
             },
             {
-              label: getTranslation(es)('training.reps_523160'),
+              label: getTranslation(language)('training.reps_523160'),
               value: workout.reps?.toLocaleString() ?? '—',
             },
           ]}

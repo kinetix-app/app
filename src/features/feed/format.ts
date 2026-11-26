@@ -12,7 +12,7 @@ export function relativeTime(iso: string, now: number = Date.now(), language: 'e
   if (hours < 24) return getTranslation(language)('feed.hAgo', { hours });
   const days = Math.floor(hours / 24);
   if (days < 7) return getTranslation(language)('feed.dAgo', { days });
-  return new Intl.DateTimeFormat(language === 'es' ? 'es-ES' : 'en-US', {
+  return new Intl.DateTimeFormat(language, {
     day: 'numeric',
     month: 'short',
   }).format(new Date(iso));

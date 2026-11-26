@@ -200,7 +200,7 @@ function FriendList({
         <PersonRow
           accountId={accountId}
           person={item.user}
-          detail={`${getTranslation(language)('friends.friendsSince')} ${new Date(item.since).toLocaleDateString(language === 'es' ? 'es' : undefined)}`}
+          detail={`${getTranslation(language)('friends.friendsSince')} ${new Date(item.since).toLocaleDateString(language)}`}
           onOpen={onOpen}
         />
       )}

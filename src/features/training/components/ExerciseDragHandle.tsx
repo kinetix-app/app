@@ -19,18 +19,20 @@ export function ExerciseDragHandle({
   onMove,
 }: Readonly<DragHandleProps>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <Pressable
       nativeID={id}
       accessibilityRole="adjustable"
       accessibilityLabel={label}
-      accessibilityHint={getTranslation(es)('training.holdAndDragToChangeExerciseOrder_0fc1bf')}
+      accessibilityHint={getTranslation(language)(
+        'training.holdAndDragToChangeExerciseOrder_0fc1bf',
+      )}
       accessibilityActions={[
-        { name: 'increment', label: getTranslation(es)('training.moveLater_3400a3') },
+        { name: 'increment', label: getTranslation(language)('training.moveLater_3400a3') },
         {
           name: 'decrement',
-          label: getTranslation(es)('training.moveEarlier_cd9ffc'),
+          label: getTranslation(language)('training.moveEarlier_cd9ffc'),
         },
       ]}
       onAccessibilityAction={({ nativeEvent }) => {

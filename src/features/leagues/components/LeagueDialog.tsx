@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
@@ -49,9 +50,9 @@ export function LeagueDialog({
               {title}
             </Text>
             <LeagueIconButton
-              label={
-                language === 'es' ? `Cerrar ${title.toLowerCase()}` : `Close ${title.toLowerCase()}`
-              }
+              label={getTranslation(language)('socialAdditional.close_a70f59', {
+                value1: title.toLowerCase(),
+              })}
               icon="close"
               onPress={onClose}
             />

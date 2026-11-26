@@ -27,7 +27,7 @@ export function ActivityEditor({
   active?: boolean;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   const form = useForm<ProfileFormValues>({ defaultValues: profileDefaults(account) });
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState('');
@@ -50,7 +50,9 @@ export function ActivityEditor({
       const updated = await updateProfile(apiClient, { activity_level: activity });
       onSaved(updated);
     } catch {
-      setFailure(getTranslation(es)('accountsUi.could_not_save_your_activity_please_try_again'));
+      setFailure(
+        getTranslation(language)('accountsUi.could_not_save_your_activity_please_try_again'),
+      );
     } finally {
       busy.current = false;
       setPending(false);
@@ -63,13 +65,13 @@ export function ActivityEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title={getTranslation(es)('accountsUi.usual_activity')}
+          title={getTranslation(language)('accountsUi.usual_activity')}
           leading={
             <ProfileBack
               onPress={() => {
                 if (!pending) onCancel();
               }}
-              label={getTranslation(es)('accountsUi.back_to_profile')}
+              label={getTranslation(language)('accountsUi.back_to_profile')}
             />
           }
         />
@@ -86,8 +88,8 @@ export function ActivityEditor({
         <SetupButton
           title={
             pending
-              ? getTranslation(es)('accountsUi.saving')
-              : getTranslation(es)('accountsUi.save_activity')
+              ? getTranslation(language)('accountsUi.saving')
+              : getTranslation(language)('accountsUi.save_activity')
           }
           disabled={pending}
           onPress={() => {
@@ -95,7 +97,7 @@ export function ActivityEditor({
           }}
         />
         <SetupButton
-          title={getTranslation(es)('accountsUi.cancel')}
+          title={getTranslation(language)('accountsUi.cancel')}
           secondary
           disabled={pending}
           onPress={onCancel}

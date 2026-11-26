@@ -190,7 +190,8 @@ export function ExerciseEvolution({
   activityType,
 }: Readonly<{ accountId: number; exerciseId: number; activityType: string }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const metricLabels = es ? spanishLabels : labels;
   const cardio = activityType === 'cardio';
   const [metric, setMetric] = useState<Metric>(cardio ? 'distance' : 'estimated_1rm');
@@ -229,13 +230,13 @@ export function ExerciseEvolution({
     range,
     selected,
   );
-  const excludedSetsLabel = getTranslation(es)('training.someSetsExcluded_227c97');
+  const excludedSetsLabel = getTranslation(language)('training.someSetsExcluded_227c97');
   return (
     <View style={{ gap: 12 }}>
       <ChartMetricSelector
         metrics={cardio ? cardioMetrics : gymMetrics}
         value={metric}
-        label={getTranslation(es)('training.exerciseMetric_f77b18')}
+        label={getTranslation(language)('training.exerciseMetric_f77b18')}
         labelFor={(key) => metricLabels[key]}
         reduceMotion={reduceMotion}
         onChange={(key) => {
@@ -344,7 +345,8 @@ function MetricInfoSheet({
   reduceMotion: boolean;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
+  const es = language === 'es';
   const metricLabels = es ? spanishLabels : labels;
   const [sheetY] = useState(() => new Animated.Value(0));
   const sheetPan = PanResponder.create({
@@ -404,7 +406,7 @@ function MetricInfoSheet({
                 </Text>
                 <IconButton
                   icon="x"
-                  label={getTranslation(es)('training.closeExplanation_209b38')}
+                  label={getTranslation(language)('training.closeExplanation_209b38')}
                   onPress={() => onClose()}
                 />
               </View>

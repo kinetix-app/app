@@ -38,26 +38,26 @@ export function ConsentScreen({
   onClose: () => void;
 }>) {
   const p = usePalette();
-  const es = useLanguage() === 'es';
+  const language = useLanguage();
   return (
     <FormCheckScreen
       onBack={onClose}
-      backLabel={getTranslation(es)('formcheck.ConsentScreen.backToWorkout')}
+      backLabel={getTranslation(language)('formcheck.ConsentScreen.backToWorkout')}
       footer={
         <>
           {denied ? (
             <Button
-              title={getTranslation(es)('formcheck.ConsentScreen.openSettings')}
+              title={getTranslation(language)('formcheck.ConsentScreen.openSettings')}
               onPress={onOpenSettings}
             />
           ) : (
             <Button
-              title={getTranslation(es)('formcheck.ConsentScreen.allowCamera')}
+              title={getTranslation(language)('formcheck.ConsentScreen.allowCamera')}
               onPress={onAllow}
             />
           )}
           <Button
-            title={getTranslation(es)('formcheck.ConsentScreen.notNow')}
+            title={getTranslation(language)('formcheck.ConsentScreen.notNow')}
             onPress={onClose}
             secondary
           />
@@ -78,17 +78,17 @@ export function ConsentScreen({
           <Feather name="camera" size={32} color={p['brand-ink']} />
         </View>
         <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-          {getTranslation(es)('formcheck.ConsentScreen.checkYourForm')}
+          {getTranslation(language)('formcheck.ConsentScreen.checkYourForm')}
         </Text>
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {getTranslation(es)(
+          {getTranslation(language)(
             'formcheck.ConsentScreen.recordASetAndKinetixCountsYourRepsAndPointsOutTheMainThingToImpro',
           )}
         </Text>
       </View>
       {denied ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {getTranslation(es)(
+          {getTranslation(language)(
             'formcheck.ConsentScreen.cameraAccessIsTurnedOffTurnItOnInYourPhoneSettingsToRecordASet',
           )}
         </Text>
@@ -96,26 +96,27 @@ export function ConsentScreen({
       <View style={[ui.card, { backgroundColor: p['surface-200'], gap: spacing['space-4'] }]}>
         <Point
           icon="smartphone"
-          title={getTranslation(es)('formcheck.ConsentScreen.analyzedOnYourPhone')}
-          text={getTranslation(es)('formcheck.ConsentScreen.yourVideoIsNotUploaded')}
+          title={getTranslation(language)('formcheck.ConsentScreen.analyzedOnYourPhone')}
+          text={getTranslation(language)('formcheck.ConsentScreen.yourVideoIsNotUploaded')}
         />
         <Point
           icon="trash-2"
-          title={getTranslation(es)('formcheck.ConsentScreen.deletedWhenYouFinish')}
-          text={getTranslation(es)(
+          title={getTranslation(language)('formcheck.ConsentScreen.deletedWhenYouFinish')}
+          text={getTranslation(language)(
             'formcheck.ConsentScreen.theVideoIsRemovedWhenYouFinishOrDiscardTheWorkoutRepsAndFormNotes',
           )}
         />
         <Point
           icon="target"
-          title={getTranslation(es)('formcheck.ConsentScreen.aTrainingAid')}
-          text={getTranslation(es)('formcheck.ConsentScreen.notMedicalAdvice')}
+          title={getTranslation(language)('formcheck.ConsentScreen.aTrainingAid')}
+          text={getTranslation(language)('formcheck.ConsentScreen.notMedicalAdvice')}
         />
       </View>
       {supportedNames.length ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {getTranslation(es)('formcheck.ConsentScreen.availableFor')} {supportedNames.join(', ')}.{' '}
-          {getTranslation(es)('formcheck.ConsentScreen.moreExercisesComing')}
+          {getTranslation(language)('formcheck.ConsentScreen.availableFor')}{' '}
+          {supportedNames.join(', ')}.{' '}
+          {getTranslation(language)('formcheck.ConsentScreen.moreExercisesComing')}
         </Text>
       ) : null}
     </FormCheckScreen>
