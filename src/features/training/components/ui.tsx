@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { Feather } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -75,22 +76,18 @@ export function Failure({ error, retry }: Readonly<{ error: unknown; retry?: () 
 
 function getFailureMessage(error: unknown, language: Language) {
   const es = language === 'es';
-  const connectionError = es
-    ? 'No se pudo conectar o leer la respuesta. Se han conservado tus cambios. Inténtalo de nuevo.'
-    : 'Could not connect or read the response. Your changes are still here. Try again.';
+  const connectionError = getTranslation(es ? 'es' : 'en')(
+    'training.couldNotConnectOrReadTheResponse_9c6b90',
+  );
   if (!(error instanceof ApiError)) return connectionError;
   if ([401, 403].includes(error.status))
-    return es
-      ? 'Tu cuenta no puede acceder a estos datos. Cierra sesión y vuelve a iniciarla.'
-      : 'Your account cannot access this data. Sign out and sign in again.';
+    return getTranslation(es ? 'es' : 'en')('training.yourAccountCannotAccessThisDataSign_9b133b');
   if (error.status === 404)
-    return es
-      ? 'Esta rutina o ejercicio ya no está disponible.'
-      : 'This routine or exercise is no longer available.';
+    return getTranslation(es ? 'es' : 'en')('training.thisRoutineOrExerciseIsNoLonger_871e69');
   if (error.status === 422)
-    return es
-      ? 'Algunos campos o ejercicios no están disponibles. Comprueba la selección e inténtalo de nuevo.'
-      : 'Some fields or exercises are unavailable. Check your selection and try again.';
+    return getTranslation(es ? 'es' : 'en')(
+      'training.someFieldsOrExercisesAreUnavailableCheck_4fe74a',
+    );
   return connectionError;
 }
 
@@ -100,7 +97,7 @@ export function Loading() {
   return (
     <ActivityIndicator
       color={p.brand}
-      accessibilityLabel={es ? 'Cargando entrenamiento' : 'Loading training'}
+      accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.loadingTraining_a32005')}
     />
   );
 }

@@ -1,8 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { Account } from '../schemas';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -26,30 +27,18 @@ function getPictureStatus(
 ) {
   if (compact) {
     if (draft.kind === 'select')
-      return selectCopy(es, 'Nueva foto · Guarda para aplicar', 'New picture · Save to apply');
+      return getTranslation(es ? 'es' : 'en')('accountsUi.new_picture_save_to_apply');
     if (draft.kind === 'remove')
-      return selectCopy(
-        es,
-        'Foto eliminada · Guarda para aplicar',
-        'Picture removed · Save to apply',
-      );
-    return selectCopy(es, 'Foto de perfil', 'Profile picture');
+      return getTranslation(es ? 'es' : 'en')('accountsUi.picture_removed_save_to_apply');
+    return getTranslation(es ? 'es' : 'en')('accountsUi.profile_picture');
   }
   if (draft.kind === 'select')
-    return selectCopy(
-      es,
-      'Foto lista · se guardará al confirmar',
-      'Picture ready · saved when you confirm',
-    );
+    return getTranslation(es ? 'es' : 'en')('accountsUi.picture_ready_saved_when_you_confirm');
   if (draft.kind === 'remove')
-    return selectCopy(
-      es,
-      'Sin foto · se eliminará al confirmar',
-      'No picture · removal saved when you confirm',
-    );
+    return getTranslation(es ? 'es' : 'en')('accountsUi.no_picture_removal_saved_when_you_confirm');
   if (account.profile.picture_url)
-    return selectCopy(es, 'Foto de perfil actual', 'Current profile picture');
-  return selectCopy(es, 'Sin foto · opcional', 'No picture · optional');
+    return getTranslation(es ? 'es' : 'en')('accountsUi.current_profile_picture');
+  return getTranslation(es ? 'es' : 'en')('accountsUi.no_picture_optional');
 }
 
 export function ProfilePictureEditor({
@@ -86,10 +75,8 @@ export function ProfilePictureEditor({
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
           setError(
-            selectCopy(
-              es,
-              'Para elegir una foto necesitas permitir el acceso en Ajustes. Inténtalo de nuevo.',
-              'Photo access is needed to choose a picture. Allow access in Settings, then try again.',
+            getTranslation(es ? 'es' : 'en')(
+              'accountsUi.photo_access_is_needed_to_choose_a_picture_allow_access_in_s',
             ),
           );
           return;
@@ -105,31 +92,17 @@ export function ProfilePictureEditor({
       if (result.canceled) return;
       const asset = result.assets[0];
       if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024) {
-        setError(
-          selectCopy(es, 'Elige una foto de menos de 5 MB.', 'Choose a picture smaller than 5 MB.'),
-        );
+        setError(getTranslation(es ? 'es' : 'en')('accountsUi.choose_a_picture_smaller_than_5_mb'));
         return;
       }
       const type = asset.mimeType ?? asset.file?.type;
       if (type && !['image/jpeg', 'image/png', 'image/webp'].includes(type)) {
-        setError(
-          selectCopy(
-            es,
-            'Elige una imagen JPEG, PNG o WebP.',
-            'Choose a JPEG, PNG or WebP picture.',
-          ),
-        );
+        setError(getTranslation(es ? 'es' : 'en')('accountsUi.choose_a_jpeg_png_or_webp_picture'));
         return;
       }
       onDraftChange({ kind: 'select', asset });
     } catch {
-      setError(
-        selectCopy(
-          es,
-          'No se pudieron abrir tus fotos. Inténtalo de nuevo.',
-          'Could not open your photos. Try again.',
-        ),
-      );
+      setError(getTranslation(es ? 'es' : 'en')('accountsUi.could_not_open_your_photos_try_again'));
     } finally {
       setBusy(false);
     }
@@ -152,8 +125,8 @@ export function ProfilePictureEditor({
           accessibilityRole="button"
           accessibilityLabel={
             hasPicture
-              ? selectCopy(es, 'Cambiar foto', 'Replace picture')
-              : selectCopy(es, 'Elegir foto', 'Choose picture')
+              ? getTranslation(es ? 'es' : 'en')('accountsUi.replace_picture')
+              : getTranslation(es ? 'es' : 'en')('accountsUi.choose_picture')
           }
           accessibilityState={{ disabled: locked }}
           disabled={locked}
@@ -170,18 +143,14 @@ export function ProfilePictureEditor({
         {hasPicture ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={selectCopy(es, 'Eliminar foto', 'Remove picture')}
+            accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.remove_picture')}
             accessibilityHint={
               compact
-                ? selectCopy(
-                    es,
-                    'Elimina esta foto al guardar tu perfil.',
-                    'Remove this picture when you save your profile.',
+                ? getTranslation(es ? 'es' : 'en')(
+                    'accountsUi.remove_this_picture_when_you_save_your_profile',
                   )
-                : selectCopy(
-                    es,
-                    'Elimina esta foto al confirmar tu perfil.',
-                    'Remove this picture when you confirm your profile.',
+                : getTranslation(es ? 'es' : 'en')(
+                    'accountsUi.remove_this_picture_when_you_confirm_your_profile',
                   )
             }
             accessibilityState={{ disabled: locked }}
@@ -203,7 +172,7 @@ export function ProfilePictureEditor({
         <View style={{ flexDirection: 'row', gap: spacing['space-2'], alignItems: 'center' }}>
           <ActivityIndicator color={p.brand} />
           <Text accessibilityLiveRegion="polite" style={[textStyles.label, { color: p.ink }]}>
-            {selectCopy(es, 'Abriendo fotos…', 'Opening photos…')}
+            {getTranslation(es ? 'es' : 'en')('accountsUi.opening_photos')}
           </Text>
         </View>
       ) : (
@@ -216,7 +185,7 @@ export function ProfilePictureEditor({
       )}
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
-          {selectCopy(es, 'JPEG, PNG o WebP · hasta 5 MB', 'JPEG, PNG or WebP · up to 5 MB')}
+          {getTranslation(es ? 'es' : 'en')('accountsUi.jpeg_png_or_webp_up_to_5_mb')}
         </Text>
       ) : null}
       {error ? (

@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useState } from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, spacing, usePalette } from '@/theme/tokens';
@@ -74,12 +75,12 @@ function PendingSessionState({ onDiscard }: Readonly<{ onDiscard: () => void }>)
         {session.error}
       </Text>
       <Button
-        title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
+        title={getTranslation(es ? 'es' : 'en')('training.retryStorage_13babc')}
         onPress={() => void session.retryStorage()}
         secondary
       />
       <Button
-        title={selectCopy(es, 'Descartar entrenamiento guardado', 'Discard stored workout')}
+        title={getTranslation(es ? 'es' : 'en')('training.discardStoredWorkout_8ad6fd')}
         onPress={onDiscard}
         tone="danger"
       />
@@ -97,7 +98,7 @@ function StorageErrorState() {
         {session.error}
       </Text>
       <Button
-        title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
+        title={getTranslation(es ? 'es' : 'en')('training.retryStorage_13babc')}
         onPress={() => {
           void session.retryStorage();
         }}
@@ -151,15 +152,11 @@ function MinimizedWorkoutCard({
         <View style={ui.row}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={selectCopy(
-              es,
-              'Opciones del entrenamiento en curso',
-              'Ongoing workout options',
+            accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+              'training.ongoingWorkoutOptions_33fd0e',
             )}
-            accessibilityHint={selectCopy(
-              es,
-              'Abre la confirmación para descartar el entrenamiento',
-              'Opens the discard workout confirmation',
+            accessibilityHint={getTranslation(es ? 'es' : 'en')(
+              'training.opensTheDiscardWorkoutConfirmation_402f0e',
             )}
             disabled={session.pending}
             onPress={onDiscard}
@@ -171,7 +168,7 @@ function MinimizedWorkoutCard({
             }}
           >
             <Text numberOfLines={1} style={{ color: p['overlay-ink'] }}>
-              {selectCopy(es, 'Entrenamiento en curso', 'Workout ongoing')}
+              {getTranslation(es ? 'es' : 'en')('training.workoutOngoing_cf2159')}
             </Text>
             <WorkoutTimer
               compact
@@ -183,7 +180,7 @@ function MinimizedWorkoutCard({
           <IconButton
             icon="play"
             onOverlay
-            label={selectCopy(es, 'Continuar entrenamiento', 'Resume workout')}
+            label={getTranslation(es ? 'es' : 'en')('training.resumeWorkout_56d326')}
             bare
             disabled={session.pending}
             onPress={() => session.change((value) => ({ ...value, minimized: false }))}
@@ -196,7 +193,7 @@ function MinimizedWorkoutCard({
         ) : null}
         {session.storageError ? (
           <Button
-            title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
+            title={getTranslation(es ? 'es' : 'en')('training.retryStorage_13babc')}
             onPress={() => {
               void session.retryStorage();
             }}
@@ -233,25 +230,25 @@ function DiscardConfirmation({
         >
           <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
             {session.draft
-              ? selectCopy(es, '¿Descartar este entrenamiento?', 'Discard this workout?')
-              : selectCopy(es, '¿Descartar el entrenamiento guardado?', 'Discard stored workout?')}
+              ? getTranslation(es ? 'es' : 'en')('training.discardThisWorkout_a7a3ef')
+              : getTranslation(es ? 'es' : 'en')('training.discardStoredWorkout_65ff6d')}
           </Text>
           <Text style={{ color: p['ink-muted'] }}>
             {session.draft?.frozen
-              ? selectCopy(
-                  es,
-                  'El envío está pendiente. Reanuda el entrenamiento para volver a finalizarlo.',
-                  'Finish delivery is pending. Resume the workout to retry Finish.',
+              ? getTranslation(es ? 'es' : 'en')(
+                  'training.finishDeliveryIsPendingResumeTheWorkout_fd46a7',
                 )
-              : selectCopy(
-                  es,
-                  'Se eliminarán el borrador y los resultados guardados.',
-                  'The workout draft and its saved results will be removed.',
+              : getTranslation(es ? 'es' : 'en')(
+                  'training.theWorkoutDraftAndItsSavedResults_0faabd',
                 )}
           </Text>
-          <Button title={selectCopy(es, 'Cancelar', 'Cancel')} secondary onPress={onCancel} />
           <Button
-            title={selectCopy(es, 'Descartar', 'Discard')}
+            title={getTranslation(es ? 'es' : 'en')('training.cancel_a25d0b')}
+            secondary
+            onPress={onCancel}
+          />
+          <Button
+            title={getTranslation(es ? 'es' : 'en')('training.discard_671592')}
             disabled={session.pending || Boolean(session.draft?.frozen)}
             tone="danger"
             onPress={onDiscard}

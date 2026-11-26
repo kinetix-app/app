@@ -1,8 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { apiClient } from '@/services/apiClient';
@@ -50,10 +51,8 @@ export function ActivityEditor({
       onSaved(updated);
     } catch {
       setFailure(
-        selectCopy(
-          es,
-          'No se pudo guardar tu actividad. Inténtalo de nuevo.',
-          'Could not save your activity. Please try again.',
+        getTranslation(es ? 'es' : 'en')(
+          'accountsUi.could_not_save_your_activity_please_try_again',
         ),
       );
     } finally {
@@ -68,13 +67,13 @@ export function ActivityEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title={selectCopy(es, 'Actividad habitual', 'Usual activity')}
+          title={getTranslation(es ? 'es' : 'en')('accountsUi.usual_activity')}
           leading={
             <ProfileBack
               onPress={() => {
                 if (!pending) onCancel();
               }}
-              label={selectCopy(es, 'Volver al perfil', 'Back to profile')}
+              label={getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile')}
             />
           }
         />
@@ -91,8 +90,8 @@ export function ActivityEditor({
         <SetupButton
           title={
             pending
-              ? selectCopy(es, 'Guardando…', 'Saving…')
-              : selectCopy(es, 'Guardar actividad', 'Save activity')
+              ? getTranslation(es ? 'es' : 'en')('accountsUi.saving')
+              : getTranslation(es ? 'es' : 'en')('accountsUi.save_activity')
           }
           disabled={pending}
           onPress={() => {
@@ -100,7 +99,7 @@ export function ActivityEditor({
           }}
         />
         <SetupButton
-          title={selectCopy(es, 'Cancelar', 'Cancel')}
+          title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
           secondary
           disabled={pending}
           onPress={onCancel}

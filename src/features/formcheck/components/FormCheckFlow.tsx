@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Modal } from 'react-native';
@@ -106,7 +107,7 @@ export function FormCheckFlow({
       return (
         <RecordingPlayer
           uri={entry.recording.uri}
-          title={`${exerciseName} · ${language === 'es' ? 'serie' : 'set'} ${setNumber}`}
+          title={`${exerciseName} · ${getTranslation(language === 'es' ? 'es' : 'en')('formcheck.FormCheckFlow.set')} ${setNumber}`}
           pose={entry.analysis.pose}
           onBack={() => setStep('result')}
         />

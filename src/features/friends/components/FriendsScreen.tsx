@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -43,16 +44,16 @@ export function FriendsScreen({
         personId={person.id}
         fallbackName={person.display_name}
         onBack={() => setPerson(null)}
-        backLabel={language === 'es' ? 'Volver a amigos' : 'Back to friends'}
+        backLabel={getTranslation(language)('friends.backToFriends')}
       />
     );
   const incoming = requests.data?.incoming.length ?? 0;
-  let requestLabel = language === 'es' ? 'Solicitudes' : 'Requests';
+  let requestLabel = getTranslation(language)('friends.requests');
   if (incoming > 0) requestLabel = `${requestLabel} (${incoming})`;
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'friends', label: language === 'es' ? 'Amigos' : 'Friends' },
+    { id: 'friends', label: getTranslation(language)('friends.friends') },
     { id: 'requests', label: requestLabel },
-    { id: 'find', label: language === 'es' ? 'Buscar' : 'Find' },
+    { id: 'find', label: getTranslation(language)('friends.find') },
   ];
   return (
     <SafeAreaView
@@ -63,11 +64,11 @@ export function FriendsScreen({
         <View style={ui.row}>
           <IconButton
             icon="arrow-left"
-            label={language === 'es' ? 'Volver al perfil' : 'Back to profile'}
+            label={getTranslation(language)('friends.backToProfile')}
             onPress={onClose}
           />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            {language === 'es' ? 'Amigos' : 'Friends'}
+            {getTranslation(language)('friends.friends')}
           </Text>
         </View>
         <View
@@ -124,9 +125,7 @@ function PersonRow({
     <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={
-          language === 'es' ? `Abrir el perfil de ${name}` : `Open ${name}’s profile`
-        }
+        accessibilityLabel={getTranslation(language)('friends.openSProfile', { name })}
         onPress={() => onOpen(person)}
         style={({ pressed }) => [
           ui.row,
@@ -173,11 +172,7 @@ function FriendList({
           {list.isPending ? <Loading /> : null}
           {list.isError ? (
             <Retry
-              text={
-                language === 'es'
-                  ? 'No se pudieron cargar tus amigos.'
-                  : 'Could not load your friends.'
-              }
+              text={getTranslation(language)('friends.couldNotLoadYourFriends')}
               onRetry={() => void list.refetch()}
             />
           ) : null}
@@ -187,15 +182,13 @@ function FriendList({
         (list.data ? (
           <View style={[ui.card, { backgroundColor: p['surface-200'], alignItems: 'center' }]}>
             <Text style={[textStyles['title-md'], { color: p.ink }]}>
-              {language === 'es' ? 'Aún no tienes amigos' : 'No friends yet'}
+              {getTranslation(language)('friends.noFriendsYet')}
             </Text>
             <Text style={{ color: p['ink-muted'], textAlign: 'center' }}>
-              {language === 'es'
-                ? 'Busca personas por nombre o añade a alguien desde su publicación.'
-                : 'Find people by name or add someone from their post in the feed.'}
+              {getTranslation(language)('friends.findPeopleByNameOrAddSomeone')}
             </Text>
             <Button
-              title={language === 'es' ? 'Buscar amigos' : 'Find friends'}
+              title={getTranslation(language)('friends.findFriends')}
               tone="positive"
               icon="search"
               onPress={onFind}
@@ -207,7 +200,7 @@ function FriendList({
         <PersonRow
           accountId={accountId}
           person={item.user}
-          detail={`${language === 'es' ? 'Amigos desde' : 'Friends since'} ${new Date(item.since).toLocaleDateString(language === 'es' ? 'es' : undefined)}`}
+          detail={`${getTranslation(language)('friends.friendsSince')} ${new Date(item.since).toLocaleDateString(language === 'es' ? 'es' : undefined)}`}
           onOpen={onOpen}
         />
       )}
@@ -246,11 +239,7 @@ function RequestList({
           {query.isPending ? <Loading /> : null}
           {query.isError ? (
             <Retry
-              text={
-                language === 'es'
-                  ? 'No se pudieron cargar las solicitudes de amistad.'
-                  : 'Could not load friend requests.'
-              }
+              text={getTranslation(language)('friends.couldNotLoadFriendRequests')}
               onRetry={() => void query.refetch()}
             />
           ) : null}
@@ -259,9 +248,7 @@ function RequestList({
       ListEmptyComponent={
         (data ? (
           <Text style={{ color: p['ink-muted'] }}>
-            {language === 'es'
-              ? 'No hay solicitudes de amistad pendientes.'
-              : 'No pending friend requests.'}
+            {getTranslation(language)('friends.noPendingFriendRequests')}
           </Text>
         ) : null) ?? undefined
       }
@@ -285,9 +272,8 @@ function RequestList({
 }
 
 function requestDetail(kind: 'incoming' | 'outgoing', language: 'en' | 'es') {
-  if (kind === 'incoming')
-    return language === 'es' ? 'Quiere ser tu amigo' : 'Wants to be your friend';
-  return language === 'es' ? 'Solicitud enviada' : 'Request sent';
+  if (kind === 'incoming') return getTranslation(language)('friends.wantsToBeYourFriend');
+  return getTranslation(language)('friends.requestSent');
 }
 
 function FindPeople({
@@ -317,10 +303,8 @@ function FindPeople({
       ListHeaderComponent={
         <View style={ui.gap}>
           <TextField
-            accessibilityLabel={
-              language === 'es' ? 'Buscar personas por nombre' : 'Search people by name'
-            }
-            placeholder={language === 'es' ? 'Buscar por nombre' : 'Search by name'}
+            accessibilityLabel={getTranslation(language)('friends.searchPeopleByName')}
+            placeholder={getTranslation(language)('friends.searchByName')}
             value={text}
             onChangeText={setText}
             autoCapitalize="words"
@@ -329,15 +313,13 @@ function FindPeople({
           />
           {!ready ? (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {language === 'es'
-                ? 'Escribe al menos 2 letras de un nombre.'
-                : 'Type at least 2 letters of a name.'}
+              {getTranslation(language)('friends.typeAtLeast2LettersOfA')}
             </Text>
           ) : null}
           {ready && results.isPending ? <Loading /> : null}
           {results.isError ? (
             <Retry
-              text={language === 'es' ? 'No se puede buscar ahora.' : 'Could not search right now.'}
+              text={getTranslation(language)('friends.couldNotSearchRightNow')}
               onRetry={() => void results.refetch()}
             />
           ) : null}
@@ -346,9 +328,7 @@ function FindPeople({
       ListEmptyComponent={
         (ready && results.data ? (
           <Text style={{ color: p['ink-muted'] }}>
-            {language === 'es'
-              ? 'No se ha encontrado a nadie con ese nombre.'
-              : 'No one found with that name.'}
+            {getTranslation(language)('friends.noOneFoundWithThatName')}
           </Text>
         ) : null) ?? undefined
       }
@@ -374,7 +354,7 @@ function Retry({ text, onRetry }: Readonly<{ text: string; onRetry: () => void }
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
         {text}
       </Text>
-      <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+      <Button title={getTranslation(language)('friends.retry')} secondary onPress={onRetry} />
     </View>
   );
 }

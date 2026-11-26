@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useState } from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { useQuery } from '@tanstack/react-query';
 import {
   AccessibilityInfo,
@@ -228,17 +229,13 @@ export function ExerciseEvolution({
     range,
     selected,
   );
-  const excludedSetsLabel = selectCopy(
-    es,
-    ' · Se excluyeron algunas series',
-    ' · Some sets excluded',
-  );
+  const excludedSetsLabel = getTranslation(es ? 'es' : 'en')('training.someSetsExcluded_227c97');
   return (
     <View style={{ gap: 12 }}>
       <ChartMetricSelector
         metrics={cardio ? cardioMetrics : gymMetrics}
         value={metric}
-        label={selectCopy(es, 'Métrica del ejercicio', 'Exercise metric')}
+        label={getTranslation(es ? 'es' : 'en')('training.exerciseMetric_f77b18')}
         labelFor={(key) => metricLabels[key]}
         reduceMotion={reduceMotion}
         onChange={(key) => {
@@ -407,7 +404,7 @@ function MetricInfoSheet({
                 </Text>
                 <IconButton
                   icon="x"
-                  label={selectCopy(es, 'Cerrar explicación', 'Close explanation')}
+                  label={getTranslation(es ? 'es' : 'en')('training.closeExplanation_209b38')}
                   onPress={() => onClose()}
                 />
               </View>

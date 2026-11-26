@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -137,7 +138,7 @@ export function FeedScreen({
           personId={view.id}
           fallbackName={view.name}
           onBack={closePanel}
-          backLabel={language === 'es' ? 'Volver al feed' : 'Back to feed'}
+          backLabel={getTranslation(language)('feed.backToFeed')}
         />
       ) : null}
       {view.kind === 'comments' ? (
@@ -324,7 +325,7 @@ function FeedHeader({
         <View style={ui.row}>
           <IconButton
             icon={<Ionicons name="create-outline" size={24} color={p.ink} />}
-            label={language === 'es' ? 'Nueva publicación' : 'New post'}
+            label={getTranslation(language)('feed.newPost')}
             bare
             onPress={onCreate}
           />
@@ -337,7 +338,7 @@ function FeedHeader({
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
             {feedErrorMessage(error, language)}
           </Text>
-          <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+          <Button title={getTranslation(language)('feed.retry')} secondary onPress={onRetry} />
         </View>
       ) : null}
     </View>
@@ -352,11 +353,9 @@ function FeedPageError({
   return (
     <View style={ui.gap}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
-        {language === 'es'
-          ? 'No se pudieron cargar más publicaciones. Tu feed se conserva.'
-          : 'Could not load more posts. Your feed is kept.'}
+        {getTranslation(language)('feed.couldNotLoadMorePostsYourFeed')}
       </Text>
-      <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+      <Button title={getTranslation(language)('feed.retry')} secondary onPress={onRetry} />
     </View>
   );
 }
@@ -370,21 +369,19 @@ function FeedEmpty({
   return (
     <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
       <Text style={[textStyles['title-md'], { color: p.ink }]}>
-        {language === 'es' ? 'Aún no hay publicaciones' : 'No posts yet'}
+        {getTranslation(language)('feed.noPostsYet')}
       </Text>
       <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
-        {language === 'es'
-          ? 'Tu feed muestra tus publicaciones y las de tus amigos. Añade amigos o comparte algo para empezar.'
-          : 'Your feed shows posts from you and your friends. Add friends or share something to get started.'}
+        {getTranslation(language)('feed.yourFeedShowsPostsFromYouAnd')}
       </Text>
       <Button
-        title={language === 'es' ? 'Buscar amigos' : 'Find friends'}
+        title={getTranslation(language)('feed.findFriends')}
         tone="positive"
         icon="user-plus"
         onPress={() => onFindFriends?.()}
       />
       <Button
-        title={language === 'es' ? 'Crear publicación' : 'Create a post'}
+        title={getTranslation(language)('feed.createAPost')}
         secondary
         icon="plus"
         onPress={onCreate}
@@ -416,19 +413,14 @@ function DeleteConfirmation({
       onDeleted(post);
     } catch (error_) {
       if (error_ instanceof ApiError && error_.status === 404) onDeleted(post);
-      else
-        setError(
-          language === 'es'
-            ? 'No se pudo eliminar la publicación. Inténtalo de nuevo.'
-            : 'Could not delete the post. Try again.',
-        );
+      else setError(getTranslation(language)('feed.couldNotDeleteThePostTryAgain'));
     } finally {
       setPending(false);
     }
   }
   let confirmTitle: string;
-  if (pending) confirmTitle = language === 'es' ? 'Eliminando…' : 'Deleting…';
-  else confirmTitle = language === 'es' ? 'Eliminar' : 'Delete';
+  if (pending) confirmTitle = getTranslation(language)('feed.deleting');
+  else confirmTitle = getTranslation(language)('feed.delete');
   return (
     <Modal visible={post !== null} transparent animationType="fade" onRequestClose={cancel}>
       <View style={[styles.scrim, { backgroundColor: p.scrim }]}>
@@ -437,12 +429,10 @@ function DeleteConfirmation({
           style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
         >
           <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-            {language === 'es' ? '¿Eliminar esta publicación?' : 'Delete this post?'}
+            {getTranslation(language)('feed.deleteThisPost')}
           </Text>
           <Text style={{ color: p['ink-muted'] }}>
-            {language === 'es'
-              ? 'Se eliminarán sus fotos, me gusta y comentarios. El entrenamiento permanecerá en tu historial.'
-              : 'Its photos, likes and comments are removed. The workout stays in your history.'}
+            {getTranslation(language)('feed.itsPhotosLikesAndCommentsAreRemoved')}
           </Text>
           {error ? (
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -450,7 +440,7 @@ function DeleteConfirmation({
             </Text>
           ) : null}
           <Button
-            title={language === 'es' ? 'Cancelar' : 'Cancel'}
+            title={getTranslation(language)('feed.cancel')}
             secondary
             disabled={pending}
             onPress={cancel}
@@ -477,12 +467,8 @@ function without(values: ReadonlySet<number>, value: number) {
 
 function feedErrorMessage(error: unknown, language: 'en' | 'es') {
   if (error instanceof ApiError && [401, 403].includes(error.status))
-    return language === 'es'
-      ? 'Tu cuenta no puede cargar el feed. Cierra sesión y vuelve a iniciarla.'
-      : 'Your account cannot load the feed. Sign out and sign in again.';
-  return language === 'es'
-    ? 'No se pudo cargar tu feed. Comprueba tu conexión e inténtalo de nuevo.'
-    : 'Could not load your feed. Check your connection and try again.';
+    return getTranslation(language)('feed.yourAccountCannotLoadTheFeedSign');
+  return getTranslation(language)('feed.couldNotLoadYourFeedCheckYour');
 }
 
 const styles = StyleSheet.create({

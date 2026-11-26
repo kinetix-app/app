@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import React, { useRef, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -18,18 +19,12 @@ export type WorkoutActions = Readonly<{
 
 function workoutError(error: unknown, language: 'en' | 'es') {
   if (error instanceof ApiError && error.status === 404)
-    return language === 'es'
-      ? 'Este entrenamiento compartido ya no está disponible.'
-      : 'This shared workout is no longer available.';
-  return language === 'es'
-    ? 'No se pudo cargar el entrenamiento. Inténtalo de nuevo.'
-    : 'Could not load this workout. Try again.';
+    return getTranslation(language)('feed.thisSharedWorkoutIsNoLongerAvailable');
+  return getTranslation(language)('feed.couldNotLoadThisWorkoutTryAgain');
 }
 
 function startError(language: 'en' | 'es') {
-  return language === 'es'
-    ? 'No se pudo iniciar el entrenamiento. Inténtalo de nuevo o reanuda tu entrenamiento activo.'
-    : 'Could not start this workout. Try again or resume your active workout.';
+  return getTranslation(language)('feed.couldNotStartThisWorkoutTryAgain');
 }
 
 export function PostOptions({
@@ -87,15 +82,11 @@ export function PostOptions({
         >
           <ScrollView contentContainerStyle={ui.card}>
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              {language === 'es' ? 'Opciones de la publicación' : 'Post options'}
+              {getTranslation(language)('feed.postOptions')}
             </Text>
             {post.is_mine ? (
               <Button
-                title={
-                  language === 'es'
-                    ? 'Editar publicación · Próximamente'
-                    : 'Edit post · Coming soon'
-                }
+                title={getTranslation(language)('feed.editPostComingSoon')}
                 secondary
                 disabled
                 onPress={() => {}}
@@ -116,7 +107,7 @@ export function PostOptions({
             ) : null}
             {pending ? (
               <Text accessibilityRole="progressbar">
-                {language === 'es' ? 'Iniciando entrenamiento…' : 'Starting workout…'}
+                {getTranslation(language)('feed.startingWorkout')}
               </Text>
             ) : null}
             {error ? (
@@ -126,14 +117,14 @@ export function PostOptions({
             ) : null}
             {post.is_mine ? (
               <Button
-                title={language === 'es' ? 'Eliminar publicación' : 'Delete post'}
+                title={getTranslation(language)('feed.deletePost')}
                 tone="danger"
                 disabled={pending}
                 onPress={() => onDelete(post)}
               />
             ) : null}
             <Button
-              title={language === 'es' ? 'Cerrar' : 'Close'}
+              title={getTranslation(language)('feed.close')}
               secondary
               disabled={pending}
               onPress={close}
@@ -166,12 +157,10 @@ function PerformAction({
     return (
       <>
         <Text style={{ color: p.ink }}>
-          {language === 'es'
-            ? 'Ya tienes un entrenamiento activo.'
-            : 'You already have an active workout.'}
+          {getTranslation(language)('feed.youAlreadyHaveAnActiveWorkout')}
         </Text>
         <Button
-          title={language === 'es' ? 'Reanudar entrenamiento activo' : 'Resume active workout'}
+          title={getTranslation(language)('feed.resumeActiveWorkout')}
           disabled={disabled}
           onPress={onResume}
         />
@@ -181,9 +170,7 @@ function PerformAction({
   if (template && !template.exercises.length) {
     return (
       <Text accessibilityRole="alert" style={{ color: p.ink }}>
-        {language === 'es'
-          ? 'Ninguno de los ejercicios de este entrenamiento está disponible para ti.'
-          : 'None of the exercises in this workout are available to you.'}
+        {getTranslation(language)('feed.noneOfTheExercisesInThisWorkout')}
       </Text>
     );
   }
@@ -191,11 +178,11 @@ function PerformAction({
     return (
       <>
         <Text style={{ color: p.ink }}>
-          {language === 'es' ? 'Se omitirán estos ejercicios' : 'These exercises will be skipped'}:{' '}
+          {getTranslation(language)('feed.theseExercisesWillBeSkipped')}:{' '}
           {template.skipped_exercises.join(', ')}.
         </Text>
         <Button
-          title={language === 'es' ? 'Iniciar ejercicios disponibles' : 'Start available exercises'}
+          title={getTranslation(language)('feed.startAvailableExercises')}
           disabled={disabled}
           onPress={() => onPerform(template)}
         />
@@ -208,8 +195,8 @@ function PerformAction({
 }
 
 function performTitle(mine: boolean, language: 'en' | 'es') {
-  if (mine) return language === 'es' ? 'Volver a realizar' : 'Perform again';
-  return language === 'es' ? 'Realizar entrenamiento' : 'Perform workout';
+  if (mine) return getTranslation(language)('feed.performAgain');
+  return getTranslation(language)('feed.performWorkout');
 }
 
 const styles = StyleSheet.create({

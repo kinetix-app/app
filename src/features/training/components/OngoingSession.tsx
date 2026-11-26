@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useRef, useState } from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { BackHandler, KeyboardAvoidingView, Modal, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, usePalette } from '@/theme/tokens';
@@ -140,10 +141,8 @@ export function OngoingSession() {
     <View style={ui.gap}>
       <View
         testID="workout-pull-handle"
-        accessibilityLabel={selectCopy(
-          es,
-          'Desliza hacia abajo para minimizar el entrenamiento',
-          'Pull down to minimize workout',
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+          'training.pullDownToMinimizeWorkout_4ceeb5',
         )}
         accessibilityState={{ disabled: session.pending }}
         onStartShouldSetResponder={() => !session.pending}
@@ -189,16 +188,12 @@ export function OngoingSession() {
       </View>
       {draft.frozen ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          {selectCopy(
-            es,
-            'Los resultados están bloqueados. Vuelve a finalizar para guardar el entrenamiento.',
-            'Results are locked. Retry Finish to save your workout.',
-          )}
+          {getTranslation(es ? 'es' : 'en')('training.resultsAreLockedRetryFinishToSave_24e526')}
         </Text>
       ) : null}
       {draft.frozen ? (
         <Button
-          title={selectCopy(es, 'Revisar las series bloqueadas', 'Review locked sets')}
+          title={getTranslation(es ? 'es' : 'en')('training.reviewLockedSets_a081f6')}
           onPress={() => void session.recoverFrozen()}
           disabled={session.pending}
           secondary
@@ -211,7 +206,7 @@ export function OngoingSession() {
       ) : null}
       {session.storageError ? (
         <Button
-          title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
+          title={getTranslation(es ? 'es' : 'en')('training.retryStorage_13babc')}
           onPress={() => {
             void session.retryStorage();
           }}
@@ -314,21 +309,19 @@ export function OngoingSession() {
             <View style={ui.gap}>
               {!draft.exercises.length ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  {selectCopy(
-                    es,
-                    'Añade ejercicios para registrar tu entrenamiento.',
-                    'Add exercises to record your workout.',
+                  {getTranslation(es ? 'es' : 'en')(
+                    'training.addExercisesToRecordYourWorkout_9c4148',
                   )}
                 </Text>
               ) : null}
               <Button
-                title={selectCopy(es, 'Añadir ejercicio', 'Add exercise')}
+                title={getTranslation(es ? 'es' : 'en')('training.addExercise_89dbcf')}
                 onPress={() => setPicker(true)}
                 tone="positive"
                 disabled={locked || dragging || draft.exercises.length >= 500}
               />
               <Button
-                title={selectCopy(es, 'Más acciones', 'More actions')}
+                title={getTranslation(es ? 'es' : 'en')('training.moreActions_80a4a7')}
                 icon="more-horizontal"
                 onPress={() => setActions(true)}
                 secondary
@@ -357,11 +350,11 @@ export function OngoingSession() {
       ) : null}
       {actions ? (
         <ActionMenu
-          title={selectCopy(es, 'Acciones del entrenamiento', 'Workout actions')}
+          title={getTranslation(es ? 'es' : 'en')('training.workoutActions_840795')}
           onClose={() => setActions(false)}
           actions={[
             {
-              title: selectCopy(es, 'Sincronizar entrenamiento', 'Sync workout'),
+              title: getTranslation(es ? 'es' : 'en')('training.syncWorkout_34738a'),
               onPress: () => void session.sync(),
               disabled: locked,
             },
@@ -371,7 +364,7 @@ export function OngoingSession() {
               disabled: session.storageError,
             },
             {
-              title: selectCopy(es, 'Descartar entrenamiento', 'Discard workout'),
+              title: getTranslation(es ? 'es' : 'en')('training.discardWorkout_2f6be5'),
               onPress: () => setDiscard(true),
               tone: 'danger',
               disabled: locked,
@@ -415,17 +408,15 @@ export function OngoingSession() {
             style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              {selectCopy(es, '¿Actualizar la rutina?', 'Update the routine?')}
+              {getTranslation(es ? 'es' : 'en')('training.updateTheRoutine_31c254')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {selectCopy(
-                es,
-                'Termina el entrenamiento. Puedes actualizar la rutina con los ejercicios y series guardados o conservar el plan actual. Se omitirán las series sin marcar.',
-                'Finish this workout. Update the original routine with these exercises and saved sets, or keep its current plan. Unticked sets will be left out.',
+              {getTranslation(es ? 'es' : 'en')(
+                'training.finishThisWorkoutUpdateTheOriginalRoutine_974469',
               )}
             </Text>
             <Button
-              title={selectCopy(es, 'Conservar rutina', 'Keep routine')}
+              title={getTranslation(es ? 'es' : 'en')('training.keepRoutine_c9f850')}
               onPress={() => {
                 setFinishPrompt(false);
                 void session.finish(false);
@@ -433,7 +424,7 @@ export function OngoingSession() {
               secondary
             />
             <Button
-              title={selectCopy(es, 'Actualizar rutina', 'Update routine')}
+              title={getTranslation(es ? 'es' : 'en')('training.updateRoutine_6be511')}
               disabled={!draft.exercises.length}
               onPress={() => {
                 setFinishPrompt(false);
@@ -441,7 +432,7 @@ export function OngoingSession() {
               }}
             />
             <Button
-              title={selectCopy(es, 'Cancelar', 'Cancel')}
+              title={getTranslation(es ? 'es' : 'en')('training.cancel_a25d0b')}
               onPress={() => setFinishPrompt(false)}
               secondary
             />
@@ -475,22 +466,20 @@ export function OngoingSession() {
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {selectCopy(es, '¿Descartar este entrenamiento?', 'Discard this workout?')}
+              {getTranslation(es ? 'es' : 'en')('training.discardThisWorkout_a7a3ef')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {selectCopy(
-                es,
-                'Se eliminarán el borrador y los resultados registrados.',
-                'The draft workout and its recorded results will be removed.',
+              {getTranslation(es ? 'es' : 'en')(
+                'training.theDraftWorkoutAndItsRecordedResults_271fea',
               )}
             </Text>
             <Button
-              title={selectCopy(es, 'Seguir registrando', 'Keep recording')}
+              title={getTranslation(es ? 'es' : 'en')('training.keepRecording_97af35')}
               onPress={() => setDiscard(false)}
               secondary
             />
             <Button
-              title={selectCopy(es, 'Descartar', 'Discard')}
+              title={getTranslation(es ? 'es' : 'en')('training.discard_671592')}
               tone="danger"
               onPress={() => {
                 setDiscard(false);
@@ -505,7 +494,7 @@ export function OngoingSession() {
 }
 
 function finishButtonTitle(pending: boolean, frozen: boolean, es: boolean) {
-  if (pending) return selectCopy(es, 'Procesando…', 'Working…');
-  if (frozen) return selectCopy(es, 'Volver a finalizar', 'Retry Finish');
-  return selectCopy(es, 'Finalizar', 'Finish');
+  if (pending) return getTranslation(es ? 'es' : 'en')('training.working_195c9e');
+  if (frozen) return getTranslation(es ? 'es' : 'en')('training.retryFinish_24636b');
+  return getTranslation(es ? 'es' : 'en')('training.finish_5ad2b2');
 }

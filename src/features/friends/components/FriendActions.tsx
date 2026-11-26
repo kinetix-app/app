@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
@@ -13,28 +14,28 @@ type Action = 'request' | 'accept' | 'remove';
 function actionTitle(action: Action, pending: Action | null, language: 'en' | 'es') {
   if (pending !== action) {
     const labels = {
-      request: language === 'es' ? 'Añadir amigo' : 'Add friend',
-      accept: language === 'es' ? 'Aceptar' : 'Accept',
-      remove: language === 'es' ? 'Eliminar' : 'Remove',
+      request: getTranslation(language)('friends.addFriend'),
+      accept: getTranslation(language)('friends.accept'),
+      remove: getTranslation(language)('friends.remove'),
     };
     return labels[action];
   }
   const pendingLabels = {
-    request: language === 'es' ? 'Enviando…' : 'Sending…',
-    accept: language === 'es' ? 'Aceptando…' : 'Accepting…',
-    remove: language === 'es' ? 'Eliminando…' : 'Removing…',
+    request: getTranslation(language)('friends.sending'),
+    accept: getTranslation(language)('friends.accepting'),
+    remove: getTranslation(language)('friends.removing'),
   };
   return pendingLabels[action];
 }
 
 function requestCancelTitle(pending: Action | null, language: 'en' | 'es') {
-  if (pending !== 'remove') return language === 'es' ? 'Cancelar solicitud' : 'Cancel request';
-  return language === 'es' ? 'Cancelando…' : 'Cancelling…';
+  if (pending !== 'remove') return getTranslation(language)('friends.cancelRequest');
+  return getTranslation(language)('friends.cancelling');
 }
 
 function declineTitle(pending: Action | null, language: 'en' | 'es') {
-  if (pending !== 'remove') return language === 'es' ? 'Rechazar' : 'Decline';
-  return language === 'es' ? 'Rechazando…' : 'Declining…';
+  if (pending !== 'remove') return getTranslation(language)('friends.decline');
+  return getTranslation(language)('friends.declining');
 }
 
 function accessibilityLabel(
@@ -42,21 +43,14 @@ function accessibilityLabel(
   name: string,
   language: 'en' | 'es',
 ) {
-  if (action === 'add')
-    return language === 'es' ? `Añadir a ${name} como amigo` : `Add ${name} as a friend`;
+  if (action === 'add') return getTranslation(language)('friends.addAsAFriend', { name });
   if (action === 'cancel')
-    return language === 'es'
-      ? `Cancelar solicitud de amistad a ${name}`
-      : `Cancel friend request to ${name}`;
+    return getTranslation(language)('friends.cancelFriendRequestTo', { name });
   if (action === 'accept')
-    return language === 'es'
-      ? `Aceptar solicitud de amistad de ${name}`
-      : `Accept friend request from ${name}`;
+    return getTranslation(language)('friends.acceptFriendRequestFrom', { name });
   if (action === 'decline')
-    return language === 'es'
-      ? `Rechazar solicitud de amistad de ${name}`
-      : `Decline friend request from ${name}`;
-  return language === 'es' ? `Eliminar a ${name} de amigos` : `Remove ${name} from friends`;
+    return getTranslation(language)('friends.declineFriendRequestFrom', { name });
+  return getTranslation(language)('friends.removeFromFriends', { name });
 }
 
 /** Relationship-aware controls; the shown state always comes from the server. */
@@ -94,11 +88,7 @@ export function FriendActions({
         cache.invalidateQueries({ queryKey: ['feed', accountId, 'posts'] }),
       ]);
     } catch {
-      setError(
-        language === 'es'
-          ? 'No se pudo actualizar la amistad. Inténtalo de nuevo.'
-          : 'Could not update this friendship. Try again.',
-      );
+      setError(getTranslation(language)('friends.couldNotUpdateThisFriendshipTryAgain'));
     } finally {
       setPending(null);
     }
@@ -151,12 +141,10 @@ export function FriendActions({
             style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {language === 'es' ? `¿Eliminar a ${name}?` : `Remove ${name}?`}
+              {getTranslation(language)('friends.remove_602068', { name })}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {language === 'es'
-                ? 'Dejaréis de ver las publicaciones para amigos del otro. Podéis volver a agregaros más adelante.'
-                : 'You will stop seeing each other’s friends-only posts. You can add each other again later.'}
+              {getTranslation(language)('friends.youWillStopSeeingEachOtherS')}
             </Text>
             {error ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -164,7 +152,7 @@ export function FriendActions({
               </Text>
             ) : null}
             <Button
-              title={language === 'es' ? 'Cancelar' : 'Cancel'}
+              title={getTranslation(language)('friends.cancel')}
               secondary
               disabled={busy}
               onPress={() => setConfirmRemove(false)}
@@ -216,9 +204,7 @@ function Controls({
       <>
         {!compact ? (
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {language === 'es'
-              ? `Solicitud enviada · esperando a ${name}`
-              : `Request sent · waiting for ${name}`}
+            {getTranslation(language)('friends.requestSentWaitingFor', { name })}
           </Text>
         ) : null}
         <Button
@@ -252,11 +238,11 @@ function Controls({
     <>
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {language === 'es' ? 'Sois amigos' : 'You are friends'}
+          {getTranslation(language)('friends.youAreFriends')}
         </Text>
       ) : null}
       <Button
-        title={language === 'es' ? 'Eliminar amigo' : 'Remove friend'}
+        title={getTranslation(language)('friends.removeFriend')}
         accessibilityLabel={accessibilityLabel('remove', name, language)}
         tone="danger"
         disabled={busy}

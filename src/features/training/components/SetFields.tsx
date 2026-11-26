@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useState } from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { TextField } from '@/components/TextField';
@@ -90,7 +91,10 @@ export function SetFields({
             </View>
             <View style={{ flex: 1 }}>
               <TextField
-                accessibilityLabel={selectCopy(es, `Repeticiones de ${label}`, `${label} reps`)}
+                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                  'dynamicMessages.reps_072a21',
+                  { value1: label },
+                )}
                 keyboardType="number-pad"
                 editable={!disabled}
                 value={set.reps}
@@ -107,20 +111,15 @@ export function SetFields({
       {cardio ? <CardioGuidance set={set} guidance={guidance} /> : null}
       {!cardio && !weightValid ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {selectCopy(
-            es,
-            `Introduce un peso positivo de hasta 999999,99 kg con un máximo de ${decimals} decimales.`,
-            `Enter positive weight up to 999999.99 kg with at most ${decimals} decimals.`,
+          {getTranslation(es ? 'es' : 'en')(
+            'dynamicMessages.enterPositiveWeightUpTo999999_5cd598',
+            { value1: decimals },
           )}
         </Text>
       ) : null}
       {!cardio && !validReps ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {selectCopy(
-            es,
-            'Introduce un número entero positivo de repeticiones.',
-            'Enter positive whole repetitions.',
-          )}
+          {getTranslation(es ? 'es' : 'en')('training.enterPositiveWholeRepetitions_7fdb51')}
         </Text>
       ) : null}
     </View>
@@ -148,7 +147,9 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
     <>
       <View style={{ flex: 1 }}>
         <TextField
-          accessibilityLabel={selectCopy(es, `Distancia de ${label}`, `${label} distance`)}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.distance_d009d7', {
+            value1: label,
+          })}
           keyboardType="decimal-pad"
           editable={!disabled}
           value={set.distance ?? ''}
@@ -159,11 +160,11 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
       </View>
       <View style={{ flex: 1.5, minWidth: 104 }}>
         <TextField
-          accessibilityLabel={selectCopy(es, `Tiempo de ${label}`, `${label} time`)}
-          accessibilityHint={selectCopy(
-            es,
-            'Introduce las horas, minutos y segundos. Por ejemplo, 1230 es 12:30 y 10000 es 01:00:00.',
-            'Enter digits for hours, minutes and seconds. For example, 1230 is 12:30; 10000 is 01:00:00.',
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.time_f77570', {
+            value1: label,
+          })}
+          accessibilityHint={getTranslation(es ? 'es' : 'en')(
+            'training.enterDigitsForHoursMinutesAndSeconds_e74bb4',
           )}
           keyboardType="number-pad"
           editable={!disabled}
@@ -195,11 +196,7 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
         />
         {invalidTime ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {selectCopy(
-              es,
-              'Los minutos y segundos deben estar entre 00 y 59.',
-              'Minutes and seconds must be between 00 and 59.',
-            )}
+            {getTranslation(es ? 'es' : 'en')('training.minutesAndSecondsMustBeBetween00_613237')}
           </Text>
         ) : null}
       </View>
@@ -270,7 +267,7 @@ function SetPosition({
         accessibilityLabel={
           es ? `Acciones para ${label.toLowerCase()}` : `Actions for ${label.toLowerCase()}`
         }
-        accessibilityHint={selectCopy(es, 'Abrir acciones de la serie', 'Open set actions')}
+        accessibilityHint={getTranslation(es ? 'es' : 'en')('training.openSetActions_03e8df')}
         disabled={disabled}
         onPress={() => setOpen(true)}
         style={{
@@ -286,9 +283,14 @@ function SetPosition({
       </Pressable>
       {open ? (
         <ActionMenu
-          title={selectCopy(es, `Serie ${number}`, `Set ${number}`)}
+          title={getTranslation(es ? 'es' : 'en')('dynamicMessages.set_1c9335', { value1: number })}
           onClose={() => setOpen(false)}
-          actions={[{ title: selectCopy(es, 'Eliminar serie', 'Remove set'), onPress: onRemove }]}
+          actions={[
+            {
+              title: getTranslation(es ? 'es' : 'en')('training.removeSet_00ca32'),
+              onPress: onRemove,
+            },
+          ]}
         />
       ) : null}
     </>
@@ -301,11 +303,11 @@ export function SetColumnHeaders({ confirmation = false }: Readonly<{ confirmati
   return (
     <View style={[ui.row, { paddingHorizontal: spacing['space-3'] }]}>
       <Text style={{ width: 44, textAlign: 'center', color: p['ink-muted'] }}>
-        {selectCopy(es, 'Serie', 'Set')}
+        {getTranslation(es ? 'es' : 'en')('training.set_367fa4')}
       </Text>
       <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>kg</Text>
       <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>
-        {selectCopy(es, 'Repeticiones', 'Reps')}
+        {getTranslation(es ? 'es' : 'en')('training.reps_523160')}
       </Text>
       {confirmation ? <View style={{ width: sizes['tap-min'] }} /> : null}
     </View>
@@ -329,7 +331,7 @@ function SetAction({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${saved ? selectCopy(es, 'Desmarcar', 'Unsave') : selectCopy(es, 'Guardar', 'Save')} ${label.toLowerCase()}`}
+      accessibilityLabel={`${saved ? getTranslation(es ? 'es' : 'en')('training.unsave_842e92') : getTranslation(es ? 'es' : 'en')('training.save_5bd05a')} ${label.toLowerCase()}`}
       accessibilityState={{ disabled, selected: saved }}
       disabled={disabled}
       onPress={onConfirm}

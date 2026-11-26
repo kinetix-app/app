@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
@@ -73,11 +74,9 @@ export function LeaguePageHeader({
       {onOpen ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={
-            language === 'es'
-              ? `Ver información de la liga ${title}`
-              : `View league information for ${title}`
-          }
+          accessibilityLabel={getTranslation(language)('leagues.viewLeagueInformationFor', {
+            title,
+          })}
           disabled={disabled}
           onPress={onOpen}
           style={({ pressed }) => [leagueStyles.row, { opacity: pressed || disabled ? 0.55 : 1 }]}
@@ -94,7 +93,7 @@ export function LeaguePageHeader({
           {onEdit ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={language === 'es' ? 'Editar liga' : 'Edit league'}
+              accessibilityLabel={getTranslation(language)('leagues.editLeague')}
               disabled={disabled}
               onPress={onEdit}
               style={({ pressed }) => [
@@ -104,7 +103,7 @@ export function LeaguePageHeader({
             >
               <Ionicons name="pencil-outline" size={16} color={p['brand-ink']} />
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                {language === 'es' ? 'Editar' : 'Edit'}
+                {getTranslation(language)('leagues.edit')}
               </Text>
             </Pressable>
           ) : null}

@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -28,7 +29,9 @@ export function MeasurementSystemSelector({
   return (
     <View
       accessibilityRole="radiogroup"
-      accessibilityLabel={label ?? (es ? 'Sistema de medidas' : 'Measurement system')}
+      accessibilityLabel={
+        label ?? getTranslation(es ? 'es' : 'en')('accountsUi.measurement_system')
+      }
       style={styles.group}
     >
       {systems.map((system) => {

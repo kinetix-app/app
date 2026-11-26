@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Modal } from 'react-native';
@@ -40,7 +41,9 @@ export function SessionWorkoutDetail({
     enabled: false,
   });
   const es = useLanguage() === 'es';
-  const name = account?.profile.display_name?.trim() || (es ? 'Tú' : 'You');
+  const name =
+    account?.profile.display_name?.trim() ||
+    getTranslation(es ? 'es' : 'en')('training.you_715a9a');
   return (
     <WorkoutDetail
       workout={detail.isSuccess ? detail.data : undefined}

@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import {
   useInfiniteQuery,
@@ -66,12 +67,7 @@ async function submitComment({
     setDraft('');
   } catch (error) {
     if (postMissing(error)) onUnavailable();
-    else
-      setError(
-        language === 'es'
-          ? 'No se pudo publicar tu comentario. El texto se conserva. Inténtalo de nuevo.'
-          : 'Could not post your comment. Your text is kept. Try again.',
-      );
+    else setError(getTranslation(language)('feed.couldNotPostYourCommentYourText'));
   } finally {
     busy.current = false;
     setSending(false);
@@ -122,12 +118,7 @@ async function deleteComment({
     onCountChange();
   } catch (error) {
     if (postMissing(error)) void refetch();
-    else
-      setError(
-        language === 'es'
-          ? 'No se pudo eliminar el comentario. Inténtalo de nuevo.'
-          : 'Could not delete the comment. Try again.',
-      );
+    else setError(getTranslation(language)('feed.couldNotDeleteTheCommentTryAgain'));
   } finally {
     setRemoving(null);
   }
@@ -159,9 +150,7 @@ function PostCommentsContent({
   if (gone)
     return (
       <Text accessibilityRole="alert" style={[ui.content, { color: p.ink }]}>
-        {language === 'es'
-          ? 'Esta publicación ya no está disponible.'
-          : 'This post is no longer available.'}
+        {getTranslation(language)('feed.thisPostIsNoLongerAvailable')}
       </Text>
     );
   if (pending) return <Loading />;
@@ -169,9 +158,9 @@ function PostCommentsContent({
     return (
       <View style={ui.content}>
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {language === 'es' ? 'No se pudo cargar esta publicación.' : 'Could not load this post.'}
+          {getTranslation(language)('feed.couldNotLoadThisPost')}
         </Text>
-        <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+        <Button title={getTranslation(language)('feed.retry')} secondary onPress={onRetry} />
       </View>
     );
   if (!post) return null;
@@ -208,11 +197,11 @@ export function CommentsScreen({
       <View style={[ui.row, styles.header]}>
         <IconButton
           icon="arrow-left"
-          label={language === 'es' ? 'Volver al feed' : 'Back to feed'}
+          label={getTranslation(language)('feed.backToFeed')}
           onPress={onBack}
         />
         <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-          {language === 'es' ? 'Comentarios' : 'Comments'}
+          {getTranslation(language)('feed.comments')}
         </Text>
       </View>
       <PostCommentsContent
@@ -304,11 +293,9 @@ function CommentsPageError({
   return (
     <View style={ui.gap}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
-        {language === 'es'
-          ? 'No se pudieron cargar más comentarios.'
-          : 'Could not load more comments.'}
+        {getTranslation(language)('feed.couldNotLoadMoreComments')}
       </Text>
-      <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+      <Button title={getTranslation(language)('feed.retry')} secondary onPress={onRetry} />
     </View>
   );
 }
@@ -321,9 +308,9 @@ function CommentsLoadError({
   return (
     <View style={ui.gap}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
-        {language === 'es' ? 'No se pudieron cargar los comentarios.' : 'Could not load comments.'}
+        {getTranslation(language)('feed.couldNotLoadComments')}
       </Text>
-      <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+      <Button title={getTranslation(language)('feed.retry')} secondary onPress={onRetry} />
     </View>
   );
 }
@@ -332,9 +319,7 @@ function CommentsEmpty({ language }: Readonly<{ language: 'en' | 'es' }>) {
   const p = usePalette();
   return (
     <Text style={{ color: p['ink-muted'] }}>
-      {language === 'es'
-        ? 'Aún no hay comentarios. Inicia la conversación.'
-        : 'No comments yet. Start the conversation.'}
+      {getTranslation(language)('feed.noCommentsYetStartTheConversation')}
     </Text>
   );
 }
@@ -370,9 +355,7 @@ function CommentRow({
       {item.is_mine || postIsMine ? (
         <IconButton
           icon="trash-2"
-          label={
-            language === 'es' ? `Eliminar comentario de ${author}` : `Delete comment by ${author}`
-          }
+          label={getTranslation(language)('feed.deleteCommentBy', { author })}
           disabled={removing !== null}
           onPress={() => onRemove(item)}
         />
@@ -406,8 +389,8 @@ function CommentComposer({
       ) : null}
       <View style={ui.row}>
         <TextField
-          accessibilityLabel={language === 'es' ? 'Escribe un comentario' : 'Write a comment'}
-          placeholder={language === 'es' ? 'Escribe un comentario' : 'Write a comment'}
+          accessibilityLabel={getTranslation(language)('feed.writeAComment')}
+          placeholder={getTranslation(language)('feed.writeAComment')}
           value={draft}
           onChangeText={onDraftChange}
           maxLength={MAX_COMMENT_TEXT}
@@ -417,7 +400,7 @@ function CommentComposer({
         />
         <IconButton
           icon={sending ? 'clock' : 'send'}
-          label={language === 'es' ? 'Enviar comentario' : 'Send comment'}
+          label={getTranslation(language)('feed.sendComment')}
           onOverlay
           busy={sending}
           disabled={sending || !draft.trim()}

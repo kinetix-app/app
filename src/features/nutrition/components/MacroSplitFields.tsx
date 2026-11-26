@@ -1,8 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { Controller, useWatch, type UseFormReturn } from 'react-hook-form';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import {
@@ -32,13 +33,14 @@ const macroLabelsEs = {
 } as const;
 
 function macroModeLabel(mode: MacroMode, es: boolean) {
-  if (mode === 'grams') return selectCopy(es, 'Gramos', 'Grams');
-  return selectCopy(es, 'Porcentajes', 'Percentages');
+  if (mode === 'grams') return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.grams');
+  return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.percentages');
 }
 
 function unitLabel(mode: MacroMode, es: boolean) {
-  if (mode === 'grams') return selectCopy(es, 'gramos', 'grams');
-  return selectCopy(es, 'porcentaje', 'percentage');
+  if (mode === 'grams')
+    return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.grams2');
+  return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.percentage');
 }
 
 export function MacroSplitFields({ form, calories, mode, onModeChange, saving }: Props) {
@@ -83,14 +85,12 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
     <>
       <View style={styles.sectionHeader}>
         <Text style={[textStyles['title-md'], { color: p.ink }]}>
-          {selectCopy(es, 'Macronutrientes diarios', 'Daily macros')}
+          {getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.dailyMacros')}
         </Text>
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel={selectCopy(
-            es,
-            'Modo de introducción de macronutrientes',
-            'Macro entry mode',
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+            'nutrition.MacroSplitFields.macroEntryMode',
           )}
           style={[styles.modes, { backgroundColor: p['surface-300'] }]}
         >
@@ -174,7 +174,9 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
                         mode === 'grams' && energy ? Math.max(0.01, energy / 100 / factor) : 100;
                       return (
                         <MacroRange
-                          label={selectCopy(es, `Intervalo de ${label}`, `${label} range`)}
+                          label={getTranslation(es ? 'es' : 'en')('dynamicMessages.range_989af5', {
+                            value1: label,
+                          })}
                           maximum={maximum}
                           value={Math.min(maximum, (hundredths(input.value) ?? 0) / 100)}
                           onChange={(value) => updateMacro(macro, value.toFixed(2))}
@@ -196,10 +198,8 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
       </View>
       {invalidAmounts ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-          {selectCopy(
-            es,
-            'Usa números no negativos con hasta dos decimales.',
-            'Use nonnegative numbers with up to two decimals.',
+          {getTranslation(es ? 'es' : 'en')(
+            'nutrition.MacroSplitFields.useNonnegativeNumbersWithUpToTwoDecimals',
           )}
         </Text>
       ) : null}

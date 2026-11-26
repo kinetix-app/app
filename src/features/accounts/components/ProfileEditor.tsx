@@ -1,4 +1,4 @@
-import { selectCopy, useLanguage, useTranslation } from '@/i18n/Language';
+import { useLanguage, useTranslation } from '@/i18n/Language';
 import { getTranslation } from '@/i18n/catalog';
 import React, { useRef, useState } from 'react';
 import {
@@ -255,7 +255,7 @@ function MeasurementSystemFields({
   return (
     <>
       <Text style={[textStyles.label, { color: p.ink }]}>
-        {selectCopy(es, 'Sistema de medidas', 'Measurement system')}
+        {getTranslation(es ? 'es' : 'en')('accountsUi.measurement_system')}
       </Text>
       <Controller
         control={form.control}
@@ -278,10 +278,8 @@ function MeasurementSystemFields({
       ) : null}
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {selectCopy(
-            es,
-            'El sistema métrico usa kg y cm. El imperial usa lb, pies y pulgadas. Al cambiar se convierten las medidas.',
-            'Metric uses kg and cm. Imperial uses lb, feet and inches. Switching converts your measurements.',
+          {getTranslation(es ? 'es' : 'en')(
+            'accountsUi.metric_uses_kg_and_cm_imperial_uses_lb_feet_and_inches_switc',
           )}
         </Text>
       ) : null}
@@ -412,14 +410,16 @@ function SexFields({
   const es = useLanguage() === 'es';
   return (
     <View style={{ gap: spacing['space-3'], marginTop: spacing['space-2'] }}>
-      <Text style={[textStyles.label, { color: p.ink }]}>{selectCopy(es, 'Sexo', 'Sex')}</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>
+        {getTranslation(es ? 'es' : 'en')('accountsUi.sex')}
+      </Text>
       <Controller
         control={form.control}
         name="sex"
         render={({ field: { value, onChange } }) => (
           <View
             accessibilityRole="radiogroup"
-            accessibilityLabel={selectCopy(es, 'Sexo', 'Sex')}
+            accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.sex')}
             style={{ flexDirection: 'row', gap: 12 }}
           >
             {(['male', 'female'] as const).map((sex) => (
@@ -428,8 +428,8 @@ function SexFields({
                 accessibilityRole="radio"
                 accessibilityLabel={
                   sex === 'male'
-                    ? selectCopy(es, 'Hombre', 'Male')
-                    : selectCopy(es, 'Mujer', 'Female')
+                    ? getTranslation(es ? 'es' : 'en')('accountsUi.male')
+                    : getTranslation(es ? 'es' : 'en')('accountsUi.female')
                 }
                 accessibilityState={{ checked: value === sex, disabled }}
                 aria-checked={value === sex}
@@ -457,8 +457,8 @@ function SexFields({
                   ]}
                 >
                   {sex === 'male'
-                    ? selectCopy(es, 'Hombre', 'Male')
-                    : selectCopy(es, 'Mujer', 'Female')}
+                    ? getTranslation(es ? 'es' : 'en')('accountsUi.male')
+                    : getTranslation(es ? 'es' : 'en')('accountsUi.female')}
                 </Text>
               </Pressable>
             ))}
@@ -537,7 +537,7 @@ export function ActivityFields({
       render={({ field: { value, onChange } }) => (
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel={selectCopy(es, 'Actividad habitual', 'Usual activity')}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.usual_activity')}
           style={{ gap: spacing['space-3'] }}
         >
           {activityOptions.map((option) => (
@@ -598,23 +598,29 @@ function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial', es
   const sexLabels = es ? { male: 'Hombre', female: 'Mujer' } : { male: 'Male', female: 'Female' };
   const sex = values.sex ? (sexLabels[values.sex] ?? '—') : '—';
   return [
-    [selectCopy(es, 'Nombre', 'Name'), values.display_name],
-    [selectCopy(es, 'Edad', 'Age'), `${values.age} ${selectCopy(es, 'años', 'years')}`],
+    [getTranslation(es ? 'es' : 'en')('accountsUi.name'), values.display_name],
     [
-      selectCopy(es, 'Actividad', 'Activity'),
+      getTranslation(es ? 'es' : 'en')('accountsUi.age'),
+      `${values.age} ${getTranslation(es ? 'es' : 'en')('accountsUi.years')}`,
+    ],
+    [
+      getTranslation(es ? 'es' : 'en')('accountsUi.activity'),
       (() => {
         const option = activityOptions.find((item) => item.value === values.activity_level);
         const label = es ? option?.labelEs : option?.label;
         return label ?? '—';
       })(),
     ],
-    [selectCopy(es, 'Sexo', 'Sex'), sex],
+    [getTranslation(es ? 'es' : 'en')('accountsUi.sex'), sex],
     [
-      selectCopy(es, 'Sistema', 'System'),
-      unit === 'metric' ? selectCopy(es, 'Métrico', 'Metric') : 'Imperial',
+      getTranslation(es ? 'es' : 'en')('accountsUi.system'),
+      unit === 'metric' ? getTranslation(es ? 'es' : 'en')('accountsUi.metric') : 'Imperial',
     ],
-    [selectCopy(es, 'Altura', 'Height'), height],
-    [selectCopy(es, 'Peso', 'Weight'), `${Number(values.weight).toFixed(2)} ${weightUnit}`],
+    [getTranslation(es ? 'es' : 'en')('accountsUi.height'), height],
+    [
+      getTranslation(es ? 'es' : 'en')('accountsUi.weight'),
+      `${Number(values.weight).toFixed(2)} ${weightUnit}`,
+    ],
   ];
 }
 
@@ -765,15 +771,13 @@ export function ProfileEditor({
               accessibilityLiveRegion="polite"
               style={[textStyles.label, { color: p['ink-muted'] }]}
             >
-              {selectCopy(es, 'Paso', 'Step')} {step + 1} {selectCopy(es, 'de', 'of')} 4 ·{' '}
-              {steps[step]}
+              {getTranslation(es ? 'es' : 'en')('accountsUi.step')} {step + 1}{' '}
+              {getTranslation(es ? 'es' : 'en')('accountsUi.of')} 4 · {steps[step]}
             </Text>
             <View
               accessibilityRole="progressbar"
-              accessibilityLabel={selectCopy(
-                es,
-                'Progreso de configuración del perfil',
-                'Profile setup progress',
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'accountsUi.profile_setup_progress',
               )}
               accessibilityValue={{ min: 1, max: 4, now: step + 1 }}
               style={wizard.progress}
@@ -849,7 +853,7 @@ export function ProfileEditor({
           />
           {onCancel ? (
             <SetupButton
-              title={selectCopy(es, 'Cancelar', 'Cancel')}
+              title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
               secondary
               disabled={disabled}
               onPress={() => {
@@ -968,12 +972,12 @@ function ProfileEditForm({
           contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}
         >
           <ScreenHeader
-            title={selectCopy(es, 'Editar perfil', 'Edit profile')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.edit_profile')}
             leading={onBack ? <ProfileBack disabled={disabled} onPress={onBack} /> : undefined}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={selectCopy(es, 'Guardar perfil', 'Save profile')}
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.save_profile')}
               accessibilityState={{ disabled }}
               disabled={disabled}
               onPress={onSave}
@@ -989,8 +993,8 @@ function ProfileEditForm({
             >
               <Text style={[textStyles.label, { color: p['on-brand'] }]}>
                 {pending
-                  ? selectCopy(es, 'Guardando…', 'Saving…')
-                  : selectCopy(es, 'Guardar', 'Save')}
+                  ? getTranslation(es ? 'es' : 'en')('accountsUi.saving')
+                  : getTranslation(es ? 'es' : 'en')('accountsUi.save')}
               </Text>
             </Pressable>
           </ScreenHeader>
@@ -1056,8 +1060,8 @@ function ProfileWizardHeader({
   const es = useLanguage() === 'es';
   const backLabel =
     step > 0
-      ? selectCopy(es, 'Volver', 'Back')
-      : selectCopy(es, 'Volver al perfil', 'Back to profile');
+      ? getTranslation(es ? 'es' : 'en')('accountsUi.back')
+      : getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile');
   return (
     <ScreenHeader
       leading={
@@ -1067,8 +1071,8 @@ function ProfileWizardHeader({
       }
       title={
         onCancel
-          ? selectCopy(es, 'Editar perfil', 'Edit profile')
-          : selectCopy(es, 'Tu perfil', 'Your profile')
+          ? getTranslation(es ? 'es' : 'en')('accountsUi.edit_profile')
+          : getTranslation(es ? 'es' : 'en')('accountsUi.your_profile')
       }
     />
   );

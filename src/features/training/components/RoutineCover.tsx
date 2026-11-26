@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useState } from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -60,7 +61,7 @@ export function RoutineCover({
     (uri && failedUri === uri);
   let content = (
     <MaterialCommunityIcons
-      accessibilityLabel={selectCopy(es, 'Rutina de gimnasio', 'Gym routine')}
+      accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.gymRoutine_2a1a6a')}
       name="dumbbell"
       size={28}
       color={p['brand-ink']}
@@ -69,7 +70,7 @@ export function RoutineCover({
   if (uri && !failed)
     content = (
       <Image
-        accessibilityLabel={selectCopy(es, 'Portada de la rutina', 'Routine cover')}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.routineCover_1f61db')}
         source={{ uri }}
         onError={() => setFailedUri(uri)}
         style={{ width: '100%', height: '100%' }}
@@ -78,11 +79,7 @@ export function RoutineCover({
   else if (path && !preview && !failed)
     content = (
       <ActivityIndicator
-        accessibilityLabel={selectCopy(
-          es,
-          'Cargando portada de la rutina',
-          'Loading routine cover',
-        )}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.loadingRoutineCover_3096d8')}
         color={p['brand-ink']}
       />
     );
@@ -105,7 +102,7 @@ export function RoutineCover({
       {retryVisible ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={selectCopy(es, 'Reintentar carga de portada', 'Retry routine cover')}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.retryRoutineCover_ce1388')}
           disabled={disabled}
           accessibilityState={{ disabled }}
           onPress={() => {

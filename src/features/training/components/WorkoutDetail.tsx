@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/services/apiClient';
@@ -50,7 +51,7 @@ export function WorkoutDetail({
         <View style={[styles.frame, ui.row, styles.headerContent]}>
           <IconButton icon="arrow-left" label={backLabel} onPress={onBack} />
           <Text accessibilityRole="header" style={[ui.heading, styles.fill, { color: p.ink }]}>
-            {selectCopy(es, 'Detalles del entrenamiento', 'Workout detail')}
+            {getTranslation(es ? 'es' : 'en')('training.workoutDetail_716d83')}
           </Text>
         </View>
       </View>
@@ -64,7 +65,7 @@ export function WorkoutDetail({
             <View style={styles.summarySection}>
               <WorkoutSummary workout={workout} author={author} />
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                {selectCopy(es, 'Resultados de los ejercicios', 'Exercise results')}
+                {getTranslation(es ? 'es' : 'en')('training.exerciseResults_5824c0')}
               </Text>
             </View>
           ) : null) ?? undefined
@@ -72,17 +73,15 @@ export function WorkoutDetail({
         ListEmptyComponent={
           workout ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              {selectCopy(es, 'No se registraron ejercicios.', 'No exercises were recorded.')}
+              {getTranslation(es ? 'es' : 'en')('training.noExercisesWereRecorded_539dc3')}
             </Text>
           ) : (
             <View style={ui.gap}>
               {!error ? <Loading /> : null}
               {unavailable ? (
                 <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                  {selectCopy(
-                    es,
-                    'Este entrenamiento ya no está disponible.',
-                    'This workout is no longer available.',
+                  {getTranslation(es ? 'es' : 'en')(
+                    'training.thisWorkoutIsNoLongerAvailable_ac92e6',
                   )}
                 </Text>
               ) : null}
@@ -100,7 +99,7 @@ export function WorkoutDetail({
         >
           <View style={[styles.frame, styles.footerContent]}>
             <Button
-              title={selectCopy(es, 'Compartir en el muro', 'Share to feed')}
+              title={getTranslation(es ? 'es' : 'en')('training.shareToFeed_97c2f4')}
               icon="share"
               onPress={onShare}
             />
@@ -160,15 +159,15 @@ function WorkoutSummary({
           testID="workout-detail-primary-metrics"
           metrics={[
             {
-              label: selectCopy(es, 'Duración', 'Duration'),
+              label: getTranslation(es ? 'es' : 'en')('training.duration_c00c5f'),
               value: formatElapsedDuration(elapsedSeconds),
             },
             {
-              label: selectCopy(es, 'Volumen', 'Volume'),
+              label: getTranslation(es ? 'es' : 'en')('training.volume_bbc801'),
               value: formatWorkoutVolume(workout.volumeKg),
             },
             {
-              label: selectCopy(es, 'Ejercicios', 'Exercises'),
+              label: getTranslation(es ? 'es' : 'en')('training.exercises_3f75d2'),
               value: workout.exercises.length.toLocaleString(es ? 'es' : undefined),
             },
           ]}
@@ -177,9 +176,12 @@ function WorkoutSummary({
           testID="workout-detail-secondary-metrics"
           divided
           metrics={[
-            { label: selectCopy(es, 'Series', 'Sets'), value: sets.toLocaleString() },
             {
-              label: selectCopy(es, 'Repeticiones', 'Reps'),
+              label: getTranslation(es ? 'es' : 'en')('training.sets_3ae183'),
+              value: sets.toLocaleString(),
+            },
+            {
+              label: getTranslation(es ? 'es' : 'en')('training.reps_523160'),
               value: workout.reps?.toLocaleString() ?? '—',
             },
           ]}

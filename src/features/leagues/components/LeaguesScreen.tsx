@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -60,8 +61,7 @@ function LeagueListItem({
     rankHint = `Your position this week is ${position}`;
     rankText = `#${position} this week`;
   }
-  const hintVerb =
-    language === 'es' ? 'Abre la clasificación de la liga.' : 'Opens league standings.';
+  const hintVerb = getTranslation(language)('leagues.opensLeagueStandings');
   return (
     <Pressable
       accessibilityRole="button"
@@ -118,25 +118,14 @@ function LeagueListItem({
 
 function message(error: unknown, language: 'en' | 'es') {
   if (error instanceof ApiError) return leagueErrorMessage(error.status, language);
-  return language === 'es'
-    ? 'Algo ha salido mal. Inténtalo de nuevo.'
-    : 'Something went wrong. Please try again.';
+  return getTranslation(language)('leagues.somethingWentWrongPleaseTryAgain');
 }
 
 function leagueErrorMessage(status: number, language: 'en' | 'es') {
-  if (status === 410)
-    return language === 'es' ? 'Esta invitación ha caducado.' : 'This invitation has expired.';
-  if (status === 404)
-    return language === 'es'
-      ? 'No se encontró la liga o invitación.'
-      : 'League or invitation not found.';
-  if (status === 403)
-    return language === 'es'
-      ? 'Solo un administrador de la liga puede hacer eso.'
-      : 'Only a league admin can do that.';
-  return language === 'es'
-    ? 'Algo ha salido mal. Inténtalo de nuevo.'
-    : 'Something went wrong. Please try again.';
+  if (status === 410) return getTranslation(language)('leagues.thisInvitationHasExpired');
+  if (status === 404) return getTranslation(language)('leagues.leagueOrInvitationNotFound');
+  if (status === 403) return getTranslation(language)('leagues.onlyALeagueAdminCanDoThat');
+  return getTranslation(language)('leagues.somethingWentWrongPleaseTryAgain');
 }
 
 function handlesLeagueBack(

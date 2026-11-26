@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -167,10 +168,8 @@ export function ExercisePicker({
             ListEmptyComponent={
               (!query.isPending && !query.isError ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  {selectCopy(
-                    es,
-                    'No se encontraron ejercicios. Prueba con otro nombre o zona muscular.',
-                    'No exercises found. Try another name or body part.',
+                  {getTranslation(es ? 'es' : 'en')(
+                    'training.noExercisesFoundTryAnotherNameOr_4ddf82',
                   )}
                 </Text>
               ) : null) ?? undefined
@@ -278,7 +277,9 @@ function ExercisePickerRow({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={selectCopy(es, `Detalles de ${item.name}`, `Details for ${item.name}`)}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.detailsFor_43fa13', {
+          value1: item.name,
+        })}
         disabled={adding}
         onPress={onDetails}
         style={[ui.row, { flex: 1 }]}
@@ -310,7 +311,7 @@ function ExercisePickerRow({
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {(
               item.body_parts?.map((part) => catalogueLabel(part, language)).join(' · ') ||
-              selectCopy(es, 'Ejercicio de gimnasio', 'Gym exercise')
+              getTranslation(es ? 'es' : 'en')('training.gymExercise_3b38a2')
             ).toLowerCase()}
           </Text>
         </View>
@@ -392,11 +393,11 @@ function ExerciseCatalogueHeader({
             accessibilityRole="header"
             style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
           >
-            {selectCopy(es, 'Añadir ejercicio', 'Add exercise')}
+            {getTranslation(es ? 'es' : 'en')('training.addExercise_89dbcf')}
           </Text>
           <IconButton
             icon="x"
-            label={selectCopy(es, 'Cerrar selector de ejercicios', 'Close exercise picker')}
+            label={getTranslation(es ? 'es' : 'en')('training.closeExercisePicker_b009b6')}
             onPress={onClose}
             disabled={adding}
           />
@@ -409,7 +410,7 @@ function ExerciseCatalogueHeader({
               search ? (
                 <IconButton
                   icon="x"
-                  label={selectCopy(es, 'Borrar búsqueda de ejercicios', 'Clear exercise search')}
+                  label={getTranslation(es ? 'es' : 'en')('training.clearExerciseSearch_6e8166')}
                   onPress={() => {
                     setSearch('');
                     setName('');
@@ -417,8 +418,8 @@ function ExerciseCatalogueHeader({
                 />
               ) : null
             }
-            accessibilityLabel={selectCopy(es, 'Buscar ejercicios', 'Search exercises')}
-            placeholder={selectCopy(es, 'Buscar por nombre', 'Search by name')}
+            accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.searchExercises_17d7ef')}
+            placeholder={getTranslation(es ? 'es' : 'en')('training.searchByName_27f10c')}
             maxLength={200}
             value={search}
             onChangeText={setSearch}
@@ -466,10 +467,8 @@ function ExerciseCatalogueHeader({
           {bodyParts.length > 1 ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={selectCopy(
-                es,
-                'Quitar todos los filtros de zonas musculares',
-                'Clear all body part filters',
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'training.clearAllBodyPartFilters_87ef3e',
               )}
               onPress={() => setBodyParts([])}
               style={({ pressed }) => ({
@@ -481,7 +480,7 @@ function ExerciseCatalogueHeader({
               })}
             >
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                {selectCopy(es, 'Quitar todos', 'Clear all')}
+                {getTranslation(es ? 'es' : 'en')('training.clearAll_715244')}
               </Text>
             </Pressable>
           ) : null}
@@ -532,11 +531,7 @@ function ExerciseSelectionAction({
     >
       {addError ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {selectCopy(
-            es,
-            'No se pudieron añadir todos los ejercicios. Se ha conservado tu selección. Inténtalo de nuevo.',
-            'Could not add all exercises. Your remaining selection is kept. Try again.',
-          )}
+          {getTranslation(es ? 'es' : 'en')('training.couldNotAddAllExercisesYourRemaining_f6542d')}
         </Text>
       ) : null}
       <Button title={title} onPress={onSubmit} disabled={adding} icon="plus" />
@@ -558,7 +553,7 @@ function CatalogueBodyPartBadges({
     <>
       {bodyParts.length === 0 ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {selectCopy(es, 'Todas las zonas musculares', 'All body parts')}
+          {getTranslation(es ? 'es' : 'en')('training.allBodyParts_46db89')}
         </Text>
       ) : (
         bodyParts.map((part) => (

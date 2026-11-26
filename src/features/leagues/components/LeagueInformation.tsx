@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
@@ -25,13 +26,13 @@ function memberRoleControlLabel(
   label: string,
   language: 'en' | 'es',
 ) {
-  if (roleLocked) return language === 'es' ? `Rol de ${name}: ${label}` : `${name} role: ${label}`;
-  return language === 'es' ? `Cambiar rol de ${name}` : `Change role for ${name}`;
+  if (roleLocked) return getTranslation(language)('leagues.role', { name, label });
+  return getTranslation(language)('leagues.changeRoleFor', { name });
 }
 
 function memberRoleHint(roleLocked: boolean, label: string, language: 'en' | 'es') {
-  if (roleLocked) return language === 'es' ? 'El rol está protegido' : 'Role is protected';
-  return language === 'es' ? `Rol actual: ${label}` : `Current role: ${label}`;
+  if (roleLocked) return getTranslation(language)('leagues.roleIsProtected');
+  return getTranslation(language)('leagues.currentRole', { label });
 }
 
 export function LeagueInformation({
@@ -189,11 +190,9 @@ export function LeagueInformation({
               >
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    language === 'es'
-                      ? `Ver historial de puntos de ${name}`
-                      : `View score history for ${name}`
-                  }
+                  accessibilityLabel={getTranslation(language)('leagues.viewScoreHistoryFor', {
+                    name,
+                  })}
                   onPress={() => onOpenScoreHistory(member)}
                   style={({ pressed }) => [
                     leagueStyles.row,

@@ -1,4 +1,5 @@
-import { selectCopy, LanguageProvider, useLanguage } from '@/i18n/Language';
+import { getTranslation } from '@/i18n/catalog';
+import { LanguageProvider, useLanguage } from '@/i18n/Language';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
@@ -71,8 +72,8 @@ function friendRequestHint(count: number, es: boolean) {
   if (!count) return undefined;
   return countLabel(
     count,
-    selectCopy(es, 'nueva solicitud de amistad', 'new friend request'),
-    selectCopy(es, 'nuevas solicitudes de amistad', 'new friend requests'),
+    getTranslation(es ? 'es' : 'en')('accountsUi.new_friend_request'),
+    getTranslation(es ? 'es' : 'en')('accountsUi.new_friend_requests'),
   );
 }
 
@@ -147,19 +148,11 @@ function HomeNavigation({
       const success = await session.signOut();
       if (!success)
         setSignOutError(
-          selectCopy(
-            es,
-            'No se pudo cerrar la sesión. Inténtalo de nuevo.',
-            'Could not sign out. Please try again.',
-          ),
+          getTranslation(es ? 'es' : 'en')('accountsUi.could_not_sign_out_please_try_again'),
         );
     } catch {
       setSignOutError(
-        selectCopy(
-          es,
-          'No se pudo cerrar la sesión. Inténtalo de nuevo.',
-          'Could not sign out. Please try again.',
-        ),
+        getTranslation(es ? 'es' : 'en')('accountsUi.could_not_sign_out_please_try_again'),
       );
     } finally {
       loggingOut.current = false;
@@ -238,7 +231,7 @@ function HomeNavigation({
           <WorkoutHistory
             accountId={accountId}
             onClose={closeProfilePanel}
-            backLabel={selectCopy(es, 'Volver al perfil', 'Back to profile')}
+            backLabel={getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile')}
             active={panelActive}
             onShare={shareWorkout}
           />
@@ -302,7 +295,7 @@ function HomeNavigation({
           profileButton={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={selectCopy(es, 'Abrir perfil', 'Open profile')}
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.open_profile')}
               accessibilityHint={friendRequestHint(incomingRequests, es)}
               onPress={showProfile}
               hitSlop={spacing['space-1']}
@@ -392,7 +385,7 @@ function HomeNavigation({
           <SessionWorkoutDetail
             accountId={accountId}
             sessionId={finishedSessionId}
-            backLabel={selectCopy(es, 'Volver a entrenamiento guardado', 'Back to workout saved')}
+            backLabel={getTranslation(es ? 'es' : 'en')('accountsUi.back_to_workout_saved')}
             onBack={() => setViewingFinished(false)}
             showShare
             onShare={shareFinishedWorkout}
@@ -413,14 +406,14 @@ function HomeNavigation({
               style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
             >
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                {selectCopy(es, 'Entrenamiento guardado', 'Workout saved')}
+                {getTranslation(es ? 'es' : 'en')('accountsUi.workout_saved')}
               </Text>
               <Button
-                title={selectCopy(es, 'Ver entrenamiento', 'View workout')}
+                title={getTranslation(es ? 'es' : 'en')('accountsUi.view_workout')}
                 onPress={() => setViewingFinished(true)}
               />
               <Button
-                title={selectCopy(es, 'Ahora no', 'Not now')}
+                title={getTranslation(es ? 'es' : 'en')('accountsUi.not_now')}
                 secondary
                 onPress={onDismissFinished}
               />

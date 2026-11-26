@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
@@ -31,7 +32,7 @@ export function SharedWorkoutDetail({
       error={detail.error}
       onRetry={() => void detail.refetch()}
       onBack={onBack}
-      backLabel={language === 'es' ? 'Volver al feed' : 'Back to feed'}
+      backLabel={getTranslation(language)('feed.backToFeed')}
     />
   );
 }

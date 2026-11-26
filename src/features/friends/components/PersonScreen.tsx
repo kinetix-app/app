@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
@@ -12,16 +13,13 @@ import { FriendActions } from './FriendActions';
 import { PersonAvatar } from './PersonAvatar';
 
 function friendCountLabel(count: number, language: 'en' | 'es') {
-  if (count === 1) return language === 'es' ? '1 amigo' : '1 friend';
-  return `${count} ${language === 'es' ? 'amigos' : 'friends'}`;
+  if (count === 1) return getTranslation(language)('friends.text1Friend');
+  return `${count} ${getTranslation(language)('friends.friends_779a51')}`;
 }
 
 function profileError(missing: boolean, language: 'en' | 'es') {
-  if (missing)
-    return language === 'es'
-      ? 'Esta persona ya no está disponible.'
-      : 'This person is no longer available.';
-  return language === 'es' ? 'No se pudo cargar este perfil.' : 'Could not load this profile.';
+  if (missing) return getTranslation(language)('friends.thisPersonIsNoLongerAvailable');
+  return getTranslation(language)('friends.couldNotLoadThisProfile');
 }
 
 function PersonLoadError({
@@ -36,7 +34,7 @@ function PersonLoadError({
         {profileError(missing, language)}
       </Text>
       {!missing ? (
-        <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+        <Button title={getTranslation(language)('friends.retry')} secondary onPress={onRetry} />
       ) : null}
     </View>
   );
@@ -74,11 +72,11 @@ export function PersonScreen({
         <View style={ui.row}>
           <IconButton
             icon="arrow-left"
-            label={backLabel ?? (language === 'es' ? 'Volver' : 'Back')}
+            label={backLabel ?? getTranslation(language)('friends.back')}
             onPress={onBack}
           />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            {language === 'es' ? 'Perfil' : 'Profile'}
+            {getTranslation(language)('friends.profile')}
           </Text>
         </View>
         <View style={{ alignItems: 'center', gap: spacing['space-2'] }}>
@@ -104,7 +102,7 @@ export function PersonScreen({
         ) : null}
         {person.data?.relationship === 'self' ? (
           <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
-            {language === 'es' ? 'Este eres tú.' : 'This is you.'}
+            {getTranslation(language)('friends.thisIsYou')}
           </Text>
         ) : null}
         {person.data && person.data.relationship !== 'self' ? (

@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import type { ViewInstance } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
@@ -57,9 +58,9 @@ export function MacroEnergyInfo({ label, factor }: Props) {
           <View style={styles.overlay} accessibilityViewIsModal>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={
-                es ? 'Cerrar información de macronutrientes' : 'Close macro information'
-              }
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'nutrition.MacroEnergyInfo.closeMacroInformation',
+              )}
               onPress={() => setPosition(null)}
               style={StyleSheet.absoluteFill}
             />
@@ -90,7 +91,8 @@ export function MacroEnergyInfo({ label, factor }: Props) {
                 ]}
               />
               <Text style={[textStyles.body, { color: p.ink }]}>
-                {label}: {factor} {es ? 'kcal por gramo.' : 'kcal per gram.'}
+                {label}: {factor}{' '}
+                {getTranslation(es ? 'es' : 'en')('nutrition.MacroEnergyInfo.kcalPerGram')}
               </Text>
             </View>
           </View>

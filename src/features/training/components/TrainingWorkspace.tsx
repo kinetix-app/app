@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import type { ViewInstance } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -13,7 +14,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import { useSession } from './SessionProvider';
 import { RoutineActionsMenu } from './RoutineActionsMenu';
@@ -115,11 +116,7 @@ export function TrainingWorkspace({
     } catch {
       if (alive.current)
         setCoverError(
-          selectCopy(
-            es,
-            'No se pudo actualizar la portada. Inténtalo de nuevo.',
-            'Could not update the cover. Try again.',
-          ),
+          getTranslation(es ? 'es' : 'en')('training.couldNotUpdateTheCoverTryAgain_d478b5'),
         );
     } finally {
       coverBusy.current = false;
@@ -299,15 +296,11 @@ export function TrainingWorkspace({
           canStart={session.ready && !session.storageError && !session.draft && starting === null}
           startHint={
             session.draft
-              ? selectCopy(
-                  es,
-                  'Termina o descarta el entrenamiento en curso para empezar otro.',
-                  'Finish or discard your ongoing workout to start another.',
+              ? getTranslation(es ? 'es' : 'en')(
+                  'training.finishOrDiscardYourOngoingWorkoutTo_3f209e',
                 )
-              : selectCopy(
-                  es,
-                  'No se puede iniciar el entrenamiento. Inténtalo cuando termine la sincronización.',
-                  'Workout starting is unavailable. Try again when synchronization finishes.',
+              : getTranslation(es ? 'es' : 'en')(
+                  'training.workoutStartingIsUnavailableTryAgainWhen_88ee0a',
                 )
           }
           canDelete={
@@ -380,22 +373,22 @@ function RoutineListHeader({
   const editingRoutine = typeof editing === 'number';
   return (
     <View style={ui.gap}>
-      <ScreenHeader title={selectCopy(es, 'Entrenamientos', 'Workouts')}>
+      <ScreenHeader title={getTranslation(es ? 'es' : 'en')('training.workouts_263b45')}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={selectCopy(es, 'Nueva rutina', 'New routine')}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.newRoutine_128760')}
           onPress={onNewRoutine}
           style={({ pressed }) => [styles.create, { opacity: pressed ? 0.55 : 1 }]}
         >
           <Feather name="plus" size={24} color={p['brand-ink']} />
           <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-            {selectCopy(es, 'Rutina', 'Routine')}
+            {getTranslation(es ? 'es' : 'en')('training.routine_ce7cd4')}
           </Text>
         </Pressable>
       </ScreenHeader>
       <TextField
-        accessibilityLabel={selectCopy(es, 'Buscar rutinas', 'Search routines')}
-        placeholder={selectCopy(es, 'Buscar por nombre', 'Search by name')}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.searchRoutines_240da1')}
+        placeholder={getTranslation(es ? 'es' : 'en')('training.searchByName_27f10c')}
         maxLength={150}
         value={search}
         onChangeText={onSearchChange}
@@ -403,7 +396,7 @@ function RoutineListHeader({
       />
       {saved ? (
         <Text accessibilityRole="alert" style={{ color: p.success }}>
-          {selectCopy(es, 'Rutina guardada.', 'Routine saved.')}
+          {getTranslation(es ? 'es' : 'en')('training.routineSaved_9682dd')}
         </Text>
       ) : null}
       {listPending || (editingRoutine && detailPending) ? <Loading /> : null}
@@ -413,7 +406,7 @@ function RoutineListHeader({
           <Failure error={detailError} retry={onRetryDetail} />
           <IconButton
             icon="arrow-left"
-            label={selectCopy(es, 'Volver a rutinas', 'Back to routines')}
+            label={getTranslation(es ? 'es' : 'en')('training.backToRoutines_ca811d')}
             onPress={onBackToRoutines}
           />
         </View>
@@ -442,26 +435,18 @@ function EmptyRoutineState({
       </View>
       <Text style={[ui.heading, { color: p.ink, textAlign: 'center' }]}>
         {name
-          ? selectCopy(es, 'No se encontraron rutinas', 'No routines found')
-          : selectCopy(es, 'Crea tu primera rutina', 'Build your first routine')}
+          ? getTranslation(es ? 'es' : 'en')('training.noRoutinesFound_29995e')
+          : getTranslation(es ? 'es' : 'en')('training.buildYourFirstRoutine_68ab46')}
       </Text>
       <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
         {name
-          ? selectCopy(
-              es,
-              'Prueba con otro nombre para encontrar tu rutina.',
-              'Try a different name to find your routine.',
-            )
-          : selectCopy(
-              es,
-              'Elige ejercicios y planifica las series para empezar tu próximo entrenamiento.',
-              'Choose your exercises, plan your sets and make your next workout easier to start.',
-            )}
+          ? getTranslation(es ? 'es' : 'en')('training.tryADifferentNameToFindYour_e21b06')
+          : getTranslation(es ? 'es' : 'en')('training.chooseYourExercisesPlanYourSetsAnd_c4af52')}
       </Text>
       {!name ? (
         <Button
-          title={selectCopy(es, 'Crear rutina', 'Create routine')}
-          accessibilityLabel={selectCopy(es, 'Crear rutina', 'Create routine')}
+          title={getTranslation(es ? 'es' : 'en')('training.createRoutine_564806')}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.createRoutine_564806')}
           icon="plus"
           tone="positive"
           onPress={onCreate}
@@ -506,8 +491,8 @@ function RoutineRow({
         day: 'numeric',
         year: 'numeric',
       })
-    : selectCopy(es, 'Sin entrenar todavía', 'Not trained yet');
-  const count = `${item.exercise_count} ${item.exercise_count === 1 ? selectCopy(es, 'ejercicio', 'exercise') : selectCopy(es, 'ejercicios', 'exercises')}`;
+    : getTranslation(es ? 'es' : 'en')('training.notTrainedYet_c16654');
+  const count = `${item.exercise_count} ${item.exercise_count === 1 ? getTranslation(es ? 'es' : 'en')('training.exercise_48600f') : getTranslation(es ? 'es' : 'en')('training.exercises_280e85')}`;
   let dateLabel = date;
   if (performed && es) dateLabel = `Último entrenamiento: ${performed.toLocaleString(language)}`;
   else if (performed) dateLabel = `Last trained ${performed.toLocaleString()}`;
@@ -522,11 +507,11 @@ function RoutineRow({
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={selectCopy(es, `Editar ${item.name}`, `Edit ${item.name}`)}
-          accessibilityHint={selectCopy(
-            es,
-            'Abrir los detalles y editar la rutina',
-            'Open routine details and edit',
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.edit_a899b6', {
+            value1: item.name,
+          })}
+          accessibilityHint={getTranslation(es ? 'es' : 'en')(
+            'training.openRoutineDetailsAndEdit_c708fd',
           )}
           accessibilityState={{ disabled: false }}
           onPress={onEdit}
@@ -550,16 +535,13 @@ function RoutineRow({
         <Pressable
           ref={trigger}
           accessibilityRole="button"
-          accessibilityLabel={selectCopy(
-            es,
-            `Acciones de la rutina ${item.name}`,
-            `Routine actions for ${item.name}`,
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+            'dynamicMessages.routineActionsFor_b301ae',
+            { value1: item.name },
           )}
           accessibilityState={{ expanded: actionsOpen }}
-          accessibilityHint={selectCopy(
-            es,
-            'Abrir las opciones de entrenar, editar, portada y eliminar',
-            'Open train, edit, cover and delete options',
+          accessibilityHint={getTranslation(es ? 'es' : 'en')(
+            'training.openTrainEditCoverAndDeleteOptions_eaf126',
           )}
           onPress={() => onActions(() => trigger.current?.focus())}
           style={({ pressed }) => [styles.actions, { opacity: pressed ? 0.55 : 1 }]}
@@ -588,8 +570,10 @@ function RoutineRow({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={selectCopy(es, `Empezar ${item.name}`, `Start ${item.name}`)}
-          accessibilityHint={selectCopy(es, 'Entrenar esta rutina', 'Train this routine')}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.start_794ce2', {
+            value1: item.name,
+          })}
+          accessibilityHint={getTranslation(es ? 'es' : 'en')('training.trainThisRoutine_f90cb0')}
           accessibilityState={{ disabled: !canStart || starting, busy: starting }}
           disabled={!canStart || starting}
           onPress={onStart}
@@ -659,7 +643,11 @@ function RoutineListFooter({
   if (!visible) return null;
   return (
     <Button
-      title={loading ? selectCopy(es, 'Cargando…', 'Loading…') : selectCopy(es, 'Más', 'More')}
+      title={
+        loading
+          ? getTranslation(es ? 'es' : 'en')('training.loading_ab84a2')
+          : getTranslation(es ? 'es' : 'en')('training.more_3efa6b')
+      }
       disabled={loading}
       onPress={onMore}
       secondary

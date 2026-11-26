@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
@@ -79,8 +80,8 @@ export function LeagueAvatar({
     invitationToken,
   );
   let label: string;
-  if (member) label = language === 'es' ? `Imagen de perfil de ${name}` : `${name} profile picture`;
-  else label = language === 'es' ? `Imagen de liga de ${name}` : `${name} league picture`;
+  if (member) label = getTranslation(language)('leagues.profilePicture', { name });
+  else label = getTranslation(language)('leagues.leaguePicture', { name });
   return (
     <View style={{ alignItems: 'center', gap: spacing['space-2'], flexShrink: 0 }}>
       <View
@@ -108,12 +109,12 @@ export function LeagueAvatar({
       {failed && retryable && path ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={language === 'es' ? `Reintentar ${label}` : `Retry ${label}`}
+          accessibilityLabel={getTranslation(language)('leagues.retry', { label })}
           onPress={retry}
           style={{ minHeight: 44, justifyContent: 'center' }}
         >
           <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-            {language === 'es' ? 'Reintentar imagen' : 'Retry picture'}
+            {getTranslation(language)('leagues.retryPicture')}
           </Text>
         </Pressable>
       ) : null}
@@ -155,18 +156,14 @@ function LeagueAvatarVisual({
   } else if (loading) {
     picture = (
       <ActivityIndicator
-        accessibilityLabel={language === 'es' ? `Cargando ${label}` : `Loading ${label}`}
+        accessibilityLabel={getTranslation(language)('leagues.loading', { label })}
         color={p['brand-ink']}
       />
     );
   } else if (member) {
     picture = (
       <Text
-        accessibilityLabel={
-          language === 'es'
-            ? `Imagen de perfil de ${name} no disponible`
-            : `${name} profile picture unavailable`
-        }
+        accessibilityLabel={getTranslation(language)('leagues.profilePictureUnavailable', { name })}
         style={[textStyles.label, { color: p['brand-ink'] }]}
       >
         {name.slice(0, 1).toUpperCase()}
@@ -175,9 +172,7 @@ function LeagueAvatarVisual({
   } else {
     picture = (
       <Ionicons
-        accessibilityLabel={
-          language === 'es' ? 'Imagen predeterminada de liga' : 'Default league picture'
-        }
+        accessibilityLabel={getTranslation(language)('leagues.defaultLeaguePicture')}
         name="trophy-outline"
         size={size > 64 ? 40 : 24}
         color={p['brand-ink']}

@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useRef, useState } from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView, type VideoPlayer } from 'expo-video';
 import { Image, Text, View } from 'react-native';
@@ -69,7 +70,7 @@ function ExerciseVideo({
     return (
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          {selectCopy(es, 'Vídeo no disponible.', 'Video unavailable.')}
+          {getTranslation(es ? 'es' : 'en')('training.videoUnavailable_af9b60')}
         </Text>
         <ExerciseMedia name={name} videoUrl={null} imageUrl={imageUrl} />
       </View>
@@ -88,7 +89,9 @@ function ExerciseVideo({
         style={mediaStyle}
         contentFit="contain"
         nativeControls={false}
-        accessibilityLabel={selectCopy(es, `Vídeo de ${name}`, `Video for ${name}`)}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.videoFor_47fd4e', {
+          value1: name,
+        })}
       />
       {status === 'loading' ? <Loading /> : null}
       <VideoControls
@@ -134,7 +137,7 @@ function VideoControls({
     <View style={{ padding: spacing['space-3'], gap: spacing['space-2'] }}>
       <View
         accessibilityRole="progressbar"
-        accessibilityLabel={selectCopy(es, 'Progreso del vídeo', 'Video progress')}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.videoProgress_205c89')}
         accessibilityValue={{ min: 0, max: player.duration || 1, now: currentTime }}
         style={{ height: 4, borderRadius: radii['radius-pill'], backgroundColor: p['surface-300'] }}
       >
@@ -155,7 +158,7 @@ function VideoControls({
         />
         <IconButton
           icon="rotate-ccw"
-          label={selectCopy(es, 'Volver a reproducir el vídeo', 'Replay video')}
+          label={getTranslation(es ? 'es' : 'en')('training.replayVideo_70b744')}
           onPress={() => player.replay()}
         />
         <Text
@@ -176,7 +179,7 @@ function VideoControls({
         />
         <IconButton
           icon="maximize"
-          label={selectCopy(es, 'Vídeo a pantalla completa', 'Full screen video')}
+          label={getTranslation(es ? 'es' : 'en')('training.fullScreenVideo_e239c9')}
           onPress={() => void view.current?.enterFullscreen()}
         />
       </View>

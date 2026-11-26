@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useRef, useState } from 'react';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { cardioInput, cardioValues, type CardioValues } from '../cardio';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
@@ -97,7 +98,7 @@ function RoutineExerciseEditor({
                   /^\d+$/.test(value.reps) &&
                   Number(value.reps) >= 1 &&
                   Number(value.reps) <= 2147483647) ||
-              selectCopy(es, 'Introduce valores válidos para la serie.', 'Enter valid set values.'),
+              getTranslation(es ? 'es' : 'en')('training.enterValidSetValues_af628f'),
           }}
           render={({ field, fieldState }) => (
             <View style={ui.gap}>
@@ -266,7 +267,7 @@ export function RoutineEditor({
       setError('root', {
         message:
           parsed.error.issues[0]?.message ??
-          selectCopy(es, 'Comprueba los campos de la rutina.', 'Check the routine fields.'),
+          getTranslation(es ? 'es' : 'en')('training.checkTheRoutineFields_d1d993'),
       });
       return;
     }
@@ -285,18 +286,18 @@ export function RoutineEditor({
         <View style={[ui.row, { padding: spacing['space-4'] }]}>
           <IconButton
             icon="arrow-left"
-            label={selectCopy(es, 'Volver a rutinas', 'Back to routines')}
+            label={getTranslation(es ? 'es' : 'en')('training.backToRoutines_ca811d')}
             onPress={close}
             disabled={disabled}
           />
           <Text accessibilityRole="header" style={[ui.heading, { flex: 1, color: p.ink }]}>
             {routine
-              ? selectCopy(es, 'Editar rutina', 'Edit routine')
-              : selectCopy(es, 'Nueva rutina', 'New routine')}
+              ? getTranslation(es ? 'es' : 'en')('training.editRoutine_47c2f4')
+              : getTranslation(es ? 'es' : 'en')('training.newRoutine_128760')}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={selectCopy(es, 'Guardar rutina', 'Save routine')}
+            accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.saveRoutine_043f48')}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={() => void submit()}
@@ -310,8 +311,8 @@ export function RoutineEditor({
           >
             <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
               {save.isPending
-                ? selectCopy(es, 'Guardando…', 'Saving…')
-                : selectCopy(es, 'Guardar', 'Save')}
+                ? getTranslation(es ? 'es' : 'en')('training.saving_444c23')
+                : getTranslation(es ? 'es' : 'en')('training.save_5bd05a')}
             </Text>
           </Pressable>
         </View>
@@ -339,24 +340,22 @@ export function RoutineEditor({
                 rules={{
                   validate: (value) =>
                     value.trim().length > 0 ||
-                    selectCopy(es, 'Introduce el nombre de la rutina.', 'Enter a routine name.'),
+                    getTranslation(es ? 'es' : 'en')('training.enterARoutineName_0a0181'),
                   maxLength: {
                     value: 150,
-                    message: selectCopy(
-                      es,
-                      'Usa un máximo de 150 caracteres.',
-                      'Use at most 150 characters.',
+                    message: getTranslation(es ? 'es' : 'en')(
+                      'training.useAtMost150Characters_12750f',
                     ),
                   },
                 }}
                 render={({ field, fieldState }) => (
                   <>
                     <TextField
-                      accessibilityLabel={selectCopy(es, 'Nombre de la rutina', 'Routine name')}
-                      placeholder={selectCopy(
-                        es,
-                        'Ponle un nombre a la rutina',
-                        'Name your routine',
+                      accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                        'training.routineName_ccb21b',
+                      )}
+                      placeholder={getTranslation(es ? 'es' : 'en')(
+                        'training.nameYourRoutine_078a84',
                       )}
                       maxLength={150}
                       inputStyle={textStyles['title-lg']}
@@ -384,8 +383,8 @@ export function RoutineEditor({
                 accessibilityRole="button"
                 accessibilityLabel={
                   notesOpen
-                    ? selectCopy(es, 'Ocultar notas de la rutina', 'Hide routine notes')
-                    : selectCopy(es, 'Añadir notas a la rutina', 'Add routine notes')
+                    ? getTranslation(es ? 'es' : 'en')('training.hideRoutineNotes_95c76f')
+                    : getTranslation(es ? 'es' : 'en')('training.addRoutineNotes_9d28ec')
                 }
                 accessibilityState={{ expanded: notesOpen, disabled }}
                 disabled={disabled}
@@ -394,8 +393,8 @@ export function RoutineEditor({
               >
                 <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                   {notesOpen
-                    ? selectCopy(es, 'Notas (opcional) −', 'Notes (optional) −')
-                    : selectCopy(es, '+ Añadir notas', '+ Add notes')}
+                    ? getTranslation(es ? 'es' : 'en')('training.notesOptional_be0f4c')
+                    : getTranslation(es ? 'es' : 'en')('training.addNotes_a2d3d1')}
                 </Text>
               </Pressable>
               {notesOpen ? (
@@ -405,21 +404,19 @@ export function RoutineEditor({
                   rules={{
                     maxLength: {
                       value: 1000,
-                      message: selectCopy(
-                        es,
-                        'Usa un máximo de 1000 caracteres.',
-                        'Use at most 1000 characters.',
+                      message: getTranslation(es ? 'es' : 'en')(
+                        'training.useAtMost1000Characters_732c2d',
                       ),
                     },
                   }}
                   render={({ field, fieldState }) => (
                     <View style={ui.gap}>
                       <TextField
-                        accessibilityLabel={selectCopy(es, 'Notas de la rutina', 'Routine notes')}
-                        placeholder={selectCopy(
-                          es,
-                          'Objetivos, recordatorios o un plan para esta rutina…',
-                          'Focus, reminders or a plan for this routine…',
+                        accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                          'training.routineNotes_580086',
+                        )}
+                        placeholder={getTranslation(es ? 'es' : 'en')(
+                          'training.focusRemindersOrAPlanForThis_430fdd',
                         )}
                         value={field.value}
                         onChangeText={field.onChange}
@@ -484,7 +481,7 @@ export function RoutineEditor({
           ListFooterComponent={
             <View style={ui.gap}>
               <Button
-                title={selectCopy(es, 'Añadir ejercicio', 'Add exercise')}
+                title={getTranslation(es ? 'es' : 'en')('training.addExercise_89dbcf')}
                 onPress={() => setPicker(true)}
                 disabled={disabled || fields.length >= 500}
                 tone="positive"
@@ -550,26 +547,18 @@ export function RoutineEditor({
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {selectCopy(
-                es,
-                '¿Descartar los cambios sin guardar?',
-                'Discard your unsaved changes?',
-              )}
+              {getTranslation(es ? 'es' : 'en')('training.discardYourUnsavedChanges_ec01af')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {selectCopy(
-                es,
-                'Tus cambios no se han guardado.',
-                'Your changes have not been saved.',
-              )}
+              {getTranslation(es ? 'es' : 'en')('training.yourChangesHaveNotBeenSaved_5fa8fc')}
             </Text>
             <Button
-              title={selectCopy(es, 'Seguir editando', 'Keep editing')}
+              title={getTranslation(es ? 'es' : 'en')('training.keepEditing_ba7ea4')}
               onPress={() => setDiscard(false)}
               secondary
             />
             <Button
-              title={selectCopy(es, 'Descartar', 'Discard')}
+              title={getTranslation(es ? 'es' : 'en')('training.discard_671592')}
               onPress={onClose}
               tone="danger"
             />

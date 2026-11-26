@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { useLanguage } from '@/i18n/Language';
 import { Pressable, Text } from 'react-native';
@@ -24,14 +25,15 @@ export function ExerciseDragHandle({
       nativeID={id}
       accessibilityRole="adjustable"
       accessibilityLabel={label}
-      accessibilityHint={
-        es
-          ? 'Mantén pulsado y arrastra para cambiar el orden'
-          : 'Hold and drag to change exercise order'
-      }
+      accessibilityHint={getTranslation(es ? 'es' : 'en')(
+        'training.holdAndDragToChangeExerciseOrder_0fc1bf',
+      )}
       accessibilityActions={[
-        { name: 'increment', label: es ? 'Mover hacia abajo' : 'Move later' },
-        { name: 'decrement', label: es ? 'Mover hacia arriba' : 'Move earlier' },
+        { name: 'increment', label: getTranslation(es ? 'es' : 'en')('training.moveLater_3400a3') },
+        {
+          name: 'decrement',
+          label: getTranslation(es ? 'es' : 'en')('training.moveEarlier_cd9ffc'),
+        },
       ]}
       onAccessibilityAction={({ nativeEvent }) => {
         if (!disabled) onMove(nativeEvent.actionName === 'increment' ? 1 : -1);

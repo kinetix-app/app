@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AccessibilityInfo, Modal, ScrollView, Text, View } from 'react-native';
@@ -10,7 +11,7 @@ import { ExerciseEvolution } from './ExerciseEvolution';
 import { SessionWorkoutDetail } from './SessionWorkoutDetail';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import type { Exercise, ExerciseSummary } from '../schemas';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { catalogueLabel } from '../catalogueLabels';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
@@ -47,11 +48,7 @@ export function ExerciseDetails({
         <SessionWorkoutDetail
           accountId={accountId}
           sessionId={workoutId}
-          backLabel={selectCopy(
-            es,
-            'Volver al historial del ejercicio',
-            'Back to exercise history',
-          )}
+          backLabel={getTranslation(es ? 'es' : 'en')('training.backToExerciseHistory_169d17')}
           onBack={closeWorkout}
         />
       ) : null}
@@ -66,7 +63,7 @@ export function ExerciseDetails({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <IconButton
               icon="arrow-left"
-              label={selectCopy(es, 'Volver', 'Back')}
+              label={getTranslation(es ? 'es' : 'en')('training.back_c16499')}
               onPress={onClose}
             />
             {detail.data ? (
@@ -124,11 +121,10 @@ export function ExerciseDetails({
               {tab === 'Instructions' ? <ExerciseInstructions exercise={detail.data} /> : null}
               {onAdd ? (
                 <Button
-                  title={selectCopy(es, 'Añadir', 'Add')}
-                  accessibilityLabel={selectCopy(
-                    es,
-                    `Añadir ${detail.data.name}`,
-                    `Add ${detail.data.name}`,
+                  title={getTranslation(es ? 'es' : 'en')('training.add_8d5f06')}
+                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                    'dynamicMessages.add_345e7a',
+                    { value1: detail.data.name },
                   )}
                   tone="positive"
                   onPress={() => {
@@ -159,13 +155,13 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
       <View style={ui.gap}>
         {exercise.equipments?.length ? (
           <Text style={{ color: p['ink-muted'] }}>
-            {selectCopy(es, 'Material', 'Equipment')}:{' '}
+            {getTranslation(es ? 'es' : 'en')('training.equipment_0cd9d5')}:{' '}
             {exercise.equipments.map((value) => catalogueLabel(value, language)).join(' · ')}
           </Text>
         ) : null}
       </View>
       <Text style={[ui.heading, { color: p.ink }]}>
-        {selectCopy(es, 'Instrucciones', 'Instructions')}
+        {getTranslation(es ? 'es' : 'en')('training.instructions_37a236')}
       </Text>
       {exercise.instructions?.length ? (
         exercise.instructions.map((text, i) => (
@@ -175,7 +171,7 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
         ))
       ) : (
         <Text style={{ color: p['ink-muted'] }}>
-          {selectCopy(es, 'No hay instrucciones disponibles.', 'No instructions available.')}
+          {getTranslation(es ? 'es' : 'en')('training.noInstructionsAvailable_bfe88c')}
         </Text>
       )}
     </>

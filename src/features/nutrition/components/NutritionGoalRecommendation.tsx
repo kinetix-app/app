@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
@@ -77,7 +78,8 @@ const missingLabelsEs: Record<string, string> = {
 };
 
 function objectiveLabel(objective: RecommendationData['objective'], es: boolean) {
-  if (!objective) return selectCopy(es, 'Objetivo diario', 'Daily target');
+  if (!objective)
+    return getTranslation(es ? 'es' : 'en')('nutrition.NutritionGoalRecommendation.dailyTarget');
   return es ? objectiveLabelsEs[objective] : objectiveLabels[objective];
 }
 
@@ -94,7 +96,9 @@ function translatedMissingField(field: string, es: boolean) {
 
 function targetComparison(suggestion: number, saved: number, es: boolean): string {
   if (saved === suggestion)
-    return selectCopy(es, 'Coincide con tu objetivo guardado.', 'Matches your saved target.');
+    return getTranslation(es ? 'es' : 'en')(
+      'nutrition.NutritionGoalRecommendation.matchesYourSavedTarget',
+    );
   const difference = Number(Math.abs(suggestion - saved).toFixed(2));
   const direction = suggestion > saved ? 'above' : 'below';
   const localizedDirection = selectCopy(
@@ -102,23 +106,23 @@ function targetComparison(suggestion: number, saved: number, es: boolean): strin
     suggestion > saved ? 'por encima' : 'por debajo',
     direction,
   );
-  return selectCopy(
-    es,
-    `Sugerencia: ${difference} kcal/día ${localizedDirection} de tu objetivo guardado.`,
-    `Suggestion: ${difference} kcal/day ${localizedDirection} your saved target.`,
+  return getTranslation(es ? 'es' : 'en')(
+    'dynamicMessages.suggestionKcalDayYourSavedTarget_c5d826',
+    { value1: difference, value2: localizedDirection },
   );
 }
 
 function adjustmentText(percent: number | null, es: boolean): string {
   if (percent === 0)
-    return selectCopy(es, 'Calorías para mantener tu peso.', 'Calories to maintain your weight.');
+    return getTranslation(es ? 'es' : 'en')(
+      'nutrition.NutritionGoalRecommendation.caloriesToMaintainYourWeight',
+    );
   const direction = Number(percent) < 0 ? 'fewer' : 'more';
   const localizedDirection = selectCopy(es, Number(percent) < 0 ? 'menos' : 'más', direction);
-  return selectCopy(
-    es,
-    `${Math.abs(percent ?? 0)} % ${localizedDirection} calorías para tu objetivo.`,
-    `${Math.abs(percent ?? 0)}% ${localizedDirection} calories for your goal.`,
-  );
+  return getTranslation(es ? 'es' : 'en')('dynamicMessages.caloriesForYourGoal_2a23a6', {
+    value1: Math.abs(percent ?? 0),
+    value2: localizedDirection,
+  });
 }
 
 type RecommendationData = Awaited<ReturnType<typeof nutritionApi.recommendation>>;
@@ -151,7 +155,8 @@ function RecommendationContent({
               {objectiveLabel(data.objective, es)}
             </Text>
             <Text style={[textStyles['metric-lg'], { color: p['brand-ink'] }]}>
-              {goal.calories} {selectCopy(es, 'kcal/día', 'kcal/day')}
+              {goal.calories}{' '}
+              {getTranslation(es ? 'es' : 'en')('nutrition.NutritionGoalRecommendation.kcalDay')}
             </Text>
             {(['protein', 'carbohydrates', 'fats'] as const).map((macro) => (
               <Text key={macro} style={[textStyles.body, { color: p.ink }]}>
@@ -162,8 +167,13 @@ function RecommendationContent({
             {saved ? (
               <View style={{ gap: spacing['space-1'] }}>
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  {selectCopy(es, 'Tu objetivo guardado:', 'Your saved target:')} {saved.calories}{' '}
-                  {selectCopy(es, 'kcal/día', 'kcal/day')}
+                  {getTranslation(es ? 'es' : 'en')(
+                    'nutrition.NutritionGoalRecommendation.yourSavedTarget',
+                  )}{' '}
+                  {saved.calories}{' '}
+                  {getTranslation(es ? 'es' : 'en')(
+                    'nutrition.NutritionGoalRecommendation.kcalDay',
+                  )}
                 </Text>
                 <Text style={[textStyles['body-sm'], { color: p.ink }]}>
                   {targetComparison(goal.calories, saved.calories, es)}
@@ -173,50 +183,51 @@ function RecommendationContent({
           </View>
           <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
             <Text style={[textStyles.body, { color: p.ink }]}>
-              {selectCopy(es, 'Actividad semanal:', 'Weekly activity:')}{' '}
+              {getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.weeklyActivity',
+              )}{' '}
               {es
                 ? (activityLabelsEs[String(data.activity_factor)] ?? 'Sin definir')
                 : (weeklyActivityLabels[String(data.activity_factor)] ?? 'Not set')}
             </Text>
             <Text style={[textStyles.body, { color: p.ink }]}>
-              {selectCopy(es, 'Mantenimiento:', 'Maintenance:')}{' '}
-              {Math.round(data.maintenance_calories ?? 0)} {selectCopy(es, 'kcal/día', 'kcal/day')}
+              {getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.maintenance',
+              )}{' '}
+              {Math.round(data.maintenance_calories ?? 0)}{' '}
+              {getTranslation(es ? 'es' : 'en')('nutrition.NutritionGoalRecommendation.kcalDay')}
             </Text>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
               {adjustmentText(data.adjustment_percent, es)}
             </Text>
           </View>
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            {selectCopy(
-              es,
-              'Una estimación inicial. Revisa tu progreso en 2–4 semanas.',
-              'A starting estimate. Review your progress in 2–4 weeks.',
+            {getTranslation(es ? 'es' : 'en')(
+              'nutrition.NutritionGoalRecommendation.aStartingEstimateReviewYourProgressIn24Weeks',
             )}
           </Text>
           <View style={styles.confirm}>
             <Switch
-              accessibilityLabel={selectCopy(
-                es,
-                'Esta estimación para adultos es adecuada para mí',
-                'This adult estimate is appropriate for me',
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.thisAdultEstimateIsAppropriateForMe',
               )}
               value={eligible}
               onValueChange={setEligible}
               disabled={pending}
             />
             <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-              {selectCopy(
-                es,
-                'No estoy embarazada ni en periodo de lactancia. No sigo una dieta prescrita.',
-                'Not pregnant or breastfeeding. No prescribed diet.',
+              {getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.notPregnantOrBreastfeedingNoPrescribedDiet',
               )}
             </Text>
           </View>
           <Button
             title={
               pending
-                ? selectCopy(es, 'Guardando…', 'Saving…')
-                : selectCopy(es, 'Aceptar sugerencia', 'Accept suggestion')
+                ? getTranslation(es ? 'es' : 'en')('nutrition.NutritionGoalRecommendation.saving')
+                : getTranslation(es ? 'es' : 'en')(
+                    'nutrition.NutritionGoalRecommendation.acceptSuggestion',
+                  )
             }
             disabled={!eligible || pending}
             onPress={() => {
@@ -225,10 +236,8 @@ function RecommendationContent({
           />
           {saved ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {selectCopy(
-                es,
-                'Esto sustituye tus objetivos actuales.',
-                'This replaces your current targets.',
+              {getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.thisReplacesYourCurrentTargets',
               )}
             </Text>
           ) : null}
@@ -238,22 +247,18 @@ function RecommendationContent({
           <Text style={[textStyles.body, { color: p.ink }]}>{translatedReason(data, es)}</Text>
           {data.missing_fields.length ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {selectCopy(es, 'Faltan:', 'Missing:')}{' '}
+              {getTranslation(es ? 'es' : 'en')('nutrition.NutritionGoalRecommendation.missing')}{' '}
               {data.missing_fields.map((field) => translatedMissingField(field, es)).join(', ')}.{' '}
-              {selectCopy(
-                es,
-                'Actualízalos en Perfil y vuelve aquí.',
-                'Update these in Profile, then return here.',
+              {getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.updateTheseInProfileThenReturnHere',
               )}
             </Text>
           ) : null}
         </View>
       )}
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {selectCopy(
-          es,
-          'Para adultos sanos. Incluye las calorías del ejercicio.',
-          'For healthy adults. Includes exercise calories.',
+        {getTranslation(es ? 'es' : 'en')(
+          'nutrition.NutritionGoalRecommendation.forHealthyAdultsIncludesExerciseCalories',
         )}
       </Text>
     </>
@@ -325,11 +330,15 @@ function Recommendation({
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView contentContainerStyle={[screenContentStyle, styles.content]}>
         <ScreenHeader
-          title={selectCopy(es, 'Tu plan nutricional', 'Your nutrition plan')}
+          title={getTranslation(es ? 'es' : 'en')(
+            'nutrition.NutritionGoalRecommendation.yourNutritionPlan',
+          )}
           leading={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={selectCopy(es, 'Volver', 'Back')}
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.back',
+              )}
               disabled={accept.isPending}
               onPress={onClose}
               style={styles.back}
@@ -339,28 +348,28 @@ function Recommendation({
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {selectCopy(
-            es,
-            'Tus calorías y macronutrientes diarios sugeridos.',
-            'Your suggested daily calories and macros.',
+          {getTranslation(es ? 'es' : 'en')(
+            'nutrition.NutritionGoalRecommendation.yourSuggestedDailyCaloriesAndMacros',
           )}
         </Text>
         {loading ? (
           <Text style={{ color: p.ink }}>
-            {selectCopy(es, 'Calculando tu sugerencia…', 'Calculating your suggestion…')}
+            {getTranslation(es ? 'es' : 'en')(
+              'nutrition.NutritionGoalRecommendation.calculatingYourSuggestion',
+            )}
           </Text>
         ) : null}
         {failed ? (
           <View style={styles.content}>
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {selectCopy(
-                es,
-                'No se pudo cargar tu sugerencia.',
-                'Could not load your suggestion.',
+              {getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.couldNotLoadYourSuggestion',
               )}
             </Text>
             <Button
-              title={selectCopy(es, 'Reintentar', 'Retry')}
+              title={getTranslation(es ? 'es' : 'en')(
+                'nutrition.NutritionGoalRecommendation.retry',
+              )}
               onPress={() => {
                 void recommendation.refetch();
                 void saved.refetch();
@@ -384,15 +393,15 @@ function Recommendation({
         ) : null}
         {accept.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {selectCopy(
-              es,
-              'No se pudo guardar tu objetivo. Inténtalo de nuevo.',
-              'Could not save your goal. Try again.',
+            {getTranslation(es ? 'es' : 'en')(
+              'nutrition.NutritionGoalRecommendation.couldNotSaveYourGoalTryAgain',
             )}
           </Text>
         ) : null}
         <Button
-          title={selectCopy(es, 'Introducir manualmente', 'Enter manually')}
+          title={getTranslation(es ? 'es' : 'en')(
+            'nutrition.NutritionGoalRecommendation.enterManually',
+          )}
           secondary
           disabled={accept.isPending}
           onPress={() => setManual(true)}

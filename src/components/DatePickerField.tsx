@@ -1,19 +1,20 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { CalendarGrid, calendarDate, calendarLabel, shiftCalendarMonth } from './CalendarGrid';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 const monthFormat = (language: 'en' | 'es') =>
-  new Intl.DateTimeFormat(selectCopy(language === 'es', 'es-ES', 'en-US'), {
+  new Intl.DateTimeFormat(language === 'es' ? 'es-ES' : 'en-US', {
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC',
   });
 const shortMonth = (language: 'en' | 'es') =>
-  new Intl.DateTimeFormat(selectCopy(language === 'es', 'es-ES', 'en-US'), {
+  new Intl.DateTimeFormat(language === 'es' ? 'es-ES' : 'en-US', {
     month: 'short',
     timeZone: 'UTC',
   });
@@ -39,7 +40,7 @@ export function DatePickerField({
   const language = useLanguage();
   const currentLabel = value
     ? calendarLabel(value, language)
-    : selectCopy(language === 'es', 'Elige una fecha', 'Choose a date');
+    : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.choose_a_date');
 
   return (
     <View style={styles.container}>
@@ -47,7 +48,7 @@ export function DatePickerField({
         <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
         {optional && !value ? (
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {selectCopy(language === 'es', 'Opcional', 'Optional')}
+            {getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.optional')}
           </Text>
         ) : null}
       </View>
@@ -76,7 +77,7 @@ export function DatePickerField({
         {optional && value ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${selectCopy(language === 'es', 'Borrar', 'Clear')} ${label.toLowerCase()}`}
+            accessibilityLabel={`${getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.clear')} ${label.toLowerCase()}`}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={onClear}
@@ -119,8 +120,8 @@ export function DatePickerCalendar({
           accessibilityRole="button"
           accessibilityLabel={
             isChoosingMonth
-              ? selectCopy(language === 'es', 'Año anterior', 'Previous year')
-              : selectCopy(language === 'es', 'Mes anterior', 'Previous month')
+              ? getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.previous_year')
+              : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.previous_month')
           }
           onPress={() => setMonth(shiftCalendarMonth(month, isChoosingMonth ? -12 : -1))}
           style={styles.arrow}
@@ -131,8 +132,8 @@ export function DatePickerCalendar({
           accessibilityRole="button"
           accessibilityLabel={
             isChoosingMonth
-              ? selectCopy(language === 'es', 'Mostrar días', 'Show days')
-              : selectCopy(language === 'es', 'Elegir mes y año', 'Choose month and year')
+              ? getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.show_days')
+              : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.choose_month_and_year')
           }
           onPress={() => setIsChoosingMonth(!isChoosingMonth)}
           style={styles.period}
@@ -150,8 +151,8 @@ export function DatePickerCalendar({
           accessibilityRole="button"
           accessibilityLabel={
             isChoosingMonth
-              ? selectCopy(language === 'es', 'Año siguiente', 'Next year')
-              : selectCopy(language === 'es', 'Mes siguiente', 'Next month')
+              ? getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.next_year')
+              : getTranslation(language === 'es' ? 'es' : 'en')('accountsUi.next_month')
           }
           accessibilityState={{ disabled: nextDisabled }}
           disabled={nextDisabled}

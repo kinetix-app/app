@@ -1,10 +1,11 @@
+import { getTranslation } from '@/i18n/catalog';
 import type { ViewInstance } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { FormCheckProfile } from '../profiles';
@@ -131,24 +132,22 @@ export function RecordScreen({
   };
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${selectCopy(es, 'SERIE', 'SET')} ${setNumber}`}
-      title={selectCopy(es, 'Graba tu serie', 'Record your set')}
+      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.sET')} ${setNumber}`}
+      title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.recordYourSet')}
       backIcon="x"
-      backLabel={selectCopy(es, 'Cancelar grabación', 'Cancel recording')}
+      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.cancelRecording')}
       onBack={onCancel}
       scroll={false}
       footer={
         recording ? (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {selectCopy(
-                es,
-                'Haz tu serie como siempre. Detén la grabación al terminar.',
-                'Do your set as usual. Stop when you finish.',
+              {getTranslation(es ? 'es' : 'en')(
+                'formcheck.RecordScreen.doYourSetAsUsualStopWhenYouFinish',
               )}
             </Text>
             <Button
-              title={selectCopy(es, 'Detener y analizar', 'Stop and analyze')}
+              title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.stopAndAnalyze')}
               onPress={() => void stop()}
             />
           </>
@@ -193,27 +192,23 @@ export function RecordScreen({
             </View>
             {failed ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                {selectCopy(
-                  es,
-                  'No se pudo guardar la grabación. Inténtalo de nuevo.',
-                  'The recording could not be saved. Try again.',
+                {getTranslation(es ? 'es' : 'en')(
+                  'formcheck.RecordScreen.theRecordingCouldNotBeSavedTryAgain',
                 )}
               </Text>
             ) : null}
             <Button
-              title={selectCopy(es, 'Iniciar grabación', 'Start recording')}
+              title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.startRecording')}
               icon="video"
               onPress={start}
             />
             {__DEV__ ? (
               <Button
-                title={selectCopy(es, 'Usar un vídeo', 'Use a video')}
+                title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.useAVideo')}
                 icon="upload"
                 secondary
-                accessibilityLabel={selectCopy(
-                  es,
-                  'Analizar un archivo de vídeo (solo desarrollo)',
-                  'Analyze a video file (development only)',
+                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                  'formcheck.RecordScreen.analyzeAVideoFileDevelopmentOnly',
                 )}
                 onPress={() => void pickVideo()}
               />
@@ -237,7 +232,9 @@ export function RecordScreen({
           facing="back"
           mode="video"
           mute
-          accessibilityLabel={selectCopy(es, 'Vista previa de la cámara', 'Camera preview')}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+            'formcheck.RecordScreen.cameraPreview',
+          )}
         />
         <View
           pointerEvents="none"
@@ -272,7 +269,8 @@ export function RecordScreen({
           >
             <Feather name="circle" size={10} color={p.danger} />
             <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
-              {selectCopy(es, 'Grabando', 'Recording')} · {clock(seconds)}
+              {getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.recording')} ·{' '}
+              {clock(seconds)}
             </Text>
           </View>
         ) : null}

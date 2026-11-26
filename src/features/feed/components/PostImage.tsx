@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -42,7 +43,7 @@ export function PostImage({
       <>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={language === 'es' ? `Ver ${label}` : `View ${label}`}
+          accessibilityLabel={getTranslation(language)('feed.view', { label })}
           onPress={() => setExpanded(true)}
           style={StyleSheet.absoluteFill}
         >
@@ -62,9 +63,7 @@ export function PostImage({
     content = (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={
-          language === 'es' ? `Reintentar cargar ${label}` : `Retry loading ${label}`
-        }
+        accessibilityLabel={getTranslation(language)('feed.retryLoading', { label })}
         onPress={() => {
           void image.refetch();
         }}
@@ -72,16 +71,14 @@ export function PostImage({
       >
         <Feather name="image" size={28} color={p['ink-muted']} />
         <Text style={[textStyles['body-sm'], { color: p.ink, textAlign: 'center' }]}>
-          {language === 'es'
-            ? 'No se pudo cargar la foto. Pulsa para reintentar.'
-            : 'Could not load photo. Tap to retry.'}
+          {getTranslation(language)('feed.couldNotLoadPhotoTapToRetry')}
         </Text>
       </Pressable>
     );
   else
     content = (
       <ActivityIndicator
-        accessibilityLabel={language === 'es' ? `Cargando ${label}` : `Loading ${label}`}
+        accessibilityLabel={getTranslation(language)('feed.loading', { label })}
         color={p.brand}
       />
     );
@@ -106,12 +103,12 @@ function PhotoViewer({
         <View style={styles.viewerHeader}>
           <IconButton
             icon="x"
-            label={language === 'es' ? 'Cerrar foto' : 'Close photo'}
+            label={getTranslation(language)('feed.closePhoto')}
             onPress={onClose}
           />
         </View>
         <Image
-          accessibilityLabel={language === 'es' ? `${label} ampliada` : `Enlarged ${label}`}
+          accessibilityLabel={getTranslation(language)('feed.enlarged', { label })}
           source={{ uri }}
           resizeMode="contain"
           style={styles.fullPhoto}

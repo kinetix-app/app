@@ -1,8 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ProfileBack } from './ProfileBack';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -101,7 +102,7 @@ export function ObjectiveEditor({
     if (query.isPending)
       return (
         <ActivityIndicator
-          accessibilityLabel={selectCopy(es, 'Cargando objetivo', 'Loading objective')}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.loading_objective')}
           color={p.brand}
         />
       );
@@ -109,10 +110,10 @@ export function ObjectiveEditor({
       return (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {selectCopy(es, 'No se pudo cargar tu objetivo.', 'Could not load your objective.')}
+            {getTranslation(es ? 'es' : 'en')('accountsUi.could_not_load_your_objective')}
           </Text>
           <SetupButton
-            title={selectCopy(es, 'Reintentar', 'Retry')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.retry')}
             secondary
             onPress={() => {
               void query.refetch();
@@ -123,7 +124,7 @@ export function ObjectiveEditor({
     return (
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel={selectCopy(es, 'Objetivo', 'Objective')}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.objective')}
         style={{ gap: 12 }}
       >
         {objectiveOptions.map((option) => (
@@ -177,33 +178,29 @@ export function ObjectiveEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title={selectCopy(es, '¿Cuál es tu objetivo?', "What's your goal?")}
+          title={getTranslation(es ? 'es' : 'en')('accountsUi.what_s_your_goal')}
           leading={
             onCancel ? <ProfileBack onPress={onCancel} disabled={mutation.isPending} /> : undefined
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {selectCopy(
-            es,
-            'Elige tu objetivo. Puedes cambiarlo cuando quieras. El objetivo nutricional numérico es opcional y puedes fijarlo más adelante.',
-            'Choose your objective. You can change it anytime. A numerical nutrition target is optional and can be set later.',
+          {getTranslation(es ? 'es' : 'en')(
+            'accountsUi.choose_your_objective_you_can_change_it_anytime_a_numerical_',
           )}
         </Text>
         {renderObjectiveChoices()}
         {mutation.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {selectCopy(
-              es,
-              'No se pudo guardar tu objetivo. Conservamos tu selección. Inténtalo de nuevo.',
-              'Could not finish saving your objective. Your selection is kept. Try again.',
+            {getTranslation(es ? 'es' : 'en')(
+              'accountsUi.could_not_finish_saving_your_objective_your_selection_is_kep',
             )}
           </Text>
         ) : null}
         <SetupButton
           title={
             mutation.isPending
-              ? selectCopy(es, 'Guardando…', 'Saving…')
-              : selectCopy(es, 'Guardar objetivo', 'Save objective')
+              ? getTranslation(es ? 'es' : 'en')('accountsUi.saving')
+              : getTranslation(es ? 'es' : 'en')('accountsUi.save_objective')
           }
           disabled={!choice || query.isPending || query.isError || mutation.isPending}
           onPress={() => {
@@ -212,7 +209,7 @@ export function ObjectiveEditor({
         />
         {onCancel ? (
           <SetupButton
-            title={selectCopy(es, 'Cancelar', 'Cancel')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
             secondary
             disabled={mutation.isPending}
             onPress={onCancel}

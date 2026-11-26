@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
@@ -46,7 +47,7 @@ export function PostCard({
         {onOptions && (post.is_mine || post.workout) ? (
           <IconButton
             icon={<Feather name="more-horizontal" size={24} color={p.ink} />}
-            label={language === 'es' ? 'Opciones de la publicación' : 'Post options'}
+            label={getTranslation(language)('feed.postOptions')}
             bare
             onPress={() => onOptions(post)}
           />
@@ -92,7 +93,7 @@ function PostBody({
       {post.workout ? (
         <PostWorkoutSummary
           workout={post.workout}
-          label={language === 'es' ? `Ver el entrenamiento de ${name}` : `See ${name}’s workout`}
+          label={getTranslation(language)('feed.seeSWorkout', { name })}
           onPress={onWorkout ? () => onWorkout(post) : undefined}
         />
       ) : null}
@@ -108,16 +109,14 @@ function PostLikeError({
   if (!visible) return null;
   return (
     <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-      {language === 'es'
-        ? 'No se pudo actualizar tu me gusta. Inténtalo de nuevo.'
-        : 'Could not update your like. Try again.'}
+      {getTranslation(language)('feed.couldNotUpdateYourLikeTryAgain')}
     </Text>
   );
 }
 
 function likeActionLabel(liked: boolean, language: 'en' | 'es') {
-  if (liked) return language === 'es' ? 'Ya no me gusta' : 'Unlike';
-  return language === 'es' ? 'Me gusta' : 'Like';
+  if (liked) return getTranslation(language)('feed.unlike');
+  return getTranslation(language)('feed.like');
 }
 
 function PostReactions({
@@ -136,22 +135,17 @@ function PostReactions({
   const language = useLanguage();
   const p = usePalette();
   const likeAction = likeActionLabel(post.liked_by_me, language);
-  const commentsLabel =
-    language === 'es' ? `Comentarios de la publicación de ${name}` : `Comments on post by ${name}`;
+  const commentsLabel = getTranslation(language)('feed.commentsOnPostBy', { name });
   const commentCountLabel = countLabel(
     post.comment_count,
-    language === 'es' ? 'comentario' : 'comment',
-    language === 'es' ? 'comentarios' : 'comments',
+    getTranslation(language)('feed.comment'),
+    getTranslation(language)('feed.comments_fa510e'),
   );
   return (
     <View style={styles.actions}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={
-          language === 'es'
-            ? `${likeAction} la publicación de ${name}`
-            : `${likeAction} post by ${name}`
-        }
+        accessibilityLabel={getTranslation(language)('feed.postBy', { likeAction, name })}
         accessibilityState={{
           selected: post.liked_by_me,
           disabled: likePending,
@@ -169,8 +163,8 @@ function PostReactions({
         <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
           {countLabel(
             post.like_count,
-            language === 'es' ? 'me gusta' : 'like',
-            language === 'es' ? 'me gusta' : 'likes',
+            getTranslation(language)('feed.like_0ae3df'),
+            getTranslation(language)('feed.likes'),
           )}
         </Text>
       </Pressable>
@@ -184,8 +178,8 @@ function PostReactions({
         <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
           {countLabel(
             post.comment_count,
-            language === 'es' ? 'comentario' : 'comment',
-            language === 'es' ? 'comentarios' : 'comments',
+            getTranslation(language)('feed.comment'),
+            getTranslation(language)('feed.comments_fa510e'),
           )}
         </Text>
       </Pressable>
@@ -202,8 +196,7 @@ function PostByline({
   const language = useLanguage();
   const p = usePalette();
   let visibilityLabel = '';
-  if (post.visibility === 'PRIVATE')
-    visibilityLabel = language === 'es' ? ' · Solo tú' : ' · Only you';
+  if (post.visibility === 'PRIVATE') visibilityLabel = getTranslation(language)('feed.onlyYou');
   const byline = (
     <>
       <PersonAvatar accountId={accountId} person={post.author} />
@@ -222,9 +215,7 @@ function PostByline({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={
-        language === 'es' ? `Abrir el perfil de ${name}` : `Open ${name}’s profile`
-      }
+      accessibilityLabel={getTranslation(language)('feed.openSProfile', { name })}
       onPress={() => onAuthor(post)}
       style={({ pressed }) => [styles.author, { opacity: pressed ? 0.65 : 1 }]}
     >

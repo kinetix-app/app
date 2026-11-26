@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
@@ -33,7 +34,7 @@ export function LeagueContributionRow({
   const name = member.display_name ?? t('Member', 'Miembro');
   const calculation = own ? item.calculation : undefined;
   let memberName = name;
-  if (own) memberName = language === 'es' ? `${name} (tú)` : `${name} (you)`;
+  if (own) memberName = getTranslation(language)('leagues.you', { name });
   const title = showMember ? memberName : `${t('Workout', 'Entrenamiento')} #${item.session_id}`;
   const completionDate = new Date(item.ended_at).toLocaleString(
     language === 'es' ? 'es' : undefined,
@@ -90,11 +91,7 @@ export function LeagueContributionRow({
       {onOpen ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={
-            language === 'es'
-              ? `Ver historial de puntos de ${name}`
-              : `View score history for ${name}`
-          }
+          accessibilityLabel={getTranslation(language)('leagues.viewScoreHistoryFor', { name })}
           onPress={onOpen}
           style={({ pressed }) => [
             leagueStyles.row,

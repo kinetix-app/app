@@ -1,7 +1,7 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { Language } from '@/i18n/Language';
-import { selectCopy } from '@/i18n/Language';
 
 export async function pickRoutinePicture(
   language: Language = 'en',
@@ -11,10 +11,8 @@ export async function pickRoutinePicture(
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted)
         return {
-          error: selectCopy(
-            language === 'es',
-            'Permite el acceso a las fotos en Ajustes para elegir una portada.',
-            'Allow photo access in Settings to choose a cover.',
+          error: getTranslation(language === 'es' ? 'es' : 'en')(
+            'training.allowPhotoAccessInSettingsToChoose_e96f35',
           ),
         };
     }
@@ -28,27 +26,21 @@ export async function pickRoutinePicture(
     if (!asset) return null;
     if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024)
       return {
-        error: selectCopy(
-          language === 'es',
-          'Elige una portada de menos de 5 MB.',
-          'Choose a cover smaller than 5 MB.',
+        error: getTranslation(language === 'es' ? 'es' : 'en')(
+          'training.chooseACoverSmallerThan5Mb_e3f9e7',
         ),
       };
     if (asset.mimeType && !['image/jpeg', 'image/png', 'image/webp'].includes(asset.mimeType))
       return {
-        error: selectCopy(
-          language === 'es',
-          'Elige una portada en JPEG, PNG o WebP.',
-          'Choose a JPEG, PNG or WebP cover.',
+        error: getTranslation(language === 'es' ? 'es' : 'en')(
+          'training.chooseAJpegPngOrWebpCover_6b72e2',
         ),
       };
     return { asset };
   } catch {
     return {
-      error: selectCopy(
-        language === 'es',
-        'No se pudieron abrir tus fotos. Inténtalo de nuevo.',
-        'Could not open your photos. Try again.',
+      error: getTranslation(language === 'es' ? 'es' : 'en')(
+        'training.couldNotOpenYourPhotosTryAgain_1be001',
       ),
     };
   }

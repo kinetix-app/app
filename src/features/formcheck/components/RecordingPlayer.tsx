@@ -1,8 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useState } from 'react';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Text, View } from 'react-native';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button } from '@/features/training/components/ui';
 import { containRect } from '../poseTrack';
@@ -26,10 +27,8 @@ function RecordingFooter({
     <>
       {showJoints && hasFaults ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {selectCopy(
-            es,
-            'Las articulaciones se vuelven rojas durante una repetición con un fallo en esa zona.',
-            'Joints turn red during a rep with a fault there.',
+          {getTranslation(es ? 'es' : 'en')(
+            'formcheck.RecordingPlayer.jointsTurnRedDuringARepWithAFaultThere',
           )}
         </Text>
       ) : null}
@@ -44,8 +43,8 @@ function RecordingFooter({
 }
 
 function jointToggleTitle(showJoints: boolean, es: boolean) {
-  if (showJoints) return selectCopy(es, 'Ocultar articulaciones', 'Hide joints');
-  return selectCopy(es, 'Mostrar articulaciones', 'Show joints');
+  if (showJoints) return getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.hideJoints');
+  return getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.showJoints');
 }
 
 function unavailableMessage(es: boolean) {
@@ -99,8 +98,8 @@ export function RecordingPlayer({
   return (
     <FormCheckScreen
       overline={title.toUpperCase()}
-      title={selectCopy(es, 'Tu grabación', 'Your recording')}
-      backLabel={selectCopy(es, 'Volver al análisis', 'Back to analysis')}
+      title={getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.yourRecording')}
+      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.backToAnalysis')}
       onBack={onBack}
       scroll={false}
       footer={
@@ -147,7 +146,9 @@ export function RecordingPlayer({
               style={{ width: '100%', height: '100%' }}
               contentFit="contain"
               nativeControls
-              accessibilityLabel={selectCopy(es, 'Serie grabada', 'Recorded set')}
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'formcheck.RecordingPlayer.recordedSet',
+              )}
             />
             {pose && frame && showJoints ? (
               <PoseOverlay track={pose} time={currentTime} box={frame} />

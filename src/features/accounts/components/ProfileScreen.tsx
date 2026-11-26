@@ -1,8 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { countLabel } from '@/features/feed/format';
 import { textStyles, spacing, usePalette } from '@/theme/tokens';
@@ -59,14 +60,10 @@ export function ProfileScreen({
   const friendDetail = friendRequests
     ? countLabel(
         friendRequests,
-        selectCopy(es, 'nueva solicitud', 'new request'),
-        selectCopy(es, 'nuevas solicitudes', 'new requests'),
+        getTranslation(es ? 'es' : 'en')('accountsUi.new_request'),
+        getTranslation(es ? 'es' : 'en')('accountsUi.new_requests'),
       )
-    : selectCopy(
-        es,
-        'Amigos, solicitudes y búsqueda de personas',
-        'Your friends, requests and people search',
-      );
+    : getTranslation(es ? 'es' : 'en')('accountsUi.your_friends_requests_and_people_search');
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -74,7 +71,7 @@ export function ProfileScreen({
     >
       <ScrollView contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}>
         <ScreenHeader
-          title={selectCopy(es, 'Perfil', 'Profile')}
+          title={getTranslation(es ? 'es' : 'en')('accountsUi.profile')}
           leading={<ProfileBack onPress={onBack} label={backLabel} />}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-4'] }}>
@@ -91,41 +88,41 @@ export function ProfileScreen({
             ) : null}
           </View>
         </View>
-        <ProfileGroup title={selectCopy(es, 'Cuenta', 'Account')}>
+        <ProfileGroup title={getTranslation(es ? 'es' : 'en')('accountsUi.account')}>
           <ProfileRow
-            title={selectCopy(es, 'Editar perfil', 'Edit profile')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.edit_profile')}
             detail={
               imperial
-                ? selectCopy(es, 'Imperial · lb, pies y pulgadas', 'Imperial · lb, ft and in')
-                : selectCopy(es, 'Métrico · kg y cm', 'Metric · kg and cm')
+                ? getTranslation(es ? 'es' : 'en')('accountsUi.imperial_lb_ft_and_in')
+                : getTranslation(es ? 'es' : 'en')('accountsUi.metric_kg_and_cm')
             }
             icon="user"
             onPress={() => onOpen('profile')}
           />
         </ProfileGroup>
-        <ProfileGroup title={selectCopy(es, 'Tu plan', 'Your plan')}>
+        <ProfileGroup title={getTranslation(es ? 'es' : 'en')('accountsUi.your_plan')}>
           <ProfileRow
-            title={selectCopy(es, 'Actividad semanal', 'Weekly activity')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.weekly_activity')}
             detail={
               activityLabel ??
-              selectCopy(es, 'Elige tu nivel de actividad', 'Choose your activity level')
+              getTranslation(es ? 'es' : 'en')('accountsUi.choose_your_activity_level')
             }
             icon="activity"
             onPress={() => onOpen('activity')}
           />
           <ProfileRow
-            title={selectCopy(es, 'Cambiar objetivo', 'Change objective')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.change_objective')}
             detail={
               objective.isPending
-                ? selectCopy(es, 'Cargando…', 'Loading…')
-                : (goal ?? selectCopy(es, 'Objetivo no disponible', 'Objective unavailable'))
+                ? getTranslation(es ? 'es' : 'en')('accountsUi.loading')
+                : (goal ?? getTranslation(es ? 'es' : 'en')('accountsUi.objective_unavailable'))
             }
             icon="target"
             onPress={() => onOpen('objective')}
           />
           {objective.isError ? (
             <ProfileRow
-              title={selectCopy(es, 'Reintentar objetivo', 'Retry objective')}
+              title={getTranslation(es ? 'es' : 'en')('accountsUi.retry_objective')}
               icon="refresh-cw"
               onPress={() => {
                 void objective.refetch();
@@ -133,27 +130,27 @@ export function ProfileScreen({
             />
           ) : null}
           <ProfileRow
-            title={selectCopy(es, 'Editar objetivo nutricional', 'Edit nutrition goal')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.edit_nutrition_goal')}
             icon="pie-chart"
             onPress={() => onOpen('nutrition')}
           />
         </ProfileGroup>
         <ProfileGroup title={'Social'}>
           <ProfileRow
-            title={selectCopy(es, 'Amigos', 'Friends')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.friends')}
             detail={friendDetail}
             icon="users"
             onPress={() => onOpen('friends')}
           />
         </ProfileGroup>
-        <ProfileGroup title={selectCopy(es, 'Actividad', 'Activity')}>
+        <ProfileGroup title={getTranslation(es ? 'es' : 'en')('accountsUi.activity')}>
           <ProfileRow
-            title={selectCopy(es, 'Progreso', 'Progress')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.progress')}
             icon="bar-chart-2"
             onPress={() => onOpen('progress')}
           />
           <ProfileRow
-            title={selectCopy(es, 'Historial de entrenamientos', 'Training history')}
+            title={getTranslation(es ? 'es' : 'en')('accountsUi.training_history')}
             icon="clock"
             onPress={() => onOpen('history')}
           />
@@ -161,8 +158,8 @@ export function ProfileScreen({
         <ProfileRow
           title={
             signingOut
-              ? selectCopy(es, 'Cerrando sesión…', 'Signing out…')
-              : selectCopy(es, 'Cerrar sesión', 'Sign out')
+              ? getTranslation(es ? 'es' : 'en')('accountsUi.signing_out')
+              : getTranslation(es ? 'es' : 'en')('accountsUi.sign_out')
           }
           icon="log-out"
           onPress={onSignOut}
@@ -191,7 +188,7 @@ function profileSummary(account: Account, es: boolean) {
   const details = [
     account.profile.age === null
       ? null
-      : `${account.profile.age} ${selectCopy(es, 'años', 'years')}`,
+      : `${account.profile.age} ${getTranslation(es ? 'es' : 'en')('accountsUi.years')}`,
     height,
     weight,
   ]

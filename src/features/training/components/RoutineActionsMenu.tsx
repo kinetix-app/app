@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import type { ViewInstance } from 'react-native';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -44,16 +45,8 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
   const [confirming, setConfirming] = useState(false);
   const error =
     deleteError instanceof ApiError && deleteError.status === 409
-      ? selectCopy(
-          es,
-          'Esta rutina tiene un entrenamiento en curso. Termínalo o descártalo antes de eliminarla.',
-          'This routine has an ongoing workout. Finish or discard it before deleting.',
-        )
-      : selectCopy(
-          es,
-          'No se pudo eliminar la rutina. Inténtalo de nuevo.',
-          'Could not delete the routine. Try again.',
-        );
+      ? getTranslation(es ? 'es' : 'en')('training.thisRoutineHasAnOngoingWorkoutFinish_9a6722')
+      : getTranslation(es ? 'es' : 'en')('training.couldNotDeleteTheRoutineTryAgain_a57a1b');
   function close() {
     if (!busy) onClose();
   }
@@ -77,8 +70,10 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
           accessibilityViewIsModal
           accessibilityLabel={
             confirming
-              ? selectCopy(es, `Eliminar ${name}`, `Delete ${name}`)
-              : selectCopy(es, `Acciones para ${name}`, `Actions for ${name}`)
+              ? getTranslation(es ? 'es' : 'en')('dynamicMessages.delete_602940', { value1: name })
+              : getTranslation(es ? 'es' : 'en')('dynamicMessages.actionsFor_f7a9e1', {
+                  value1: name,
+                })
           }
           style={{
             width: '100%',
@@ -112,14 +107,14 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
           >
             <View style={{ gap: spacing['space-1'] }}>
               <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-                {confirming ? selectCopy(es, '¿Eliminar rutina?', 'Delete routine?') : name}
+                {confirming
+                  ? getTranslation(es ? 'es' : 'en')('training.deleteRoutine_36c655')
+                  : name}
               </Text>
               {confirming ? (
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  {selectCopy(
-                    es,
-                    'Esta rutina se eliminará de tu biblioteca. Se conservarán los entrenamientos completados y el historial.',
-                    'This routine will be removed from your library. Completed workouts and training history will be kept.',
+                  {getTranslation(es ? 'es' : 'en')(
+                    'training.thisRoutineWillBeRemovedFromYour_58f5f1',
                   )}
                 </Text>
               ) : null}
@@ -145,8 +140,8 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
               accessibilityRole="button"
               accessibilityLabel={
                 confirming
-                  ? selectCopy(es, 'Conservar rutina', 'Keep routine')
-                  : selectCopy(es, 'Cerrar acciones de la rutina', 'Close routine actions')
+                  ? getTranslation(es ? 'es' : 'en')('training.keepRoutine_c9f850')
+                  : getTranslation(es ? 'es' : 'en')('training.closeRoutineActions_0aa88e')
               }
               accessibilityState={{ disabled: busy }}
               disabled={busy}
@@ -160,8 +155,8 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
             >
               <Text style={[textStyles.label, { color: p.ink }]}>
                 {confirming
-                  ? selectCopy(es, 'Conservar rutina', 'Keep routine')
-                  : selectCopy(es, 'Cancelar', 'Cancel')}
+                  ? getTranslation(es ? 'es' : 'en')('training.keepRoutine_c9f850')
+                  : getTranslation(es ? 'es' : 'en')('training.cancel_a25d0b')}
               </Text>
             </Pressable>
           </ScrollView>
@@ -197,10 +192,9 @@ function DeleteRoutineConfirmation({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={selectCopy(
-          es,
-          `Confirmar eliminación de ${name}`,
-          `Confirm delete ${name}`,
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+          'dynamicMessages.confirmDelete_9870e6',
+          { value1: name },
         )}
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
@@ -226,8 +220,8 @@ function DeleteRoutineConfirmation({
         )}
         <Text style={[textStyles.label, { color: p.danger }]}>
           {deleting
-            ? selectCopy(es, 'Eliminando…', 'Deleting…')
-            : selectCopy(es, 'Eliminar rutina', 'Delete routine')}
+            ? getTranslation(es ? 'es' : 'en')('training.deleting_467f44')
+            : getTranslation(es ? 'es' : 'en')('training.deleteRoutine_ce5d0f')}
         </Text>
       </Pressable>
     </>
@@ -270,7 +264,9 @@ function RoutineActionOptions({
         <Pressable
           ref={canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={selectCopy(es, `Entrenar ${name}`, `Train ${name}`)}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.train_8edf48', {
+            value1: name,
+          })}
           accessibilityState={{ disabled: !canStart || busy }}
           disabled={!canStart || busy}
           onPress={onStart}
@@ -286,7 +282,7 @@ function RoutineActionOptions({
         >
           <MaterialIcons name="play-arrow" size={26} color={p['brand-ink']} />
           <Text style={[textStyles.body, { color: p['brand-ink'] }]}>
-            {selectCopy(es, 'Entrenar', 'Train')}
+            {getTranslation(es ? 'es' : 'en')('training.train_73ad48')}
           </Text>
         </Pressable>
         <View
@@ -299,7 +295,9 @@ function RoutineActionOptions({
         <Pressable
           ref={!canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={selectCopy(es, `Editar ${name}`, `Edit ${name}`)}
+          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.edit_a899b6', {
+            value1: name,
+          })}
           accessibilityState={{ disabled: busy }}
           disabled={busy}
           onPress={onEdit}
@@ -314,7 +312,7 @@ function RoutineActionOptions({
         >
           <Feather name="edit-2" size={22} color={p.ink} />
           <Text style={[textStyles.body, { color: p.ink }]}>
-            {selectCopy(es, 'Editar', 'Edit')}
+            {getTranslation(es ? 'es' : 'en')('training.edit_dac3da')}
           </Text>
         </Pressable>
       </View>
@@ -333,7 +331,9 @@ function RoutineActionOptions({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={selectCopy(es, `Eliminar ${name}`, `Delete ${name}`)}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.delete_602940', {
+          value1: name,
+        })}
         accessibilityState={{ disabled: !canDelete || busy }}
         disabled={!canDelete || busy}
         onPress={onConfirmDelete}
@@ -350,16 +350,12 @@ function RoutineActionOptions({
       >
         <Feather name="trash-2" size={22} color={p.danger} />
         <Text style={[textStyles.body, { color: p.danger }]}>
-          {selectCopy(es, 'Eliminar', 'Delete')}
+          {getTranslation(es ? 'es' : 'en')('training.delete_1eddfa')}
         </Text>
       </Pressable>
       {!canDelete ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {selectCopy(
-            es,
-            'Termina o descarta el entrenamiento en curso antes de eliminar esta rutina.',
-            'Finish or discard this routine’s ongoing workout before deleting.',
-          )}
+          {getTranslation(es ? 'es' : 'en')('training.finishOrDiscardThisRoutineSOngoing_f99ca0')}
         </Text>
       ) : null}
     </>
@@ -416,12 +412,12 @@ function RoutineCoverActions({
           <Feather name="image" size={22} color={p.ink} />
           <Text style={[textStyles.body, { color: p.ink }]}>
             {hasCover
-              ? selectCopy(es, 'Cambiar portada', 'Change cover')
-              : selectCopy(es, 'Añadir portada', 'Add cover')}
+              ? getTranslation(es ? 'es' : 'en')('training.changeCover_defe3e')
+              : getTranslation(es ? 'es' : 'en')('training.addCover_4bffa4')}
           </Text>
           {coverPending ? (
             <ActivityIndicator
-              accessibilityLabel={selectCopy(es, 'Actualizando portada', 'Updating cover')}
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.updatingCover_dd98d7')}
               color={p.brand}
             />
           ) : null}
@@ -429,10 +425,9 @@ function RoutineCoverActions({
         {hasCover ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={selectCopy(
-              es,
-              `Quitar portada de ${name}`,
-              `Remove cover for ${name}`,
+            accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+              'dynamicMessages.removeCoverFor_e79cf7',
+              { value1: name },
             )}
             accessibilityState={{ disabled: busy }}
             disabled={busy}
@@ -448,7 +443,7 @@ function RoutineCoverActions({
           >
             <Feather name="trash-2" size={22} color={p.danger} />
             <Text style={[textStyles.body, { color: p.danger }]}>
-              {selectCopy(es, 'Quitar portada', 'Remove cover')}
+              {getTranslation(es ? 'es' : 'en')('training.removeCover_bba977')}
             </Text>
           </Pressable>
         ) : null}
@@ -461,17 +456,15 @@ function RoutineCoverActions({
           {onRetryCover ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={selectCopy(
-                es,
-                'Reintentar subida de portada',
-                'Retry cover upload',
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'training.retryCoverUpload_8775b7',
               )}
               disabled={busy}
               onPress={onRetryCover}
               style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
             >
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                {selectCopy(es, 'Reintentar', 'Retry')}
+                {getTranslation(es ? 'es' : 'en')('training.retry_95b6f5')}
               </Text>
             </Pressable>
           ) : null}

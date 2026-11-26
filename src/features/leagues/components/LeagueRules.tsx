@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useState } from 'react';
@@ -82,10 +83,7 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
   const [tip, setTip] = useState<(typeof rules)[number] | null>(null);
   let timezoneSuffix = '';
   if (tip?.title === 'Weekly rounds' && timezone) {
-    timezoneSuffix =
-      language === 'es'
-        ? ` Zona horaria de la liga: ${timezone}.`
-        : ` League timezone: ${timezone}.`;
+    timezoneSuffix = getTranslation(language)('leagues.leagueTimezone', { timezone });
   }
   const dismiss = () => setTip(null);
   useEffect(() => {
@@ -97,7 +95,7 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
   return (
     <LeagueCard>
       <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-        {language === 'es' ? 'Reglas de la liga' : 'League rules'}
+        {getTranslation(language)('leagues.leagueRules')}
       </Text>
       <View>
         {rules.map((rule, index) => (
@@ -168,9 +166,7 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
                     {language === 'es' ? spanishRules[tip.title].title : tip.title}
                   </Text>
                   <LeagueIconButton
-                    label={
-                      language === 'es' ? 'Cerrar información de la regla' : 'Dismiss rule tip'
-                    }
+                    label={getTranslation(language)('leagues.dismissRuleTip')}
                     icon="close"
                     onPress={dismiss}
                   />

@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable } from 'react-native';
@@ -14,7 +15,7 @@ export function ProfileBack({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label ?? (es ? 'Volver al perfil' : 'Back to profile')}
+      accessibilityLabel={label ?? getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile')}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}

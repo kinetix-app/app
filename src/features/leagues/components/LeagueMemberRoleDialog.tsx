@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useRef, useState } from 'react';
@@ -7,13 +8,8 @@ import { radii, shadows, spacing, textStyles, usePalette } from '@/theme/tokens'
 import { LeagueAction, leagueStyles } from './LeagueUI';
 
 function roleDescription(name: string, promoting: boolean, language: 'en' | 'es') {
-  if (promoting)
-    return language === 'es'
-      ? `${name} podrá editar la liga, invitar a personas y gestionar los roles.`
-      : `${name} will be able to edit the league, invite people and manage member roles.`;
-  return language === 'es'
-    ? `${name} conservará su membresía y puntuaciones. Se eliminarán los controles de administrador.`
-    : `${name} will keep their membership and scores. Admin controls will be removed.`;
+  if (promoting) return getTranslation(language)('leagues.willBeAbleToEditTheLeague', { name });
+  return getTranslation(language)('leagues.willKeepTheirMembershipAndScoresAdmin', { name });
 }
 
 export function LeagueMemberRoleDialog({

@@ -1,4 +1,5 @@
-import { selectCopy, type Language } from '@/i18n/Language';
+import { getTranslation } from '@/i18n/catalog';
+import { type Language } from '@/i18n/Language';
 import { bundledSpecs } from './engine';
 import type { ExerciseSpec } from './engine';
 import type { FormCheckProfile } from './profiles';
@@ -55,8 +56,8 @@ function repLabel(
 }
 
 function repStatusLabel(ok: boolean, language: Language) {
-  if (ok) return selectCopy(language === 'es', 'Bien', 'Good');
-  return selectCopy(language === 'es', 'Revisar', 'Check');
+  if (ok) return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.good');
+  return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.check');
 }
 
 function issueTitle(
@@ -107,14 +108,14 @@ function firstTip(
 
 function verdict(score: number | null, language: Language) {
   if (score !== null && score >= GREAT_SCORE)
-    return selectCopy(language === 'es', 'Gran serie', 'Great set');
-  return selectCopy(language === 'es', 'Buena serie', 'Solid set');
+    return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.greatSet');
+  return getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.solidSet');
 }
 
 /** "4", "4 and 5", "1, 3 and 4". */
 export function listReps(reps: number[], language: Language = 'en'): string {
   if (reps.length <= 1) return reps.join('');
-  return `${reps.slice(0, -1).join(', ')} ${selectCopy(language === 'es', 'y', 'and')} ${reps.at(-1)}`;
+  return `${reps.slice(0, -1).join(', ')} ${getTranslation(language === 'es' ? 'es' : 'en')('formcheck.view.and')} ${reps.at(-1)}`;
 }
 
 /** Turns stored ids into display text. Unknown ids degrade to generic text instead of failing. */

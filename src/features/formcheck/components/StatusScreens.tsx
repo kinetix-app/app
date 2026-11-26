@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useLanguage } from '@/i18n/Language';
@@ -11,22 +12,30 @@ export function AnalyzingScreen({ onCancel }: Readonly<{ onCancel: () => void }>
   return (
     <FormCheckScreen
       backIcon="x"
-      backLabel={es ? 'Cancelar análisis' : 'Cancel analysis'}
+      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.cancelAnalysis')}
       onBack={onCancel}
       scroll={false}
-      footer={<Button title={es ? 'Cancelar' : 'Cancel'} onPress={onCancel} secondary />}
+      footer={
+        <Button
+          title={getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.cancel')}
+          onPress={onCancel}
+          secondary
+        />
+      }
     >
       <View
         accessibilityRole="progressbar"
-        accessibilityLabel={es ? 'Analizando tu serie' : 'Analyzing your set'}
+        accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+          'formcheck.StatusScreens.analyzingYourSet',
+        )}
         style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing['space-4'] }}
       >
         <ActivityIndicator size="large" color={p.brand} />
         <Text style={[textStyles['title-md'], { color: p.ink }]}>
-          {es ? 'Analizando tu serie…' : 'Analyzing your set…'}
+          {getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.analyzingYourSet2')}
         </Text>
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {es ? 'Esto permanece en tu teléfono.' : 'This stays on your phone.'}
+          {getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.thisStaysOnYourPhone')}
         </Text>
       </View>
     </FormCheckScreen>
@@ -48,18 +57,21 @@ export function AnalysisFailedScreen({
   return (
     <FormCheckScreen
       backIcon="x"
-      backLabel={es ? 'Volver al entrenamiento' : 'Back to workout'}
+      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.backToWorkout')}
       onBack={onClose}
       footer={
         <>
-          <Button title={es ? 'Reintentar' : 'Try again'} onPress={onRetry} />
           <Button
-            title={es ? 'Grabar de nuevo' : 'Record again'}
+            title={getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.tryAgain')}
+            onPress={onRetry}
+          />
+          <Button
+            title={getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.recordAgain')}
             onPress={onRecordAgain}
             secondary
           />
           <Button
-            title={es ? 'Registrar serie manualmente' : 'Log set by hand'}
+            title={getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.logSetByHand')}
             onPress={onClose}
             secondary
           />
@@ -68,12 +80,12 @@ export function AnalysisFailedScreen({
     >
       <View style={ui.gap}>
         <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-          {es ? 'Algo ha salido mal' : 'Something went wrong'}
+          {getTranslation(es ? 'es' : 'en')('formcheck.StatusScreens.somethingWentWrong')}
         </Text>
         <Text accessibilityRole="alert" style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {es
-            ? 'No se pudo analizar esta grabación. El vídeo sigue en tu teléfono, así que puedes intentarlo de nuevo.'
-            : 'We could not analyze this recording. Your video is still on your phone, so you can try again.'}
+          {getTranslation(es ? 'es' : 'en')(
+            'formcheck.StatusScreens.weCouldNotAnalyzeThisRecordingYourVideoIsStillOnYourPhoneSoYouCan',
+          )}
         </Text>
       </View>
     </FormCheckScreen>

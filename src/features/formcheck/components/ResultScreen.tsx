@@ -1,7 +1,8 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { AnalysisView } from '../view';
@@ -27,7 +28,7 @@ function RepResults({
   return (
     <View style={ui.gap}>
       <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-        {selectCopy(es, 'REPETICIÓN A REPETICIÓN', 'REP BY REP')}
+        {getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.rEPBYREP')}
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
         {view.reps.map((rep) => (
@@ -68,10 +69,8 @@ export function DemoNotice() {
     >
       <Feather name="info" size={18} color={p.info} style={{ marginTop: 2 }} />
       <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-        {selectCopy(
-          es,
-          'Análisis de demostración: este resultado es provisional y aún no evalúa tu técnica.',
-          'Demo analysis: this result is a placeholder, not a real check of your form yet.',
+        {getTranslation(es ? 'es' : 'en')(
+          'formcheck.ResultScreen.demoAnalysisThisResultIsAPlaceholderNotARealCheckOfYourFormYet',
         )}
       </Text>
     </View>
@@ -117,24 +116,27 @@ export function ResultScreen({
   const es = useLanguage() === 'es';
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${selectCopy(es, 'SERIE', 'SET')} ${setNumber}`}
-      title={selectCopy(es, 'Serie analizada', 'Set analyzed')}
+      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.sET')} ${setNumber}`}
+      title={getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.setAnalyzed')}
       backIcon="x"
-      backLabel={selectCopy(es, 'Volver al entrenamiento', 'Back to workout')}
+      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.backToWorkout')}
       onBack={onDone}
       footer={
         <>
-          <Button title={selectCopy(es, 'Listo', 'Done')} onPress={onDone} />
+          <Button
+            title={getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.done')}
+            onPress={onDone}
+          />
           {hasVideo ? (
             <Button
-              title={selectCopy(es, 'Ver grabación', 'Watch recording')}
+              title={getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.watchRecording')}
               icon="play"
               onPress={onWatchVideo}
               secondary
             />
           ) : null}
           <Button
-            title={selectCopy(es, 'Grabar de nuevo', 'Record again')}
+            title={getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.recordAgain')}
             icon="video"
             onPress={onRecordAgain}
             secondary
@@ -153,7 +155,7 @@ export function ResultScreen({
       </View>
       {view.score !== null ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {selectCopy(es, 'Puntuación técnica', 'Technique score')}{' '}
+          {getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.techniqueScore')}{' '}
           <Text style={{ color: p.ink, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
             {Math.round(view.score)}
           </Text>{' '}
@@ -166,7 +168,7 @@ export function ResultScreen({
           {view.praise.length ? (
             <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
               <Text style={[textStyles.overline, { color: p.success }]}>
-                {selectCopy(es, 'QUÉ HA IDO BIEN', 'WHAT WENT WELL')}
+                {getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.wHATWENTWELL')}
               </Text>
               <PraiseList items={view.praise} />
             </View>
@@ -174,7 +176,8 @@ export function ResultScreen({
           {view.issues.map((issue) => (
             <View key={issue.id} style={[ui.card, { backgroundColor: p['surface-200'] }]}>
               <Text style={[textStyles.overline, { color: p.warning }]}>
-                {selectCopy(es, 'PROBLEMA', 'ISSUE')} · {issue.label.toUpperCase()}
+                {getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.iSSUE')} ·{' '}
+                {issue.label.toUpperCase()}
               </Text>
               <Text style={[textStyles['title-md'], { color: p.ink }]}>{issue.title}</Text>
               {issue.explanation ? (
@@ -195,10 +198,8 @@ export function ResultScreen({
             <PraiseList items={view.praise} />
           ) : (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {selectCopy(
-                es,
-                'Todas las repeticiones se veían bien. Sigue así.',
-                'Every rep looked good. Keep it up.',
+              {getTranslation(es ? 'es' : 'en')(
+                'formcheck.ResultScreen.everyRepLookedGoodKeepItUp',
               )}
             </Text>
           )}
@@ -207,16 +208,14 @@ export function ResultScreen({
       {view.tip ? (
         <View style={[ui.card, { backgroundColor: p['brand-soft'], gap: spacing['space-1'] }]}>
           <Text style={[textStyles.overline, { color: p['brand-ink'] }]}>
-            {selectCopy(es, 'PRÓXIMA SERIE', 'NEXT SET')}
+            {getTranslation(es ? 'es' : 'en')('formcheck.ResultScreen.nEXTSET')}
           </Text>
           <Text style={[textStyles.body, { color: p['brand-ink'] }]}>{view.tip}</Text>
         </View>
       ) : null}
       <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
-        {selectCopy(
-          es,
-          '¿El recuento es incorrecto? Puedes editar las repeticiones de la serie.',
-          'Wrong count? You can edit the reps in the set.',
+        {getTranslation(es ? 'es' : 'en')(
+          'formcheck.ResultScreen.wrongCountYouCanEditTheRepsInTheSet',
         )}
       </Text>
     </FormCheckScreen>

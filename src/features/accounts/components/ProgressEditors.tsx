@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import { z } from 'zod/v4';
 import React, { useRef, useState } from 'react';
 import {
@@ -21,7 +22,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import { Button } from '@/components/Button';
 import { DatePickerCalendar, DatePickerField } from '@/components/DatePickerField';
 import { TextField } from '@/components/TextField';
@@ -166,7 +167,7 @@ function ProgressDialog({
             <View style={styles.actionRow}>
               <View style={styles.grow}>
                 <Button
-                  title={selectCopy(es, 'Cancelar', 'Cancel')}
+                  title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
                   shape="rounded"
                   secondary
                   disabled={busy}
@@ -176,7 +177,7 @@ function ProgressDialog({
               <View style={styles.saveAction}>
                 <Button
                   shape="rounded"
-                  title={busy ? selectCopy(es, 'Guardando…', 'Saving…') : saveLabel}
+                  title={busy ? getTranslation(es ? 'es' : 'en')('accountsUi.saving') : saveLabel}
                   accessibilityLabel={saveLabel}
                   disabled={busy}
                   onPress={onSave}
@@ -209,7 +210,7 @@ function ProgressDialog({
             </ScrollView>
             <View style={[styles.actions, { borderTopColor: p.line }]}>
               <Button
-                title={selectCopy(es, 'Cancelar', 'Cancel')}
+                title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
                 shape="rounded"
                 secondary
                 onPress={closeCalendar}
@@ -403,10 +404,10 @@ export function MeasurementEditor({
 
   return (
     <ProgressDialog
-      title={selectCopy(es, 'Registrar medidas', 'Log measurements')}
+      title={getTranslation(es ? 'es' : 'en')('accountsUi.log_measurements')}
       busy={mutation.isPending}
       error={formError}
-      saveLabel={selectCopy(es, 'Guardar medidas', 'Save measurements')}
+      saveLabel={getTranslation(es ? 'es' : 'en')('accountsUi.save_measurements')}
       onClose={dismiss}
       onSave={() => void handleSubmit(save)()}
     >
@@ -416,21 +417,17 @@ export function MeasurementEditor({
             name="date"
             control={control}
             openCalendar={openCalendar}
-            label={selectCopy(es, 'Fecha de medición', 'Measurement date')}
+            label={getTranslation(es ? 'es' : 'en')('accountsUi.measurement_date')}
             today={today}
             disabled={mutation.isPending}
           />
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {Object.keys(initial.previous).length
-              ? selectCopy(
-                  es,
-                  'Se han rellenado los valores anteriores. Borra los que quieras omitir.',
-                  'Previous values are filled in. Clear any you want to skip.',
+              ? getTranslation(es ? 'es' : 'en')(
+                  'accountsUi.previous_values_are_filled_in_clear_any_you_want_to_skip',
                 )
-              : selectCopy(
-                  es,
-                  'Añade las medidas que tomaste. Deja las demás vacías.',
-                  'Add the measurements you took. Leave the others blank.',
+              : getTranslation(es ? 'es' : 'en')(
+                  'accountsUi.add_the_measurements_you_took_leave_the_others_blank',
                 )}
           </Text>
           <View style={styles.fieldGroup}>
@@ -442,7 +439,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_ft"
                   control={control}
-                  label={selectCopy(es, 'Altura (pies)', 'Height (ft)')}
+                  label={getTranslation(es ? 'es' : 'en')('accountsUi.height_ft')}
                   compact
                   disabled={mutation.isPending}
                   mode="integer"
@@ -450,7 +447,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_in"
                   control={control}
-                  label={selectCopy(es, 'Altura (pulgadas)', 'Height (in)')}
+                  label={getTranslation(es ? 'es' : 'en')('accountsUi.height_in')}
                   compact
                   disabled={mutation.isPending}
                 />
@@ -461,7 +458,7 @@ export function MeasurementEditor({
           </View>
           <View style={[styles.section, { borderTopColor: p.line }]}>
             <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-              {selectCopy(es, 'Perímetro', 'Circumference')}
+              {getTranslation(es ? 'es' : 'en')('accountsUi.circumference')}
             </Text>
             <View style={styles.fieldGroup}>{circumferenceMetrics.map(field)}</View>
           </View>
@@ -535,15 +532,15 @@ export function PhysicalTargetEditor({
     <ProgressDialog
       title={
         target
-          ? selectCopy(es, 'Editar peso objetivo', 'Edit weight target')
-          : selectCopy(es, 'Fijar peso objetivo', 'Set weight target')
+          ? getTranslation(es ? 'es' : 'en')('accountsUi.edit_weight_target')
+          : getTranslation(es ? 'es' : 'en')('accountsUi.set_weight_target')
       }
       busy={mutation.isPending}
       error={formError}
       saveLabel={
         staleObjective
-          ? selectCopy(es, 'Listo', 'Done')
-          : selectCopy(es, 'Guardar objetivo', 'Save target')
+          ? getTranslation(es ? 'es' : 'en')('accountsUi.done')
+          : getTranslation(es ? 'es' : 'en')('accountsUi.save_target')
       }
       onSave={staleObjective ? dismiss : () => void handleSubmit(save)()}
       onClose={dismiss}
@@ -553,14 +550,14 @@ export function PhysicalTargetEditor({
           <ProgressField
             name="weight_kg"
             control={control}
-            label={`${selectCopy(es, 'Peso objetivo', 'Target weight')} (${measurementUnit('weight_kg', system)})`}
+            label={`${getTranslation(es ? 'es' : 'en')('accountsUi.target_weight')} (${measurementUnit('weight_kg', system)})`}
             disabled={mutation.isPending || staleObjective}
           />
           <ProgressDate
             name="target_date"
             control={control}
             openCalendar={openCalendar}
-            label={selectCopy(es, 'Fecha objetivo', 'Target date')}
+            label={getTranslation(es ? 'es' : 'en')('accountsUi.target_date')}
             today={todayForProfile(timeZone)}
             disabled={mutation.isPending || staleObjective}
             optional

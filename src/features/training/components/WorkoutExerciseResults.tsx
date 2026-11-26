@@ -1,5 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
-import { selectCopy, useLanguage } from '@/i18n/Language';
+import { useLanguage } from '@/i18n/Language';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -52,10 +53,9 @@ export function WorkoutExerciseResults({
           {image ? (
             <Image
               source={{ uri: image }}
-              accessibilityLabel={selectCopy(
-                es,
-                `Imagen de ${exercise.name}`,
-                `Image of ${exercise.name}`,
+              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                'dynamicMessages.imageOf_9bfc5d',
+                { value1: exercise.name },
               )}
               resizeMode="contain"
               style={styles.image}
@@ -70,7 +70,7 @@ export function WorkoutExerciseResults({
           {cardio.length > 0 ? <SetTable sets={cardio} cardio /> : null}
           {sets.length === 0 ? (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {selectCopy(es, 'No hay series registradas', 'No sets recorded')}
+              {getTranslation(es ? 'es' : 'en')('training.noSetsRecorded_bfc086')}
             </Text>
           ) : null}
         </View>
@@ -119,7 +119,7 @@ function SetTable({
     <View role="table" accessibilityLabel={tableLabel[language]}>
       <View role="row" style={[styles.row, styles.tableHeader]}>
         <Text role="columnheader" style={[columnTitle, styles.setNumber]}>
-          {selectCopy(es, 'Serie', 'Set')}
+          {getTranslation(es ? 'es' : 'en')('training.set_367fa4')}
         </Text>
         <Text role="columnheader" style={[columnTitle, styles.measurement]}>
           {measurementLabel[language]}
