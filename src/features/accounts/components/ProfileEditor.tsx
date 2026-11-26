@@ -1,6 +1,6 @@
-import { useLanguage, useTranslation, type Language } from '@/i18n/Language';
+import { useLanguage, useLanguagePreview, useTranslation, type Language } from '@/i18n/Language';
 import { getTranslation } from '@/i18n/catalog';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Controller,
   useForm,
@@ -186,6 +186,7 @@ function updateMeasurementsForUnit(
 function LanguageFields({ form, disabled }: Readonly<{ form: ProfileFormApi; disabled: boolean }>) {
   const p = usePalette();
   const t = useTranslation();
+  const setPreview = useLanguagePreview();
   return (
     <Controller
       control={form.control}
@@ -211,7 +212,10 @@ function LanguageFields({ form, disabled }: Readonly<{ form: ProfileFormApi; dis
                 accessibilityState={{ checked: value === code, disabled }}
                 aria-checked={value === code}
                 disabled={disabled}
-                onPress={() => onChange(code)}
+                onPress={() => {
+                  onChange(code);
+                  setPreview(code);
+                }}
                 style={{
                   minHeight: sizes['tap-min'],
                   padding: spacing['space-3'],
@@ -668,6 +672,8 @@ export function ProfileEditor({
 }: ProfileEditorProps) {
   const p = usePalette();
   const language = useLanguage();
+  const setPreview = useLanguagePreview();
+  useEffect(() => () => setPreview(null), [setPreview]);
   const es = language === 'es';
   const defaults = profileDefaults(account);
   const form = useForm<ProfileFormValues>({ defaultValues: defaults });

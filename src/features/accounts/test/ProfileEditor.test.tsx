@@ -1,5 +1,6 @@
 import React from 'react';
-import { LanguageProvider } from '@/i18n/Language';
+import { LanguageProvider, useTranslation } from '@/i18n/Language';
+import { Text } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ProfileEditor } from '../components/ProfileEditor';
@@ -376,3 +377,93 @@ test('failed language save retains the draft and retries explicitly', async () =
     expect.objectContaining({ language: 'es' }),
   );
 });
+
+test('previews language immediately, keeps it after a failed save, and restores it on cancel', async () => {
+  jest.mocked(updateProfile).mockRejectedValueOnce(new Error('offline'));
+  function Preview() {
+    const [editing, setEditing] = React.useState(true);
+    return (
+      <LanguageProvider language="en">
+        <PreviewLabel />
+        {editing ? (
+          <ProfileEditor
+            account={completeAccount}
+            onSaved={jest.fn()}
+            onCancel={() => setEditing(false)}
+            mode="edit"
+          />
+        ) : null}
+      </LanguageProvider>
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <Preview />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText('Main navigation')).toBeTruthy();
+  fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+  expect(screen.getByText('Navegación principal')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Guardar perfil' })).toBeTruthy();
+  expect(updateProfile).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar perfil' }));
+  await screen.findByText(
+    'No se pudo guardar tu perfil. Conservamos tus datos y la foto elegida. Inténtalo de nuevo.',
+  );
+  expect(screen.getByText('Navegación principal')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Volver al perfil' }));
+  expect(screen.getByText('Main navigation')).toBeTruthy();
+});
+
+function PreviewLabel() {
+  const t = useTranslation();
+  return <Text>{t('navigation.main')}</Text>;
+}
+
+test('keeps the previewed language after a successful save', async () => {
+  jest.mocked(updateProfile).mockReset();
+  const saved = {
+    ...completeAccount,
+    profile: { ...completeAccount.profile, language: 'es' as const },
+  };
+  jest.mocked(updateProfile).mockResolvedValueOnce(saved);
+  function Preview() {
+    const [account, setAccount] = React.useState(completeAccount);
+    const [editing, setEditing] = React.useState(true);
+    return (
+      <LanguageProvider language={account.profile.language ?? 'en'}>
+        <PreviewLabel />
+        {editing ? (
+          <ProfileEditor
+            account={account}
+            onSaved={(next) => {
+              setAccount(next);
+              setEditing(false);
+            }}
+            mode="edit"
+          />
+        ) : null}
+      </LanguageProvider>
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <Preview />
+    </QueryClientProvider>,
+  );
+  fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar perfil' }));
+  await waitFor(() => expect(updateProfile).toHaveBeenCalled(), { timeout: 10000 });
+  await waitFor(() => expect(screen.queryByRole('radio', { name: 'Español' })).toBeNull(), {
+    timeout: 10000,
+  });
+  expect(screen.getByText('Navegación principal')).toBeTruthy();
+  expect(updateProfile).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ language: 'es' }),
+  );
+}, 20000);
