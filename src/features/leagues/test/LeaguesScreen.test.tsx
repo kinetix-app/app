@@ -170,6 +170,15 @@ test('unconfigured weekly rankings show an unavailable state and singular member
   expect(screen.queryByText(/#.*this week/)).toBeNull();
 });
 
+test('Spanish league list localizes weekly rank, member count and navigation hint', async () => {
+  setup('member', 2, 1, 'es');
+  const card = await screen.findByRole('button', { name: 'Early birds' });
+
+  expect(screen.getByText('#2 esta semana')).toBeTruthy();
+  expect(screen.getByText('1 miembro')).toBeTruthy();
+  expect(card.props.accessibilityHint).toContain('Tu posición esta semana es 2, 1 miembro');
+});
+
 const button = (name: string | RegExp) => screen.getByRole('button', { name });
 const findButton = (name: string | RegExp) => screen.findByRole('button', { name });
 
