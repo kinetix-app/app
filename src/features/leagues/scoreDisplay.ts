@@ -1,5 +1,10 @@
-export function roundRange(start: string, end: string, timezone: string) {
-  const format = new Intl.DateTimeFormat(undefined, {
+export function roundRange(
+  start: string,
+  end: string,
+  timezone: string,
+  language: 'en' | 'es' = 'en',
+) {
+  const format = new Intl.DateTimeFormat(language === 'es' ? 'es' : undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

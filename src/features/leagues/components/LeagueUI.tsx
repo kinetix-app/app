@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -105,15 +106,22 @@ export function LeagueRankingRow({
   current?: boolean;
   onPress?: () => void;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
+  const memberName = row.display_name ?? (language === 'es' ? 'Miembro' : 'Member');
+  let accessibilityHint: string | undefined;
+  if (onPress)
+    accessibilityHint =
+      language === 'es' ? 'Abre el historial de puntos del miembro' : 'Opens member score history';
+  const selfLabel = rankingSelfLabel(current, language);
   const Row = onPress ? Pressable : View;
   return (
     <Row
       onPress={onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityHint={onPress ? 'Opens member score history' : undefined}
+      accessibilityHint={accessibilityHint}
       accessible
-      accessibilityLabel={`#${row.position} ${row.display_name ?? 'Member'}: ${row.score} points${current ? ', you' : ''}`}
+      accessibilityLabel={`#${row.position} ${memberName}: ${row.score} ${language === 'es' ? 'puntos' : 'points'}${selfLabel}`}
       style={[
         leagueStyles.ranking,
         { backgroundColor: current ? p['brand-soft'] : p['surface-300'] },
@@ -127,14 +135,16 @@ export function LeagueRankingRow({
       <LeagueAvatar
         accountId={accountId}
         path={row.picture_url}
-        name={row.display_name ?? 'Member'}
+        name={memberName}
         member
         size={36}
       />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[textStyles.label, { color: p.ink }]}>{row.display_name ?? 'Member'}</Text>
+        <Text style={[textStyles.label, { color: p.ink }]}>{memberName}</Text>
         {current ? (
-          <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>You</Text>
+          <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
+            {language === 'es' ? 'Tú' : 'You'}
+          </Text>
         ) : null}
       </View>
       <View style={{ flexShrink: 1, alignItems: 'flex-end' }}>
@@ -146,11 +156,18 @@ export function LeagueRankingRow({
         >
           {row.score}
         </Text>
-        <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>points</Text>
+        <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
+          {language === 'es' ? 'puntos' : 'points'}
+        </Text>
       </View>
       {onPress ? <Ionicons name="chevron-forward" size={16} color={p['ink-muted']} /> : null}
     </Row>
   );
+}
+
+function rankingSelfLabel(current: boolean, language: 'en' | 'es') {
+  if (!current) return '';
+  return language === 'es' ? ', tú' : ', you';
 }
 
 export const leagueStyles = StyleSheet.create({

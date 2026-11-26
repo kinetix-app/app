@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { BackHandler, KeyboardAvoidingView, Modal, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, usePalette } from '@/theme/tokens';
@@ -17,6 +18,7 @@ export function OngoingSession() {
   const session = useSession();
   const { draft, change } = session;
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [finishPrompt, setFinishPrompt] = useState(false);
@@ -86,7 +88,9 @@ export function OngoingSession() {
         {slot.sets.map((set, i) => (
           <React.Fragment key={set.id}>
             <SetFields
-              label={`Exercise ${index + 1} set ${i + 1}`}
+              label={
+                es ? `Ejercicio ${index + 1}, serie ${i + 1}` : `Exercise ${index + 1} set ${i + 1}`
+              }
               set={set}
               cardio={slot.exercise.activity_type === 'cardio'}
               number={i + 1}
@@ -101,10 +105,13 @@ export function OngoingSession() {
             {formCheck && profileForExercise(slot.exercise.name)
               ? (() => {
                   const recorded = formCheck.entryFor(set.id);
+                  const labels = es
+                    ? { recorded: 'Revisar', record: 'Grabar', set: 'serie' }
+                    : { recorded: 'Review', record: 'Record', set: 'set' };
                   if (!recorded && i !== slot.sets.findIndex((value) => !value.saved)) return null;
                   return (
                     <Button
-                      title={recorded ? `Review set ${i + 1}` : `Record set ${i + 1}`}
+                      title={`${recorded ? labels.recorded : labels.record} ${labels.set} ${i + 1}`}
                       icon={recorded ? 'eye' : 'camera'}
                       onPress={() =>
                         setChecking({
@@ -133,7 +140,11 @@ export function OngoingSession() {
     <View style={ui.gap}>
       <View
         testID="workout-pull-handle"
-        accessibilityLabel="Pull down to minimize workout"
+        accessibilityLabel={selectCopy(
+          es,
+          'Desliza hacia abajo para minimizar el entrenamiento',
+          'Pull down to minimize workout',
+        )}
         accessibilityState={{ disabled: session.pending }}
         onStartShouldSetResponder={() => !session.pending}
         onResponderTerminationRequest={() => false}
@@ -171,19 +182,23 @@ export function OngoingSession() {
           <WorkoutTimer startedAt={draft.startedAt} endedAt={draft.frozen?.ended_at} compact />
         </View>
         <Button
-          title={finishButtonTitle(session.pending, Boolean(draft.frozen))}
+          title={finishButtonTitle(session.pending, Boolean(draft.frozen), es)}
           onPress={finish}
           disabled={session.pending || dragging || session.storageError}
         />
       </View>
       {draft.frozen ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          Results are locked. Retry Finish to save your workout.
+          {selectCopy(
+            es,
+            'Los resultados están bloqueados. Vuelve a finalizar para guardar el entrenamiento.',
+            'Results are locked. Retry Finish to save your workout.',
+          )}
         </Text>
       ) : null}
       {draft.frozen ? (
         <Button
-          title="Review locked sets"
+          title={selectCopy(es, 'Revisar las series bloqueadas', 'Review locked sets')}
           onPress={() => void session.recoverFrozen()}
           disabled={session.pending}
           secondary
@@ -196,7 +211,7 @@ export function OngoingSession() {
       ) : null}
       {session.storageError ? (
         <Button
-          title="Retry storage"
+          title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
           onPress={() => {
             void session.retryStorage();
           }}
@@ -285,7 +300,9 @@ export function OngoingSession() {
                     sets: [...value.sets, emptyActualSet('kg')],
                   }))
                 }
-                addSetLabel={`Add set to exercise ${index + 1}`}
+                addSetLabel={
+                  es ? `Añadir serie al ejercicio ${index + 1}` : `Add set to exercise ${index + 1}`
+                }
                 canAddSet={item.sets.length < 100}
                 confirmSets
               >
@@ -296,16 +313,22 @@ export function OngoingSession() {
           ListFooterComponent={
             <View style={ui.gap}>
               {!draft.exercises.length ? (
-                <Text style={{ color: p['ink-muted'] }}>Add exercises to record your workout.</Text>
+                <Text style={{ color: p['ink-muted'] }}>
+                  {selectCopy(
+                    es,
+                    'Añade ejercicios para registrar tu entrenamiento.',
+                    'Add exercises to record your workout.',
+                  )}
+                </Text>
               ) : null}
               <Button
-                title="Add exercise"
+                title={selectCopy(es, 'Añadir ejercicio', 'Add exercise')}
                 onPress={() => setPicker(true)}
                 tone="positive"
                 disabled={locked || dragging || draft.exercises.length >= 500}
               />
               <Button
-                title="More actions"
+                title={selectCopy(es, 'Más acciones', 'More actions')}
                 icon="more-horizontal"
                 onPress={() => setActions(true)}
                 secondary
@@ -334,17 +357,21 @@ export function OngoingSession() {
       ) : null}
       {actions ? (
         <ActionMenu
-          title="Workout actions"
+          title={selectCopy(es, 'Acciones del entrenamiento', 'Workout actions')}
           onClose={() => setActions(false)}
           actions={[
-            { title: 'Sync workout', onPress: () => void session.sync(), disabled: locked },
             {
-              title: finishButtonTitle(false, Boolean(draft.frozen)),
+              title: selectCopy(es, 'Sincronizar entrenamiento', 'Sync workout'),
+              onPress: () => void session.sync(),
+              disabled: locked,
+            },
+            {
+              title: finishButtonTitle(false, Boolean(draft.frozen), es),
               onPress: finish,
               disabled: session.storageError,
             },
             {
-              title: 'Discard workout',
+              title: selectCopy(es, 'Descartar entrenamiento', 'Discard workout'),
               onPress: () => setDiscard(true),
               tone: 'danger',
               disabled: locked,
@@ -388,14 +415,17 @@ export function OngoingSession() {
             style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              Update the routine?
+              {selectCopy(es, '¿Actualizar la rutina?', 'Update the routine?')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              Finish this workout. Update the original routine with these exercises and saved sets,
-              or keep its current plan. Unticked sets will be left out.
+              {selectCopy(
+                es,
+                'Termina el entrenamiento. Puedes actualizar la rutina con los ejercicios y series guardados o conservar el plan actual. Se omitirán las series sin marcar.',
+                'Finish this workout. Update the original routine with these exercises and saved sets, or keep its current plan. Unticked sets will be left out.',
+              )}
             </Text>
             <Button
-              title="Keep routine"
+              title={selectCopy(es, 'Conservar rutina', 'Keep routine')}
               onPress={() => {
                 setFinishPrompt(false);
                 void session.finish(false);
@@ -403,14 +433,18 @@ export function OngoingSession() {
               secondary
             />
             <Button
-              title="Update routine"
+              title={selectCopy(es, 'Actualizar rutina', 'Update routine')}
               disabled={!draft.exercises.length}
               onPress={() => {
                 setFinishPrompt(false);
                 void session.finish(true);
               }}
             />
-            <Button title="Cancel" onPress={() => setFinishPrompt(false)} secondary />
+            <Button
+              title={selectCopy(es, 'Cancelar', 'Cancel')}
+              onPress={() => setFinishPrompt(false)}
+              secondary
+            />
           </View>
         </View>
       </Modal>
@@ -441,14 +475,22 @@ export function OngoingSession() {
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              Discard this workout?
+              {selectCopy(es, '¿Descartar este entrenamiento?', 'Discard this workout?')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              The draft workout and its recorded results will be removed.
+              {selectCopy(
+                es,
+                'Se eliminarán el borrador y los resultados registrados.',
+                'The draft workout and its recorded results will be removed.',
+              )}
             </Text>
-            <Button title="Keep recording" onPress={() => setDiscard(false)} secondary />
             <Button
-              title="Discard"
+              title={selectCopy(es, 'Seguir registrando', 'Keep recording')}
+              onPress={() => setDiscard(false)}
+              secondary
+            />
+            <Button
+              title={selectCopy(es, 'Descartar', 'Discard')}
               tone="danger"
               onPress={() => {
                 setDiscard(false);
@@ -462,7 +504,8 @@ export function OngoingSession() {
   );
 }
 
-function finishButtonTitle(pending: boolean, frozen: boolean) {
-  if (pending) return 'Working…';
-  return frozen ? 'Retry Finish' : 'Finish';
+function finishButtonTitle(pending: boolean, frozen: boolean, es: boolean) {
+  if (pending) return selectCopy(es, 'Procesando…', 'Working…');
+  if (frozen) return selectCopy(es, 'Volver a finalizar', 'Retry Finish');
+  return selectCopy(es, 'Finalizar', 'Finish');
 }

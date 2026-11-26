@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { Pressable, Text } from 'react-native';
 import { usePalette } from '@/theme/tokens';
 
@@ -17,15 +18,20 @@ export function ExerciseDragHandle({
   onMove,
 }: Readonly<DragHandleProps>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <Pressable
       nativeID={id}
       accessibilityRole="adjustable"
       accessibilityLabel={label}
-      accessibilityHint="Hold and drag to change exercise order"
+      accessibilityHint={
+        es
+          ? 'Mantén pulsado y arrastra para cambiar el orden'
+          : 'Hold and drag to change exercise order'
+      }
       accessibilityActions={[
-        { name: 'increment', label: 'Move later' },
-        { name: 'decrement', label: 'Move earlier' },
+        { name: 'increment', label: es ? 'Mover hacia abajo' : 'Move later' },
+        { name: 'decrement', label: es ? 'Mover hacia arriba' : 'Move earlier' },
       ]}
       onAccessibilityAction={({ nativeEvent }) => {
         if (!disabled) onMove(nativeEvent.actionName === 'increment' ? 1 : -1);

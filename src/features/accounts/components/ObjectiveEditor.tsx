@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ProfileBack } from './ProfileBack';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -10,15 +11,41 @@ import { getAccount, getObjective, setObjective } from '../api';
 import type { Account, Objective } from '../schemas';
 import { SetupButton, setupStyles as s } from './SetupUI';
 
-export const objectiveOptions: { value: Objective; label: string; description: string }[] = [
+export const objectiveOptions: {
+  value: Objective;
+  label: string;
+  description: string;
+  labelEs: string;
+  descriptionEs: string;
+}[] = [
   {
     value: 'build_muscle',
     label: 'Build muscle',
+    labelEs: 'Ganar músculo',
+    descriptionEs: 'Favorece el crecimiento muscular y la fuerza.',
     description: 'Support muscle growth and strength.',
   },
-  { value: 'lose_fat', label: 'Lose fat', description: 'Focus on reducing body fat.' },
-  { value: 'gain_weight', label: 'Gain weight', description: 'Work towards gaining body weight.' },
-  { value: 'maintain_weight', label: 'Maintain weight', description: 'Keep your weight steady.' },
+  {
+    value: 'lose_fat',
+    label: 'Lose fat',
+    labelEs: 'Perder grasa',
+    descriptionEs: 'Céntrate en reducir la grasa corporal.',
+    description: 'Focus on reducing body fat.',
+  },
+  {
+    value: 'gain_weight',
+    label: 'Gain weight',
+    labelEs: 'Ganar peso',
+    descriptionEs: 'Trabaja para aumentar tu peso corporal.',
+    description: 'Work towards gaining body weight.',
+  },
+  {
+    value: 'maintain_weight',
+    label: 'Maintain weight',
+    labelEs: 'Mantener peso',
+    descriptionEs: 'Mantén tu peso estable.',
+    description: 'Keep your weight steady.',
+  },
 ];
 type ObjectiveEditorProps = Readonly<{
   accountId: number;
@@ -34,6 +61,7 @@ export function ObjectiveEditor({
   active = true,
 }: ObjectiveEditorProps) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const cache = useQueryClient();
   const [selected, setSelected] = useState<Objective | null>(null);
   const busy = useRef(false);
@@ -71,15 +99,20 @@ export function ObjectiveEditor({
   }
   function renderObjectiveChoices() {
     if (query.isPending)
-      return <ActivityIndicator accessibilityLabel="Loading objective" color={p.brand} />;
+      return (
+        <ActivityIndicator
+          accessibilityLabel={selectCopy(es, 'Cargando objetivo', 'Loading objective')}
+          color={p.brand}
+        />
+      );
     if (query.isError)
       return (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not load your objective.
+            {selectCopy(es, 'No se pudo cargar tu objetivo.', 'Could not load your objective.')}
           </Text>
           <SetupButton
-            title="Retry"
+            title={selectCopy(es, 'Reintentar', 'Retry')}
             secondary
             onPress={() => {
               void query.refetch();
@@ -88,12 +121,17 @@ export function ObjectiveEditor({
         </>
       );
     return (
-      <View accessibilityRole="radiogroup" accessibilityLabel="Objective" style={{ gap: 12 }}>
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={selectCopy(es, 'Objetivo', 'Objective')}
+        style={{ gap: 12 }}
+      >
         {objectiveOptions.map((option) => (
           <Pressable
             key={option.value}
             accessibilityRole="radio"
-            accessibilityLabel={option.label}
+            accessibilityLabel={es ? option.labelEs : option.label}
+            aria-checked={choice === option.value}
             accessibilityState={{
               checked: choice === option.value,
               selected: choice === option.value,
@@ -116,7 +154,7 @@ export function ObjectiveEditor({
                 { color: choice === option.value ? p['brand-ink'] : p.ink },
               ]}
             >
-              {option.label}
+              {es ? option.labelEs : option.label}
               {choice === option.value ? ' ✓' : ''}
             </Text>
             <Text
@@ -125,7 +163,7 @@ export function ObjectiveEditor({
                 { color: choice === option.value ? p['brand-ink'] : p['ink-muted'] },
               ]}
             >
-              {option.description}
+              {es ? option.descriptionEs : option.description}
             </Text>
           </Pressable>
         ))}
@@ -139,30 +177,46 @@ export function ObjectiveEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title="What's your goal?"
+          title={selectCopy(es, '¿Cuál es tu objetivo?', "What's your goal?")}
           leading={
             onCancel ? <ProfileBack onPress={onCancel} disabled={mutation.isPending} /> : undefined
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          Choose your objective. You can change it anytime. A numerical nutrition target is optional
-          and can be set later.
+          {selectCopy(
+            es,
+            'Elige tu objetivo. Puedes cambiarlo cuando quieras. El objetivo nutricional numérico es opcional y puedes fijarlo más adelante.',
+            'Choose your objective. You can change it anytime. A numerical nutrition target is optional and can be set later.',
+          )}
         </Text>
         {renderObjectiveChoices()}
         {mutation.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not finish saving your objective. Your selection is kept. Try again.
+            {selectCopy(
+              es,
+              'No se pudo guardar tu objetivo. Conservamos tu selección. Inténtalo de nuevo.',
+              'Could not finish saving your objective. Your selection is kept. Try again.',
+            )}
           </Text>
         ) : null}
         <SetupButton
-          title={mutation.isPending ? 'Saving…' : 'Save objective'}
+          title={
+            mutation.isPending
+              ? selectCopy(es, 'Guardando…', 'Saving…')
+              : selectCopy(es, 'Guardar objetivo', 'Save objective')
+          }
           disabled={!choice || query.isPending || query.isError || mutation.isPending}
           onPress={() => {
             void save();
           }}
         />
         {onCancel ? (
-          <SetupButton title="Cancel" secondary disabled={mutation.isPending} onPress={onCancel} />
+          <SetupButton
+            title={selectCopy(es, 'Cancelar', 'Cancel')}
+            secondary
+            disabled={mutation.isPending}
+            onPress={onCancel}
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { LanguageProvider } from '@/i18n/Language';
 import { AccessibilityInfo, BackHandler, FlatList, Image, Modal, View } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -199,6 +200,26 @@ test('reaching the end loads older posts and keeps them after a failed page', as
   fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
   expect(await screen.findByText('Older session')).toBeTruthy();
   expect(feedApi.posts).toHaveBeenLastCalledWith(10, expect.any(AbortSignal), 'friends');
+});
+
+test('a forbidden feed request gives account recovery guidance in Spanish', async () => {
+  jest.mocked(feedApi.posts).mockRejectedValueOnce(new ApiError(403));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  clients.push(client);
+  render(
+    <QueryClientProvider client={client}>
+      <LanguageProvider language="es">
+        <FeedScreen accountId={1} />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+
+  expect(
+    await screen.findByText(
+      'Tu cuenta no puede cargar el feed. Cierra sesión y vuelve a iniciarla.',
+    ),
+  ).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Reintentar' })).toBeTruthy();
 });
 
 test('comments open, post a trimmed comment and update the feed count', async () => {
@@ -880,4 +901,44 @@ test('your comments can be deleted and older pages load at the end of the list',
   expect(feedApi.comments).toHaveBeenLastCalledWith(10, 2, expect.any(AbortSignal));
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(await screen.findByText('2 comments')).toBeTruthy();
+});
+
+test('a failed comment deletion keeps the comment and reports the failure', async () => {
+  jest.mocked(feedApi.comments).mockResolvedValue({
+    items: [
+      {
+        id: 1,
+        post_id: 10,
+        author: { id: 1, display_name: 'Alice', has_picture: false },
+        comment: 'Keep this comment',
+        created_at: new Date().toISOString(),
+        is_mine: true,
+      },
+    ],
+    next_after_id: null,
+  });
+  jest.mocked(feedApi.removeComment).mockRejectedValueOnce(new Error('offline'));
+  renderFeed();
+  fireEvent.press(await screen.findByRole('button', { name: /Comments on post by Bob/ }));
+  expect(await screen.findByText('Keep this comment')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Delete comment by Alice' }));
+
+  expect(await screen.findByText('Could not delete the comment. Try again.')).toBeTruthy();
+  expect(screen.getByText('Keep this comment')).toBeTruthy();
+  expect(feedApi.removeComment).toHaveBeenCalledWith(10, 1);
+});
+
+test('Spanish feed localizes comments and keeps post content', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  clients.push(client);
+  render(
+    <QueryClientProvider client={client}>
+      <LanguageProvider language="es">
+        <FeedScreen accountId={1} />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+  fireEvent.press(await screen.findByRole('button', { name: /Comentarios de la publicación/ }));
+  expect(await screen.findByText('Aún no hay comentarios. Inicia la conversación.')).toBeTruthy();
+  expect(screen.getByLabelText('Escribe un comentario')).toBeTruthy();
 });

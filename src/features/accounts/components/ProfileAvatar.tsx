@@ -1,3 +1,4 @@
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +33,7 @@ function getPictureUri(
 
 export function ProfileAvatar({ account, preview, size = 112, compact }: ProfileAvatarProps) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [decoded, setDecoded] = useState<{ blob: Blob; uri?: string; failed?: boolean }>();
   const privatePhoto = account.profile.picture_url === profilePicturePath && !preview;
   const photo = useQuery({
@@ -67,19 +69,22 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
   if (uri) {
     picture = (
       <Image
-        accessibilityLabel="Profile picture"
+        accessibilityLabel={selectCopy(es, 'Foto de perfil', 'Profile picture')}
         source={{ uri }}
         style={{ width: '100%', height: '100%' }}
       />
     );
   } else if (privatePhoto && (photo.isPending || (!failed && !uri))) {
     picture = (
-      <ActivityIndicator accessibilityLabel="Loading profile picture" color={p['brand-ink']} />
+      <ActivityIndicator
+        accessibilityLabel={selectCopy(es, 'Cargando foto de perfil', 'Loading profile picture')}
+        color={p['brand-ink']}
+      />
     );
   } else {
     picture = (
       <Text
-        accessibilityLabel="No profile picture"
+        accessibilityLabel={selectCopy(es, 'Sin foto de perfil', 'No profile picture')}
         style={[textStyles[size < 112 ? 'metric-md' : 'display-lg'], { color: p['brand-ink'] }]}
       >
         {account.profile.display_name?.slice(0, 1).toUpperCase() || '+'}
@@ -105,10 +110,10 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
       {privatePhoto && failed && !compact ? (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not load your picture.
+            {selectCopy(es, 'No se pudo cargar tu foto.', 'Could not load your picture.')}
           </Text>
           <SetupButton
-            title="Retry picture"
+            title={selectCopy(es, 'Reintentar foto', 'Retry picture')}
             secondary
             onPress={() => {
               void photo.refetch();

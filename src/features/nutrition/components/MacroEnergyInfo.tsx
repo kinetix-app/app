@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { useLanguage } from '@/i18n/Language';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 type Props = Readonly<{ label: string; factor: number }>;
@@ -11,6 +12,7 @@ const arrowSize = spacing['space-3'];
 
 export function MacroEnergyInfo({ label, factor }: Props) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const { width, height } = useWindowDimensions();
   const anchor = React.useRef<ViewInstance>(null);
   const [position, setPosition] = React.useState<Anchor | null>(null);
@@ -39,7 +41,7 @@ export function MacroEnergyInfo({ label, factor }: Props) {
       <Pressable
         ref={anchor}
         accessibilityRole="button"
-        accessibilityLabel={`${label} calories per gram`}
+        accessibilityLabel={es ? `${label}: calorías por gramo` : `${label} calories per gram`}
         accessibilityState={{ expanded: position !== null }}
         onPress={() => {
           anchor.current?.measureInWindow((x, y, anchorWidth, anchorHeight) => {
@@ -55,7 +57,9 @@ export function MacroEnergyInfo({ label, factor }: Props) {
           <View style={styles.overlay} accessibilityViewIsModal>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close macro information"
+              accessibilityLabel={
+                es ? 'Cerrar información de macronutrientes' : 'Close macro information'
+              }
               onPress={() => setPosition(null)}
               style={StyleSheet.absoluteFill}
             />
@@ -86,7 +90,7 @@ export function MacroEnergyInfo({ label, factor }: Props) {
                 ]}
               />
               <Text style={[textStyles.body, { color: p.ink }]}>
-                {label}: {factor} kcal per gram.
+                {label}: {factor} {es ? 'kcal por gramo.' : 'kcal per gram.'}
               </Text>
             </View>
           </View>

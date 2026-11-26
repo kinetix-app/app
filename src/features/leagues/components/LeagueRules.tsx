@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
@@ -42,9 +43,50 @@ const rules = [
   },
 ] as const;
 
+const spanishRules: Record<string, { title: string; summary: string; detail: string }> = {
+  Score: {
+    title: 'Puntuación',
+    summary: 'Volumen de gimnasio × horas transcurridas ÷ peso corporal (kg)',
+    detail:
+      'El volumen es la suma de repeticiones confirmadas × peso en kg. El tiempo incluye las pausas. Se registra el peso del perfil al finalizar. Los puntos se redondean al entero más cercano, con mitades hacia arriba. Los datos ausentes o no positivos no puntúan.',
+  },
+  'Daily credit': {
+    title: 'Puntuación diaria',
+    summary: 'Tu mejor entrenamiento de gimnasio de cada día',
+    detail:
+      'Solo cuenta tu puntuación redondeada más alta de cada día. Empieza al unirte o después y termina y envía antes de cerrar la ronda. En caso de empate gana el primero en finalizar y luego el menor ID de entrenamiento. Un entrenamiento puede contar en varias ligas.',
+  },
+  'Weekly rounds': {
+    title: 'Rondas semanales',
+    summary: 'Del lunes a medianoche al lunes siguiente',
+    detail:
+      'El inicio del entrenamiento determina su día en la zona horaria de la liga. Cada ronda comienza el lunes a las 00:00 inclusive y termina el lunes siguiente a las 00:00 exclusive, incluidos los cambios de horario.',
+  },
+  Standings: {
+    title: 'Clasificación',
+    summary: 'Todas las rondas cuentan para el total general',
+    detail:
+      'La clasificación general incluye la ronda actual y todas las anteriores. Los totales iguales comparten posición.',
+  },
+  'Round outcome': {
+    title: 'Resultado de la ronda',
+    summary: 'Las puntuaciones más bajas comparten la posición perdedora',
+    detail:
+      'Con al menos dos miembros, todos los empatados con el total más bajo pierden, incluidos los ceros. Los resultados no vistos aparecen primero los más antiguos y se confirman después de mostrarse.',
+  },
+};
+
 export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [tip, setTip] = useState<(typeof rules)[number] | null>(null);
+  let timezoneSuffix = '';
+  if (tip?.title === 'Weekly rounds' && timezone) {
+    timezoneSuffix =
+      language === 'es'
+        ? ` Zona horaria de la liga: ${timezone}.`
+        : ` League timezone: ${timezone}.`;
+  }
   const dismiss = () => setTip(null);
   useEffect(() => {
     if (!tip) return;
@@ -55,15 +97,19 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
   return (
     <LeagueCard>
       <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-        League rules
+        {language === 'es' ? 'Reglas de la liga' : 'League rules'}
       </Text>
       <View>
         {rules.map((rule, index) => (
           <Pressable
             key={rule.title}
             accessibilityRole="button"
-            accessibilityLabel={`About ${rule.title.toLowerCase()}`}
-            accessibilityHint={rule.summary}
+            accessibilityLabel={
+              language === 'es'
+                ? `Acerca de ${spanishRules[rule.title].title.toLowerCase()}`
+                : `About ${rule.title.toLowerCase()}`
+            }
+            accessibilityHint={language === 'es' ? spanishRules[rule.title].summary : rule.summary}
             onPress={() => setTip(rule)}
             style={({ pressed }) => [
               leagueStyles.row,
@@ -78,8 +124,12 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
           >
             <Ionicons name={rule.icon} size={20} color={p['brand-ink']} />
             <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
-              <Text style={[textStyles.label, { color: p.ink }]}>{rule.title}</Text>
-              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{rule.summary}</Text>
+              <Text style={[textStyles.label, { color: p.ink }]}>
+                {language === 'es' ? spanishRules[rule.title].title : rule.title}
+              </Text>
+              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                {language === 'es' ? spanishRules[rule.title].summary : rule.summary}
+              </Text>
             </View>
             <Ionicons name="information-circle-outline" size={20} color={p['ink-muted']} />
           </Pressable>
@@ -115,19 +165,23 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
                 <View style={leagueStyles.row}>
                   <Ionicons name="information-circle-outline" size={24} color={p.info} />
                   <Text style={[textStyles['title-md'], { flex: 1, color: p.ink }]}>
-                    {tip.title}
+                    {language === 'es' ? spanishRules[tip.title].title : tip.title}
                   </Text>
-                  <LeagueIconButton label="Dismiss rule tip" icon="close" onPress={dismiss} />
+                  <LeagueIconButton
+                    label={
+                      language === 'es' ? 'Cerrar información de la regla' : 'Dismiss rule tip'
+                    }
+                    icon="close"
+                    onPress={dismiss}
+                  />
                 </View>
                 <Text
                   accessibilityLiveRegion="polite"
                   role="status"
                   style={[textStyles.body, { color: p.ink }]}
                 >
-                  {tip.detail}
-                  {tip.title === 'Weekly rounds' && timezone
-                    ? ` League timezone: ${timezone}.`
-                    : ''}
+                  {language === 'es' ? spanishRules[tip.title].detail : tip.detail}
+                  {timezoneSuffix}
                 </Text>
               </ScrollView>
             </View>

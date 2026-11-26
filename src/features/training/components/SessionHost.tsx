@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, spacing, usePalette } from '@/theme/tokens';
@@ -65,14 +66,23 @@ export function SessionHost({
 function PendingSessionState({ onDiscard }: Readonly<{ onDiscard: () => void }>) {
   const session = useSession();
   const p = usePalette();
+  const es = useLanguage() === 'es';
   if (!session.storageError) return <Loading />;
   return (
     <View style={ui.content}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
         {session.error}
       </Text>
-      <Button title="Retry storage" onPress={() => void session.retryStorage()} secondary />
-      <Button title="Discard stored workout" onPress={onDiscard} tone="danger" />
+      <Button
+        title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
+        onPress={() => void session.retryStorage()}
+        secondary
+      />
+      <Button
+        title={selectCopy(es, 'Descartar entrenamiento guardado', 'Discard stored workout')}
+        onPress={onDiscard}
+        tone="danger"
+      />
     </View>
   );
 }
@@ -80,13 +90,14 @@ function PendingSessionState({ onDiscard }: Readonly<{ onDiscard: () => void }>)
 function StorageErrorState() {
   const session = useSession();
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <View style={ui.content}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
         {session.error}
       </Text>
       <Button
-        title="Retry storage"
+        title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
         onPress={() => {
           void session.retryStorage();
         }}
@@ -102,6 +113,7 @@ function MinimizedWorkoutCard({
 }: Readonly<{ inFlow: boolean; onDiscard: () => void }>) {
   const session = useSession();
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const draft = session.draft;
   if (!draft) return null;
   return (
@@ -139,8 +151,16 @@ function MinimizedWorkoutCard({
         <View style={ui.row}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Ongoing workout options"
-            accessibilityHint="Opens the discard workout confirmation"
+            accessibilityLabel={selectCopy(
+              es,
+              'Opciones del entrenamiento en curso',
+              'Ongoing workout options',
+            )}
+            accessibilityHint={selectCopy(
+              es,
+              'Abre la confirmación para descartar el entrenamiento',
+              'Opens the discard workout confirmation',
+            )}
             disabled={session.pending}
             onPress={onDiscard}
             style={{
@@ -151,7 +171,7 @@ function MinimizedWorkoutCard({
             }}
           >
             <Text numberOfLines={1} style={{ color: p['overlay-ink'] }}>
-              Workout ongoing
+              {selectCopy(es, 'Entrenamiento en curso', 'Workout ongoing')}
             </Text>
             <WorkoutTimer
               compact
@@ -163,7 +183,7 @@ function MinimizedWorkoutCard({
           <IconButton
             icon="play"
             onOverlay
-            label="Resume workout"
+            label={selectCopy(es, 'Continuar entrenamiento', 'Resume workout')}
             bare
             disabled={session.pending}
             onPress={() => session.change((value) => ({ ...value, minimized: false }))}
@@ -176,7 +196,7 @@ function MinimizedWorkoutCard({
         ) : null}
         {session.storageError ? (
           <Button
-            title="Retry storage"
+            title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
             onPress={() => {
               void session.retryStorage();
             }}
@@ -195,6 +215,7 @@ function DiscardConfirmation({
 }: Readonly<{ visible: boolean; onCancel: () => void; onDiscard: () => void }>) {
   const session = useSession();
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View
@@ -211,16 +232,26 @@ function DiscardConfirmation({
           style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
         >
           <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-            {session.draft ? 'Discard this workout?' : 'Discard stored workout?'}
+            {session.draft
+              ? selectCopy(es, '¿Descartar este entrenamiento?', 'Discard this workout?')
+              : selectCopy(es, '¿Descartar el entrenamiento guardado?', 'Discard stored workout?')}
           </Text>
           <Text style={{ color: p['ink-muted'] }}>
             {session.draft?.frozen
-              ? 'Finish delivery is pending. Resume the workout to retry Finish.'
-              : 'The workout draft and its saved results will be removed.'}
+              ? selectCopy(
+                  es,
+                  'El envío está pendiente. Reanuda el entrenamiento para volver a finalizarlo.',
+                  'Finish delivery is pending. Resume the workout to retry Finish.',
+                )
+              : selectCopy(
+                  es,
+                  'Se eliminarán el borrador y los resultados guardados.',
+                  'The workout draft and its saved results will be removed.',
+                )}
           </Text>
-          <Button title="Cancel" secondary onPress={onCancel} />
+          <Button title={selectCopy(es, 'Cancelar', 'Cancel')} secondary onPress={onCancel} />
           <Button
-            title="Discard"
+            title={selectCopy(es, 'Descartar', 'Discard')}
             disabled={session.pending || Boolean(session.draft?.frozen)}
             tone="danger"
             onPress={onDiscard}

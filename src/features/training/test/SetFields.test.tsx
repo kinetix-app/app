@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SetFields } from '../components/SetFields';
 import { cardioInput } from '../cardio';
 import type { ActualSet } from '../sessionDraft';
+import { LanguageProvider } from '@/i18n/Language';
 
 test('one numeric time field formats digits and preserves duration for saving', () => {
   let current: ActualSet;
@@ -99,4 +100,25 @@ test('fetched cardio guidance appears only as placeholders, including zero measu
   );
   expect(screen.getByLabelText('Set 1 distance').props.placeholder).toBe('0');
   expect(screen.getByLabelText('Set 1 time').props.placeholder).toBe('00:00:00');
+});
+
+test('Spanish cardio editor explains prior recorded and guided gym results', () => {
+  render(
+    <LanguageProvider language="es">
+      <SetFields
+        cardio
+        set={{ id: 'set-es', reps: '10', value: '50', unit: 'kg', distance: '1' }}
+        guidance={{ reps: 8, weightKg: '40', distanceKm: null, durationSeconds: null }}
+        unit="kg"
+        label="Serie 1"
+        disabled={false}
+        onChange={jest.fn()}
+        onRemove={jest.fn()}
+      />
+    </LanguageProvider>,
+  );
+
+  expect(screen.getByText(/Registro anterior: 50 kg · 10 rep\./)).toBeTruthy();
+  expect(screen.getByText(/Resultado anterior: 40 kg · 8 rep\./)).toBeTruthy();
+  expect(screen.getByText(/Introduce la distancia y el tiempo para sustituirlo\./)).toBeTruthy();
 });

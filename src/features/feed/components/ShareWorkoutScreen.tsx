@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { Feather } from '@expo/vector-icons';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,6 +49,8 @@ export function ShareWorkoutScreen({
   onClose,
   onShared,
 }: ShareWorkoutScreenProps) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   const requestedSessionId = initialSessionId ?? null;
   const workouts = useQuery({
@@ -99,7 +102,12 @@ export function ShareWorkoutScreen({
       if (Platform.OS !== 'web') {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-          setPhotoError('Photo access is needed. Allow access in Settings, then try again.');
+          setPhotoError(
+            t(
+              'Photo access is needed. Allow access in Settings, then try again.',
+              'Se necesita acceso a las fotos. Permítelo en Ajustes e inténtalo de nuevo.',
+            ),
+          );
           return;
         }
       }
@@ -114,10 +122,17 @@ export function ShareWorkoutScreen({
       setPhotos((current) => [...current, ...accepted].slice(0, MAX_POST_IMAGES));
       if (rejected)
         setPhotoError(
-          `${countLabel(rejected, 'photo')} skipped. Use JPEG, PNG or WebP up to 5 MB each.`,
+          language === 'es'
+            ? `${countLabel(rejected, 'foto omitida', 'fotos omitidas')}. Usa JPEG, PNG o WebP de hasta 5 MB cada una.`
+            : `${countLabel(rejected, 'photo')} skipped. Use JPEG, PNG or WebP up to 5 MB each.`,
         );
     } catch {
-      setPhotoError('Could not open your photos. Try again.');
+      setPhotoError(
+        t(
+          'Could not open your photos. Try again.',
+          'No se pudieron abrir tus fotos. Inténtalo de nuevo.',
+        ),
+      );
     }
   }
 
@@ -138,7 +153,7 @@ export function ShareWorkoutScreen({
       });
     } catch (error_) {
       // Keep every entered value so the person can correct and retry.
-      setError(shareErrorMessage(error_));
+      setError(shareErrorMessage(error_, language));
       if (error_ instanceof ApiError && error_.status === 409) void workouts.refetch();
       busy.current = false;
       setPending(false);
@@ -164,20 +179,25 @@ export function ShareWorkoutScreen({
         keyboardShouldPersistTaps="handled"
       >
         <View style={ui.row}>
-          <IconButton icon="arrow-left" label="Back to feed" disabled={pending} onPress={back} />
+          <IconButton
+            icon="arrow-left"
+            label={t('Back to feed', 'Volver al feed')}
+            disabled={pending}
+            onPress={back}
+          />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            New post
+            {t('New post', 'Nueva publicación')}
           </Text>
         </View>
 
         <View style={ui.gap}>
           <Text nativeID="caption-label" style={[textStyles['title-md'], { color: p.ink }]}>
-            Caption
+            {t('Caption', 'Título')}
           </Text>
           <TextField
-            accessibilityLabel="Caption"
+            accessibilityLabel={t('Caption', 'Título')}
             accessibilityLabelledBy="caption-label"
-            placeholder="Add a short caption"
+            placeholder={t('Add a short caption', 'Añade un título breve')}
             value={caption}
             onChangeText={setCaption}
             maxLength={MAX_POST_CAPTION}
@@ -187,12 +207,12 @@ export function ShareWorkoutScreen({
 
         <View style={ui.gap}>
           <Text nativeID="description-label" style={[textStyles['title-md'], { color: p.ink }]}>
-            Description
+            {t('Description', 'Descripción')}
           </Text>
           <TextField
-            accessibilityLabel="Description"
+            accessibilityLabel={t('Description', 'Descripción')}
             accessibilityLabelledBy="description-label"
-            placeholder="How did it go?"
+            placeholder={t('How did it go?', '¿Cómo ha ido?')}
             value={description}
             onChangeText={setDescription}
             maxLength={MAX_POST_DESCRIPTION}
@@ -225,7 +245,10 @@ export function ShareWorkoutScreen({
         />
 
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Your friends will see this post in their feed.
+          {t(
+            'Your friends will see this post in their feed.',
+            'Tus amigos verán esta publicación en su feed.',
+          )}
         </Text>
 
         {error ? (
@@ -234,7 +257,7 @@ export function ShareWorkoutScreen({
           </Text>
         ) : null}
         <Button
-          title={pending ? 'Sharing…' : 'Share'}
+          title={pending ? t('Sharing…', 'Compartiendo…') : t('Share', 'Compartir')}
           disabled={pending || !canShare}
           onPress={() => {
             void share();
@@ -253,10 +276,14 @@ export function ShareWorkoutScreen({
             style={[ui.card, styles.dialog, { backgroundColor: p['surface-200'] }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              Discard this post?
+              {t('Discard this post?', '¿Descartar esta publicación?')}
             </Text>
-            <Button title="Keep editing" secondary onPress={() => setDiscardOpen(false)} />
-            <Button title="Discard" tone="danger" onPress={onClose} />
+            <Button
+              title={t('Keep editing', 'Seguir editando')}
+              secondary
+              onPress={() => setDiscardOpen(false)}
+            />
+            <Button title={t('Discard', 'Descartar')} tone="danger" onPress={onClose} />
           </View>
         </View>
       </Modal>
@@ -264,7 +291,7 @@ export function ShareWorkoutScreen({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={detailSessionId}
-          backLabel="Back to new post"
+          backLabel={t('Back to new post', 'Volver a la nueva publicación')}
           onBack={() => setDetailSessionId(null)}
           showShare={false}
         />
@@ -313,30 +340,34 @@ function WorkoutPicker({
   onPreview: (sessionId: number) => void;
   onSelect: (workout: WorkoutSummary | null) => void;
 }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   const recent = workouts.data?.items ?? [];
   return (
     <View style={ui.gap}>
-      <Text style={[textStyles['title-md'], { color: p.ink }]}>Workout · optional</Text>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>
+        {t('Workout · optional', 'Entrenamiento · opcional')}
+      </Text>
       <AnchoredPicker
         selection={selected?.session_id ?? null}
         options={[
-          { value: null, label: 'No workout' },
+          { value: null, label: t('No workout', 'Sin entrenamiento') },
           ...recent.map((workout) => ({
             value: workout.session_id,
             label: workout.title,
-            detail: new Date(workout.ended_at).toLocaleString(),
+            detail: new Date(workout.ended_at).toLocaleString(language === 'es' ? 'es' : undefined),
             action: {
-              label: `Preview ${workout.title}`,
+              label: language === 'es' ? `Ver ${workout.title}` : `Preview ${workout.title}`,
               icon: 'eye-outline' as const,
               onPress: () => onPreview(workout.session_id),
             },
           })),
         ]}
         onSelect={(id) => onSelect(recent.find((workout) => workout.session_id === id) ?? null)}
-        labelPrefix="Workout to share"
-        fallbackLabel={selected?.title ?? 'No workout'}
-        closeLabel="Close workout menu"
+        labelPrefix={t('Workout to share', 'Entrenamiento para compartir')}
+        fallbackLabel={selected?.title ?? t('No workout', 'Sin entrenamiento')}
+        closeLabel={t('Close workout menu', 'Cerrar menú de entrenamiento')}
         menuTestId="post-workout-menu"
         icon="barbell-outline"
         disabled={pending}
@@ -344,7 +375,7 @@ function WorkoutPicker({
         triggerAction={
           selected
             ? {
-                label: 'Preview workout',
+                label: t('Preview workout', 'Ver entrenamiento'),
                 icon: 'eye-outline',
                 onPress: () => onPreview(selected.session_id),
               }
@@ -360,16 +391,22 @@ function WorkoutPicker({
       {unresolvedSelection && workouts.isPending ? <Loading /> : null}
       {unavailableSelection ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          The workout you opened is unavailable to share. Choose another workout or post without
-          one.
+          {t(
+            'The workout you opened is unavailable to share. Choose another workout or post without one.',
+            'El entrenamiento que abriste no se puede compartir. Elige otro o publica sin entrenamiento.',
+          )}
         </Text>
       ) : null}
       {workouts.isError ? (
         <View style={ui.gap}>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not load your workouts.
+            {t('Could not load your workouts.', 'No se pudieron cargar tus entrenamientos.')}
           </Text>
-          <Button title="Retry" secondary onPress={() => void workouts.refetch()} />
+          <Button
+            title={t('Retry', 'Reintentar')}
+            secondary
+            onPress={() => void workouts.refetch()}
+          />
         </View>
       ) : null}
     </View>
@@ -389,17 +426,19 @@ function PostPhotos({
   onPick: () => void;
   onRemove: (position: number) => void;
 }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   const [photoInfoOpen, setPhotoInfoOpen] = useState(false);
   return (
     <View style={ui.gap}>
       <View style={ui.row}>
         <Text style={[textStyles['title-md'], { color: p.ink }]}>
-          Photos · {photos.length}/{MAX_POST_IMAGES}
+          {t('Photos', 'Fotos')} · {photos.length}/{MAX_POST_IMAGES}
         </Text>
         <IconButton
           icon="info"
-          label="Photo requirements"
+          label={t('Photo requirements', 'Requisitos de las fotos')}
           bare
           expanded={photoInfoOpen}
           onPress={() => setPhotoInfoOpen(!photoInfoOpen)}
@@ -410,20 +449,29 @@ function PostPhotos({
           accessibilityLiveRegion="polite"
           style={[textStyles['body-sm'], { color: p['ink-muted'] }]}
         >
-          Use JPEG, PNG or WebP up to 5 MB each. Location and other photo details are removed.
+          {t(
+            'Use JPEG, PNG or WebP up to 5 MB each. Location and other photo details are removed.',
+            'Usa JPEG, PNG o WebP de hasta 5 MB cada una. Se eliminan la ubicación y otros datos de las fotos.',
+          )}
         </Text>
       ) : null}
       <View style={styles.photos}>
         {photos.map((photo, position) => (
           <View key={`${photo.uri}-${position}`} style={styles.thumbnail}>
             <Image
-              accessibilityLabel={`Selected photo ${position + 1}`}
+              accessibilityLabel={
+                language === 'es'
+                  ? `Foto seleccionada ${position + 1}`
+                  : `Selected photo ${position + 1}`
+              }
               source={{ uri: photo.uri }}
               style={[StyleSheet.absoluteFill, { borderRadius: radii['radius-md'] }]}
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Remove photo ${position + 1}`}
+              accessibilityLabel={
+                language === 'es' ? `Eliminar foto ${position + 1}` : `Remove photo ${position + 1}`
+              }
               disabled={pending}
               onPress={() => onRemove(position)}
               style={[styles.remove, { backgroundColor: p['surface-300'] }]}
@@ -435,7 +483,7 @@ function PostPhotos({
         {photos.length < MAX_POST_IMAGES ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add photos"
+            accessibilityLabel={t('Add photos', 'Añadir fotos')}
             disabled={pending}
             onPress={onPick}
             style={[
@@ -445,7 +493,7 @@ function PostPhotos({
             ]}
           >
             <Feather name="plus" size={26} color={p['brand-ink']} />
-            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Add</Text>
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>{t('Add', 'Añadir')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -459,29 +507,56 @@ function PostPhotos({
 }
 
 function WorkoutMenuStatus({ loading, empty }: Readonly<{ loading: boolean; empty: boolean }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   if (loading) return <Loading />;
   if (!empty) return null;
   return (
     <Text style={[textStyles['body-sm'], { color: p['ink-muted'], padding: spacing['space-2'] }]}>
-      No finished workouts available to share.
+      {t(
+        'No finished workouts available to share.',
+        'No hay entrenamientos finalizados para compartir.',
+      )}
     </Text>
   );
 }
 
-export function shareErrorMessage(error: unknown) {
+export function shareErrorMessage(error: unknown, language: 'en' | 'es' = 'en') {
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   if (error instanceof ApiError) {
-    if (error.status === 409) return 'You already shared this workout. Choose another one.';
-    if (error.status === 413) return 'Photos are too large. Use up to 5 photos of 5 MB each.';
-    if (error.status === 415) return 'Use JPEG, PNG or WebP photos.';
+    if (error.status === 409)
+      return t(
+        'You already shared this workout. Choose another one.',
+        'Ya compartiste este entrenamiento. Elige otro.',
+      );
+    if (error.status === 413)
+      return t(
+        'Photos are too large. Use up to 5 photos of 5 MB each.',
+        'Las fotos son demasiado grandes. Usa hasta 5 fotos de 5 MB cada una.',
+      );
+    if (error.status === 415)
+      return t('Use JPEG, PNG or WebP photos.', 'Usa fotos JPEG, PNG o WebP.');
     if (error.status === 422)
-      return 'Add a caption, description, photo or workout. Check any attachments and try again.';
+      return t(
+        'Add a caption, description, photo or workout. Check any attachments and try again.',
+        'Añade un título, descripción, foto o entrenamiento. Revisa los adjuntos e inténtalo de nuevo.',
+      );
     if (error.status === 503)
-      return 'Photo upload is unavailable right now. Remove the photos or try again later.';
+      return t(
+        'Photo upload is unavailable right now. Remove the photos or try again later.',
+        'La subida de fotos no está disponible. Elimina las fotos o inténtalo más tarde.',
+      );
     if ([401, 403].includes(error.status))
-      return 'Your account cannot share right now. Sign out and sign in again.';
+      return t(
+        'Your account cannot share right now. Sign out and sign in again.',
+        'Tu cuenta no puede compartir ahora. Cierra sesión y vuelve a iniciarla.',
+      );
   }
-  return 'Could not share your post. Your caption, description and photos are kept. Try again.';
+  return t(
+    'Could not share your post. Your caption, description and photos are kept. Try again.',
+    'No se pudo compartir la publicación. Se conservan el título, la descripción y las fotos. Inténtalo de nuevo.',
+  );
 }
 
 const styles = StyleSheet.create({

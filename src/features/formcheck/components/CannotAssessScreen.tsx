@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { AnalysisView } from '../view';
@@ -30,19 +31,33 @@ export function CannotAssessScreen({
   onLogByHand: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · SET ${setNumber}`}
+      overline={`${exerciseName.toUpperCase()} · ${es ? 'SERIE' : 'SET'} ${setNumber}`}
       backIcon="x"
-      backLabel="Back to workout"
+      backLabel={es ? 'Volver al entrenamiento' : 'Back to workout'}
       onBack={onLogByHand}
       footer={
         <>
-          <Button title="Record again" icon="video" onPress={onRecordAgain} />
+          <Button
+            title={es ? 'Grabar de nuevo' : 'Record again'}
+            icon="video"
+            onPress={onRecordAgain}
+          />
           {hasVideo ? (
-            <Button title="Watch recording" icon="play" onPress={onWatchVideo} secondary />
+            <Button
+              title={es ? 'Ver grabación' : 'Watch recording'}
+              icon="play"
+              onPress={onWatchVideo}
+              secondary
+            />
           ) : null}
-          <Button title="Log set by hand" onPress={onLogByHand} secondary />
+          <Button
+            title={es ? 'Registrar serie manualmente' : 'Log set by hand'}
+            onPress={onLogByHand}
+            secondary
+          />
         </>
       }
     >
@@ -61,7 +76,7 @@ export function CannotAssessScreen({
           <Feather name="video-off" size={32} color={p.warning} />
         </View>
         <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-          We couldn&apos;t check your form
+          {es ? 'No hemos podido revisar tu técnica' : "We couldn't check your form"}
         </Text>
       </View>
       {view.reasons.map((reason) => (
@@ -82,7 +97,9 @@ export function CannotAssessScreen({
         </View>
       ))}
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        Your set is not marked as good or bad. You can still log it by hand.
+        {es
+          ? 'Tu serie no se marca como buena ni mala. Puedes registrarla manualmente.'
+          : 'Your set is not marked as good or bad. You can still log it by hand.'}
       </Text>
     </FormCheckScreen>
   );

@@ -1,0 +1,16 @@
+{
+  "navigation": {
+    "home": "Inicio",
+    "workout": "Entreno",
+    "nutrition": "Nutrición",
+    "league": "Liga",
+    "main": "Navegación principal",
+    "startWorkout": "Iniciar entrenamiento"
+  },
+  "profile": {
+    "label": "Idioma",
+    "saving": "Guardando…",
+    "save": "Guardar perfil",
+    "continue": "Continuar"
+  }
+}

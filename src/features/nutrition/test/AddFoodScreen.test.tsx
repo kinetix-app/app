@@ -10,6 +10,7 @@ import {
   within,
 } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LanguageProvider } from '@/i18n/Language';
 import { nutritionApi } from '../api';
 import { AddFoodScreen } from '../components/AddFoodScreen';
 import type { Food, Recipe } from '../schemas';
@@ -55,7 +56,7 @@ const recipe: Recipe = {
   fats: 2,
   ingredients: [{ food_id: food.id, name: food.name, quantity_grams: 100 }],
 };
-function open() {
+function open(language: 'en' | 'es' = 'en') {
   const onSaved = jest.fn();
   const onClose = jest.fn();
   const client = new QueryClient({
@@ -65,15 +66,17 @@ function open() {
     },
   });
   render(
-    <QueryClientProvider client={client}>
-      <AddFoodScreen
-        accountId={1}
-        meal="Lunch"
-        date="2026-10-28"
-        onSaved={onSaved}
-        onClose={onClose}
-      />
-    </QueryClientProvider>,
+    <LanguageProvider language={language}>
+      <QueryClientProvider client={client}>
+        <AddFoodScreen
+          accountId={1}
+          meal="Lunch"
+          date="2026-10-28"
+          onSaved={onSaved}
+          onClose={onClose}
+        />
+      </QueryClientProvider>
+    </LanguageProvider>,
   );
   return { onSaved, onClose };
 }
@@ -363,6 +366,72 @@ test('creates a food with a macro estimate and refreshes the catalogue', async (
   });
   expect(nutritionApi.foodPage).toHaveBeenCalledTimes(2);
 }, 20000);
+
+test('keeps Spanish food form values after a failed save and allows retry', async () => {
+  jest.useRealTimers();
+  jest
+    .mocked(nutritionApi.createFood)
+    .mockRejectedValueOnce(new Error('Offline'))
+    .mockResolvedValueOnce(food);
+  open('es');
+
+  fireEvent.press(screen.getByRole('button', { name: 'Crear' }));
+  fireEvent.changeText(screen.getByLabelText('Nombre del alimento'), ' Yogur ');
+  for (const [field, value] of Object.entries({
+    Calorías: '120',
+    Proteínas: '8',
+    Carbohidratos: '10',
+    Grasas: '4',
+  })) {
+    fireEvent.changeText(screen.getByLabelText(field), value);
+  }
+
+  fireEvent.press(screen.getByText('Guardar alimento'));
+  expect(await screen.findByText('No se pudo guardar el alimento.')).toBeTruthy();
+  expect(screen.getByLabelText('Nombre del alimento').props.value).toBe(' Yogur ');
+  expect(screen.getByLabelText('Proteínas').props.value).toBe('8');
+
+  fireEvent.press(screen.getByText('Guardar alimento'));
+  await waitFor(() => expect(nutritionApi.createFood).toHaveBeenCalledTimes(2));
+  expect(nutritionApi.createFood).toHaveBeenLastCalledWith({
+    name: 'Yogur',
+    brand: null,
+    barcode: null,
+    calories: 108,
+    protein: 8,
+    carbohydrates: 10,
+    fats: 4,
+  });
+}, 20000);
+
+test('keeps Spanish recipe ingredients after save failure and retries the request', async () => {
+  jest.useRealTimers();
+  jest
+    .mocked(nutritionApi.createRecipe)
+    .mockRejectedValueOnce(new Error('Offline'))
+    .mockResolvedValueOnce(recipe);
+  open('es');
+
+  fireEvent.press(screen.getByRole('tab', { name: 'Recetas' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Crear' }));
+  fireEvent.changeText(screen.getByLabelText('Nombre de la receta'), ' Bol de arroz ');
+  fireEvent.changeText(screen.getByLabelText('Buscar ingrediente'), 'rice');
+  fireEvent.press(await screen.findByLabelText('Añadir Rice como ingrediente'));
+
+  fireEvent.press(screen.getAllByText('Crear receta').at(-1)!);
+  expect(await screen.findByText('No se pudo guardar la receta.')).toBeTruthy();
+  expect(screen.getByLabelText('Nombre de la receta').props.value).toBe(' Bol de arroz ');
+  expect(screen.getByLabelText('Cantidad de Rice').props.value).toBe('100');
+
+  fireEvent.press(screen.getAllByText('Crear receta').at(-1)!);
+  await waitFor(() => expect(nutritionApi.createRecipe).toHaveBeenCalledTimes(2));
+  expect(nutritionApi.createRecipe).toHaveBeenLastCalledWith({
+    name: 'Bol de arroz',
+    servings: 1,
+    ingredients: [{ food_id: 1, quantity_grams: 100 }],
+  });
+}, 20000);
+
 test('reuses the food form with the existing values when editing', async () => {
   jest.mocked(nutritionApi.updateFood).mockResolvedValue({ ...food, name: 'Brown rice' });
   open();
@@ -557,3 +626,11 @@ test('builds a recipe from searched ingredients, edits quantities and removes un
     ingredients: [{ food_id: 1, quantity_grams: 150 }],
   });
 }, 20000);
+
+test('localizes food selection while preserving catalogue names', async () => {
+  open('es');
+  expect(screen.getByLabelText('Buscar alimento')).toBeTruthy();
+  fireEvent.press(await screen.findByLabelText('Seleccionar Rice'));
+  expect(screen.getByLabelText('Cantidad de alimento')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Añadir alimento' })).toBeTruthy();
+});

@@ -7,6 +7,7 @@ import { PrivateQueryProvider } from '@/providers/PrivateQueryProvider';
 import { Button } from '../components/ui';
 import { SessionProvider, useSession } from '../components/SessionProvider';
 import { SessionHost } from '../components/SessionHost';
+import { LanguageProvider, type Language } from '@/i18n/Language';
 
 import { trainingApi } from '../api';
 import { exampleExercise, exampleRoutine } from './fixtures';
@@ -17,13 +18,19 @@ async function selectActivityFilter(activity: 'All' | 'Gym' | 'Cardio') {
   fireEvent.press(screen.getByLabelText('Save filters'));
 }
 
-function TrainingWorkspace(props: { accountId: number; onSignOut: () => void }) {
+function TrainingWorkspace(props: {
+  accountId: number;
+  onSignOut: () => void;
+  language?: Language;
+}) {
   return (
-    <PrivateQueryProvider key={props.accountId}>
-      <SessionProvider {...props}>
-        <TrainingContent accountId={props.accountId} />
-      </SessionProvider>
-    </PrivateQueryProvider>
+    <LanguageProvider language={props.language ?? 'en'}>
+      <PrivateQueryProvider key={props.accountId}>
+        <SessionProvider {...props}>
+          <TrainingContent accountId={props.accountId} />
+        </SessionProvider>
+      </PrivateQueryProvider>
+    </LanguageProvider>
   );
 }
 
@@ -252,6 +259,22 @@ test('creates a routine by selecting exercises, filtering body-parts and adding 
   });
   expect(form.has('file')).toBe(false);
   expect(trainingApi.save).not.toHaveBeenCalled();
+});
+
+test('Spanish exercise picker exposes translated filter and selection actions', async () => {
+  render(<TrainingWorkspace accountId={1} onSignOut={jest.fn()} language="es" />);
+  fireEvent.press(await screen.findByLabelText('Nueva rutina'));
+  fireEvent.changeText(screen.getByLabelText('Nombre de la rutina'), 'Empuje');
+  fireEvent.press(screen.getByText('Añadir ejercicio'));
+  expect(await screen.findByLabelText('Seleccionar Bench press')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText(/^Filtrar zonas musculares/));
+  fireEvent.press(await screen.findByRole('checkbox', { name: 'pecho' }));
+  fireEvent.press(screen.getByLabelText('Guardar filtros'));
+  await waitFor(() =>
+    expect(trainingApi.exercises).toHaveBeenCalledWith(['CHEST'], 0, expect.anything(), ''),
+  );
+  fireEvent.press(await screen.findByLabelText('Seleccionar Bench press'));
+  expect(screen.getByText('Añadir ejercicios (1)')).toBeTruthy();
 });
 
 test('cancel confirms dirty changes and account changes discard private forms and queries', async () => {

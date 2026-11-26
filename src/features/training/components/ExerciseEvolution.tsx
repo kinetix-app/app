@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useQuery } from '@tanstack/react-query';
 import {
   AccessibilityInfo,
@@ -49,6 +50,25 @@ const descriptions: Record<Metric, string> = {
   distance: 'The longest distance in an individual set that day, not the sum of sets.',
   duration_seconds: 'The longest time in an individual set that day, not the sum of sets.',
 };
+const spanishLabels: Record<Metric, string> = {
+  estimated_1rm: 'Fuerza estimada (1RM)',
+  weight: 'Peso',
+  volume: 'Volumen',
+  reps: 'Repeticiones',
+  distance: 'Distancia',
+  duration_seconds: 'Tiempo',
+};
+const spanishDescriptions: Record<Metric, string> = {
+  estimated_1rm:
+    'La repetición máxima estimada más alta usa la carga registrada × (1 + repeticiones / 30) para series de 2 a 10 repeticiones y la carga registrada para una sola repetición. Se excluyen las series de más de 10 repeticiones. Es una estimación: no sabemos cuánto se acercó cada serie al esfuerzo máximo. En ejercicios asistidos o con el peso corporal, la carga registrada puede no representar la carga total ni la fuerza real.',
+  weight:
+    'La mayor carga registrada en una sola serie de ese día. En ejercicios asistidos o con el peso corporal, puede no representar la carga total.',
+  volume:
+    'La suma de la carga registrada por las repeticiones de las series válidas del día. Se excluyen las series incompletas o incompatibles. En ejercicios asistidos o con el peso corporal, puede no representar la carga total.',
+  reps: 'El mayor número de repeticiones en una sola serie de ese día.',
+  distance: 'La mayor distancia de una sola serie de ese día, sin sumar las series.',
+  duration_seconds: 'La mayor duración de una sola serie de ese día, sin sumar las series.',
+};
 export function rangeStart(today: Date, months: number): string {
   const year = today.getUTCFullYear();
   const month = today.getUTCMonth() - months;
@@ -85,21 +105,56 @@ function axisPrecision(metric: Metric): number {
 function evolutionUnits(imperial: boolean): { weight: 'kg' | 'lb'; distance: 'km' | 'mi' } {
   return imperial ? { weight: 'lb', distance: 'mi' } : { weight: 'kg', distance: 'km' };
 }
-function rangeLabel(range: Range): string {
+function rangeLabel(range: Range, es: boolean): string {
+  if (es) {
+    if (range === 'All') return 'Todo';
+    if (range === 12) return '1 año';
+    return range === 1 ? '1 mes' : `${range} meses`;
+  }
   if (range === 'All') return range;
   if (range === 12) return '1 year';
   return `${range} month${range === 1 ? '' : 's'}`;
 }
-function emptyMessage(hasValues: boolean, hasHistory: boolean): string {
+function emptyMessage(hasValues: boolean, hasHistory: boolean, es: boolean): string {
+  if (es) {
+    if (hasValues) return 'No hay datos en este período. Prueba un período más largo.';
+    if (hasHistory) return 'Esta métrica no está disponible para las series registradas.';
+    return 'Aún no hay observaciones para este período.';
+  }
   if (hasValues) return 'No data in this period. Try a longer range.';
   if (hasHistory) return 'This metric is unavailable for the recorded sets.';
   return 'No data in this period. No observations are available yet.';
 }
-function metricUnitExplanation(metric: Metric, weight: string, distance: string): string {
+function metricUnitExplanation(
+  metric: Metric,
+  weight: string,
+  distance: string,
+  es: boolean,
+): string {
+  if (es) {
+    if (metric === 'distance') return `La distancia se muestra en ${distance}.`;
+    if (metric === 'duration_seconds') return 'El tiempo se muestra en horas, minutos y segundos.';
+    if (metric === 'reps') return '';
+    return `La carga se muestra en ${weight}.`;
+  }
   if (metric === 'distance') return `Distance is shown in ${distance}.`;
   if (metric === 'duration_seconds') return 'Time is shown in hours, minutes and seconds.';
   if (metric === 'reps') return '';
   return `Load is shown in ${weight}.`;
+}
+function selectEvolutionDays(
+  days: EvolutionDay[],
+  metric: Metric,
+  range: Range,
+  selected: string | null,
+) {
+  const today = new Date().toISOString().slice(0, 10);
+  const start = range === 'All' ? '' : rangeStart(new Date(), range);
+  const history = days.filter((day) => day.date <= today);
+  const all = history.filter((day) => day[metric] !== null);
+  const visible = all.filter((day) => day.date >= start);
+  const current = visible.find((day) => day.date === selected) ?? visible.at(-1);
+  return { history, all, visible, current };
 }
 function MetricHeadline({
   current,
@@ -112,7 +167,8 @@ function MetricHeadline({
   weight: string;
   distance: string;
 }>) {
-  if (!current) return <>{labels[metric]}</>;
+  const language = useLanguage();
+  if (!current) return <>{(language === 'es' ? spanishLabels : labels)[metric]}</>;
   if (metric !== 'duration_seconds') return <>{value(current, metric, weight, distance)}</>;
   return (
     <>
@@ -133,6 +189,8 @@ export function ExerciseEvolution({
   activityType,
 }: Readonly<{ accountId: number; exerciseId: number; activityType: string }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
+  const metricLabels = es ? spanishLabels : labels;
   const cardio = activityType === 'cardio';
   const [metric, setMetric] = useState<Metric>(cardio ? 'distance' : 'estimated_1rm');
   const [range, setRange] = useState<Range>(3);
@@ -164,19 +222,24 @@ export function ExerciseEvolution({
     queryFn: ({ signal }) => trainingApi.exerciseEvolution(exerciseId, weight, distance, signal),
     enabled: !!account.data,
   });
-  const today = new Date().toISOString().slice(0, 10);
-  const start = range === 'All' ? '' : rangeStart(new Date(), range);
-  const history = (query.data?.days ?? []).filter((d) => d.date <= today);
-  const all = history.filter((d) => d[metric] !== null);
-  const visible = all.filter((d) => d.date >= start);
-  const current = visible.find((d) => d.date === selected) ?? visible.at(-1);
+  const { history, all, visible, current } = selectEvolutionDays(
+    query.data?.days ?? [],
+    metric,
+    range,
+    selected,
+  );
+  const excludedSetsLabel = selectCopy(
+    es,
+    ' · Se excluyeron algunas series',
+    ' · Some sets excluded',
+  );
   return (
     <View style={{ gap: 12 }}>
       <ChartMetricSelector
         metrics={cardio ? cardioMetrics : gymMetrics}
         value={metric}
-        label="Exercise metric"
-        labelFor={(key) => labels[key]}
+        label={selectCopy(es, 'Métrica del ejercicio', 'Exercise metric')}
+        labelFor={(key) => metricLabels[key]}
         reduceMotion={reduceMotion}
         onChange={(key) => {
           animate();
@@ -190,7 +253,7 @@ export function ExerciseEvolution({
         </Text>
         <IconButton
           icon="info"
-          label={`About ${labels[metric]}`}
+          label={es ? `Acerca de ${metricLabels[metric]}` : `About ${metricLabels[metric]}`}
           onPress={() => setInfo(true)}
           bare
         />
@@ -215,7 +278,7 @@ export function ExerciseEvolution({
       {current ? (
         <Text style={{ color: p['ink-muted'] }}>
           {current.date}
-          {metric === 'volume' && current.volume_partial ? ' · Some sets excluded' : ''}
+          {metric === 'volume' && current.volume_partial ? excludedSetsLabel : ''}
         </Text>
       ) : null}
       {query.data ? (
@@ -227,7 +290,9 @@ export function ExerciseEvolution({
             label: value(day, metric, weight, distance),
           }))}
           emptyState={
-            query.isError ? undefined : { title: emptyMessage(all.length > 0, history.length > 0) }
+            query.isError
+              ? undefined
+              : { title: emptyMessage(all.length > 0, history.length > 0, es) }
           }
           selected={selected}
           onSelect={setSelected}
@@ -242,7 +307,7 @@ export function ExerciseEvolution({
         {([1, 3, 6, 12, 'All'] as Range[]).map((r) => (
           <AnimatedTextSelector
             key={r}
-            label={rangeLabel(r)}
+            label={rangeLabel(r, es)}
             selected={range === r}
             role="button"
             reduceMotion={reduceMotion}
@@ -282,6 +347,8 @@ function MetricInfoSheet({
   reduceMotion: boolean;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
+  const metricLabels = es ? spanishLabels : labels;
   const [sheetY] = useState(() => new Animated.Value(0));
   const sheetPan = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -336,12 +403,17 @@ function MetricInfoSheet({
                 }}
               >
                 <Text accessibilityRole="header" style={{ color: p.ink, fontSize: 20, flex: 1 }}>
-                  {labels[metric]}
+                  {metricLabels[metric]}
                 </Text>
-                <IconButton icon="x" label="Close explanation" onPress={() => onClose()} />
+                <IconButton
+                  icon="x"
+                  label={selectCopy(es, 'Cerrar explicación', 'Close explanation')}
+                  onPress={() => onClose()}
+                />
               </View>
               <Text style={{ color: p.ink, lineHeight: 22 }}>
-                {descriptions[metric]} {metricUnitExplanation(metric, weight, distance)}
+                {(es ? spanishDescriptions : descriptions)[metric]}{' '}
+                {metricUnitExplanation(metric, weight, distance, es)}
               </Text>
             </ScrollView>
           </SafeAreaView>

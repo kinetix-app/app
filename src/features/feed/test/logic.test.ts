@@ -22,6 +22,9 @@ test('relative time stays readable across ranges', () => {
   expect(relativeTime('2026-11-10T07:00:00Z', now)).toBe('5 h ago');
   expect(relativeTime('2026-11-08T12:00:00Z', now)).toBe('2 d ago');
   expect(relativeTime('2026-10-01T12:00:00Z', now)).toBe('Oct 1');
+  expect(relativeTime('2026-11-10T11:59:30Z', now, 'es')).toBe('Ahora mismo');
+  expect(relativeTime('2026-11-10T11:15:00Z', now, 'es')).toBe('Hace 45 min');
+  expect(relativeTime('2026-11-08T12:00:00Z', now, 'es')).toBe('Hace 2 d');
 });
 
 test('post form carries the workout, trimmed caption and description, visibility and repeated files', () => {

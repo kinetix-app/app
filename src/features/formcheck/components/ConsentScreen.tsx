@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import { FormCheckScreen } from './FormCheckScreen';
@@ -36,18 +37,22 @@ export function ConsentScreen({
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <FormCheckScreen
       onBack={onClose}
-      backLabel="Back to workout"
+      backLabel={selectCopy(es, 'Volver al entrenamiento', 'Back to workout')}
       footer={
         <>
           {denied ? (
-            <Button title="Open settings" onPress={onOpenSettings} />
+            <Button
+              title={selectCopy(es, 'Abrir ajustes', 'Open settings')}
+              onPress={onOpenSettings}
+            />
           ) : (
-            <Button title="Allow camera" onPress={onAllow} />
+            <Button title={selectCopy(es, 'Permitir cámara', 'Allow camera')} onPress={onAllow} />
           )}
-          <Button title="Not now" onPress={onClose} secondary />
+          <Button title={selectCopy(es, 'Ahora no', 'Not now')} onPress={onClose} secondary />
         </>
       }
     >
@@ -65,33 +70,50 @@ export function ConsentScreen({
           <Feather name="camera" size={32} color={p['brand-ink']} />
         </View>
         <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-          Check your form
+          {selectCopy(es, 'Revisa tu técnica', 'Check your form')}
         </Text>
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          Record a set and Kinetix counts your reps and points out the main thing to improve.
+          {selectCopy(
+            es,
+            'Graba una serie y Kinetix contará tus repeticiones y señalará lo principal que puedes mejorar.',
+            'Record a set and Kinetix counts your reps and points out the main thing to improve.',
+          )}
         </Text>
       </View>
       {denied ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Camera access is turned off. Turn it on in your phone settings to record a set.
+          {selectCopy(
+            es,
+            'El acceso a la cámara está desactivado. Actívalo en los ajustes del teléfono para grabar una serie.',
+            'Camera access is turned off. Turn it on in your phone settings to record a set.',
+          )}
         </Text>
       ) : null}
       <View style={[ui.card, { backgroundColor: p['surface-200'], gap: spacing['space-4'] }]}>
         <Point
           icon="smartphone"
-          title="Analyzed on your phone"
-          text="Your video is not uploaded."
+          title={selectCopy(es, 'Analizado en tu teléfono', 'Analyzed on your phone')}
+          text={selectCopy(es, 'Tu vídeo no se sube.', 'Your video is not uploaded.')}
         />
         <Point
           icon="trash-2"
-          title="Deleted when you finish"
-          text="The video is removed when you finish or discard the workout. Reps and form notes stay with the set."
+          title={selectCopy(es, 'Se elimina al terminar', 'Deleted when you finish')}
+          text={selectCopy(
+            es,
+            'El vídeo se elimina al terminar o descartar el entrenamiento. Las repeticiones y notas permanecen en la serie.',
+            'The video is removed when you finish or discard the workout. Reps and form notes stay with the set.',
+          )}
         />
-        <Point icon="target" title="A training aid" text="Not medical advice." />
+        <Point
+          icon="target"
+          title={selectCopy(es, 'Una ayuda para entrenar', 'A training aid')}
+          text={selectCopy(es, 'No es asesoramiento médico.', 'Not medical advice.')}
+        />
       </View>
       {supportedNames.length ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Available for {supportedNames.join(', ')}. More exercises coming.
+          {selectCopy(es, 'Disponible para', 'Available for')} {supportedNames.join(', ')}.{' '}
+          {selectCopy(es, 'Pronto habrá más ejercicios.', 'More exercises coming.')}
         </Text>
       ) : null}
     </FormCheckScreen>

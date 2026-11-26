@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { countLabel } from '@/features/feed/format';
 import { textStyles, spacing, usePalette } from '@/theme/tokens';
@@ -45,26 +46,27 @@ export function ProfileScreen({
   friendRequests?: number;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const objective = useQuery({
     queryKey: ['accounts', account.id, 'objective'],
     queryFn: ({ signal }) => getObjective(signal),
   });
-  const goal = objectiveOptions.find((item) => item.value === objective.data?.objective)?.label;
-  const values = profileDefaults(account);
-  const imperial = values.measurement_system === 'imperial';
-  const heightLabel = imperial
-    ? `${values.height_ft} ft ${values.height_in} in`
-    : `${values.height_cm} cm`;
-  const height = account.profile.height_cm === null ? null : heightLabel;
-  const weightUnit = imperial ? 'lb' : 'kg';
-  const weight = account.profile.weight_kg === null ? null : `${values.weight} ${weightUnit}`;
-  const details = [
-    account.profile.age === null ? null : `${account.profile.age} years`,
-    height,
-    weight,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const goalOption = objectiveOptions.find((item) => item.value === objective.data?.objective);
+  const goal = es ? goalOption?.labelEs : goalOption?.label;
+  const activity = activityOptions.find((item) => item.value === account.profile.activity_level);
+  const { imperial, details } = profileSummary(account, es);
+  const activityLabel = es ? activity?.labelEs : activity?.label;
+  const friendDetail = friendRequests
+    ? countLabel(
+        friendRequests,
+        selectCopy(es, 'nueva solicitud', 'new request'),
+        selectCopy(es, 'nuevas solicitudes', 'new requests'),
+      )
+    : selectCopy(
+        es,
+        'Amigos, solicitudes y búsqueda de personas',
+        'Your friends, requests and people search',
+      );
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -72,7 +74,7 @@ export function ProfileScreen({
     >
       <ScrollView contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}>
         <ScreenHeader
-          title="Profile"
+          title={selectCopy(es, 'Perfil', 'Profile')}
           leading={<ProfileBack onPress={onBack} label={backLabel} />}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-4'] }}>
@@ -89,33 +91,41 @@ export function ProfileScreen({
             ) : null}
           </View>
         </View>
-        <ProfileGroup title="Account">
+        <ProfileGroup title={selectCopy(es, 'Cuenta', 'Account')}>
           <ProfileRow
-            title="Edit profile"
-            detail={imperial ? 'Imperial · lb, ft and in' : 'Metric · kg and cm'}
+            title={selectCopy(es, 'Editar perfil', 'Edit profile')}
+            detail={
+              imperial
+                ? selectCopy(es, 'Imperial · lb, pies y pulgadas', 'Imperial · lb, ft and in')
+                : selectCopy(es, 'Métrico · kg y cm', 'Metric · kg and cm')
+            }
             icon="user"
             onPress={() => onOpen('profile')}
           />
         </ProfileGroup>
-        <ProfileGroup title="Your plan">
+        <ProfileGroup title={selectCopy(es, 'Tu plan', 'Your plan')}>
           <ProfileRow
-            title="Weekly activity"
+            title={selectCopy(es, 'Actividad semanal', 'Weekly activity')}
             detail={
-              activityOptions.find((item) => item.value === account.profile.activity_level)
-                ?.label ?? 'Choose your activity level'
+              activityLabel ??
+              selectCopy(es, 'Elige tu nivel de actividad', 'Choose your activity level')
             }
             icon="activity"
             onPress={() => onOpen('activity')}
           />
           <ProfileRow
-            title="Change objective"
-            detail={objective.isPending ? 'Loading…' : (goal ?? 'Objective unavailable')}
+            title={selectCopy(es, 'Cambiar objetivo', 'Change objective')}
+            detail={
+              objective.isPending
+                ? selectCopy(es, 'Cargando…', 'Loading…')
+                : (goal ?? selectCopy(es, 'Objetivo no disponible', 'Objective unavailable'))
+            }
             icon="target"
             onPress={() => onOpen('objective')}
           />
           {objective.isError ? (
             <ProfileRow
-              title="Retry objective"
+              title={selectCopy(es, 'Reintentar objetivo', 'Retry objective')}
               icon="refresh-cw"
               onPress={() => {
                 void objective.refetch();
@@ -123,29 +133,37 @@ export function ProfileScreen({
             />
           ) : null}
           <ProfileRow
-            title="Edit nutrition goal"
+            title={selectCopy(es, 'Editar objetivo nutricional', 'Edit nutrition goal')}
             icon="pie-chart"
             onPress={() => onOpen('nutrition')}
           />
         </ProfileGroup>
-        <ProfileGroup title="Social">
+        <ProfileGroup title={'Social'}>
           <ProfileRow
-            title="Friends"
-            detail={
-              friendRequests
-                ? countLabel(friendRequests, 'new request', 'new requests')
-                : 'Your friends, requests and people search'
-            }
+            title={selectCopy(es, 'Amigos', 'Friends')}
+            detail={friendDetail}
             icon="users"
             onPress={() => onOpen('friends')}
           />
         </ProfileGroup>
-        <ProfileGroup title="Activity">
-          <ProfileRow title="Progress" icon="bar-chart-2" onPress={() => onOpen('progress')} />
-          <ProfileRow title="Training history" icon="clock" onPress={() => onOpen('history')} />
+        <ProfileGroup title={selectCopy(es, 'Actividad', 'Activity')}>
+          <ProfileRow
+            title={selectCopy(es, 'Progreso', 'Progress')}
+            icon="bar-chart-2"
+            onPress={() => onOpen('progress')}
+          />
+          <ProfileRow
+            title={selectCopy(es, 'Historial de entrenamientos', 'Training history')}
+            icon="clock"
+            onPress={() => onOpen('history')}
+          />
         </ProfileGroup>
         <ProfileRow
-          title={signingOut ? 'Signing out…' : 'Sign out'}
+          title={
+            signingOut
+              ? selectCopy(es, 'Cerrando sesión…', 'Signing out…')
+              : selectCopy(es, 'Cerrar sesión', 'Sign out')
+          }
           icon="log-out"
           onPress={onSignOut}
           disabled={signingOut}
@@ -159,4 +177,25 @@ export function ProfileScreen({
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function profileSummary(account: Account, es: boolean) {
+  const values = profileDefaults(account);
+  const imperial = values.measurement_system === 'imperial';
+  const heightLabel = imperial
+    ? `${values.height_ft} ft ${values.height_in} in`
+    : `${values.height_cm} cm`;
+  const height = account.profile.height_cm === null ? null : heightLabel;
+  const weightUnit = imperial ? 'lb' : 'kg';
+  const weight = account.profile.weight_kg === null ? null : `${values.weight} ${weightUnit}`;
+  const details = [
+    account.profile.age === null
+      ? null
+      : `${account.profile.age} ${selectCopy(es, 'años', 'years')}`,
+    height,
+    weight,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return { imperial, details };
 }

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
@@ -42,14 +43,16 @@ function entryUnit(kind: EntrySource['kind'], amount: number): string {
   return amount === 1 ? 'serving' : 'servings';
 }
 
-function saveLabel(pending: boolean, editing: boolean, createLabel: string): string {
-  if (pending) return 'Saving…';
-  return editing ? 'Save changes' : createLabel;
+function saveLabel(pending: boolean, editing: boolean, createLabel: string, es: boolean): string {
+  if (pending) return selectCopy(es, 'Guardando…', 'Saving…');
+  return editing ? selectCopy(es, 'Guardar cambios', 'Save changes') : createLabel;
 }
 
-function searchStatus(searching: boolean, failed: boolean): string {
-  if (searching) return 'Searching…';
-  return failed ? 'Could not load foods' : 'No foods found';
+function searchStatus(searching: boolean, failed: boolean, es: boolean): string {
+  if (searching) return selectCopy(es, 'Buscando…', 'Searching…');
+  return failed
+    ? selectCopy(es, 'No se pudieron cargar los alimentos', 'Could not load foods')
+    : selectCopy(es, 'No se encontraron alimentos', 'No foods found');
 }
 
 const maxEntryAmount = 999999.99;
@@ -60,6 +63,90 @@ const validAmount = (value: string) =>
 const entityTypes = ['Food', 'Recipe'] as const;
 type EntityType = (typeof entityTypes)[number];
 type CatalogueForm = { kind: 'create'; type: EntityType } | { kind: 'edit'; entry: EntrySource };
+
+function catalogueTypeLabel(label: EntityType, es: boolean) {
+  if (!es) return label;
+  return label === 'Food' ? 'Alimentos' : 'Recetas';
+}
+
+function queueReviewTitle(count: number, es: boolean) {
+  const noun =
+    count === 1 ? selectCopy(es, 'registro', 'entry') : selectCopy(es, 'registros', 'entries');
+  return `${selectCopy(es, 'Revisar', 'Review')} ${count} ${noun}`;
+}
+
+function catalogueFormTitle(editing: boolean, type: EntityType, es: boolean) {
+  const action = editing ? selectCopy(es, 'Editar', 'Edit') : selectCopy(es, 'Crear', 'Create');
+  const item =
+    type === 'Food' ? selectCopy(es, 'alimento', 'food') : selectCopy(es, 'receta', 'recipe');
+  return `${action} ${item}`;
+}
+
+function recipePortionLabel(servings: number, es: boolean) {
+  if (es) return servings === 1 ? 'Por ración' : `Para ${servings} raciones`;
+  return servings === 1 ? 'Per serving' : `For ${servings} servings`;
+}
+
+function catalogueLoadingLabel(collection: 'foods' | 'recipes', es: boolean) {
+  if (es) return collection === 'foods' ? 'Cargando alimentos' : 'Cargando recetas';
+  return `Loading ${collection}`;
+}
+
+function catalogueRetryLabel(collection: 'foods' | 'recipes', es: boolean) {
+  if (es)
+    return collection === 'foods' ? 'Reintentar carga de alimentos' : 'Reintentar carga de recetas';
+  return `Retry loading ${collection}`;
+}
+
+function quantityUnitLabel(amount: number, unit: string, es: boolean) {
+  if (es && unit !== 'g') return amount === 1 ? 'ración' : 'raciones';
+  return unit;
+}
+
+function reviewItemEditLabel(editing: boolean, name: string, es: boolean) {
+  if (es) return `${editing ? 'Cancelar edición de la cantidad de' : 'Editar cantidad de'} ${name}`;
+  return `${editing ? 'Cancel editing' : 'Edit'} ${name} quantity`;
+}
+
+function reviewConfirmLabel(pending: boolean, count: number, meal: string, es: boolean) {
+  if (pending) return selectCopy(es, 'Añadiendo…', 'Adding…');
+  if (es) return `Añadir ${count} ${count === 1 ? 'registro' : 'registros'}`;
+  return `Add ${count} ${count === 1 ? 'entry' : 'entries'} to ${meal}`;
+}
+
+function portionForAmount(amount: number, unit: string, es: boolean) {
+  const isServing = unit === 'servings' || unit === 'serving';
+  if (!isServing) return `${selectCopy(es, 'Para', 'For')} ${amount} ${unit}`;
+  const portionUnit =
+    amount === 1 ? selectCopy(es, 'ración', 'serving') : selectCopy(es, 'raciones', 'servings');
+  return `${selectCopy(es, 'Para', 'For')} ${amount} ${portionUnit}`;
+}
+
+function amountActionLabel(adding: boolean, label: string, es: boolean) {
+  if (!es) return label;
+  return selectCopy(adding, 'Añadir alimento', 'Guardar cambios');
+}
+
+function selectedFoodPortion(grams: number, es: boolean) {
+  if (grams === 100) return selectCopy(es, 'Por 100 g', 'Per 100 g');
+  return selectCopy(es, `Para ${grams} g`, `For ${grams} g`);
+}
+
+function foodFieldLabel(field: 'calories' | 'protein' | 'carbohydrates' | 'fats', es: boolean) {
+  const labelsEs = {
+    calories: 'Calorías',
+    protein: 'Proteínas',
+    carbohydrates: 'Carbohidratos',
+    fats: 'Grasas',
+  };
+  const labelsEn = {
+    calories: 'Calories',
+    protein: 'Protein',
+    carbohydrates: 'Carbohydrates',
+    fats: 'Fat',
+  };
+  return (es ? labelsEs : labelsEn)[field];
+}
 
 const mealTypeFor = (meal: string) =>
   ({ Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snacks: 'snack' })[meal] as
@@ -111,12 +198,17 @@ function CatalogueHeader({
   onBack: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <>
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={reviewingEntries ? 'Back to selection' : 'Back to nutrition'}
+          accessibilityLabel={
+            reviewingEntries
+              ? selectCopy(es, 'Volver a la selección', 'Back to selection')
+              : selectCopy(es, 'Volver a nutrición', 'Back to nutrition')
+          }
           disabled={pending}
           onPress={() => {
             onBack();
@@ -127,28 +219,47 @@ function CatalogueHeader({
         </Pressable>
         <View style={styles.heading}>
           <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-            {reviewingEntries ? 'Review entries' : 'Add food'}
+            {reviewingEntries
+              ? selectCopy(es, 'Revisar registros', 'Review entries')
+              : selectCopy(es, 'Añadir alimento', 'Add food')}
           </Text>
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{meal}</Text>
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+            {es
+              ? ((
+                  {
+                    Breakfast: 'Desayuno',
+                    Lunch: 'Comida',
+                    Dinner: 'Cena',
+                    Snacks: 'Tentempiés',
+                  } as Record<string, string>
+                )[meal] ?? meal)
+              : meal}
+          </Text>
         </View>
         {!reviewingEntries ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Create"
+            accessibilityLabel={selectCopy(es, 'Crear', 'Create')}
             onPress={() => onCreate()}
             style={[styles.createButton, { backgroundColor: p['brand-soft'] }]}
           >
             <Feather name="plus" size={20} color={p['brand-ink']} />
-            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Create</Text>
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+              {selectCopy(es, 'Crear', 'Create')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
       {!reviewingEntries ? (
-        <View accessibilityRole="tablist" accessibilityLabel="Catalogue type" style={styles.header}>
+        <View
+          accessibilityRole="tablist"
+          accessibilityLabel={selectCopy(es, 'Tipo de catálogo', 'Catalogue type')}
+          style={styles.header}
+        >
           {entityTypes.map((label) => (
             <AnimatedTextSelector
               key={label}
-              label={label}
+              label={catalogueTypeLabel(label, es)}
               selected={tab === label}
               role="tab"
               reduceMotion={reduceMotion}
@@ -186,6 +297,7 @@ function FoodCatalogueList({
   onRequestDelete: (food: Food) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <>
       {active ? (
@@ -213,7 +325,9 @@ function FoodCatalogueList({
           )}
           ListEmptyComponent={
             (visibleFoodSearch && debouncedSearch && !results.isPending && !results.isError ? (
-              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No foods found.</Text>
+              <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+                {selectCopy(es, 'No se encontraron alimentos.', 'No foods found.')}
+              </Text>
             ) : null) ?? undefined
           }
           ListFooterComponent={
@@ -243,6 +357,7 @@ export function AddFoodScreen({
   onSaved: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState('');
   const [tab, setTab] = React.useState<EntityType>('Food');
@@ -322,9 +437,11 @@ export function AddFoodScreen({
           />
           {tab === 'Food' && !reviewingEntries ? (
             <>
-              <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
+              <Text style={[textStyles.label, { color: p.ink }]}>
+                {selectCopy(es, 'Buscar', 'Search')}
+              </Text>
               <TextField
-                accessibilityLabel="Search food"
+                accessibilityLabel={selectCopy(es, 'Buscar alimento', 'Search food')}
                 maxLength={150}
                 leading={<Feather name="search" size={20} color={p['ink-muted']} />}
                 value={search}
@@ -332,7 +449,7 @@ export function AddFoodScreen({
                   setSearch(value);
                   foodList.current?.scrollToOffset({ offset: 0, animated: false });
                 }}
-                placeholder="Chicken, rice, yogurt…"
+                placeholder={selectCopy(es, 'Pollo, arroz, yogur…', 'Chicken, rice, yogurt…')}
               />
             </>
           ) : null}
@@ -393,7 +510,7 @@ export function AddFoodScreen({
         {!reviewingEntries && queuedEntries.length > 0 ? (
           <View style={styles.reviewFooter}>
             <Button
-              title={`Review ${queuedEntries.length} ${queuedEntries.length === 1 ? 'entry' : 'entries'}`}
+              title={queueReviewTitle(queuedEntries.length, es)}
               icon="clipboard"
               onPress={() => setReviewingEntries(true)}
             />
@@ -457,6 +574,7 @@ function CatalogueFormModal({
   onSaved: (entry: EntrySource) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const scroll = React.useRef<ScrollViewInstance>(null);
   const editing = form.kind === 'edit';
   let type: EntityType;
@@ -478,11 +596,15 @@ function CatalogueFormModal({
               accessibilityRole="header"
               style={[textStyles['title-md'], styles.heading, { color: p.ink }]}
             >
-              {editing ? 'Edit' : 'Create'} {type.toLowerCase()}
+              {catalogueFormTitle(editing, type, es)}
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={editing ? 'Close editor' : 'Close creation'}
+              accessibilityLabel={
+                editing
+                  ? selectCopy(es, 'Cerrar editor', 'Close editor')
+                  : selectCopy(es, 'Cerrar creación', 'Close creation')
+              }
               onPress={onClose}
               style={[styles.back, { backgroundColor: p['surface-300'] }]}
             >
@@ -492,13 +614,13 @@ function CatalogueFormModal({
           {!editing ? (
             <View
               accessibilityRole="tablist"
-              accessibilityLabel="Creation type"
+              accessibilityLabel={selectCopy(es, 'Tipo de creación', 'Creation type')}
               style={styles.header}
             >
               {entityTypes.map((label) => (
                 <AnimatedTextSelector
                   key={label}
-                  label={label}
+                  label={catalogueTypeLabel(label, es)}
                   selected={type === label}
                   role="tab"
                   reduceMotion={reduceMotion}
@@ -572,6 +694,7 @@ function PortionPicker({
   onQueue: (amount: number) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [amount, setAmount] = React.useState(entry.kind === 'recipe' ? '1' : '');
   const [previewAmount, setPreviewAmount] = React.useState('');
   React.useEffect(() => {
@@ -605,7 +728,11 @@ function PortionPicker({
               </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Close amount selector"
+                accessibilityLabel={selectCopy(
+                  es,
+                  'Cerrar selector de cantidad',
+                  'Close amount selector',
+                )}
                 onPress={onClose}
                 style={styles.back}
               >
@@ -633,21 +760,25 @@ function PortionPicker({
                     values={entry.source}
                     embedded
                     factor={previewServings}
-                    portion={
-                      previewServings === 1 ? 'Per serving' : `For ${previewServings} servings`
-                    }
+                    portion={recipePortionLabel(previewServings, es)}
                   />
-                  <Text style={[textStyles.label, { color: p.ink }]}>Servings</Text>
+                  <Text style={[textStyles.label, { color: p.ink }]}>
+                    {selectCopy(es, 'Raciones', 'Servings')}
+                  </Text>
                   <View style={[styles.amountRow, styles.portionRecipeRow]}>
                     <ServingsStepper
-                      label="Recipe servings to add"
+                      label={selectCopy(
+                        es,
+                        'Raciones de receta a añadir',
+                        'Recipe servings to add',
+                      )}
                       value={amount}
                       onChange={setAmount}
                       fractional
                     />
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel="Add recipe"
+                      accessibilityLabel={selectCopy(es, 'Añadir receta', 'Add recipe')}
                       accessibilityState={{ disabled: !canQueue }}
                       disabled={!canQueue}
                       onPress={submit}
@@ -659,7 +790,9 @@ function PortionPicker({
                         },
                       ]}
                     >
-                      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Add</Text>
+                      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                        {selectCopy(es, 'Añadir', 'Add')}
+                      </Text>
                     </Pressable>
                   </View>
                 </>
@@ -680,8 +813,14 @@ function CatalogueStatus({
   collection: 'foods' | 'recipes';
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   if (catalogue.isFetchingNextPage)
-    return <ActivityIndicator accessibilityLabel={`Loading ${collection}`} color={p.brand} />;
+    return (
+      <ActivityIndicator
+        accessibilityLabel={catalogueLoadingLabel(collection, es)}
+        color={p.brand}
+      />
+    );
   if (!catalogue.isError) return null;
   return (
     <Pressable
@@ -689,7 +828,9 @@ function CatalogueStatus({
       onPress={catalogue.retry}
       style={[styles.pageAction, { backgroundColor: p['surface-300'] }]}
     >
-      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry loading {collection}</Text>
+      <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+        {catalogueRetryLabel(collection, es)}
+      </Text>
     </Pressable>
   );
 }
@@ -710,11 +851,12 @@ function FoodRow({
   onRequestDelete: (food: Food) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <View style={[styles.catalogueRow, { backgroundColor: p['surface-200'] }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Select ${food.name}`}
+        accessibilityLabel={selectCopy(es, `Seleccionar ${food.name}`, `Select ${food.name}`)}
         accessibilityState={{ selected: isQueued }}
         onPress={() => onSelect(food)}
         style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
@@ -734,7 +876,7 @@ function FoodRow({
         <View style={styles.flex}>
           <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            Per 100 g · {food.calories} kcal
+            {selectCopy(es, 'Por 100 g', 'Per 100 g')} · {food.calories} kcal
           </Text>
         </View>
       </Pressable>
@@ -742,7 +884,7 @@ function FoodRow({
         <View style={styles.itemActions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Edit ${food.name}`}
+            accessibilityLabel={selectCopy(es, `Editar ${food.name}`, `Edit ${food.name}`)}
             hitSlop={spacing['space-1']}
             onPress={() => onEdit(food)}
             style={styles.editItem}
@@ -751,7 +893,7 @@ function FoodRow({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Delete ${food.name}`}
+            accessibilityLabel={selectCopy(es, `Eliminar ${food.name}`, `Delete ${food.name}`)}
             onPress={() => onRequestDelete(food)}
             hitSlop={spacing['space-1']}
             style={styles.deleteRecipe}
@@ -778,6 +920,7 @@ function DeleteFoodConfirmation({
   onConfirm: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <Modal transparent animationType="fade" visible={Boolean(food)} onRequestClose={onCancel}>
       <View style={[styles.modalBackdrop, { backgroundColor: p.scrim }]}>
@@ -786,12 +929,22 @@ function DeleteFoodConfirmation({
           style={[styles.deleteConfirmation, { backgroundColor: p['surface-200'] }]}
         >
           <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-            {error ? 'Can’t delete food' : 'Delete food?'}
+            {error
+              ? selectCopy(es, 'No se puede eliminar el alimento', 'Can’t delete food')
+              : selectCopy(es, '¿Eliminar alimento?', 'Delete food?')}
           </Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {error
-              ? `“${food?.name}” is used in a recipe or diary and must be kept.`
-              : `Delete “${food?.name}”? This cannot be undone.`}
+              ? selectCopy(
+                  es,
+                  `“${food?.name}” se usa en una receta o diario y debe conservarse.`,
+                  `“${food?.name}” is used in a recipe or diary and must be kept.`,
+                )
+              : selectCopy(
+                  es,
+                  `¿Eliminar “${food?.name}”? Esta acción no se puede deshacer.`,
+                  `Delete “${food?.name}”? This cannot be undone.`,
+                )}
           </Text>
           <View style={styles.confirmationActions}>
             <Pressable
@@ -799,7 +952,9 @@ function DeleteFoodConfirmation({
               onPress={onCancel}
               style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
             >
-              <Text style={[textStyles.label, { color: p.ink }]}>{error ? 'Close' : 'Cancel'}</Text>
+              <Text style={[textStyles.label, { color: p.ink }]}>
+                {error ? selectCopy(es, 'Cerrar', 'Close') : selectCopy(es, 'Cancelar', 'Cancel')}
+              </Text>
             </Pressable>
             {!error ? (
               <Pressable
@@ -808,7 +963,9 @@ function DeleteFoodConfirmation({
                 onPress={onConfirm}
                 style={[styles.confirmButton, { backgroundColor: p.danger }]}
               >
-                <Text style={[textStyles.label, { color: p['on-brand'] }]}>Delete</Text>
+                <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+                  {selectCopy(es, 'Eliminar', 'Delete')}
+                </Text>
               </Pressable>
             ) : null}
           </View>
@@ -836,6 +993,7 @@ function EntryQueueReview({
   onConfirm: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
   const [draftQuantity, setDraftQuantity] = React.useState('');
   const totals = entries.reduce(
@@ -851,7 +1009,6 @@ function EntryQueueReview({
     { calories: 0, protein: 0, carbohydrates: 0, fats: 0 },
   );
   const confirmDisabled = pending || editingKey !== null || !entries.length;
-  const entryLabel = entries.length === 1 ? 'entry' : 'entries';
 
   return (
     <View style={styles.reviewSections}>
@@ -869,11 +1026,7 @@ function EntryQueueReview({
               <View style={styles.queueRow}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    editing
-                      ? `Cancel editing ${item.source.name} quantity`
-                      : `Edit ${item.source.name} quantity`
-                  }
+                  accessibilityLabel={reviewItemEditLabel(editing, item.source.name, es)}
                   accessibilityState={{ disabled: pending, expanded: editing }}
                   disabled={pending}
                   onPress={() => {
@@ -885,7 +1038,7 @@ function EntryQueueReview({
                   <View style={styles.flex}>
                     <Text style={[textStyles.label, { color: p.ink }]}>{item.source.name}</Text>
                     <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                      {amount} {unit} · {calories} kcal
+                      {amount} {quantityUnitLabel(amount, unit, es)} · {calories} kcal
                     </Text>
                   </View>
                   <Feather
@@ -896,7 +1049,11 @@ function EntryQueueReview({
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${item.source.name} from selection`}
+                  accessibilityLabel={selectCopy(
+                    es,
+                    `Quitar ${item.source.name} de la selección`,
+                    `Remove ${item.source.name} from selection`,
+                  )}
                   disabled={pending}
                   onPress={() => {
                     if (editing) {
@@ -926,7 +1083,7 @@ function EntryQueueReview({
                   <PortionNutritionPreview
                     values={item.source}
                     factor={factor}
-                    portion={`For ${amount} ${unit}`}
+                    portion={portionForAmount(amount, unit, es)}
                   />
                 </>
               ) : null}
@@ -935,17 +1092,27 @@ function EntryQueueReview({
         })}
       </View>
       <View style={styles.reviewTotals}>
-        <Text style={[textStyles.label, { color: p.ink }]}>Selection totals</Text>
+        <Text style={[textStyles.label, { color: p.ink }]}>
+          {selectCopy(es, 'Totales de la selección', 'Selection totals')}
+        </Text>
         <View
           accessible
-          accessibilityLabel={`Nutrition summary: ${Math.round(totals.calories)} calories, ${formatGrams(totals.carbohydrates)} grams carbohydrates, ${formatGrams(totals.protein)} grams protein, ${formatGrams(totals.fats)} grams fat`}
+          accessibilityLabel={
+            es
+              ? `Resumen nutricional: ${Math.round(totals.calories)} calorías, ${formatGrams(totals.carbohydrates)} gramos de carbohidratos, ${formatGrams(totals.protein)} gramos de proteínas, ${formatGrams(totals.fats)} gramos de grasas`
+              : `Nutrition summary: ${Math.round(totals.calories)} calories, ${formatGrams(totals.carbohydrates)} grams carbohydrates, ${formatGrams(totals.protein)} grams protein, ${formatGrams(totals.fats)} grams fat`
+          }
         >
           <NutritionSummary values={totals} precision={1} />
         </View>
       </View>
       {error ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-          Some entries could not be added. Review the remaining selection and try again.
+          {selectCopy(
+            es,
+            'No se pudieron añadir algunos registros. Revisa la selección restante e inténtalo de nuevo.',
+            'Some entries could not be added. Review the remaining selection and try again.',
+          )}
         </Text>
       ) : null}
       <Pressable
@@ -959,7 +1126,7 @@ function EntryQueueReview({
         ]}
       >
         <Text style={[textStyles.label, styles.centeredText, { color: p['on-brand'] }]}>
-          {pending ? 'Adding…' : `Add ${entries.length} ${entryLabel} to ${meal}`}
+          {reviewConfirmLabel(pending, entries.length, meal, es)}
         </Text>
       </Pressable>
     </View>
@@ -980,21 +1147,30 @@ function AmountActionRow({
   onPress: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const adding = label === 'Add food';
   return (
     <View style={styles.amountRow}>
       <TextField
-        accessibilityLabel={unit === 'g' ? 'Food amount' : 'Recipe servings to add'}
+        accessibilityLabel={
+          unit === 'g'
+            ? selectCopy(es, 'Cantidad de alimento', 'Food amount')
+            : selectCopy(es, 'Raciones de receta a añadir', 'Recipe servings to add')
+        }
         keyboardType="decimal-pad"
-        placeholder="Amount"
+        placeholder={selectCopy(es, 'Cantidad', 'Amount')}
         value={amount}
         onChangeText={(value) => onChange(numericAmount(value))}
         containerStyle={[styles.flex, styles.compactField]}
         inputStyle={styles.compactInput}
-        trailing={<Text style={[textStyles.label, { color: p['ink-muted'] }]}>{unit}</Text>}
+        trailing={
+          <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
+            {es && unit === 'servings' ? 'raciones' : unit}
+          </Text>
+        }
       />
       <QueueIconButton
-        label={label}
+        label={amountActionLabel(adding, label, es)}
         icon={adding ? 'plus' : 'check'}
         disabled={!validAmount(amount)}
         onPress={onPress}
@@ -1038,6 +1214,7 @@ function numericAmount(value: string) {
 }
 
 function SelectedFoodPreview({ food, amount }: Readonly<{ food: Food; amount: string }>) {
+  const es = useLanguage() === 'es';
   const quantity = Number(amount);
   const grams = Number.isFinite(quantity) && quantity > 0 ? quantity : 100;
   return (
@@ -1045,7 +1222,7 @@ function SelectedFoodPreview({ food, amount }: Readonly<{ food: Food; amount: st
       values={food}
       embedded
       factor={grams / 100}
-      portion={grams === 100 ? 'Per 100 g' : `For ${grams} g`}
+      portion={selectedFoodPortion(grams, es)}
     />
   );
 }
@@ -1056,14 +1233,25 @@ function formatGrams(value: number, maximumFractionDigits = 1) {
 
 function EmptyRecipes({ searching }: Readonly<{ searching: boolean }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   if (searching)
-    return <Text style={[textStyles.body, { color: p['ink-muted'] }]}>No recipes found.</Text>;
+    return (
+      <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
+        {selectCopy(es, 'No se encontraron recetas.', 'No recipes found.')}
+      </Text>
+    );
   return (
     <View style={styles.emptyRecipes}>
       <Feather name="book-open" size={22} color={p['ink-muted']} />
-      <Text style={[textStyles.body, { color: p.ink }]}>No recipes saved yet</Text>
+      <Text style={[textStyles.body, { color: p.ink }]}>
+        {selectCopy(es, 'Aún no hay recetas guardadas', 'No recipes saved yet')}
+      </Text>
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        Create one to add its servings to any meal.
+        {selectCopy(
+          es,
+          'Crea una para añadir sus raciones a cualquier comida.',
+          'Create one to add its servings to any meal.',
+        )}
       </Text>
     </View>
   );
@@ -1083,6 +1271,7 @@ function RecipePicker({
   onEdit: (recipe: Recipe) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const queryClient = useQueryClient();
   const [recipeToDelete, setRecipeToDelete] = React.useState<Recipe | null>(null);
   const [search, setSearch] = React.useState('');
@@ -1103,9 +1292,9 @@ function RecipePicker({
   });
   return (
     <View style={[styles.list, styles.recipeForm]}>
-      <Text style={[textStyles.label, { color: p.ink }]}>Search</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>{selectCopy(es, 'Buscar', 'Search')}</Text>
       <TextField
-        accessibilityLabel="Search recipe"
+        accessibilityLabel={selectCopy(es, 'Buscar receta', 'Search recipe')}
         maxLength={150}
         leading={<Feather name="search" size={20} color={p['ink-muted']} />}
         value={search}
@@ -1113,7 +1302,7 @@ function RecipePicker({
           setSearch(value);
           list.current?.scrollToOffset({ offset: 0, animated: false });
         }}
-        placeholder="Chicken rice, pasta…"
+        placeholder={selectCopy(es, 'Arroz con pollo, pasta…', 'Chicken rice, pasta…')}
       />
       <FlatList
         ref={list}
@@ -1132,7 +1321,11 @@ function RecipePicker({
               accessibilityState={{
                 selected: queuedRecipeIds.includes(recipe.id),
               }}
-              accessibilityLabel={`Select ${recipe.name}`}
+              accessibilityLabel={selectCopy(
+                es,
+                `Seleccionar ${recipe.name}`,
+                `Select ${recipe.name}`,
+              )}
               onPress={() => onSelect(recipe)}
               style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
             >
@@ -1153,7 +1346,7 @@ function RecipePicker({
               <View style={styles.flex}>
                 <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  Per serving · {recipe.calories.toFixed(0)} kcal
+                  {selectCopy(es, 'Por ración', 'Per serving')} · {recipe.calories.toFixed(0)} kcal
                 </Text>
               </View>
             </Pressable>
@@ -1161,7 +1354,11 @@ function RecipePicker({
               <View style={styles.itemActions}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Edit ${recipe.name}`}
+                  accessibilityLabel={selectCopy(
+                    es,
+                    `Editar ${recipe.name}`,
+                    `Edit ${recipe.name}`,
+                  )}
                   hitSlop={spacing['space-1']}
                   onPress={() => onEdit(recipe)}
                   style={styles.editItem}
@@ -1170,7 +1367,11 @@ function RecipePicker({
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Delete ${recipe.name}`}
+                  accessibilityLabel={selectCopy(
+                    es,
+                    `Eliminar ${recipe.name}`,
+                    `Delete ${recipe.name}`,
+                  )}
                   accessibilityState={{ disabled: remove.isPending }}
                   disabled={remove.isPending}
                   onPress={() => {
@@ -1213,12 +1414,22 @@ function RecipePicker({
               <Feather name="trash-2" size={24} color={p.danger} />
             </View>
             <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-              {remove.isError ? 'Can’t delete recipe' : 'Delete recipe?'}
+              {remove.isError
+                ? selectCopy(es, 'No se puede eliminar la receta', 'Can’t delete recipe')
+                : selectCopy(es, '¿Eliminar receta?', 'Delete recipe?')}
             </Text>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
               {remove.isError
-                ? `“${recipeToDelete?.name}” is already logged in your diary. Keep it to preserve your nutrition history.`
-                : `“${recipeToDelete?.name}” will be permanently removed.`}
+                ? selectCopy(
+                    es,
+                    `“${recipeToDelete?.name}” ya está registrada en tu diario. Consérvala para mantener tu historial.`,
+                    `“${recipeToDelete?.name}” is already logged in your diary. Keep it to preserve your nutrition history.`,
+                  )
+                : selectCopy(
+                    es,
+                    `“${recipeToDelete?.name}” se eliminará permanentemente.`,
+                    `“${recipeToDelete?.name}” will be permanently removed.`,
+                  )}
             </Text>
             <View style={styles.confirmationActions}>
               {remove.isError ? (
@@ -1227,7 +1438,9 @@ function RecipePicker({
                   onPress={() => setRecipeToDelete(null)}
                   style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
                 >
-                  <Text style={[textStyles.label, { color: p.ink }]}>Close</Text>
+                  <Text style={[textStyles.label, { color: p.ink }]}>
+                    {selectCopy(es, 'Cerrar', 'Close')}
+                  </Text>
                 </Pressable>
               ) : (
                 <>
@@ -1236,7 +1449,9 @@ function RecipePicker({
                     onPress={() => setRecipeToDelete(null)}
                     style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
                   >
-                    <Text style={[textStyles.label, { color: p.ink }]}>Cancel</Text>
+                    <Text style={[textStyles.label, { color: p.ink }]}>
+                      {selectCopy(es, 'Cancelar', 'Cancel')}
+                    </Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
@@ -1247,7 +1462,9 @@ function RecipePicker({
                       { backgroundColor: p.danger, opacity: remove.isPending ? 0.55 : 1 },
                     ]}
                   >
-                    <Text style={[textStyles.label, { color: p['on-brand'] }]}>Delete</Text>
+                    <Text style={[textStyles.label, { color: p['on-brand'] }]}>
+                      {selectCopy(es, 'Eliminar', 'Delete')}
+                    </Text>
                   </Pressable>
                 </>
               )}
@@ -1271,6 +1488,7 @@ function ServingsStepper({
   fractional?: boolean;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const count = fractional ? roundedAmount(value) || 0 : Number(value);
   const maximum = fractional ? maxEntryAmount : 100;
   const step = (change: -1 | 1) => {
@@ -1279,7 +1497,11 @@ function ServingsStepper({
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={decrement ? 'Decrease servings' : 'Increase servings'}
+        accessibilityLabel={
+          decrement
+            ? selectCopy(es, 'Reducir raciones', 'Decrease servings')
+            : selectCopy(es, 'Aumentar raciones', 'Increase servings')
+        }
         accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={() => {
@@ -1324,6 +1546,7 @@ function FoodEditor({
   onSaved,
 }: Readonly<{ food: Food | null; onSaved: (food: Food) => void }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const queryClient = useQueryClient();
   const [name, setName] = React.useState(food?.name ?? '');
   const [values, setValues] = React.useState({
@@ -1352,20 +1575,27 @@ function FoodEditor({
   const valid = Boolean(name.trim()) && Object.values(values).every((value) => Number(value) >= 0);
   return (
     <View style={styles.recipeForm}>
-      <Text style={[textStyles.label, { color: p.ink }]}>Name</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>{selectCopy(es, 'Nombre', 'Name')}</Text>
       <TextField
-        accessibilityLabel="Food name"
+        accessibilityLabel={selectCopy(es, 'Nombre del alimento', 'Food name')}
         value={name}
         onChangeText={setName}
-        placeholder="Greek yogurt"
+        placeholder={selectCopy(es, 'Yogur griego', 'Greek yogurt')}
       />
       {(['calories', 'protein', 'carbohydrates', 'fats'] as const).map((field) => (
         <View key={field} style={styles.foodField}>
-          <Text style={[textStyles.label, { color: p.ink }]}>
-            {field === 'calories' ? 'Calories' : `${field[0].toUpperCase()}${field.slice(1)}`}
-          </Text>
+          <Text style={[textStyles.label, { color: p.ink }]}>{foodFieldLabel(field, es)}</Text>
           <TextField
-            accessibilityLabel={field}
+            accessibilityLabel={
+              es
+                ? {
+                    calories: 'Calorías',
+                    protein: 'Proteínas',
+                    carbohydrates: 'Carbohidratos',
+                    fats: 'Grasas',
+                  }[field]
+                : field
+            }
             keyboardType="decimal-pad"
             value={values[field]}
             onChangeText={(value) =>
@@ -1389,7 +1619,9 @@ function FoodEditor({
         </View>
       ))}
       {save.isError ? (
-        <Text style={[textStyles['body-sm'], { color: p.danger }]}>Could not save food.</Text>
+        <Text style={[textStyles['body-sm'], { color: p.danger }]}>
+          {selectCopy(es, 'No se pudo guardar el alimento.', 'Could not save food.')}
+        </Text>
       ) : null}
       <Pressable
         accessibilityRole="button"
@@ -1401,7 +1633,12 @@ function FoodEditor({
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {saveLabel(save.isPending, Boolean(food), 'Save food')}
+          {saveLabel(
+            save.isPending,
+            Boolean(food),
+            selectCopy(es, 'Guardar alimento', 'Save food'),
+            es,
+          )}
         </Text>
       </Pressable>
     </View>
@@ -1456,12 +1693,13 @@ function RecipeIngredients({
   setIngredients: React.Dispatch<React.SetStateAction<RecipeIngredient[]>>;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <>
       {ingredientsWithNutrition.length ? (
         <View style={styles.recipeFields}>
           <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-            In this recipe
+            {selectCopy(es, 'En esta receta', 'In this recipe')}
           </Text>
           <View style={[styles.ingredientList, { backgroundColor: p['surface-100'] }]}>
             {ingredientsWithNutrition.map(({ key, food, grams, nutrition }, index) => (
@@ -1485,7 +1723,11 @@ function RecipeIngredients({
                 </View>
                 <View style={styles.ingredientControls}>
                   <TextField
-                    accessibilityLabel={`${food.name} quantity`}
+                    accessibilityLabel={selectCopy(
+                      es,
+                      `Cantidad de ${food.name}`,
+                      `${food.name} quantity`,
+                    )}
                     keyboardType="decimal-pad"
                     selectTextOnFocus
                     value={grams}
@@ -1506,7 +1748,11 @@ function RecipeIngredients({
                   />
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Remove ${food.name}`}
+                    accessibilityLabel={selectCopy(
+                      es,
+                      `Eliminar ${food.name}`,
+                      `Remove ${food.name}`,
+                    )}
                     style={styles.stepperButton}
                     onPress={() =>
                       setIngredients((current) => current.filter((item) => item.key !== key))
@@ -1536,6 +1782,7 @@ function IngredientSearchResults({
   chooseIngredient: (food: Food) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <>
       {term ? (
@@ -1543,7 +1790,11 @@ function IngredientSearchResults({
           style={[styles.ingredientResults, { backgroundColor: p['surface-100'] }]}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled
-          accessibilityLabel="Ingredient search results"
+          accessibilityLabel={selectCopy(
+            es,
+            'Resultados de búsqueda de ingredientes',
+            'Ingredient search results',
+          )}
           scrollEventThrottle={32}
           onScroll={({ nativeEvent: { contentSize, contentOffset, layoutMeasurement } }) => {
             if (contentSize.height - contentOffset.y <= layoutMeasurement.height * 1.5) {
@@ -1556,7 +1807,11 @@ function IngredientSearchResults({
               <Pressable
                 key={food.id}
                 accessibilityRole="button"
-                accessibilityLabel={`Add ${food.name} as an ingredient`}
+                accessibilityLabel={selectCopy(
+                  es,
+                  `Añadir ${food.name} como ingrediente`,
+                  `Add ${food.name} as an ingredient`,
+                )}
                 onPress={() => chooseIngredient(food)}
                 style={({ pressed }) => [
                   styles.ingredientSearchRow,
@@ -1578,7 +1833,7 @@ function IngredientSearchResults({
                 { color: p['ink-muted'] },
               ]}
             >
-              {searchStatus(term !== debouncedSearch || results.isPending, results.isError)}
+              {searchStatus(term !== debouncedSearch || results.isPending, results.isError, es)}
             </Text>
           )}
           {term === debouncedSearch ? (
@@ -1596,6 +1851,7 @@ function RecipeEditor({
   onSaved,
 }: Readonly<{ accountId: number; recipe: Recipe | null; onSaved: (recipe: Recipe) => void }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const queryClient = useQueryClient();
   const [name, setName] = React.useState(recipe?.name ?? '');
   const [servings, setServings] = React.useState(recipe?.servings.toString() ?? '1');
@@ -1676,36 +1932,48 @@ function RecipeEditor({
   return (
     <View style={styles.recipeForm}>
       <View style={styles.recipeFields}>
-        <Text style={[textStyles.label, { color: p.ink }]}>Recipe name</Text>
+        <Text style={[textStyles.label, { color: p.ink }]}>
+          {selectCopy(es, 'Nombre de la receta', 'Recipe name')}
+        </Text>
         <TextField
-          accessibilityLabel="Recipe name"
+          accessibilityLabel={selectCopy(es, 'Nombre de la receta', 'Recipe name')}
           value={name}
           onChangeText={setName}
-          placeholder="Chicken rice bowl"
+          placeholder={selectCopy(es, 'Bol de arroz con pollo', 'Chicken rice bowl')}
           containerStyle={styles.compactField}
           inputStyle={styles.compactInput}
         />
         <View style={styles.servingRow}>
-          <Text style={[textStyles.label, styles.flex, { color: p.ink }]}>Servings</Text>
-          <ServingsStepper label="Recipe servings" value={servings} onChange={setServings} />
+          <Text style={[textStyles.label, styles.flex, { color: p.ink }]}>
+            {selectCopy(es, 'Raciones', 'Servings')}
+          </Text>
+          <ServingsStepper
+            label={selectCopy(es, 'Raciones de receta', 'Recipe servings')}
+            value={servings}
+            onChange={setServings}
+          />
         </View>
       </View>
       <View style={styles.recipeFields}>
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          Add ingredients
+          {selectCopy(es, 'Añadir ingredientes', 'Add ingredients')}
         </Text>
         <TextField
-          accessibilityLabel="Search ingredient"
+          accessibilityLabel={selectCopy(es, 'Buscar ingrediente', 'Search ingredient')}
           maxLength={150}
           leading={<Feather name="search" size={18} color={p['ink-muted']} />}
           value={search}
           onChangeText={setSearch}
-          placeholder="Search for a food"
+          placeholder={selectCopy(es, 'Buscar un alimento', 'Search for a food')}
           trailing={
             search ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Clear ingredient search"
+                accessibilityLabel={selectCopy(
+                  es,
+                  'Borrar búsqueda de ingredientes',
+                  'Clear ingredient search',
+                )}
                 onPress={clearIngredientSearch}
                 style={styles.stepperButton}
               >
@@ -1732,7 +2000,7 @@ function RecipeEditor({
           <PortionNutritionPreview
             values={preview}
             factor={matchesSavedPortions ? 1 : 1 / servingCount}
-            portion="Per serving"
+            portion={selectCopy(es, 'Por ración', 'Per serving')}
             precision={2}
             embedded
           />
@@ -1743,11 +2011,17 @@ function RecipeEditor({
       validQuantities &&
       existingFoods.some((result) => result.isError) ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Nutrition is unavailable for one or more ingredients.
+          {selectCopy(
+            es,
+            'La información nutricional no está disponible para uno o más ingredientes.',
+            'Nutrition is unavailable for one or more ingredients.',
+          )}
         </Text>
       ) : null}
       {save.isError ? (
-        <Text style={[textStyles['body-sm'], { color: p.danger }]}>Could not save recipe.</Text>
+        <Text style={[textStyles['body-sm'], { color: p.danger }]}>
+          {selectCopy(es, 'No se pudo guardar la receta.', 'Could not save recipe.')}
+        </Text>
       ) : null}
       <Pressable
         accessibilityRole="button"
@@ -1760,7 +2034,12 @@ function RecipeEditor({
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {saveLabel(save.isPending, Boolean(recipe), 'Create recipe')}
+          {saveLabel(
+            save.isPending,
+            Boolean(recipe),
+            selectCopy(es, 'Crear receta', 'Create recipe'),
+            es,
+          )}
         </Text>
       </Pressable>
     </View>

@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import React, { useRef, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, ui } from '@/features/training/components/ui';
@@ -15,6 +16,22 @@ export type WorkoutActions = Readonly<{
   resume: () => void;
 }>;
 
+function workoutError(error: unknown, language: 'en' | 'es') {
+  if (error instanceof ApiError && error.status === 404)
+    return language === 'es'
+      ? 'Este entrenamiento compartido ya no está disponible.'
+      : 'This shared workout is no longer available.';
+  return language === 'es'
+    ? 'No se pudo cargar el entrenamiento. Inténtalo de nuevo.'
+    : 'Could not load this workout. Try again.';
+}
+
+function startError(language: 'en' | 'es') {
+  return language === 'es'
+    ? 'No se pudo iniciar el entrenamiento. Inténtalo de nuevo o reanuda tu entrenamiento activo.'
+    : 'Could not start this workout. Try again or resume your active workout.';
+}
+
 export function PostOptions({
   post,
   onClose,
@@ -26,6 +43,7 @@ export function PostOptions({
   onDelete: (post: Post) => void;
   workoutActions?: WorkoutActions;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [error, setError] = useState('');
@@ -42,13 +60,9 @@ export function PostOptions({
       setTemplate(workout);
       if (!workout.exercises.length || (!accepted && workout.skipped_exercises.length)) return;
       if (await workoutActions.start(workout)) onClose();
-      else setError('Could not start this workout. Try again or resume your active workout.');
+      else setError(startError(language));
     } catch (error_) {
-      setError(
-        error_ instanceof ApiError && error_.status === 404
-          ? 'This shared workout is no longer available.'
-          : 'Could not load this workout. Try again.',
-      );
+      setError(workoutError(error_, language));
     } finally {
       busy.current = false;
       setPending(false);
@@ -73,10 +87,19 @@ export function PostOptions({
         >
           <ScrollView contentContainerStyle={ui.card}>
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              Post options
+              {language === 'es' ? 'Opciones de la publicación' : 'Post options'}
             </Text>
             {post.is_mine ? (
-              <Button title="Edit post · Coming soon" secondary disabled onPress={() => {}} />
+              <Button
+                title={
+                  language === 'es'
+                    ? 'Editar publicación · Próximamente'
+                    : 'Edit post · Coming soon'
+                }
+                secondary
+                disabled
+                onPress={() => {}}
+              />
             ) : null}
             {post.workout && workoutActions ? (
               <PerformAction
@@ -91,7 +114,11 @@ export function PostOptions({
                 }}
               />
             ) : null}
-            {pending ? <Text accessibilityRole="progressbar">Starting workout…</Text> : null}
+            {pending ? (
+              <Text accessibilityRole="progressbar">
+                {language === 'es' ? 'Iniciando entrenamiento…' : 'Starting workout…'}
+              </Text>
+            ) : null}
             {error ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
                 {error}
@@ -99,13 +126,18 @@ export function PostOptions({
             ) : null}
             {post.is_mine ? (
               <Button
-                title="Delete post"
+                title={language === 'es' ? 'Eliminar publicación' : 'Delete post'}
                 tone="danger"
                 disabled={pending}
                 onPress={() => onDelete(post)}
               />
             ) : null}
-            <Button title="Close" secondary disabled={pending} onPress={close} />
+            <Button
+              title={language === 'es' ? 'Cerrar' : 'Close'}
+              secondary
+              disabled={pending}
+              onPress={close}
+            />
           </ScrollView>
         </View>
       </View>
@@ -128,19 +160,30 @@ function PerformAction({
   onPerform: (accepted?: WorkoutTemplate) => void;
   onResume: () => void;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   if (activeDraft) {
     return (
       <>
-        <Text style={{ color: p.ink }}>You already have an active workout.</Text>
-        <Button title="Resume active workout" disabled={disabled} onPress={onResume} />
+        <Text style={{ color: p.ink }}>
+          {language === 'es'
+            ? 'Ya tienes un entrenamiento activo.'
+            : 'You already have an active workout.'}
+        </Text>
+        <Button
+          title={language === 'es' ? 'Reanudar entrenamiento activo' : 'Resume active workout'}
+          disabled={disabled}
+          onPress={onResume}
+        />
       </>
     );
   }
   if (template && !template.exercises.length) {
     return (
       <Text accessibilityRole="alert" style={{ color: p.ink }}>
-        None of the exercises in this workout are available to you.
+        {language === 'es'
+          ? 'Ninguno de los ejercicios de este entrenamiento está disponible para ti.'
+          : 'None of the exercises in this workout are available to you.'}
       </Text>
     );
   }
@@ -148,10 +191,11 @@ function PerformAction({
     return (
       <>
         <Text style={{ color: p.ink }}>
-          These exercises will be skipped: {template.skipped_exercises.join(', ')}.
+          {language === 'es' ? 'Se omitirán estos ejercicios' : 'These exercises will be skipped'}:{' '}
+          {template.skipped_exercises.join(', ')}.
         </Text>
         <Button
-          title="Start available exercises"
+          title={language === 'es' ? 'Iniciar ejercicios disponibles' : 'Start available exercises'}
           disabled={disabled}
           onPress={() => onPerform(template)}
         />
@@ -159,12 +203,13 @@ function PerformAction({
     );
   }
   return (
-    <Button
-      title={mine ? 'Perform again' : 'Perform workout'}
-      disabled={disabled}
-      onPress={() => onPerform()}
-    />
+    <Button title={performTitle(mine, language)} disabled={disabled} onPress={() => onPerform()} />
   );
+}
+
+function performTitle(mine: boolean, language: 'en' | 'es') {
+  if (mine) return language === 'es' ? 'Volver a realizar' : 'Perform again';
+  return language === 'es' ? 'Realizar entrenamiento' : 'Perform workout';
 }
 
 const styles = StyleSheet.create({

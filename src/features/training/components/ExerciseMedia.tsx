@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView, type VideoPlayer } from 'expo-video';
 import { Image, Text, View } from 'react-native';
@@ -39,6 +40,8 @@ function ExerciseVideo({
   imageUrl: string | null;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const view = useRef<VideoView>(null);
   const [muted, setMuted] = useState(true);
   const player = useVideoPlayer(url, (player) => {
@@ -53,8 +56,6 @@ function ExerciseVideo({
     currentOffsetFromLive: null,
     bufferedPosition: 0,
   });
-  const clock = (seconds: number) =>
-    `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
   const { status } = useEvent(player, 'statusChange', { status: player.status });
   const autoplayed = useRef(false);
   useEffect(() => {
@@ -68,7 +69,7 @@ function ExerciseVideo({
     return (
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          Video unavailable.
+          {selectCopy(es, 'Vídeo no disponible.', 'Video unavailable.')}
         </Text>
         <ExerciseMedia name={name} videoUrl={null} imageUrl={imageUrl} />
       </View>
@@ -87,69 +88,97 @@ function ExerciseVideo({
         style={mediaStyle}
         contentFit="contain"
         nativeControls={false}
-        accessibilityLabel={`Video for ${name}`}
+        accessibilityLabel={selectCopy(es, `Vídeo de ${name}`, `Video for ${name}`)}
       />
       {status === 'loading' ? <Loading /> : null}
-      <View style={{ padding: spacing['space-3'], gap: spacing['space-2'] }}>
+      <VideoControls
+        player={player}
+        view={view}
+        isPlaying={isPlaying}
+        muted={muted}
+        setMuted={setMuted}
+        currentTime={currentTime}
+      />
+    </View>
+  );
+}
+
+function VideoControls({
+  player,
+  view,
+  isPlaying,
+  muted,
+  setMuted,
+  currentTime,
+}: Readonly<{
+  player: VideoPlayer;
+  view: React.RefObject<VideoView | null>;
+  isPlaying: boolean;
+  muted: boolean;
+  setMuted: (muted: boolean) => void;
+  currentTime: number;
+}>) {
+  const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
+  const clock = (seconds: number) =>
+    `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  const progress = player.duration ? (currentTime / player.duration) * 100 : 0;
+  const playingLabel = isPlaying
+    ? { en: 'Pause video', es: 'Pausar vídeo' }
+    : { en: 'Play video', es: 'Reproducir vídeo' };
+  const soundLabel = muted
+    ? { en: 'Unmute video', es: 'Activar sonido' }
+    : { en: 'Mute video', es: 'Silenciar vídeo' };
+  return (
+    <View style={{ padding: spacing['space-3'], gap: spacing['space-2'] }}>
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLabel={selectCopy(es, 'Progreso del vídeo', 'Video progress')}
+        accessibilityValue={{ min: 0, max: player.duration || 1, now: currentTime }}
+        style={{ height: 4, borderRadius: radii['radius-pill'], backgroundColor: p['surface-300'] }}
+      >
         <View
-          accessibilityRole="progressbar"
-          accessibilityLabel="Video progress"
-          accessibilityValue={{ min: 0, max: player.duration || 1, now: currentTime }}
           style={{
             height: 4,
             borderRadius: radii['radius-pill'],
-            backgroundColor: p['surface-300'],
+            backgroundColor: p.brand,
+            width: `${Math.min(100, progress)}%`,
           }}
+        />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] }}>
+        <IconButton
+          icon={isPlaying ? 'pause' : 'play'}
+          label={playingLabel[language]}
+          onPress={() => (isPlaying ? player.pause() : player.play())}
+        />
+        <IconButton
+          icon="rotate-ccw"
+          label={selectCopy(es, 'Volver a reproducir el vídeo', 'Replay video')}
+          onPress={() => player.replay()}
+        />
+        <Text
+          style={[
+            textStyles['body-sm'],
+            { flex: 1, color: p['ink-muted'], fontVariant: ['tabular-nums'] },
+          ]}
         >
-          <View
-            style={{
-              height: 4,
-              borderRadius: radii['radius-pill'],
-              backgroundColor: p.brand,
-              width: `${Math.min(100, player.duration ? (currentTime / player.duration) * 100 : 0)}%`,
-            }}
-          />
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] }}>
-          <IconButton
-            icon={isPlaying ? 'pause' : 'play'}
-            label={isPlaying ? 'Pause video' : 'Play video'}
-            onPress={() => {
-              if (isPlaying) player.pause();
-              else player.play();
-            }}
-          />
-          <IconButton
-            icon="rotate-ccw"
-            label="Replay video"
-            onPress={() => {
-              player.replay();
-            }}
-          />
-          <Text
-            style={[
-              textStyles['body-sm'],
-              { flex: 1, color: p['ink-muted'], fontVariant: ['tabular-nums'] },
-            ]}
-          >
-            {clock(currentTime)} / {clock(player.duration || 0)}
-          </Text>
-          <IconButton
-            icon={muted ? 'volume-x' : 'volume-2'}
-            label={muted ? 'Unmute video' : 'Mute video'}
-            onPress={() => {
-              setPlayerMuted(player, !muted);
-              setMuted(!muted);
-            }}
-          />
-          <IconButton
-            icon="maximize"
-            label="Full screen video"
-            onPress={() => {
-              void view.current?.enterFullscreen();
-            }}
-          />
-        </View>
+          {clock(currentTime)} / {clock(player.duration || 0)}
+        </Text>
+        <IconButton
+          icon={muted ? 'volume-x' : 'volume-2'}
+          label={soundLabel[language]}
+          onPress={() => {
+            setPlayerMuted(player, !muted);
+            setMuted(!muted);
+          }}
+        />
+        <IconButton
+          icon="maximize"
+          label={selectCopy(es, 'Vídeo a pantalla completa', 'Full screen video')}
+          onPress={() => void view.current?.enterFullscreen()}
+        />
       </View>
     </View>
   );

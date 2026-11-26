@@ -19,6 +19,8 @@ import { BodyPartFilter, type ActivityFilter } from './BodyPartFilter';
 import { trainingApi } from '../api';
 import { ExerciseDetails } from './ExerciseDetails';
 import type { ExerciseSummary } from '../schemas';
+import { selectCopy, useLanguage } from '@/i18n/Language';
+import { catalogueLabel } from '../catalogueLabels';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export function ExercisePicker({
@@ -33,6 +35,7 @@ export function ExercisePicker({
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const insets = useSafeAreaInsets();
   const submitting = useRef(false);
   const list = useRef<FlatList<ExerciseSummary>>(null);
@@ -164,7 +167,11 @@ export function ExercisePicker({
             ListEmptyComponent={
               (!query.isPending && !query.isError ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  No exercises found. Try another name or body part.
+                  {selectCopy(
+                    es,
+                    'No se encontraron ejercicios. Prueba con otro nombre o zona muscular.',
+                    'No exercises found. Try another name or body part.',
+                  )}
                 </Text>
               ) : null) ?? undefined
             }
@@ -250,6 +257,11 @@ function ExercisePickerRow({
   onToggle: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
+  const selectionVerb = selected
+    ? { en: 'Deselect', es: 'Deseleccionar' }
+    : { en: 'Select', es: 'Seleccionar' };
   const disabled = adding || (!selected && atCapacity);
   return (
     <View
@@ -266,7 +278,7 @@ function ExercisePickerRow({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Details for ${item.name}`}
+        accessibilityLabel={selectCopy(es, `Detalles de ${item.name}`, `Details for ${item.name}`)}
         disabled={adding}
         onPress={onDetails}
         style={[ui.row, { flex: 1 }]}
@@ -296,13 +308,16 @@ function ExercisePickerRow({
         <View style={{ flex: 1, gap: spacing['space-1'] }}>
           <Text style={[textStyles.label, { color: p.ink }]}>{item.name}</Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {(item.body_parts?.join(' · ') || 'Gym exercise').toLowerCase()}
+            {(
+              item.body_parts?.map((part) => catalogueLabel(part, language)).join(' · ') ||
+              selectCopy(es, 'Ejercicio de gimnasio', 'Gym exercise')
+            ).toLowerCase()}
           </Text>
         </View>
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${selected ? 'Deselect' : 'Select'} ${item.name}`}
+        accessibilityLabel={`${selectionVerb[language]} ${item.name}`}
         accessibilityState={{ selected, disabled }}
         disabled={disabled}
         onPress={onToggle}
@@ -356,7 +371,19 @@ function ExerciseCatalogueHeader({
   onRetry: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const activeFilterCount = bodyParts.length + (activityType === 'all' ? 0 : 1);
+  const filterLabel = activeFilterCount
+    ? {
+        en: `Filter body parts (${activeFilterCount} active)`,
+        es: `Filtrar zonas musculares (${activeFilterCount} activos)`,
+      }
+    : { en: 'Filter body parts', es: 'Filtrar zonas musculares' };
+  const activityName =
+    activityType === 'cardio' ? { en: 'Cardio', es: 'cardio' } : { en: 'Gym', es: 'gimnasio' };
+  const activityLabels = { en: 'Gym', es: 'Gimnasio' };
+  const activeActivityLabel = activityType === 'cardio' ? 'Cardio' : activityLabels[language];
   return (
     <View style={ui.gap}>
       <View style={ui.gap}>
@@ -365,9 +392,14 @@ function ExerciseCatalogueHeader({
             accessibilityRole="header"
             style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
           >
-            Add exercise
+            {selectCopy(es, 'Añadir ejercicio', 'Add exercise')}
           </Text>
-          <IconButton icon="x" label="Close exercise picker" onPress={onClose} disabled={adding} />
+          <IconButton
+            icon="x"
+            label={selectCopy(es, 'Cerrar selector de ejercicios', 'Close exercise picker')}
+            onPress={onClose}
+            disabled={adding}
+          />
         </View>
         <View style={ui.row}>
           <TextField
@@ -377,7 +409,7 @@ function ExerciseCatalogueHeader({
               search ? (
                 <IconButton
                   icon="x"
-                  label="Clear exercise search"
+                  label={selectCopy(es, 'Borrar búsqueda de ejercicios', 'Clear exercise search')}
                   onPress={() => {
                     setSearch('');
                     setName('');
@@ -385,8 +417,8 @@ function ExerciseCatalogueHeader({
                 />
               ) : null
             }
-            accessibilityLabel="Search exercises"
-            placeholder="Search by name"
+            accessibilityLabel={selectCopy(es, 'Buscar ejercicios', 'Search exercises')}
+            placeholder={selectCopy(es, 'Buscar por nombre', 'Search by name')}
             maxLength={200}
             value={search}
             onChangeText={setSearch}
@@ -395,11 +427,7 @@ function ExerciseCatalogueHeader({
           />
           <IconButton
             icon="sliders"
-            label={
-              activeFilterCount > 0
-                ? `Filter body parts (${activeFilterCount} active)`
-                : 'Filter body parts'
-            }
+            label={filterLabel[language]}
             onPress={() => {
               Keyboard.dismiss();
               setFilterOpen(true);
@@ -410,7 +438,11 @@ function ExerciseCatalogueHeader({
           {activityType !== 'all' ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Remove ${activityType === 'cardio' ? 'Cardio' : 'Gym'} filter`}
+              accessibilityLabel={selectCopy(
+                es,
+                `Quitar filtro de ${activityName.es}`,
+                `Remove ${activityName.en} filter`,
+              )}
               onPress={onClearActivity}
               style={[
                 ui.row,
@@ -423,7 +455,7 @@ function ExerciseCatalogueHeader({
               ]}
             >
               <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
-                {activityType === 'cardio' ? 'Cardio' : 'Gym'}
+                {activeActivityLabel}
               </Text>
               <Feather name="x" size={16} color={p['brand-ink']} />
             </Pressable>
@@ -434,7 +466,11 @@ function ExerciseCatalogueHeader({
           {bodyParts.length > 1 ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Clear all body part filters"
+              accessibilityLabel={selectCopy(
+                es,
+                'Quitar todos los filtros de zonas musculares',
+                'Clear all body part filters',
+              )}
               onPress={() => setBodyParts([])}
               style={({ pressed }) => ({
                 alignSelf: 'center',
@@ -444,7 +480,9 @@ function ExerciseCatalogueHeader({
                 opacity: pressed ? 0.55 : 1,
               })}
             >
-              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Clear all</Text>
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                {selectCopy(es, 'Quitar todos', 'Clear all')}
+              </Text>
             </Pressable>
           ) : null}
         </View>
@@ -471,6 +509,11 @@ function ExerciseSelectionAction({
   onSubmit: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
+  const addLabels = es
+    ? { adding: 'Añadiendo…', add: `Añadir ejercicios (${count})` }
+    : { adding: 'Adding…', add: `Add exercises (${count})` };
+  const title = adding ? addLabels.adding : addLabels.add;
   if (count === 0) return null;
   return (
     <View
@@ -489,15 +532,14 @@ function ExerciseSelectionAction({
     >
       {addError ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Could not add all exercises. Your remaining selection is kept. Try again.
+          {selectCopy(
+            es,
+            'No se pudieron añadir todos los ejercicios. Se ha conservado tu selección. Inténtalo de nuevo.',
+            'Could not add all exercises. Your remaining selection is kept. Try again.',
+          )}
         </Text>
       ) : null}
-      <Button
-        title={adding ? 'Adding…' : `Add exercises (${count})`}
-        onPress={onSubmit}
-        disabled={adding}
-        icon="plus"
-      />
+      <Button title={title} onPress={onSubmit} disabled={adding} icon="plus" />
     </View>
   );
 }
@@ -510,16 +552,22 @@ function CatalogueBodyPartBadges({
   setBodyParts: React.Dispatch<React.SetStateAction<string[]>>;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   return (
     <>
       {bodyParts.length === 0 ? (
-        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>All body parts</Text>
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          {selectCopy(es, 'Todas las zonas musculares', 'All body parts')}
+        </Text>
       ) : (
         bodyParts.map((part) => (
           <Pressable
             key={part}
             accessibilityRole="button"
-            accessibilityLabel={`Remove ${part} filter`}
+            accessibilityLabel={
+              es ? `Quitar filtro de ${catalogueLabel(part, language)}` : `Remove ${part} filter`
+            }
             onPress={() => setBodyParts((previous) => previous.filter((value) => value !== part))}
             style={[
               ui.row,
@@ -532,7 +580,7 @@ function CatalogueBodyPartBadges({
             ]}
           >
             <Text style={[textStyles['body-sm'], { color: p['brand-ink'] }]}>
-              {part.toLowerCase()}
+              {catalogueLabel(part, language).toLowerCase()}
             </Text>
             <Feather name="x" size={16} color={p['brand-ink']} />
           </Pressable>

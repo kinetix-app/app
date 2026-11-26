@@ -13,6 +13,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import { useSession } from './SessionProvider';
 import { RoutineActionsMenu } from './RoutineActionsMenu';
@@ -31,6 +32,8 @@ export function TrainingWorkspace({
   onEditingChange?: (editing: boolean) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const session = useSession();
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
@@ -96,7 +99,7 @@ export function TrainingWorkspace({
     try {
       let asset: ImagePickerAsset | undefined;
       if (mode === 'choose') {
-        const selected = await pickRoutinePicture();
+        const selected = await pickRoutinePicture(language);
         if (!alive.current || !selected) return;
         if ('error' in selected) {
           setCoverError(selected.error);
@@ -110,7 +113,14 @@ export function TrainingWorkspace({
       setFailedCover(asset ? { id: actions.item.id, asset } : null);
       await coverMutation.mutateAsync({ id: actions.item.id, asset });
     } catch {
-      if (alive.current) setCoverError('Could not update the cover. Try again.');
+      if (alive.current)
+        setCoverError(
+          selectCopy(
+            es,
+            'No se pudo actualizar la portada. Inténtalo de nuevo.',
+            'Could not update the cover. Try again.',
+          ),
+        );
     } finally {
       coverBusy.current = false;
       if (alive.current) setCoverWorking(false);
@@ -289,8 +299,16 @@ export function TrainingWorkspace({
           canStart={session.ready && !session.storageError && !session.draft && starting === null}
           startHint={
             session.draft
-              ? 'Finish or discard your ongoing workout to start another.'
-              : 'Workout starting is unavailable. Try again when synchronization finishes.'
+              ? selectCopy(
+                  es,
+                  'Termina o descarta el entrenamiento en curso para empezar otro.',
+                  'Finish or discard your ongoing workout to start another.',
+                )
+              : selectCopy(
+                  es,
+                  'No se puede iniciar el entrenamiento. Inténtalo cuando termine la sincronización.',
+                  'Workout starting is unavailable. Try again when synchronization finishes.',
+                )
           }
           canDelete={
             session.ready &&
@@ -357,23 +375,27 @@ function RoutineListHeader({
   onBackToRoutines,
 }: RoutineListHeaderProps) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const editingRoutine = typeof editing === 'number';
   return (
     <View style={ui.gap}>
-      <ScreenHeader title="Workouts">
+      <ScreenHeader title={selectCopy(es, 'Entrenamientos', 'Workouts')}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="New routine"
+          accessibilityLabel={selectCopy(es, 'Nueva rutina', 'New routine')}
           onPress={onNewRoutine}
           style={({ pressed }) => [styles.create, { opacity: pressed ? 0.55 : 1 }]}
         >
           <Feather name="plus" size={24} color={p['brand-ink']} />
-          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Routine</Text>
+          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+            {selectCopy(es, 'Rutina', 'Routine')}
+          </Text>
         </Pressable>
       </ScreenHeader>
       <TextField
-        accessibilityLabel="Search routines"
-        placeholder="Search by name"
+        accessibilityLabel={selectCopy(es, 'Buscar rutinas', 'Search routines')}
+        placeholder={selectCopy(es, 'Buscar por nombre', 'Search by name')}
         maxLength={150}
         value={search}
         onChangeText={onSearchChange}
@@ -381,7 +403,7 @@ function RoutineListHeader({
       />
       {saved ? (
         <Text accessibilityRole="alert" style={{ color: p.success }}>
-          Routine saved.
+          {selectCopy(es, 'Rutina guardada.', 'Routine saved.')}
         </Text>
       ) : null}
       {listPending || (editingRoutine && detailPending) ? <Loading /> : null}
@@ -389,7 +411,11 @@ function RoutineListHeader({
       {editingRoutine && detailError ? (
         <View style={ui.gap}>
           <Failure error={detailError} retry={onRetryDetail} />
-          <IconButton icon="arrow-left" label="Back to routines" onPress={onBackToRoutines} />
+          <IconButton
+            icon="arrow-left"
+            label={selectCopy(es, 'Volver a rutinas', 'Back to routines')}
+            onPress={onBackToRoutines}
+          />
         </View>
       ) : null}
     </View>
@@ -406,6 +432,8 @@ function EmptyRoutineState({
   onCreate: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   if (!visible) return null;
   return (
     <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
@@ -413,17 +441,27 @@ function EmptyRoutineState({
         <Feather name={name ? 'search' : 'layers'} size={28} color={p['brand-ink']} />
       </View>
       <Text style={[ui.heading, { color: p.ink, textAlign: 'center' }]}>
-        {name ? 'No routines found' : 'Build your first routine'}
+        {name
+          ? selectCopy(es, 'No se encontraron rutinas', 'No routines found')
+          : selectCopy(es, 'Crea tu primera rutina', 'Build your first routine')}
       </Text>
       <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
         {name
-          ? 'Try a different name to find your routine.'
-          : 'Choose your exercises, plan your sets and make your next workout easier to start.'}
+          ? selectCopy(
+              es,
+              'Prueba con otro nombre para encontrar tu rutina.',
+              'Try a different name to find your routine.',
+            )
+          : selectCopy(
+              es,
+              'Elige ejercicios y planifica las series para empezar tu próximo entrenamiento.',
+              'Choose your exercises, plan your sets and make your next workout easier to start.',
+            )}
       </Text>
       {!name ? (
         <Button
-          title="Create routine"
-          accessibilityLabel="Create routine"
+          title={selectCopy(es, 'Crear rutina', 'Create routine')}
+          accessibilityLabel={selectCopy(es, 'Crear rutina', 'Create routine')}
           icon="plus"
           tone="positive"
           onPress={onCreate}
@@ -457,13 +495,22 @@ function RoutineRow({
   onRetry: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const trigger = useRef<ViewInstance>(null);
   const performed = item.last_performed_at ? new Date(item.last_performed_at) : null;
+  const locale = es ? 'es' : undefined;
   const date = performed
-    ? performed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Not trained yet';
-  const count = `${item.exercise_count} ${item.exercise_count === 1 ? 'exercise' : 'exercises'}`;
-  const dateLabel = performed ? `Last trained ${performed.toLocaleString()}` : date;
+    ? performed.toLocaleDateString(locale, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : selectCopy(es, 'Sin entrenar todavía', 'Not trained yet');
+  const count = `${item.exercise_count} ${item.exercise_count === 1 ? selectCopy(es, 'ejercicio', 'exercise') : selectCopy(es, 'ejercicios', 'exercises')}`;
+  let dateLabel = date;
+  if (performed && es) dateLabel = `Último entrenamiento: ${performed.toLocaleString(language)}`;
+  else if (performed) dateLabel = `Last trained ${performed.toLocaleString()}`;
   return (
     <View style={[ui.card, styles.routineCard, { backgroundColor: p['surface-200'] }]}>
       <View style={styles.cardMain}>
@@ -475,8 +522,12 @@ function RoutineRow({
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Edit ${item.name}`}
-          accessibilityHint="Open routine details and edit"
+          accessibilityLabel={selectCopy(es, `Editar ${item.name}`, `Edit ${item.name}`)}
+          accessibilityHint={selectCopy(
+            es,
+            'Abrir los detalles y editar la rutina',
+            'Open routine details and edit',
+          )}
           accessibilityState={{ disabled: false }}
           onPress={onEdit}
           style={({ pressed }) => [styles.routineDetails, { opacity: pressed ? 0.55 : 1 }]}
@@ -499,9 +550,17 @@ function RoutineRow({
         <Pressable
           ref={trigger}
           accessibilityRole="button"
-          accessibilityLabel={`Routine actions for ${item.name}`}
+          accessibilityLabel={selectCopy(
+            es,
+            `Acciones de la rutina ${item.name}`,
+            `Routine actions for ${item.name}`,
+          )}
           accessibilityState={{ expanded: actionsOpen }}
-          accessibilityHint="Open train, edit, cover and delete options"
+          accessibilityHint={selectCopy(
+            es,
+            'Abrir las opciones de entrenar, editar, portada y eliminar',
+            'Open train, edit, cover and delete options',
+          )}
           onPress={() => onActions(() => trigger.current?.focus())}
           style={({ pressed }) => [styles.actions, { opacity: pressed ? 0.55 : 1 }]}
         >
@@ -529,8 +588,8 @@ function RoutineRow({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Start ${item.name}`}
-          accessibilityHint="Train this routine"
+          accessibilityLabel={selectCopy(es, `Empezar ${item.name}`, `Start ${item.name}`)}
+          accessibilityHint={selectCopy(es, 'Entrenar esta rutina', 'Train this routine')}
           accessibilityState={{ disabled: !canStart || starting, busy: starting }}
           disabled={!canStart || starting}
           onPress={onStart}
@@ -596,8 +655,14 @@ function RoutineListFooter({
   loading,
   onMore,
 }: Readonly<{ visible: boolean; loading: boolean; onMore: () => void }>) {
+  const es = useLanguage() === 'es';
   if (!visible) return null;
   return (
-    <Button title={loading ? 'Loading…' : 'More'} disabled={loading} onPress={onMore} secondary />
+    <Button
+      title={loading ? selectCopy(es, 'Cargando…', 'Loading…') : selectCopy(es, 'Más', 'More')}
+      disabled={loading}
+      onPress={onMore}
+      secondary
+    />
   );
 }

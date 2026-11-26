@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { spacing, usePalette } from '@/theme/tokens';
 import { Button, ui } from './ui';
@@ -10,6 +11,11 @@ type Action = {
   tone?: 'positive' | 'danger';
 };
 
+const COPY = {
+  en: { close: 'Close actions', cancel: 'Cancel' },
+  es: { close: 'Cerrar acciones', cancel: 'Cancelar' },
+} as const;
+
 export function ActionMenu({
   title,
   actions,
@@ -20,6 +26,7 @@ export function ActionMenu({
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View
@@ -32,7 +39,7 @@ export function ActionMenu({
         }}
       >
         <Pressable
-          accessibilityLabel="Close actions"
+          accessibilityLabel={COPY[language].close}
           accessibilityRole="button"
           onPress={onClose}
           style={{ position: 'absolute', inset: 0 }}
@@ -55,7 +62,7 @@ export function ActionMenu({
               }}
             />
           ))}
-          <Button title="Cancel" secondary onPress={onClose} />
+          <Button title={COPY[language].cancel} secondary onPress={onClose} />
         </View>
       </View>
     </Modal>

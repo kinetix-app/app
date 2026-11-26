@@ -1,4 +1,5 @@
 import type { ViewInstance } from 'react-native';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -36,14 +37,23 @@ type RoutineActionsMenuProps = Readonly<{
 export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
   const { name, onClose, onDelete, deleting, deleteError, coverPending } = props;
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const busy = deleting || coverPending;
   const insets = useSafeAreaInsets();
   const first = useRef<ViewInstance>(null);
   const [confirming, setConfirming] = useState(false);
   const error =
     deleteError instanceof ApiError && deleteError.status === 409
-      ? 'This routine has an ongoing workout. Finish or discard it before deleting.'
-      : 'Could not delete the routine. Try again.';
+      ? selectCopy(
+          es,
+          'Esta rutina tiene un entrenamiento en curso. Termínalo o descártalo antes de eliminarla.',
+          'This routine has an ongoing workout. Finish or discard it before deleting.',
+        )
+      : selectCopy(
+          es,
+          'No se pudo eliminar la rutina. Inténtalo de nuevo.',
+          'Could not delete the routine. Try again.',
+        );
   function close() {
     if (!busy) onClose();
   }
@@ -65,7 +75,11 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
         />
         <View
           accessibilityViewIsModal
-          accessibilityLabel={confirming ? `Delete ${name}` : `Actions for ${name}`}
+          accessibilityLabel={
+            confirming
+              ? selectCopy(es, `Eliminar ${name}`, `Delete ${name}`)
+              : selectCopy(es, `Acciones para ${name}`, `Actions for ${name}`)
+          }
           style={{
             width: '100%',
             maxWidth: 640,
@@ -98,12 +112,15 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
           >
             <View style={{ gap: spacing['space-1'] }}>
               <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-                {confirming ? 'Delete routine?' : name}
+                {confirming ? selectCopy(es, '¿Eliminar rutina?', 'Delete routine?') : name}
               </Text>
               {confirming ? (
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  This routine will be removed from your library. Completed workouts and training
-                  history will be kept.
+                  {selectCopy(
+                    es,
+                    'Esta rutina se eliminará de tu biblioteca. Se conservarán los entrenamientos completados y el historial.',
+                    'This routine will be removed from your library. Completed workouts and training history will be kept.',
+                  )}
                 </Text>
               ) : null}
             </View>
@@ -126,7 +143,11 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
             )}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={confirming ? 'Keep routine' : 'Close routine actions'}
+              accessibilityLabel={
+                confirming
+                  ? selectCopy(es, 'Conservar rutina', 'Keep routine')
+                  : selectCopy(es, 'Cerrar acciones de la rutina', 'Close routine actions')
+              }
               accessibilityState={{ disabled: busy }}
               disabled={busy}
               onPress={() => (confirming ? setConfirming(false) : close())}
@@ -138,7 +159,9 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
               })}
             >
               <Text style={[textStyles.label, { color: p.ink }]}>
-                {confirming ? 'Keep routine' : 'Cancel'}
+                {confirming
+                  ? selectCopy(es, 'Conservar rutina', 'Keep routine')
+                  : selectCopy(es, 'Cancelar', 'Cancel')}
               </Text>
             </Pressable>
           </ScrollView>
@@ -164,6 +187,7 @@ function DeleteRoutineConfirmation({
   onDelete: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <>
       {deleteError ? (
@@ -173,7 +197,11 @@ function DeleteRoutineConfirmation({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Confirm delete ${name}`}
+        accessibilityLabel={selectCopy(
+          es,
+          `Confirmar eliminación de ${name}`,
+          `Confirm delete ${name}`,
+        )}
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         onPress={onDelete}
@@ -197,7 +225,9 @@ function DeleteRoutineConfirmation({
           <Feather name="trash-2" size={20} color={p.danger} />
         )}
         <Text style={[textStyles.label, { color: p.danger }]}>
-          {deleting ? 'Deleting…' : 'Delete routine'}
+          {deleting
+            ? selectCopy(es, 'Eliminando…', 'Deleting…')
+            : selectCopy(es, 'Eliminar rutina', 'Delete routine')}
         </Text>
       </Pressable>
     </>
@@ -227,6 +257,7 @@ function RoutineActionOptions({
     onConfirmDelete: () => void;
   }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <>
       <View
@@ -239,7 +270,7 @@ function RoutineActionOptions({
         <Pressable
           ref={canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={`Train ${name}`}
+          accessibilityLabel={selectCopy(es, `Entrenar ${name}`, `Train ${name}`)}
           accessibilityState={{ disabled: !canStart || busy }}
           disabled={!canStart || busy}
           onPress={onStart}
@@ -254,7 +285,9 @@ function RoutineActionOptions({
           })}
         >
           <MaterialIcons name="play-arrow" size={26} color={p['brand-ink']} />
-          <Text style={[textStyles.body, { color: p['brand-ink'] }]}>Train</Text>
+          <Text style={[textStyles.body, { color: p['brand-ink'] }]}>
+            {selectCopy(es, 'Entrenar', 'Train')}
+          </Text>
         </Pressable>
         <View
           style={{
@@ -266,7 +299,7 @@ function RoutineActionOptions({
         <Pressable
           ref={!canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={`Edit ${name}`}
+          accessibilityLabel={selectCopy(es, `Editar ${name}`, `Edit ${name}`)}
           accessibilityState={{ disabled: busy }}
           disabled={busy}
           onPress={onEdit}
@@ -280,7 +313,9 @@ function RoutineActionOptions({
           })}
         >
           <Feather name="edit-2" size={22} color={p.ink} />
-          <Text style={[textStyles.body, { color: p.ink }]}>Edit</Text>
+          <Text style={[textStyles.body, { color: p.ink }]}>
+            {selectCopy(es, 'Editar', 'Edit')}
+          </Text>
         </Pressable>
       </View>
       <RoutineCoverActions
@@ -298,7 +333,7 @@ function RoutineActionOptions({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Delete ${name}`}
+        accessibilityLabel={selectCopy(es, `Eliminar ${name}`, `Delete ${name}`)}
         accessibilityState={{ disabled: !canDelete || busy }}
         disabled={!canDelete || busy}
         onPress={onConfirmDelete}
@@ -314,11 +349,17 @@ function RoutineActionOptions({
         })}
       >
         <Feather name="trash-2" size={22} color={p.danger} />
-        <Text style={[textStyles.body, { color: p.danger }]}>Delete</Text>
+        <Text style={[textStyles.body, { color: p.danger }]}>
+          {selectCopy(es, 'Eliminar', 'Delete')}
+        </Text>
       </Pressable>
       {!canDelete ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Finish or discard this routine’s ongoing workout before deleting.
+          {selectCopy(
+            es,
+            'Termina o descarta el entrenamiento en curso antes de eliminar esta rutina.',
+            'Finish or discard this routine’s ongoing workout before deleting.',
+          )}
         </Text>
       ) : null}
     </>
@@ -346,6 +387,7 @@ function RoutineCoverActions({
 > &
   Readonly<{ busy: boolean }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <>
       {' '}
@@ -373,16 +415,25 @@ function RoutineCoverActions({
         >
           <Feather name="image" size={22} color={p.ink} />
           <Text style={[textStyles.body, { color: p.ink }]}>
-            {hasCover ? 'Change cover' : 'Add cover'}
+            {hasCover
+              ? selectCopy(es, 'Cambiar portada', 'Change cover')
+              : selectCopy(es, 'Añadir portada', 'Add cover')}
           </Text>
           {coverPending ? (
-            <ActivityIndicator accessibilityLabel="Updating cover" color={p.brand} />
+            <ActivityIndicator
+              accessibilityLabel={selectCopy(es, 'Actualizando portada', 'Updating cover')}
+              color={p.brand}
+            />
           ) : null}
         </Pressable>
         {hasCover ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Remove cover for ${name}`}
+            accessibilityLabel={selectCopy(
+              es,
+              `Quitar portada de ${name}`,
+              `Remove cover for ${name}`,
+            )}
             accessibilityState={{ disabled: busy }}
             disabled={busy}
             onPress={onRemoveCover}
@@ -396,7 +447,9 @@ function RoutineCoverActions({
             })}
           >
             <Feather name="trash-2" size={22} color={p.danger} />
-            <Text style={[textStyles.body, { color: p.danger }]}>Remove cover</Text>
+            <Text style={[textStyles.body, { color: p.danger }]}>
+              {selectCopy(es, 'Quitar portada', 'Remove cover')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -408,12 +461,18 @@ function RoutineCoverActions({
           {onRetryCover ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Retry cover upload"
+              accessibilityLabel={selectCopy(
+                es,
+                'Reintentar subida de portada',
+                'Retry cover upload',
+              )}
               disabled={busy}
               onPress={onRetryCover}
               style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
             >
-              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry</Text>
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                {selectCopy(es, 'Reintentar', 'Retry')}
+              </Text>
             </Pressable>
           ) : null}
         </View>

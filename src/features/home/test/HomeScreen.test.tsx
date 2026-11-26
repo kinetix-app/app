@@ -193,6 +193,29 @@ test('home header profile picture opens Profile and its back arrow returns Home'
   expect(screen.queryByText('Edit profile')).toBeNull();
 });
 
+test('a Spanish profile shows translated plan and plural friend request details', async () => {
+  jest.mocked(getAccount).mockResolvedValue({
+    ...completeAccount,
+    profile: { ...completeAccount.profile, language: 'es', measurement_system: 'imperial' },
+  });
+  jest.mocked(friendsApi.requests).mockResolvedValue({
+    incoming: [3, 4].map((id) => ({
+      user: { id, display_name: `Friend ${id}`, has_picture: false },
+      created_at: '2026-11-15T10:00:00Z',
+    })),
+    outgoing: [],
+  });
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  const profileButton = await screen.findByRole('button', { name: 'Abrir perfil' });
+  await waitFor(() =>
+    expect(profileButton.props.accessibilityHint).toBe('2 nuevas solicitudes de amistad'),
+  );
+  fireEvent.press(profileButton);
+  expect(await screen.findByText('Ganar músculo')).toBeTruthy();
+  expect(screen.getByText('Imperial · lb, pies y pulgadas')).toBeTruthy();
+  expect(screen.getByText('2 nuevas solicitudes')).toBeTruthy();
+});
+
 test('plus starts the existing workout editor and a minimized draft survives navigation without duplicate starts', async () => {
   render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
   await waitFor(() =>

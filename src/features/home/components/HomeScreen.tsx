@@ -1,3 +1,4 @@
+import { selectCopy, LanguageProvider, useLanguage } from '@/i18n/Language';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
@@ -66,6 +67,15 @@ type HomeNavigationProps = Readonly<{
   initialInvitation?: string;
 }>;
 
+function friendRequestHint(count: number, es: boolean) {
+  if (!count) return undefined;
+  return countLabel(
+    count,
+    selectCopy(es, 'nueva solicitud de amistad', 'new friend request'),
+    selectCopy(es, 'nuevas solicitudes de amistad', 'new friend requests'),
+  );
+}
+
 function HomeNavigation({
   account,
   initialTab,
@@ -74,6 +84,7 @@ function HomeNavigation({
   onDismissFinished,
   initialInvitation,
 }: HomeNavigationProps) {
+  const es = useLanguage() === 'es';
   const accountId = account.id;
   const cache = useQueryClient();
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
@@ -134,9 +145,22 @@ function HomeNavigation({
     setSignOutError('');
     try {
       const success = await session.signOut();
-      if (!success) setSignOutError('Could not sign out. Please try again.');
+      if (!success)
+        setSignOutError(
+          selectCopy(
+            es,
+            'No se pudo cerrar la sesión. Inténtalo de nuevo.',
+            'Could not sign out. Please try again.',
+          ),
+        );
     } catch {
-      setSignOutError('Could not sign out. Please try again.');
+      setSignOutError(
+        selectCopy(
+          es,
+          'No se pudo cerrar la sesión. Inténtalo de nuevo.',
+          'Could not sign out. Please try again.',
+        ),
+      );
     } finally {
       loggingOut.current = false;
       setSigningOut(false);
@@ -214,7 +238,7 @@ function HomeNavigation({
           <WorkoutHistory
             accountId={accountId}
             onClose={closeProfilePanel}
-            backLabel="Back to profile"
+            backLabel={selectCopy(es, 'Volver al perfil', 'Back to profile')}
             active={panelActive}
             onShare={shareWorkout}
           />
@@ -236,7 +260,18 @@ function HomeNavigation({
             account={account}
             onOpen={openProfile}
             onBack={() => select(profileOrigin)}
-            backLabel={profileBackLabels[profileOrigin]}
+            backLabel={
+              es
+                ? (
+                    {
+                      home: 'Volver a inicio',
+                      workout: 'Volver al entrenamiento',
+                      nutrition: 'Volver a nutrición',
+                      league: 'Volver a ligas',
+                    } as const
+                  )[profileOrigin]
+                : profileBackLabels[profileOrigin]
+            }
             onSignOut={() => {
               void signOut();
             }}
@@ -267,12 +302,8 @@ function HomeNavigation({
           profileButton={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open profile"
-              accessibilityHint={
-                incomingRequests
-                  ? countLabel(incomingRequests, 'new friend request', 'new friend requests')
-                  : undefined
-              }
+              accessibilityLabel={selectCopy(es, 'Abrir perfil', 'Open profile')}
+              accessibilityHint={friendRequestHint(incomingRequests, es)}
               onPress={showProfile}
               hitSlop={spacing['space-1']}
               style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
@@ -361,7 +392,7 @@ function HomeNavigation({
           <SessionWorkoutDetail
             accountId={accountId}
             sessionId={finishedSessionId}
-            backLabel="Back to workout saved"
+            backLabel={selectCopy(es, 'Volver a entrenamiento guardado', 'Back to workout saved')}
             onBack={() => setViewingFinished(false)}
             showShare
             onShare={shareFinishedWorkout}
@@ -382,10 +413,17 @@ function HomeNavigation({
               style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
             >
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                Workout saved
+                {selectCopy(es, 'Entrenamiento guardado', 'Workout saved')}
               </Text>
-              <Button title="View workout" onPress={() => setViewingFinished(true)} />
-              <Button title="Not now" secondary onPress={onDismissFinished} />
+              <Button
+                title={selectCopy(es, 'Ver entrenamiento', 'View workout')}
+                onPress={() => setViewingFinished(true)}
+              />
+              <Button
+                title={selectCopy(es, 'Ahora no', 'Not now')}
+                secondary
+                onPress={onDismissFinished}
+              />
             </View>
           </View>
         ) : null}
@@ -460,23 +498,33 @@ function AccountGate({
   const account = query.data;
   if (account.onboarding.required)
     return !account.onboarding.profile_complete ? (
-      <ProfileEditor account={account} onSaved={saved} />
+      <LanguageProvider language={account.profile.language ?? 'en'}>
+        <ProfileEditor account={account} onSaved={saved} />
+      </LanguageProvider>
     ) : (
-      <ObjectiveEditor accountId={accountId} onSaved={saved} />
+      <LanguageProvider language={account.profile.language ?? 'en'}>
+        <ObjectiveEditor accountId={accountId} onSaved={saved} />
+      </LanguageProvider>
     );
   return (
-    <SessionProvider accountId={accountId} onSignOut={onSignOut} onFinished={setFinishedSessionId}>
-      <FormCheckHost accountId={accountId}>
-        <HomeNavigation
-          account={account}
-          initialTab={initialTab}
-          initialInvitation={initialInvitation}
-          onAccount={saved}
-          finishedSessionId={finishedSessionId}
-          onDismissFinished={() => setFinishedSessionId(null)}
-        />
-      </FormCheckHost>
-    </SessionProvider>
+    <LanguageProvider language={account.profile.language ?? 'en'}>
+      <SessionProvider
+        accountId={accountId}
+        onSignOut={onSignOut}
+        onFinished={setFinishedSessionId}
+      >
+        <FormCheckHost accountId={accountId}>
+          <HomeNavigation
+            account={account}
+            initialTab={initialTab}
+            initialInvitation={initialInvitation}
+            onAccount={saved}
+            finishedSessionId={finishedSessionId}
+            onDismissFinished={() => setFinishedSessionId(null)}
+          />
+        </FormCheckHost>
+      </SessionProvider>
+    </LanguageProvider>
   );
 }
 type PrivateHomeProps = Readonly<{

@@ -48,3 +48,13 @@ test('accepts only the owned private photo path or legacy HTTPS references', () 
     }),
   ).toThrow();
 });
+
+test('accepts old account responses and rejects unsupported profile languages', () => {
+  expect(parseAccount(account).profile.language ?? 'en').toBe('en');
+  expect(() =>
+    parseAccount({ ...account, profile: { ...account.profile, language: 'fr' } }),
+  ).toThrow();
+  expect(() =>
+    parseAccount({ ...account, profile: { ...account.profile, language: null } }),
+  ).toThrow();
+});

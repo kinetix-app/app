@@ -60,3 +60,63 @@ export const unknownReason: NotAssessableReason = {
   explanation: 'The recording could not be assessed.',
   fixes: ['Try recording again'],
 };
+
+/** Spanish wording keyed by analyzer reason ID; unknown IDs use the generic fallback. */
+export const spanishReasons: Record<string, NotAssessableReason> = {
+  body_not_visible: {
+    title: 'No podemos ver todo tu cuerpo',
+    explanation: 'Una parte de tu cuerpo salió del encuadre durante la serie.',
+    fixes: ['Coloca el teléfono a 2–3 m', 'Mantén la cabeza y los pies dentro del encuadre'],
+  },
+  hips_not_visible: {
+    title: 'No podemos ver tu cadera',
+    explanation: 'La cadera quedó oculta y no pudimos evaluar el movimiento.',
+    fixes: ['Graba de lado a la altura de la cadera', 'Retira lo que obstruya la vista'],
+  },
+  wrong_angle: {
+    title: 'El ángulo de cámara no sirve para este ejercicio',
+    explanation: 'Este ejercicio se evalúa desde otro ángulo.',
+    fixes: ['Coloca el teléfono para grabar de lado'],
+  },
+  low_light: {
+    title: 'La imagen está demasiado oscura',
+    explanation: 'No había suficiente luz para seguir tu movimiento.',
+    fixes: ['Ponte frente a una fuente de luz o enciende más luces'],
+  },
+  low_confidence: {
+    title: 'No pudimos verte con suficiente claridad',
+    explanation: 'Las repeticiones se veían, pero no con suficiente claridad para puntuarlas.',
+    fixes: [
+      'Ponte frente a una fuente de luz o enciende más luces',
+      'Graba delante de un fondo liso',
+    ],
+  },
+  no_recording: {
+    title: 'El vídeo no se guardó',
+    explanation: 'Este dispositivo no pudo conservar la grabación.',
+    fixes: ['Graba la serie de nuevo', 'Usa la aplicación en tu teléfono si vuelve a ocurrir'],
+  },
+  multiple_people: {
+    title: 'Hay más de una persona en el encuadre',
+    explanation: 'No podemos determinar qué movimiento evaluar.',
+    fixes: ['Pide a las demás personas que salgan del encuadre'],
+  },
+  too_short: {
+    title: 'La grabación es demasiado corta',
+    explanation: 'Necesitamos al menos una repetición completa.',
+    fixes: [
+      'Empieza a grabar antes de la primera repetición',
+      'Detén la grabación después de la última',
+    ],
+  },
+  no_reps_detected: {
+    title: 'No encontramos repeticiones',
+    explanation: 'No pudimos relacionar tu movimiento con este ejercicio.',
+    fixes: ['Comprueba que sea el ejercicio correcto', 'Graba toda la serie dentro del encuadre'],
+  },
+};
+export const spanishUnknownReason: NotAssessableReason = {
+  title: 'No pudimos revisar esta grabación',
+  explanation: 'No se pudo evaluar la grabación.',
+  fixes: ['Intenta grabarla de nuevo'],
+};

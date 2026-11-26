@@ -2,10 +2,15 @@ import React, { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { selectCopy, useLanguage } from '@/i18n/Language';
+import { catalogueLabel } from '../catalogueLabels';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export type ActivityFilter = 'all' | 'gym' | 'cardio';
-const ACTIVITY_LABELS = { all: 'All', gym: 'Gym', cardio: 'Cardio' } as const;
+const ACTIVITY_LABELS = {
+  en: { all: 'All', gym: 'Gym', cardio: 'Cardio' },
+  es: { all: 'Todas', gym: 'Gimnasio', cardio: 'Cardio' },
+} as const;
 
 export function BodyPartFilter({
   selected,
@@ -27,9 +32,16 @@ export function BodyPartFilter({
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const [activity, setActivity] = useState(activityType);
   const [draft, setDraft] = useState(selected);
-  const available = [...new Set([...selected, ...options])].sort((a, b) => a.localeCompare(b));
+  const selectionSummary = draft.length
+    ? selectCopy(es, `${draft.length} seleccionadas`, `${draft.length} selected`)
+    : selectCopy(es, 'Todas las zonas musculares', 'All body parts');
+  const available = [...new Set([...selected, ...options])].sort((a, b) =>
+    catalogueLabel(a, language).localeCompare(catalogueLabel(b, language), language),
+  );
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View
@@ -53,12 +65,22 @@ export function BodyPartFilter({
               accessibilityRole="header"
               style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
             >
-              Filters
+              {selectCopy(es, 'Filtros', 'Filters')}
             </Text>
-            <IconButton icon="x" label="Close body part filters" onPress={onClose} />
+            <IconButton
+              icon="x"
+              label={selectCopy(
+                es,
+                'Cerrar filtros de zonas musculares',
+                'Close body part filters',
+              )}
+              onPress={onClose}
+            />
           </View>
           <View style={{ gap: spacing['space-2'] }}>
-            <Text style={[textStyles.label, { color: p.ink }]}>Activity</Text>
+            <Text style={[textStyles.label, { color: p.ink }]}>
+              {selectCopy(es, 'Actividad', 'Activity')}
+            </Text>
             <View
               style={[
                 ui.row,
@@ -94,7 +116,7 @@ export function BodyPartFilter({
                       { color: activity === type ? p['brand-ink'] : p['ink-muted'] },
                     ]}
                   >
-                    {ACTIVITY_LABELS[type]}
+                    {ACTIVITY_LABELS[language][type]}
                   </Text>
                 </Pressable>
               ))}
@@ -102,7 +124,9 @@ export function BodyPartFilter({
           </View>
           {activity !== 'cardio' ? (
             <>
-              <Text style={[textStyles.label, { color: p.ink }]}>Body parts</Text>
+              <Text style={[textStyles.label, { color: p.ink }]}>
+                {selectCopy(es, 'Zonas musculares', 'Body parts')}
+              </Text>
               <ScrollView
                 style={{ flexShrink: 1 }}
                 keyboardShouldPersistTaps="handled"
@@ -112,12 +136,14 @@ export function BodyPartFilter({
                 {error ? <Failure error={error} retry={retry} /> : null}
                 {available.map((part) => {
                   const checked = draft.includes(part);
+                  const label = catalogueLabel(part, language);
                   return (
                     <Pressable
                       key={part}
                       accessibilityRole="checkbox"
-                      accessibilityLabel={part}
+                      accessibilityLabel={label}
                       accessibilityState={{ checked }}
+                      aria-checked={checked}
                       onPress={() =>
                         setDraft((previous) =>
                           checked
@@ -142,7 +168,7 @@ export function BodyPartFilter({
                           { color: checked ? p['brand-ink'] : p.ink, flex: 1 },
                         ]}
                       >
-                        {part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()}
+                        {label.charAt(0).toUpperCase() + label.slice(1)}
                       </Text>
                       <Feather
                         name={checked ? 'check-square' : 'square'}
@@ -153,7 +179,13 @@ export function BodyPartFilter({
                   );
                 })}
                 {!pending && !error && available.length === 0 ? (
-                  <Text style={{ color: p['ink-muted'] }}>No body parts available.</Text>
+                  <Text style={{ color: p['ink-muted'] }}>
+                    {selectCopy(
+                      es,
+                      'No hay zonas musculares disponibles.',
+                      'No body parts available.',
+                    )}
+                  </Text>
                 ) : null}
               </ScrollView>
               <View style={[ui.row, { justifyContent: 'space-between' }]}>
@@ -161,11 +193,15 @@ export function BodyPartFilter({
                   accessibilityLiveRegion="polite"
                   style={[textStyles['body-sm'], { color: p['ink-muted'], flex: 1 }]}
                 >
-                  {draft.length ? `${draft.length} selected` : 'All body parts'}
+                  {selectionSummary}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Clear draft body part filters"
+                  accessibilityLabel={selectCopy(
+                    es,
+                    'Limpiar selección de zonas musculares',
+                    'Clear draft body part filters',
+                  )}
                   accessibilityState={{ disabled: draft.length === 0 }}
                   disabled={draft.length === 0}
                   onPress={() => setDraft([])}
@@ -176,19 +212,21 @@ export function BodyPartFilter({
                     opacity: pressed || !draft.length ? 0.55 : 1,
                   })}
                 >
-                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Clear</Text>
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                    {selectCopy(es, 'Limpiar', 'Clear')}
+                  </Text>
                 </Pressable>
               </View>
             </>
           ) : null}
           <View style={ui.row}>
             <View style={{ flex: 1 }}>
-              <Button title="Cancel" onPress={onClose} secondary />
+              <Button title={selectCopy(es, 'Cancelar', 'Cancel')} onPress={onClose} secondary />
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                title="Save"
-                accessibilityLabel="Save filters"
+                title={selectCopy(es, 'Guardar', 'Save')}
+                accessibilityLabel={selectCopy(es, 'Guardar filtros', 'Save filters')}
                 onPress={() =>
                   onApply(
                     activity === 'cardio' ? [] : [...draft].sort((a, b) => a.localeCompare(b)),

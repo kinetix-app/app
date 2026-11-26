@@ -1,0 +1,58 @@
+import type { Language } from '@/i18n/Language';
+
+const spanishCatalogueLabels: Readonly<Record<string, string>> = {
+  arms: 'brazos',
+  back: 'espalda',
+  'lower arms': 'antebrazos',
+  'lower legs': 'parte inferior de las piernas',
+  'upper arms': 'parte superior de los brazos',
+  'upper legs': 'parte superior de las piernas',
+  chest: 'pecho',
+  shoulders: 'hombros',
+  legs: 'piernas',
+  neck: 'cuello',
+  waist: 'cintura',
+  cardio: 'cardio',
+  abs: 'abdominales',
+  abductors: 'abductores',
+  adductors: 'aductores',
+  biceps: 'bíceps',
+  calves: 'gemelos',
+  delts: 'deltoides',
+  forearms: 'antebrazos',
+  glutes: 'glúteos',
+  hamstrings: 'isquiotibiales',
+  lats: 'dorsales',
+  pectorals: 'pectorales',
+  quads: 'cuádriceps',
+  quadriceps: 'cuádriceps',
+  traps: 'trapecios',
+  triceps: 'tríceps',
+  'upper back': 'parte superior de la espalda',
+  spine: 'columna vertebral',
+  'body weight': 'peso corporal',
+  band: 'banda elástica',
+  barbell: 'barra',
+  'bosu ball': 'pelota BOSU',
+  cable: 'polea',
+  dumbbell: 'mancuerna',
+  'ez barbell': 'barra Z',
+  kettlebell: 'pesa rusa',
+  'leverage machine': 'máquina de palanca',
+  'medicine ball': 'balón medicinal',
+  'resistance band': 'banda de resistencia',
+  roller: 'rodillo',
+  rope: 'cuerda',
+  'smith machine': 'máquina Smith',
+  'stability ball': 'pelota de estabilidad',
+  'stationary bike': 'bicicleta estática',
+  treadmill: 'cinta de correr',
+  weighted: 'con peso',
+  wheel: 'rueda abdominal',
+};
+
+export function catalogueLabel(value: string, language: Language): string {
+  if (language === 'en') return value;
+  const key = value.trim().toLowerCase().replace(/[_-]+/g, ' ');
+  return Object.hasOwn(spanishCatalogueLabels, key) ? spanishCatalogueLabels[key] : value;
+}

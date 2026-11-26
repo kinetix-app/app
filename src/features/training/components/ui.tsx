@@ -2,6 +2,7 @@ import React from 'react';
 import { Feather } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
+import { useLanguage, type Language } from '@/i18n/Language';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
@@ -58,30 +59,50 @@ export function IconButton({
 
 export function Failure({ error, retry }: Readonly<{ error: unknown; retry?: () => void }>) {
   const p = usePalette();
-  const text = getFailureMessage(error);
+  const language = useLanguage();
+  const text = getFailureMessage(error, language);
   return (
     <View style={ui.gap}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
         {text}
       </Text>
-      {retry ? <Button title="Retry" onPress={retry} secondary /> : null}
+      {retry ? (
+        <Button title={language === 'es' ? 'Reintentar' : 'Retry'} onPress={retry} secondary />
+      ) : null}
     </View>
   );
 }
 
-function getFailureMessage(error: unknown) {
-  if (!(error instanceof ApiError))
-    return 'Could not connect or read the response. Your changes are still here. Try again.';
+function getFailureMessage(error: unknown, language: Language) {
+  const es = language === 'es';
+  const connectionError = es
+    ? 'No se pudo conectar o leer la respuesta. Se han conservado tus cambios. Inténtalo de nuevo.'
+    : 'Could not connect or read the response. Your changes are still here. Try again.';
+  if (!(error instanceof ApiError)) return connectionError;
   if ([401, 403].includes(error.status))
-    return 'Your account cannot access this data. Sign out and sign in again.';
-  if (error.status === 404) return 'This routine or exercise is no longer available.';
+    return es
+      ? 'Tu cuenta no puede acceder a estos datos. Cierra sesión y vuelve a iniciarla.'
+      : 'Your account cannot access this data. Sign out and sign in again.';
+  if (error.status === 404)
+    return es
+      ? 'Esta rutina o ejercicio ya no está disponible.'
+      : 'This routine or exercise is no longer available.';
   if (error.status === 422)
-    return 'Some fields or exercises are unavailable. Check your selection and try again.';
-  return 'Could not connect or read the response. Your changes are still here. Try again.';
+    return es
+      ? 'Algunos campos o ejercicios no están disponibles. Comprueba la selección e inténtalo de nuevo.'
+      : 'Some fields or exercises are unavailable. Check your selection and try again.';
+  return connectionError;
 }
+
 export function Loading() {
   const p = usePalette();
-  return <ActivityIndicator color={p.brand} accessibilityLabel="Loading training" />;
+  const es = useLanguage() === 'es';
+  return (
+    <ActivityIndicator
+      color={p.brand}
+      accessibilityLabel={es ? 'Cargando entrenamiento' : 'Loading training'}
+    />
+  );
 }
 export const ui = StyleSheet.create({
   screen: { flex: 1 },

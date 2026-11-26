@@ -1,0 +1,16 @@
+{
+  "navigation": {
+    "home": "Feed",
+    "workout": "Workout",
+    "nutrition": "Nutrition",
+    "league": "League",
+    "main": "Main navigation",
+    "startWorkout": "Start workout"
+  },
+  "profile": {
+    "label": "Language",
+    "saving": "Saving…",
+    "save": "Save profile",
+    "continue": "Continue"
+  }
+}

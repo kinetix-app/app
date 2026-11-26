@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { Food } from '../schemas';
 
@@ -24,8 +25,11 @@ export function NutritionSummary({
   compact?: boolean;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const typography = compact ? [textStyles.caption, styles.compactTypography] : textStyles.overline;
-  const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: precision });
+  const formatter = new Intl.NumberFormat(language === 'es' ? 'es-ES' : 'en-US', {
+    maximumFractionDigits: precision,
+  });
   const format = (value: number) => formatter.format(value * factor);
   return (
     <View style={[styles.summary, compact && styles.compact]}>
@@ -34,7 +38,14 @@ export function NutritionSummary({
       </Text>
       {macros.map(([label, field, name]) => (
         <View key={field} style={[styles.macro, compact && styles.compactMacro]}>
-          <Text accessibilityLabel={name} style={[typography, { color: p.ink }]}>
+          <Text
+            accessibilityLabel={
+              language === 'es'
+                ? { carbohydrates: 'Carbohidratos', protein: 'Proteínas', fats: 'Grasas' }[field]
+                : name
+            }
+            style={[typography, { color: p.ink }]}
+          >
             {label}
           </Text>
           <Text style={[typography, styles.tabular, { color: p['ink-muted'] }]}>
@@ -60,7 +71,10 @@ export function PortionNutritionPreview({
   embedded?: boolean;
 }>) {
   const p = usePalette();
-  const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: precision });
+  const language = useLanguage();
+  const formatter = new Intl.NumberFormat(language === 'es' ? 'es-ES' : 'en-US', {
+    maximumFractionDigits: precision,
+  });
   const format = (value: number) => formatter.format(value * factor);
 
   return (
@@ -79,7 +93,11 @@ export function PortionNutritionPreview({
       <View style={styles.portionMacros}>
         {macros.map(([, field, label, color]) => (
           <View key={field} style={styles.portionMacro}>
-            <Text style={[textStyles['body-sm'], { color: p[color] }]}>{label}</Text>
+            <Text style={[textStyles['body-sm'], { color: p[color] }]}>
+              {language === 'es'
+                ? { carbohydrates: 'Carbohidratos', protein: 'Proteínas', fats: 'Grasas' }[field]
+                : label}
+            </Text>
             <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
               {format(values[field])} g
             </Text>

@@ -1,15 +1,21 @@
 import React from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { usePalette } from '@/theme/tokens';
 import type { DragHandleProps } from './ExerciseDragHandle';
 
 export function ExerciseDragHandle({ id, label, disabled, onMove }: Readonly<DragHandleProps>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <button
       type="button"
       id={id}
       aria-label={label}
-      title="Drag to reorder; use arrow keys to move"
+      title={
+        es
+          ? 'Arrastra para reordenar. Usa las flechas para mover.'
+          : 'Drag to reorder; use arrow keys to move'
+      }
       disabled={disabled}
       onDragStart={(event) => event.preventDefault()}
       onKeyDown={(event) => {

@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
@@ -27,8 +28,21 @@ export function LeagueScoreHistory({
   backTo?: 'Standings' | 'League information';
   onBack: () => void;
 }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
-  const name = member.display_name ?? 'Member';
+  const name = member.display_name ?? t('Member', 'Miembro');
+  let backTitle: string = backTo;
+  let backAction: string = `Back to ${backTo.toLowerCase()}`;
+  if (language === 'es') {
+    if (backTo === 'Standings') {
+      backTitle = 'Clasificación';
+      backAction = 'Volver a clasificación';
+    } else {
+      backTitle = 'Información de la liga';
+      backAction = 'Volver a información de la liga';
+    }
+  }
   const [workoutId, setWorkoutId] = useState<number | null>(null);
   const ownHistory = member.user_id === accountId;
   const history = useInfiniteQuery({
@@ -45,9 +59,19 @@ export function LeagueScoreHistory({
   };
   function renderPagination() {
     if (history.isFetchingNextPage)
-      return <ActivityIndicator color={p.brand} accessibilityLabel="Loading more scores" />;
+      return (
+        <ActivityIndicator
+          color={p.brand}
+          accessibilityLabel={t('Loading more scores', 'Cargando más puntuaciones')}
+        />
+      );
     if (history.isFetchNextPageError)
-      return <LeagueAction label="Retry more scores" onPress={following} />;
+      return (
+        <LeagueAction
+          label={t('Retry more scores', 'Reintentar más puntuaciones')}
+          onPress={following}
+        />
+      );
     return null;
   }
 
@@ -71,23 +95,26 @@ export function LeagueScoreHistory({
               title={name}
               picture={member.picture_url}
               member
-              navigationLabel={backTo}
-              backLabel={`Back to ${backTo.toLowerCase()}`}
+              navigationLabel={backTitle}
+              backLabel={backAction}
               onBack={onBack}
             />
             <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-              Score history
+              {t('Score history', 'Historial de puntos')}
             </Text>
             {history.isPending ? (
-              <ActivityIndicator color={p.brand} accessibilityLabel="Loading score history" />
+              <ActivityIndicator
+                color={p.brand}
+                accessibilityLabel={t('Loading score history', 'Cargando historial de puntos')}
+              />
             ) : null}
             {history.isError && !history.data ? (
               <>
                 <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                  Could not load score history.
+                  {t('Could not load score history.', 'No se pudo cargar el historial de puntos.')}
                 </Text>
                 <LeagueAction
-                  label="Retry score history"
+                  label={t('Retry score history', 'Reintentar historial de puntos')}
                   onPress={() => {
                     void history.refetch();
                   }}
@@ -99,7 +126,7 @@ export function LeagueScoreHistory({
         ListEmptyComponent={
           (history.isSuccess ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              No credited scores yet.
+              {t('No credited scores yet.', 'Aún no hay puntuaciones registradas.')}
             </Text>
           ) : null) ?? undefined
         }
@@ -124,7 +151,7 @@ export function LeagueScoreHistory({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={workoutId}
-          backLabel="Back to score history"
+          backLabel={t('Back to score history', 'Volver al historial de puntos')}
           onBack={() => setWorkoutId(null)}
         />
       ) : null}

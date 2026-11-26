@@ -1,4 +1,5 @@
 import React from 'react';
+import { LanguageProvider } from '@/i18n/Language';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { calendarLabel, shiftCalendarMonth } from '@/components/CalendarGrid';
@@ -195,4 +196,72 @@ test('uses saved profile units for the chart and check-in without a unit selecto
 
   fireEvent.press(screen.getByRole('button', { name: 'Log measurements' }));
   expect(screen.getByLabelText('Weight (lb)').props.value).toBe('165.35');
+});
+
+function openInSpanish() {
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { gcTime: 0 } },
+  });
+  render(
+    <QueryClientProvider client={cache}>
+      <LanguageProvider language="es">
+        <ProgressScreen account={completeAccount} onClose={() => {}} />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+}
+
+test('Spanish progress and calendar keep metric codes while translating labels', async () => {
+  openInSpanish();
+  await screen.findByText('Aún no hay medidas de peso.');
+  fireEvent.press(screen.getByRole('button', { name: 'Registrar medidas' }));
+  expect(screen.getByLabelText('Peso (kg)')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Fecha de medición' }));
+  expect(screen.getByText('Lun')).toBeTruthy();
+  expect(screen.getByLabelText('Mes anterior')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Elegir mes y año' }));
+  expect(
+    screen.getByRole('button', { name: 'Año siguiente' }).props.accessibilityState.disabled,
+  ).toBe(true);
+  fireEvent.press(screen.getByRole('button', { name: 'Año anterior' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Mostrar días' }));
+  expect(screen.getByRole('button', { name: 'Mes siguiente' })).toBeTruthy();
+});
+
+test('Spanish measurement validation prevents invalid saves and retains input after failure', async () => {
+  jest.mocked(progressApi.record).mockRejectedValueOnce(new Error('offline'));
+  openInSpanish();
+  await screen.findByText('Aún no hay medidas de peso.');
+  fireEvent.press(screen.getByRole('button', { name: 'Registrar medidas' }));
+  fireEvent.changeText(screen.getByLabelText('Peso (kg)'), '1.234');
+  fireEvent.changeText(screen.getByLabelText('Altura (cm)'), '500');
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar medidas' }));
+  expect(
+    await screen.findByText('Introduce un número con dos decimales como máximo.'),
+  ).toBeTruthy();
+  expect(screen.getByText(/Altura: introduce un valor mayor que 0/)).toBeTruthy();
+  expect(progressApi.record).not.toHaveBeenCalled();
+  fireEvent.changeText(screen.getByLabelText('Peso (kg)'), '75');
+  fireEvent.changeText(screen.getByLabelText('Altura (cm)'), '170');
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar medidas' }));
+  expect(
+    await screen.findByText('No se pudieron guardar tus medidas. Inténtalo de nuevo.'),
+  ).toBeTruthy();
+  expect(screen.getByLabelText('Peso (kg)').props.value).toBe('75');
+});
+
+test('Spanish target editor prompts to reload after the account objective changes', async () => {
+  jest.mocked(progressApi.saveTarget).mockRejectedValueOnce(new ApiError(409));
+  openInSpanish();
+  fireEvent.press(await screen.findByRole('button', { name: 'Fijar objetivo' }));
+  fireEvent.changeText(screen.getByLabelText('Peso objetivo (kg)'), '75');
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar objetivo' }));
+  expect(
+    await screen.findByText(
+      'Tu objetivo ha cambiado. Cierra este formulario para cargar el objetivo actual.',
+    ),
+  ).toBeTruthy();
+  jest.mocked(progressApi.target).mockResolvedValue({ objective: 'maintain_weight', target: null });
+  fireEvent.press(screen.getByRole('button', { name: 'Listo' }));
+  expect(await screen.findByText('Mantener peso')).toBeTruthy();
 });

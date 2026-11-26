@@ -1,0 +1,24 @@
+import React, { createContext, useContext } from 'react';
+import { getTranslation } from './catalog';
+
+export type Language = 'en' | 'es';
+const LanguageContext = createContext<Language>('en');
+
+export function LanguageProvider({
+  language,
+  children,
+}: React.PropsWithChildren<{ language: Language }>) {
+  return <LanguageContext.Provider value={language}>{children}</LanguageContext.Provider>;
+}
+
+export function useLanguage() {
+  return useContext(LanguageContext);
+}
+
+export function selectCopy(spanish: boolean, es: string, en: string): string {
+  return spanish ? es : en;
+}
+
+export function useTranslation() {
+  return getTranslation(useLanguage());
+}

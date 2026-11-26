@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
@@ -28,6 +29,8 @@ export function LeagueInvitationCard({
   onJoin: () => void;
   onClose: () => void;
 }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   const muted = p['ink-muted'];
   const close = () => {
@@ -37,21 +40,24 @@ export function LeagueInvitationCard({
     ? [
         {
           icon: 'people-outline' as const,
-          label: 'Members',
+          label: t('Members', 'Miembros'),
           value: String(invitation.member_count),
         },
         {
           icon: 'calendar-outline' as const,
-          label: 'Created',
-          value: new Date(invitation.created_at).toLocaleDateString(undefined, {
-            dateStyle: 'medium',
-            timeZone: invitation.timezone ?? 'UTC',
-          }),
+          label: t('Created', 'Creada'),
+          value: new Date(invitation.created_at).toLocaleDateString(
+            language === 'es' ? 'es' : undefined,
+            {
+              dateStyle: 'medium',
+              timeZone: invitation.timezone ?? 'UTC',
+            },
+          ),
         },
       ]
     : [];
 
-  const joinLabel = joining ? 'Joining…' : 'Join league';
+  const joinLabel = joining ? t('Joining…', 'Uniéndose…') : t('Join league', 'Unirse a la liga');
   return (
     <Modal visible transparent animationType="fade" onRequestClose={close}>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing['space-4'] }}>
@@ -85,7 +91,7 @@ export function LeagueInvitationCard({
             }}
           >
             <LeagueIconButton
-              label="Close invitation"
+              label={t('Close invitation', 'Cerrar invitación')}
               icon="close"
               onPress={close}
               disabled={joining}
@@ -107,22 +113,25 @@ export function LeagueInvitationCard({
                 <LeagueAvatar
                   accountId={accountId}
                   invitationToken={invitation?.has_picture ? token : undefined}
-                  name={invitation?.name ?? 'League'}
+                  name={invitation?.name ?? t('League', 'Liga')}
                   size={84}
                 />
               </View>
               <Text style={[textStyles.overline, { color: p['brand-ink'] }]}>
-                LEAGUE INVITATION
+                {t('LEAGUE INVITATION', 'INVITACIÓN A LA LIGA')}
               </Text>
               <Text
                 accessibilityRole="header"
                 style={[textStyles['display-lg'], { color: p.ink, textAlign: 'center' }]}
               >
-                {invitation?.name ?? (loading ? 'Opening invitation…' : 'Invitation unavailable')}
+                {invitation?.name ??
+                  (loading
+                    ? t('Opening invitation…', 'Abriendo invitación…')
+                    : t('Invitation unavailable', 'Invitación no disponible'))}
               </Text>
               {invitation ? (
                 <Text style={[textStyles.body, { color: muted, textAlign: 'center' }]}>
-                  {invitation.description ?? 'No description provided.'}
+                  {invitation.description ?? t('No description provided.', 'Sin descripción.')}
                 </Text>
               ) : null}
             </View>
@@ -165,12 +174,15 @@ export function LeagueInvitationCard({
               >
                 <Ionicons name="checkmark-circle-outline" size={22} color={p['brand-ink']} />
                 <Text style={[textStyles.label, { flex: 1, color: p['brand-ink'] }]}>
-                  You’re already a member of this league.
+                  {t('You’re already a member of this league.', 'Ya eres miembro de esta liga.')}
                 </Text>
               </View>
             ) : null}
             {loading ? (
-              <ActivityIndicator color={p.brand} accessibilityLabel="Loading invitation" />
+              <ActivityIndicator
+                color={p.brand}
+                accessibilityLabel={t('Loading invitation', 'Cargando invitación')}
+              />
             ) : null}
             {error ? (
               <Text
@@ -183,14 +195,18 @@ export function LeagueInvitationCard({
             <View style={{ gap: spacing['space-2'] }}>
               {invitation ? (
                 <LeagueAction
-                  label={invitation.already_member ? 'Open league' : joinLabel}
+                  label={invitation.already_member ? t('Open league', 'Abrir liga') : joinLabel}
                   variant="primary"
                   disabled={joining}
                   onPress={onJoin}
                 />
               ) : null}
               {retry ? (
-                <LeagueAction label="Retry invitation" variant="primary" onPress={retry} />
+                <LeagueAction
+                  label={t('Retry invitation', 'Reintentar invitación')}
+                  variant="primary"
+                  onPress={retry}
+                />
               ) : null}
             </View>
           </ScrollView>
