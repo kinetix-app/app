@@ -35,7 +35,7 @@ export function ExerciseHistory({
     <View style={ui.gap}>
       {items.length === 0 ? (
         <Text style={{ color: p['ink-muted'] }}>
-          {getTranslation(es ? 'es' : 'en')('training.noPreviousSessionsForThisExercise_652a75')}
+          {getTranslation(es)('training.noPreviousSessionsForThisExercise_652a75')}
         </Text>
       ) : null}
       {items.map((item) => (
@@ -52,7 +52,7 @@ export function ExerciseHistory({
           style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
         >
           <Text style={{ color: p.brand }}>
-            {getTranslation(es ? 'es' : 'en')('training.loadMoreHistory_8923d1')}
+            {getTranslation(es)('training.loadMoreHistory_8923d1')}
           </Text>
         </Pressable>
       ) : null}
@@ -81,13 +81,13 @@ function HistoryCard({
         ))
       ) : (
         <Text style={{ color: p['ink-muted'] }}>
-          {getTranslation(es ? 'es' : 'en')('training.noSetsRecorded_ab2cd2')}
+          {getTranslation(es)('training.noSetsRecorded_ab2cd2')}
         </Text>
       )}
       <Button
-        title={getTranslation(es ? 'es' : 'en')('training.viewWorkout_79f257')}
+        title={getTranslation(es)('training.viewWorkout_79f257')}
         secondary
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.viewWorkout_d0de35', {
+        accessibilityLabel={getTranslation(es)('dynamicMessages.viewWorkout_d0de35', {
           value1: item.session_id,
         })}
         onPress={() => onOpenWorkout(item.session_id)}

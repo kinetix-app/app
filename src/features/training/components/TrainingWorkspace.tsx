@@ -115,9 +115,7 @@ export function TrainingWorkspace({
       await coverMutation.mutateAsync({ id: actions.item.id, asset });
     } catch {
       if (alive.current)
-        setCoverError(
-          getTranslation(es ? 'es' : 'en')('training.couldNotUpdateTheCoverTryAgain_d478b5'),
-        );
+        setCoverError(getTranslation(es)('training.couldNotUpdateTheCoverTryAgain_d478b5'));
     } finally {
       coverBusy.current = false;
       if (alive.current) setCoverWorking(false);
@@ -296,12 +294,8 @@ export function TrainingWorkspace({
           canStart={session.ready && !session.storageError && !session.draft && starting === null}
           startHint={
             session.draft
-              ? getTranslation(es ? 'es' : 'en')(
-                  'training.finishOrDiscardYourOngoingWorkoutTo_3f209e',
-                )
-              : getTranslation(es ? 'es' : 'en')(
-                  'training.workoutStartingIsUnavailableTryAgainWhen_88ee0a',
-                )
+              ? getTranslation(es)('training.finishOrDiscardYourOngoingWorkoutTo_3f209e')
+              : getTranslation(es)('training.workoutStartingIsUnavailableTryAgainWhen_88ee0a')
           }
           canDelete={
             session.ready &&
@@ -373,22 +367,22 @@ function RoutineListHeader({
   const editingRoutine = typeof editing === 'number';
   return (
     <View style={ui.gap}>
-      <ScreenHeader title={getTranslation(es ? 'es' : 'en')('training.workouts_263b45')}>
+      <ScreenHeader title={getTranslation(es)('training.workouts_263b45')}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.newRoutine_128760')}
+          accessibilityLabel={getTranslation(es)('training.newRoutine_128760')}
           onPress={onNewRoutine}
           style={({ pressed }) => [styles.create, { opacity: pressed ? 0.55 : 1 }]}
         >
           <Feather name="plus" size={24} color={p['brand-ink']} />
           <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-            {getTranslation(es ? 'es' : 'en')('training.routine_ce7cd4')}
+            {getTranslation(es)('training.routine_ce7cd4')}
           </Text>
         </Pressable>
       </ScreenHeader>
       <TextField
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.searchRoutines_240da1')}
-        placeholder={getTranslation(es ? 'es' : 'en')('training.searchByName_27f10c')}
+        accessibilityLabel={getTranslation(es)('training.searchRoutines_240da1')}
+        placeholder={getTranslation(es)('training.searchByName_27f10c')}
         maxLength={150}
         value={search}
         onChangeText={onSearchChange}
@@ -396,7 +390,7 @@ function RoutineListHeader({
       />
       {saved ? (
         <Text accessibilityRole="alert" style={{ color: p.success }}>
-          {getTranslation(es ? 'es' : 'en')('training.routineSaved_9682dd')}
+          {getTranslation(es)('training.routineSaved_9682dd')}
         </Text>
       ) : null}
       {listPending || (editingRoutine && detailPending) ? <Loading /> : null}
@@ -406,7 +400,7 @@ function RoutineListHeader({
           <Failure error={detailError} retry={onRetryDetail} />
           <IconButton
             icon="arrow-left"
-            label={getTranslation(es ? 'es' : 'en')('training.backToRoutines_ca811d')}
+            label={getTranslation(es)('training.backToRoutines_ca811d')}
             onPress={onBackToRoutines}
           />
         </View>
@@ -435,18 +429,18 @@ function EmptyRoutineState({
       </View>
       <Text style={[ui.heading, { color: p.ink, textAlign: 'center' }]}>
         {name
-          ? getTranslation(es ? 'es' : 'en')('training.noRoutinesFound_29995e')
-          : getTranslation(es ? 'es' : 'en')('training.buildYourFirstRoutine_68ab46')}
+          ? getTranslation(es)('training.noRoutinesFound_29995e')
+          : getTranslation(es)('training.buildYourFirstRoutine_68ab46')}
       </Text>
       <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
         {name
-          ? getTranslation(es ? 'es' : 'en')('training.tryADifferentNameToFindYour_e21b06')
-          : getTranslation(es ? 'es' : 'en')('training.chooseYourExercisesPlanYourSetsAnd_c4af52')}
+          ? getTranslation(es)('training.tryADifferentNameToFindYour_e21b06')
+          : getTranslation(es)('training.chooseYourExercisesPlanYourSetsAnd_c4af52')}
       </Text>
       {!name ? (
         <Button
-          title={getTranslation(es ? 'es' : 'en')('training.createRoutine_564806')}
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.createRoutine_564806')}
+          title={getTranslation(es)('training.createRoutine_564806')}
+          accessibilityLabel={getTranslation(es)('training.createRoutine_564806')}
           icon="plus"
           tone="positive"
           onPress={onCreate}
@@ -491,8 +485,8 @@ function RoutineRow({
         day: 'numeric',
         year: 'numeric',
       })
-    : getTranslation(es ? 'es' : 'en')('training.notTrainedYet_c16654');
-  const count = `${item.exercise_count} ${item.exercise_count === 1 ? getTranslation(es ? 'es' : 'en')('training.exercise_48600f') : getTranslation(es ? 'es' : 'en')('training.exercises_280e85')}`;
+    : getTranslation(es)('training.notTrainedYet_c16654');
+  const count = `${item.exercise_count} ${item.exercise_count === 1 ? getTranslation(es)('training.exercise_48600f') : getTranslation(es)('training.exercises_280e85')}`;
   let dateLabel = date;
   if (performed && es) dateLabel = `Último entrenamiento: ${performed.toLocaleString(language)}`;
   else if (performed) dateLabel = `Last trained ${performed.toLocaleString()}`;
@@ -507,12 +501,10 @@ function RoutineRow({
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.edit_a899b6', {
+          accessibilityLabel={getTranslation(es)('dynamicMessages.edit_a899b6', {
             value1: item.name,
           })}
-          accessibilityHint={getTranslation(es ? 'es' : 'en')(
-            'training.openRoutineDetailsAndEdit_c708fd',
-          )}
+          accessibilityHint={getTranslation(es)('training.openRoutineDetailsAndEdit_c708fd')}
           accessibilityState={{ disabled: false }}
           onPress={onEdit}
           style={({ pressed }) => [styles.routineDetails, { opacity: pressed ? 0.55 : 1 }]}
@@ -535,12 +527,11 @@ function RoutineRow({
         <Pressable
           ref={trigger}
           accessibilityRole="button"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-            'dynamicMessages.routineActionsFor_b301ae',
-            { value1: item.name },
-          )}
+          accessibilityLabel={getTranslation(es)('dynamicMessages.routineActionsFor_b301ae', {
+            value1: item.name,
+          })}
           accessibilityState={{ expanded: actionsOpen }}
-          accessibilityHint={getTranslation(es ? 'es' : 'en')(
+          accessibilityHint={getTranslation(es)(
             'training.openTrainEditCoverAndDeleteOptions_eaf126',
           )}
           onPress={() => onActions(() => trigger.current?.focus())}
@@ -570,10 +561,10 @@ function RoutineRow({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.start_794ce2', {
+          accessibilityLabel={getTranslation(es)('dynamicMessages.start_794ce2', {
             value1: item.name,
           })}
-          accessibilityHint={getTranslation(es ? 'es' : 'en')('training.trainThisRoutine_f90cb0')}
+          accessibilityHint={getTranslation(es)('training.trainThisRoutine_f90cb0')}
           accessibilityState={{ disabled: !canStart || starting, busy: starting }}
           disabled={!canStart || starting}
           onPress={onStart}
@@ -645,8 +636,8 @@ function RoutineListFooter({
     <Button
       title={
         loading
-          ? getTranslation(es ? 'es' : 'en')('training.loading_ab84a2')
-          : getTranslation(es ? 'es' : 'en')('training.more_3efa6b')
+          ? getTranslation(es)('training.loading_ab84a2')
+          : getTranslation(es)('training.more_3efa6b')
       }
       disabled={loading}
       onPress={onMore}

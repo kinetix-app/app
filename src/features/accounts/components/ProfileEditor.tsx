@@ -147,7 +147,7 @@ function displayFieldLabel(
 }
 
 function saveButtonTitle(pending: boolean, step: number, es: boolean) {
-  const t = getTranslation(es ? 'es' : 'en');
+  const t = getTranslation(es);
   if (pending) return t('profile.saving');
   if (step === 3) return t('profile.save');
   return t('profile.continue');
@@ -255,7 +255,7 @@ function MeasurementSystemFields({
   return (
     <>
       <Text style={[textStyles.label, { color: p.ink }]}>
-        {getTranslation(es ? 'es' : 'en')('accountsUi.measurement_system')}
+        {getTranslation(es)('accountsUi.measurement_system')}
       </Text>
       <Controller
         control={form.control}
@@ -278,7 +278,7 @@ function MeasurementSystemFields({
       ) : null}
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {getTranslation(es ? 'es' : 'en')(
+          {getTranslation(es)(
             'accountsUi.metric_uses_kg_and_cm_imperial_uses_lb_feet_and_inches_switc',
           )}
         </Text>
@@ -411,7 +411,7 @@ function SexFields({
   return (
     <View style={{ gap: spacing['space-3'], marginTop: spacing['space-2'] }}>
       <Text style={[textStyles.label, { color: p.ink }]}>
-        {getTranslation(es ? 'es' : 'en')('accountsUi.sex')}
+        {getTranslation(es)('accountsUi.sex')}
       </Text>
       <Controller
         control={form.control}
@@ -419,7 +419,7 @@ function SexFields({
         render={({ field: { value, onChange } }) => (
           <View
             accessibilityRole="radiogroup"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.sex')}
+            accessibilityLabel={getTranslation(es)('accountsUi.sex')}
             style={{ flexDirection: 'row', gap: 12 }}
           >
             {(['male', 'female'] as const).map((sex) => (
@@ -428,8 +428,8 @@ function SexFields({
                 accessibilityRole="radio"
                 accessibilityLabel={
                   sex === 'male'
-                    ? getTranslation(es ? 'es' : 'en')('accountsUi.male')
-                    : getTranslation(es ? 'es' : 'en')('accountsUi.female')
+                    ? getTranslation(es)('accountsUi.male')
+                    : getTranslation(es)('accountsUi.female')
                 }
                 accessibilityState={{ checked: value === sex, disabled }}
                 aria-checked={value === sex}
@@ -457,8 +457,8 @@ function SexFields({
                   ]}
                 >
                   {sex === 'male'
-                    ? getTranslation(es ? 'es' : 'en')('accountsUi.male')
-                    : getTranslation(es ? 'es' : 'en')('accountsUi.female')}
+                    ? getTranslation(es)('accountsUi.male')
+                    : getTranslation(es)('accountsUi.female')}
                 </Text>
               </Pressable>
             ))}
@@ -537,7 +537,7 @@ export function ActivityFields({
       render={({ field: { value, onChange } }) => (
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.usual_activity')}
+          accessibilityLabel={getTranslation(es)('accountsUi.usual_activity')}
           style={{ gap: spacing['space-3'] }}
         >
           {activityOptions.map((option) => (
@@ -598,29 +598,26 @@ function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial', es
   const sexLabels = es ? { male: 'Hombre', female: 'Mujer' } : { male: 'Male', female: 'Female' };
   const sex = values.sex ? (sexLabels[values.sex] ?? '—') : '—';
   return [
-    [getTranslation(es ? 'es' : 'en')('accountsUi.name'), values.display_name],
+    [getTranslation(es)('accountsUi.name'), values.display_name],
     [
-      getTranslation(es ? 'es' : 'en')('accountsUi.age'),
-      `${values.age} ${getTranslation(es ? 'es' : 'en')('accountsUi.years')}`,
+      getTranslation(es)('accountsUi.age'),
+      `${values.age} ${getTranslation(es)('accountsUi.years')}`,
     ],
     [
-      getTranslation(es ? 'es' : 'en')('accountsUi.activity'),
+      getTranslation(es)('accountsUi.activity'),
       (() => {
         const option = activityOptions.find((item) => item.value === values.activity_level);
         const label = es ? option?.labelEs : option?.label;
         return label ?? '—';
       })(),
     ],
-    [getTranslation(es ? 'es' : 'en')('accountsUi.sex'), sex],
+    [getTranslation(es)('accountsUi.sex'), sex],
     [
-      getTranslation(es ? 'es' : 'en')('accountsUi.system'),
-      unit === 'metric' ? getTranslation(es ? 'es' : 'en')('accountsUi.metric') : 'Imperial',
+      getTranslation(es)('accountsUi.system'),
+      unit === 'metric' ? getTranslation(es)('accountsUi.metric') : 'Imperial',
     ],
-    [getTranslation(es ? 'es' : 'en')('accountsUi.height'), height],
-    [
-      getTranslation(es ? 'es' : 'en')('accountsUi.weight'),
-      `${Number(values.weight).toFixed(2)} ${weightUnit}`,
-    ],
+    [getTranslation(es)('accountsUi.height'), height],
+    [getTranslation(es)('accountsUi.weight'), `${Number(values.weight).toFixed(2)} ${weightUnit}`],
   ];
 }
 
@@ -771,14 +768,12 @@ export function ProfileEditor({
               accessibilityLiveRegion="polite"
               style={[textStyles.label, { color: p['ink-muted'] }]}
             >
-              {getTranslation(es ? 'es' : 'en')('accountsUi.step')} {step + 1}{' '}
-              {getTranslation(es ? 'es' : 'en')('accountsUi.of')} 4 · {steps[step]}
+              {getTranslation(es)('accountsUi.step')} {step + 1}{' '}
+              {getTranslation(es)('accountsUi.of')} 4 · {steps[step]}
             </Text>
             <View
               accessibilityRole="progressbar"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'accountsUi.profile_setup_progress',
-              )}
+              accessibilityLabel={getTranslation(es)('accountsUi.profile_setup_progress')}
               accessibilityValue={{ min: 1, max: 4, now: step + 1 }}
               style={wizard.progress}
             >
@@ -853,7 +848,7 @@ export function ProfileEditor({
           />
           {onCancel ? (
             <SetupButton
-              title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
+              title={getTranslation(es)('accountsUi.cancel')}
               secondary
               disabled={disabled}
               onPress={() => {
@@ -972,12 +967,12 @@ function ProfileEditForm({
           contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}
         >
           <ScreenHeader
-            title={getTranslation(es ? 'es' : 'en')('accountsUi.edit_profile')}
+            title={getTranslation(es)('accountsUi.edit_profile')}
             leading={onBack ? <ProfileBack disabled={disabled} onPress={onBack} /> : undefined}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.save_profile')}
+              accessibilityLabel={getTranslation(es)('accountsUi.save_profile')}
               accessibilityState={{ disabled }}
               disabled={disabled}
               onPress={onSave}
@@ -993,8 +988,8 @@ function ProfileEditForm({
             >
               <Text style={[textStyles.label, { color: p['on-brand'] }]}>
                 {pending
-                  ? getTranslation(es ? 'es' : 'en')('accountsUi.saving')
-                  : getTranslation(es ? 'es' : 'en')('accountsUi.save')}
+                  ? getTranslation(es)('accountsUi.saving')
+                  : getTranslation(es)('accountsUi.save')}
               </Text>
             </Pressable>
           </ScreenHeader>
@@ -1060,8 +1055,8 @@ function ProfileWizardHeader({
   const es = useLanguage() === 'es';
   const backLabel =
     step > 0
-      ? getTranslation(es ? 'es' : 'en')('accountsUi.back')
-      : getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile');
+      ? getTranslation(es)('accountsUi.back')
+      : getTranslation(es)('accountsUi.back_to_profile');
   return (
     <ScreenHeader
       leading={
@@ -1071,8 +1066,8 @@ function ProfileWizardHeader({
       }
       title={
         onCancel
-          ? getTranslation(es ? 'es' : 'en')('accountsUi.edit_profile')
-          : getTranslation(es ? 'es' : 'en')('accountsUi.your_profile')
+          ? getTranslation(es)('accountsUi.edit_profile')
+          : getTranslation(es)('accountsUi.your_profile')
       }
     />
   );

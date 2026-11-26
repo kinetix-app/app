@@ -25,7 +25,8 @@ void i18n.init({
   interpolation: { escapeValue: false },
 });
 
-export function getTranslation(language: Language) {
-  const translate = i18n.getFixedT(language);
+export function getTranslation(language: Language | boolean) {
+  const locale = typeof language === 'boolean' ? (language ? 'es' : 'en') : language;
+  const translate = i18n.getFixedT(locale);
   return (key: TranslationKey, options?: TranslationOptions) => translate(key, options ?? {});
 }

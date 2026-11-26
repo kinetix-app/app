@@ -98,7 +98,7 @@ function RoutineExerciseEditor({
                   /^\d+$/.test(value.reps) &&
                   Number(value.reps) >= 1 &&
                   Number(value.reps) <= 2147483647) ||
-              getTranslation(es ? 'es' : 'en')('training.enterValidSetValues_af628f'),
+              getTranslation(es)('training.enterValidSetValues_af628f'),
           }}
           render={({ field, fieldState }) => (
             <View style={ui.gap}>
@@ -267,7 +267,7 @@ export function RoutineEditor({
       setError('root', {
         message:
           parsed.error.issues[0]?.message ??
-          getTranslation(es ? 'es' : 'en')('training.checkTheRoutineFields_d1d993'),
+          getTranslation(es)('training.checkTheRoutineFields_d1d993'),
       });
       return;
     }
@@ -286,18 +286,18 @@ export function RoutineEditor({
         <View style={[ui.row, { padding: spacing['space-4'] }]}>
           <IconButton
             icon="arrow-left"
-            label={getTranslation(es ? 'es' : 'en')('training.backToRoutines_ca811d')}
+            label={getTranslation(es)('training.backToRoutines_ca811d')}
             onPress={close}
             disabled={disabled}
           />
           <Text accessibilityRole="header" style={[ui.heading, { flex: 1, color: p.ink }]}>
             {routine
-              ? getTranslation(es ? 'es' : 'en')('training.editRoutine_47c2f4')
-              : getTranslation(es ? 'es' : 'en')('training.newRoutine_128760')}
+              ? getTranslation(es)('training.editRoutine_47c2f4')
+              : getTranslation(es)('training.newRoutine_128760')}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.saveRoutine_043f48')}
+            accessibilityLabel={getTranslation(es)('training.saveRoutine_043f48')}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={() => void submit()}
@@ -311,8 +311,8 @@ export function RoutineEditor({
           >
             <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
               {save.isPending
-                ? getTranslation(es ? 'es' : 'en')('training.saving_444c23')
-                : getTranslation(es ? 'es' : 'en')('training.save_5bd05a')}
+                ? getTranslation(es)('training.saving_444c23')
+                : getTranslation(es)('training.save_5bd05a')}
             </Text>
           </Pressable>
         </View>
@@ -340,23 +340,17 @@ export function RoutineEditor({
                 rules={{
                   validate: (value) =>
                     value.trim().length > 0 ||
-                    getTranslation(es ? 'es' : 'en')('training.enterARoutineName_0a0181'),
+                    getTranslation(es)('training.enterARoutineName_0a0181'),
                   maxLength: {
                     value: 150,
-                    message: getTranslation(es ? 'es' : 'en')(
-                      'training.useAtMost150Characters_12750f',
-                    ),
+                    message: getTranslation(es)('training.useAtMost150Characters_12750f'),
                   },
                 }}
                 render={({ field, fieldState }) => (
                   <>
                     <TextField
-                      accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                        'training.routineName_ccb21b',
-                      )}
-                      placeholder={getTranslation(es ? 'es' : 'en')(
-                        'training.nameYourRoutine_078a84',
-                      )}
+                      accessibilityLabel={getTranslation(es)('training.routineName_ccb21b')}
+                      placeholder={getTranslation(es)('training.nameYourRoutine_078a84')}
                       maxLength={150}
                       inputStyle={textStyles['title-lg']}
                       containerStyle={{
@@ -383,8 +377,8 @@ export function RoutineEditor({
                 accessibilityRole="button"
                 accessibilityLabel={
                   notesOpen
-                    ? getTranslation(es ? 'es' : 'en')('training.hideRoutineNotes_95c76f')
-                    : getTranslation(es ? 'es' : 'en')('training.addRoutineNotes_9d28ec')
+                    ? getTranslation(es)('training.hideRoutineNotes_95c76f')
+                    : getTranslation(es)('training.addRoutineNotes_9d28ec')
                 }
                 accessibilityState={{ expanded: notesOpen, disabled }}
                 disabled={disabled}
@@ -393,8 +387,8 @@ export function RoutineEditor({
               >
                 <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                   {notesOpen
-                    ? getTranslation(es ? 'es' : 'en')('training.notesOptional_be0f4c')
-                    : getTranslation(es ? 'es' : 'en')('training.addNotes_a2d3d1')}
+                    ? getTranslation(es)('training.notesOptional_be0f4c')
+                    : getTranslation(es)('training.addNotes_a2d3d1')}
                 </Text>
               </Pressable>
               {notesOpen ? (
@@ -404,18 +398,14 @@ export function RoutineEditor({
                   rules={{
                     maxLength: {
                       value: 1000,
-                      message: getTranslation(es ? 'es' : 'en')(
-                        'training.useAtMost1000Characters_732c2d',
-                      ),
+                      message: getTranslation(es)('training.useAtMost1000Characters_732c2d'),
                     },
                   }}
                   render={({ field, fieldState }) => (
                     <View style={ui.gap}>
                       <TextField
-                        accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                          'training.routineNotes_580086',
-                        )}
-                        placeholder={getTranslation(es ? 'es' : 'en')(
+                        accessibilityLabel={getTranslation(es)('training.routineNotes_580086')}
+                        placeholder={getTranslation(es)(
                           'training.focusRemindersOrAPlanForThis_430fdd',
                         )}
                         value={field.value}
@@ -481,7 +471,7 @@ export function RoutineEditor({
           ListFooterComponent={
             <View style={ui.gap}>
               <Button
-                title={getTranslation(es ? 'es' : 'en')('training.addExercise_89dbcf')}
+                title={getTranslation(es)('training.addExercise_89dbcf')}
                 onPress={() => setPicker(true)}
                 disabled={disabled || fields.length >= 500}
                 tone="positive"
@@ -547,18 +537,18 @@ export function RoutineEditor({
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {getTranslation(es ? 'es' : 'en')('training.discardYourUnsavedChanges_ec01af')}
+              {getTranslation(es)('training.discardYourUnsavedChanges_ec01af')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {getTranslation(es ? 'es' : 'en')('training.yourChangesHaveNotBeenSaved_5fa8fc')}
+              {getTranslation(es)('training.yourChangesHaveNotBeenSaved_5fa8fc')}
             </Text>
             <Button
-              title={getTranslation(es ? 'es' : 'en')('training.keepEditing_ba7ea4')}
+              title={getTranslation(es)('training.keepEditing_ba7ea4')}
               onPress={() => setDiscard(false)}
               secondary
             />
             <Button
-              title={getTranslation(es ? 'es' : 'en')('training.discard_671592')}
+              title={getTranslation(es)('training.discard_671592')}
               onPress={onClose}
               tone="danger"
             />

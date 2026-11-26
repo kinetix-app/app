@@ -76,18 +76,14 @@ export function Failure({ error, retry }: Readonly<{ error: unknown; retry?: () 
 
 function getFailureMessage(error: unknown, language: Language) {
   const es = language === 'es';
-  const connectionError = getTranslation(es ? 'es' : 'en')(
-    'training.couldNotConnectOrReadTheResponse_9c6b90',
-  );
+  const connectionError = getTranslation(es)('training.couldNotConnectOrReadTheResponse_9c6b90');
   if (!(error instanceof ApiError)) return connectionError;
   if ([401, 403].includes(error.status))
-    return getTranslation(es ? 'es' : 'en')('training.yourAccountCannotAccessThisDataSign_9b133b');
+    return getTranslation(es)('training.yourAccountCannotAccessThisDataSign_9b133b');
   if (error.status === 404)
-    return getTranslation(es ? 'es' : 'en')('training.thisRoutineOrExerciseIsNoLonger_871e69');
+    return getTranslation(es)('training.thisRoutineOrExerciseIsNoLonger_871e69');
   if (error.status === 422)
-    return getTranslation(es ? 'es' : 'en')(
-      'training.someFieldsOrExercisesAreUnavailableCheck_4fe74a',
-    );
+    return getTranslation(es)('training.someFieldsOrExercisesAreUnavailableCheck_4fe74a');
   return connectionError;
 }
 
@@ -97,7 +93,7 @@ export function Loading() {
   return (
     <ActivityIndicator
       color={p.brand}
-      accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.loadingTraining_a32005')}
+      accessibilityLabel={getTranslation(es)('training.loadingTraining_a32005')}
     />
   );
 }

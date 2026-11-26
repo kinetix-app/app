@@ -72,8 +72,8 @@ function friendRequestHint(count: number, es: boolean) {
   if (!count) return undefined;
   return countLabel(
     count,
-    getTranslation(es ? 'es' : 'en')('accountsUi.new_friend_request'),
-    getTranslation(es ? 'es' : 'en')('accountsUi.new_friend_requests'),
+    getTranslation(es)('accountsUi.new_friend_request'),
+    getTranslation(es)('accountsUi.new_friend_requests'),
   );
 }
 
@@ -147,13 +147,9 @@ function HomeNavigation({
     try {
       const success = await session.signOut();
       if (!success)
-        setSignOutError(
-          getTranslation(es ? 'es' : 'en')('accountsUi.could_not_sign_out_please_try_again'),
-        );
+        setSignOutError(getTranslation(es)('accountsUi.could_not_sign_out_please_try_again'));
     } catch {
-      setSignOutError(
-        getTranslation(es ? 'es' : 'en')('accountsUi.could_not_sign_out_please_try_again'),
-      );
+      setSignOutError(getTranslation(es)('accountsUi.could_not_sign_out_please_try_again'));
     } finally {
       loggingOut.current = false;
       setSigningOut(false);
@@ -231,7 +227,7 @@ function HomeNavigation({
           <WorkoutHistory
             accountId={accountId}
             onClose={closeProfilePanel}
-            backLabel={getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile')}
+            backLabel={getTranslation(es)('accountsUi.back_to_profile')}
             active={panelActive}
             onShare={shareWorkout}
           />
@@ -295,7 +291,7 @@ function HomeNavigation({
           profileButton={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.open_profile')}
+              accessibilityLabel={getTranslation(es)('accountsUi.open_profile')}
               accessibilityHint={friendRequestHint(incomingRequests, es)}
               onPress={showProfile}
               hitSlop={spacing['space-1']}
@@ -385,7 +381,7 @@ function HomeNavigation({
           <SessionWorkoutDetail
             accountId={accountId}
             sessionId={finishedSessionId}
-            backLabel={getTranslation(es ? 'es' : 'en')('accountsUi.back_to_workout_saved')}
+            backLabel={getTranslation(es)('accountsUi.back_to_workout_saved')}
             onBack={() => setViewingFinished(false)}
             showShare
             onShare={shareFinishedWorkout}
@@ -406,14 +402,14 @@ function HomeNavigation({
               style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
             >
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                {getTranslation(es ? 'es' : 'en')('accountsUi.workout_saved')}
+                {getTranslation(es)('accountsUi.workout_saved')}
               </Text>
               <Button
-                title={getTranslation(es ? 'es' : 'en')('accountsUi.view_workout')}
+                title={getTranslation(es)('accountsUi.view_workout')}
                 onPress={() => setViewingFinished(true)}
               />
               <Button
-                title={getTranslation(es ? 'es' : 'en')('accountsUi.not_now')}
+                title={getTranslation(es)('accountsUi.not_now')}
                 secondary
                 onPress={onDismissFinished}
               />

@@ -41,9 +41,7 @@ export function SessionWorkoutDetail({
     enabled: false,
   });
   const es = useLanguage() === 'es';
-  const name =
-    account?.profile.display_name?.trim() ||
-    getTranslation(es ? 'es' : 'en')('training.you_715a9a');
+  const name = account?.profile.display_name?.trim() || getTranslation(es)('training.you_715a9a');
   return (
     <WorkoutDetail
       workout={detail.isSuccess ? detail.data : undefined}

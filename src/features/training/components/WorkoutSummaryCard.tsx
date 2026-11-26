@@ -33,15 +33,15 @@ export function WorkoutSummaryCard({
   const [focused, setFocused] = useState(false);
   const metrics = [
     {
-      label: getTranslation(es ? 'es' : 'en')('training.duration_c00c5f'),
+      label: getTranslation(es)('training.duration_c00c5f'),
       value: formatElapsedDuration(durationSeconds),
     },
     {
-      label: getTranslation(es ? 'es' : 'en')('training.volume_bbc801'),
+      label: getTranslation(es)('training.volume_bbc801'),
       value: formatWorkoutVolume(volumeKg),
     },
     {
-      label: getTranslation(es ? 'es' : 'en')('training.exercises_3f75d2'),
+      label: getTranslation(es)('training.exercises_3f75d2'),
       value: exerciseCount.toLocaleString(),
     },
   ];

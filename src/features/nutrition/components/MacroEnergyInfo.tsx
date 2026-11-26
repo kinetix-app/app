@@ -58,7 +58,7 @@ export function MacroEnergyInfo({ label, factor }: Props) {
           <View style={styles.overlay} accessibilityViewIsModal>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+              accessibilityLabel={getTranslation(es)(
                 'nutrition.MacroEnergyInfo.closeMacroInformation',
               )}
               onPress={() => setPosition(null)}
@@ -91,8 +91,7 @@ export function MacroEnergyInfo({ label, factor }: Props) {
                 ]}
               />
               <Text style={[textStyles.body, { color: p.ink }]}>
-                {label}: {factor}{' '}
-                {getTranslation(es ? 'es' : 'en')('nutrition.MacroEnergyInfo.kcalPerGram')}
+                {label}: {factor} {getTranslation(es)('nutrition.MacroEnergyInfo.kcalPerGram')}
               </Text>
             </View>
           </View>

@@ -132,22 +132,20 @@ export function RecordScreen({
   };
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.sET')} ${setNumber}`}
-      title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.recordYourSet')}
+      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es)('formcheck.RecordScreen.sET')} ${setNumber}`}
+      title={getTranslation(es)('formcheck.RecordScreen.recordYourSet')}
       backIcon="x"
-      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.cancelRecording')}
+      backLabel={getTranslation(es)('formcheck.RecordScreen.cancelRecording')}
       onBack={onCancel}
       scroll={false}
       footer={
         recording ? (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {getTranslation(es ? 'es' : 'en')(
-                'formcheck.RecordScreen.doYourSetAsUsualStopWhenYouFinish',
-              )}
+              {getTranslation(es)('formcheck.RecordScreen.doYourSetAsUsualStopWhenYouFinish')}
             </Text>
             <Button
-              title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.stopAndAnalyze')}
+              title={getTranslation(es)('formcheck.RecordScreen.stopAndAnalyze')}
               onPress={() => void stop()}
             />
           </>
@@ -192,22 +190,20 @@ export function RecordScreen({
             </View>
             {failed ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                {getTranslation(es ? 'es' : 'en')(
-                  'formcheck.RecordScreen.theRecordingCouldNotBeSavedTryAgain',
-                )}
+                {getTranslation(es)('formcheck.RecordScreen.theRecordingCouldNotBeSavedTryAgain')}
               </Text>
             ) : null}
             <Button
-              title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.startRecording')}
+              title={getTranslation(es)('formcheck.RecordScreen.startRecording')}
               icon="video"
               onPress={start}
             />
             {__DEV__ ? (
               <Button
-                title={getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.useAVideo')}
+                title={getTranslation(es)('formcheck.RecordScreen.useAVideo')}
                 icon="upload"
                 secondary
-                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                accessibilityLabel={getTranslation(es)(
                   'formcheck.RecordScreen.analyzeAVideoFileDevelopmentOnly',
                 )}
                 onPress={() => void pickVideo()}
@@ -232,9 +228,7 @@ export function RecordScreen({
           facing="back"
           mode="video"
           mute
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-            'formcheck.RecordScreen.cameraPreview',
-          )}
+          accessibilityLabel={getTranslation(es)('formcheck.RecordScreen.cameraPreview')}
         />
         <View
           pointerEvents="none"
@@ -269,8 +263,7 @@ export function RecordScreen({
           >
             <Feather name="circle" size={10} color={p.danger} />
             <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
-              {getTranslation(es ? 'es' : 'en')('formcheck.RecordScreen.recording')} ·{' '}
-              {clock(seconds)}
+              {getTranslation(es)('formcheck.RecordScreen.recording')} · {clock(seconds)}
             </Text>
           </View>
         ) : null}

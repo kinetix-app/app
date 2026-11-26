@@ -80,11 +80,11 @@ export function WorkoutHistory({
         <View style={[ui.row, styles.headerContent]}>
           <IconButton
             icon="arrow-left"
-            label={backLabel ?? getTranslation(es ? 'es' : 'en')('training.backToRoutines_ca811d')}
+            label={backLabel ?? getTranslation(es)('training.backToRoutines_ca811d')}
             onPress={onClose}
           />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
-            {getTranslation(es ? 'es' : 'en')('training.workoutHistory_ca0ae9')}
+            {getTranslation(es)('training.workoutHistory_ca0ae9')}
           </Text>
         </View>
       </View>
@@ -99,7 +99,7 @@ export function WorkoutHistory({
         ListEmptyComponent={
           (!list.isPending && !list.isError ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {getTranslation(es ? 'es' : 'en')('training.noCompletedWorkoutsYet_0b37be')}
+              {getTranslation(es)('training.noCompletedWorkoutsYet_0b37be')}
             </Text>
           ) : null) ?? undefined
         }
@@ -111,7 +111,7 @@ export function WorkoutHistory({
             !previous || month !== monthFormat.format(new Date(previous.ended_at));
           const day = dayFormat.format(completed);
           const time = timeFormat.format(completed);
-          const when = getTranslation(es ? 'es' : 'en')('dynamicMessages.at_a18fb4', {
+          const when = getTranslation(es)('dynamicMessages.at_a18fb4', {
             value1: day,
             value2: time,
           });
@@ -137,7 +137,7 @@ export function WorkoutHistory({
                 volumeKg={item.total_volume_kg}
                 exerciseCount={item.exercises.length}
                 open={{
-                  label: getTranslation(es ? 'es' : 'en')('dynamicMessages.viewFrom_44e9bf', {
+                  label: getTranslation(es)('dynamicMessages.viewFrom_44e9bf', {
                     value1: item.title,
                     value2: when,
                   }),
@@ -158,7 +158,7 @@ export function WorkoutHistory({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={selected}
-          backLabel={getTranslation(es ? 'es' : 'en')('training.backToHistory_8fcd2b')}
+          backLabel={getTranslation(es)('training.backToHistory_8fcd2b')}
           onBack={() => setSelected(null)}
           showShare={Boolean(onShare)}
           onShare={shareSelected}

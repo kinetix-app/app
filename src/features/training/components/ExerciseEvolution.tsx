@@ -229,13 +229,13 @@ export function ExerciseEvolution({
     range,
     selected,
   );
-  const excludedSetsLabel = getTranslation(es ? 'es' : 'en')('training.someSetsExcluded_227c97');
+  const excludedSetsLabel = getTranslation(es)('training.someSetsExcluded_227c97');
   return (
     <View style={{ gap: 12 }}>
       <ChartMetricSelector
         metrics={cardio ? cardioMetrics : gymMetrics}
         value={metric}
-        label={getTranslation(es ? 'es' : 'en')('training.exerciseMetric_f77b18')}
+        label={getTranslation(es)('training.exerciseMetric_f77b18')}
         labelFor={(key) => metricLabels[key]}
         reduceMotion={reduceMotion}
         onChange={(key) => {
@@ -404,7 +404,7 @@ function MetricInfoSheet({
                 </Text>
                 <IconButton
                   icon="x"
-                  label={getTranslation(es ? 'es' : 'en')('training.closeExplanation_209b38')}
+                  label={getTranslation(es)('training.closeExplanation_209b38')}
                   onPress={() => onClose()}
                 />
               </View>

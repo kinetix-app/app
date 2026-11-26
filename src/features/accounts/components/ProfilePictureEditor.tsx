@@ -26,19 +26,17 @@ function getPictureStatus(
   es: boolean,
 ) {
   if (compact) {
-    if (draft.kind === 'select')
-      return getTranslation(es ? 'es' : 'en')('accountsUi.new_picture_save_to_apply');
+    if (draft.kind === 'select') return getTranslation(es)('accountsUi.new_picture_save_to_apply');
     if (draft.kind === 'remove')
-      return getTranslation(es ? 'es' : 'en')('accountsUi.picture_removed_save_to_apply');
-    return getTranslation(es ? 'es' : 'en')('accountsUi.profile_picture');
+      return getTranslation(es)('accountsUi.picture_removed_save_to_apply');
+    return getTranslation(es)('accountsUi.profile_picture');
   }
   if (draft.kind === 'select')
-    return getTranslation(es ? 'es' : 'en')('accountsUi.picture_ready_saved_when_you_confirm');
+    return getTranslation(es)('accountsUi.picture_ready_saved_when_you_confirm');
   if (draft.kind === 'remove')
-    return getTranslation(es ? 'es' : 'en')('accountsUi.no_picture_removal_saved_when_you_confirm');
-  if (account.profile.picture_url)
-    return getTranslation(es ? 'es' : 'en')('accountsUi.current_profile_picture');
-  return getTranslation(es ? 'es' : 'en')('accountsUi.no_picture_optional');
+    return getTranslation(es)('accountsUi.no_picture_removal_saved_when_you_confirm');
+  if (account.profile.picture_url) return getTranslation(es)('accountsUi.current_profile_picture');
+  return getTranslation(es)('accountsUi.no_picture_optional');
 }
 
 export function ProfilePictureEditor({
@@ -75,7 +73,7 @@ export function ProfilePictureEditor({
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
           setError(
-            getTranslation(es ? 'es' : 'en')(
+            getTranslation(es)(
               'accountsUi.photo_access_is_needed_to_choose_a_picture_allow_access_in_s',
             ),
           );
@@ -92,17 +90,17 @@ export function ProfilePictureEditor({
       if (result.canceled) return;
       const asset = result.assets[0];
       if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024) {
-        setError(getTranslation(es ? 'es' : 'en')('accountsUi.choose_a_picture_smaller_than_5_mb'));
+        setError(getTranslation(es)('accountsUi.choose_a_picture_smaller_than_5_mb'));
         return;
       }
       const type = asset.mimeType ?? asset.file?.type;
       if (type && !['image/jpeg', 'image/png', 'image/webp'].includes(type)) {
-        setError(getTranslation(es ? 'es' : 'en')('accountsUi.choose_a_jpeg_png_or_webp_picture'));
+        setError(getTranslation(es)('accountsUi.choose_a_jpeg_png_or_webp_picture'));
         return;
       }
       onDraftChange({ kind: 'select', asset });
     } catch {
-      setError(getTranslation(es ? 'es' : 'en')('accountsUi.could_not_open_your_photos_try_again'));
+      setError(getTranslation(es)('accountsUi.could_not_open_your_photos_try_again'));
     } finally {
       setBusy(false);
     }
@@ -125,8 +123,8 @@ export function ProfilePictureEditor({
           accessibilityRole="button"
           accessibilityLabel={
             hasPicture
-              ? getTranslation(es ? 'es' : 'en')('accountsUi.replace_picture')
-              : getTranslation(es ? 'es' : 'en')('accountsUi.choose_picture')
+              ? getTranslation(es)('accountsUi.replace_picture')
+              : getTranslation(es)('accountsUi.choose_picture')
           }
           accessibilityState={{ disabled: locked }}
           disabled={locked}
@@ -143,15 +141,11 @@ export function ProfilePictureEditor({
         {hasPicture ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.remove_picture')}
+            accessibilityLabel={getTranslation(es)('accountsUi.remove_picture')}
             accessibilityHint={
               compact
-                ? getTranslation(es ? 'es' : 'en')(
-                    'accountsUi.remove_this_picture_when_you_save_your_profile',
-                  )
-                : getTranslation(es ? 'es' : 'en')(
-                    'accountsUi.remove_this_picture_when_you_confirm_your_profile',
-                  )
+                ? getTranslation(es)('accountsUi.remove_this_picture_when_you_save_your_profile')
+                : getTranslation(es)('accountsUi.remove_this_picture_when_you_confirm_your_profile')
             }
             accessibilityState={{ disabled: locked }}
             disabled={locked}
@@ -172,7 +166,7 @@ export function ProfilePictureEditor({
         <View style={{ flexDirection: 'row', gap: spacing['space-2'], alignItems: 'center' }}>
           <ActivityIndicator color={p.brand} />
           <Text accessibilityLiveRegion="polite" style={[textStyles.label, { color: p.ink }]}>
-            {getTranslation(es ? 'es' : 'en')('accountsUi.opening_photos')}
+            {getTranslation(es)('accountsUi.opening_photos')}
           </Text>
         </View>
       ) : (
@@ -185,7 +179,7 @@ export function ProfilePictureEditor({
       )}
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
-          {getTranslation(es ? 'es' : 'en')('accountsUi.jpeg_png_or_webp_up_to_5_mb')}
+          {getTranslation(es)('accountsUi.jpeg_png_or_webp_up_to_5_mb')}
         </Text>
       ) : null}
       {error ? (

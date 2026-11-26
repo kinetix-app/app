@@ -27,9 +27,7 @@ function RecordingFooter({
     <>
       {showJoints && hasFaults ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {getTranslation(es ? 'es' : 'en')(
-            'formcheck.RecordingPlayer.jointsTurnRedDuringARepWithAFaultThere',
-          )}
+          {getTranslation(es)('formcheck.RecordingPlayer.jointsTurnRedDuringARepWithAFaultThere')}
         </Text>
       ) : null}
       <Button
@@ -43,8 +41,8 @@ function RecordingFooter({
 }
 
 function jointToggleTitle(showJoints: boolean, es: boolean) {
-  if (showJoints) return getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.hideJoints');
-  return getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.showJoints');
+  if (showJoints) return getTranslation(es)('formcheck.RecordingPlayer.hideJoints');
+  return getTranslation(es)('formcheck.RecordingPlayer.showJoints');
 }
 
 function unavailableMessage(es: boolean) {
@@ -98,8 +96,8 @@ export function RecordingPlayer({
   return (
     <FormCheckScreen
       overline={title.toUpperCase()}
-      title={getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.yourRecording')}
-      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.RecordingPlayer.backToAnalysis')}
+      title={getTranslation(es)('formcheck.RecordingPlayer.yourRecording')}
+      backLabel={getTranslation(es)('formcheck.RecordingPlayer.backToAnalysis')}
       onBack={onBack}
       scroll={false}
       footer={
@@ -146,9 +144,7 @@ export function RecordingPlayer({
               style={{ width: '100%', height: '100%' }}
               contentFit="contain"
               nativeControls
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'formcheck.RecordingPlayer.recordedSet',
-              )}
+              accessibilityLabel={getTranslation(es)('formcheck.RecordingPlayer.recordedSet')}
             />
             {pose && frame && showJoints ? (
               <PoseOverlay track={pose} time={currentTime} box={frame} />

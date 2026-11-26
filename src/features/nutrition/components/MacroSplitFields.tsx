@@ -33,14 +33,13 @@ const macroLabelsEs = {
 } as const;
 
 function macroModeLabel(mode: MacroMode, es: boolean) {
-  if (mode === 'grams') return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.grams');
-  return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.percentages');
+  if (mode === 'grams') return getTranslation(es)('nutrition.MacroSplitFields.grams');
+  return getTranslation(es)('nutrition.MacroSplitFields.percentages');
 }
 
 function unitLabel(mode: MacroMode, es: boolean) {
-  if (mode === 'grams')
-    return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.grams2');
-  return getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.percentage');
+  if (mode === 'grams') return getTranslation(es)('nutrition.MacroSplitFields.grams2');
+  return getTranslation(es)('nutrition.MacroSplitFields.percentage');
 }
 
 export function MacroSplitFields({ form, calories, mode, onModeChange, saving }: Props) {
@@ -85,13 +84,11 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
     <>
       <View style={styles.sectionHeader}>
         <Text style={[textStyles['title-md'], { color: p.ink }]}>
-          {getTranslation(es ? 'es' : 'en')('nutrition.MacroSplitFields.dailyMacros')}
+          {getTranslation(es)('nutrition.MacroSplitFields.dailyMacros')}
         </Text>
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-            'nutrition.MacroSplitFields.macroEntryMode',
-          )}
+          accessibilityLabel={getTranslation(es)('nutrition.MacroSplitFields.macroEntryMode')}
           style={[styles.modes, { backgroundColor: p['surface-300'] }]}
         >
           {(['percentages', 'grams'] as const).map((entry) => (
@@ -174,7 +171,7 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
                         mode === 'grams' && energy ? Math.max(0.01, energy / 100 / factor) : 100;
                       return (
                         <MacroRange
-                          label={getTranslation(es ? 'es' : 'en')('dynamicMessages.range_989af5', {
+                          label={getTranslation(es)('dynamicMessages.range_989af5', {
                             value1: label,
                           })}
                           maximum={maximum}
@@ -198,7 +195,7 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
       </View>
       {invalidAmounts ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-          {getTranslation(es ? 'es' : 'en')(
+          {getTranslation(es)(
             'nutrition.MacroSplitFields.useNonnegativeNumbersWithUpToTwoDecimals',
           )}
         </Text>

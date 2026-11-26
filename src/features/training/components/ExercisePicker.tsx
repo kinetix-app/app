@@ -168,9 +168,7 @@ export function ExercisePicker({
             ListEmptyComponent={
               (!query.isPending && !query.isError ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  {getTranslation(es ? 'es' : 'en')(
-                    'training.noExercisesFoundTryAnotherNameOr_4ddf82',
-                  )}
+                  {getTranslation(es)('training.noExercisesFoundTryAnotherNameOr_4ddf82')}
                 </Text>
               ) : null) ?? undefined
             }
@@ -277,7 +275,7 @@ function ExercisePickerRow({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.detailsFor_43fa13', {
+        accessibilityLabel={getTranslation(es)('dynamicMessages.detailsFor_43fa13', {
           value1: item.name,
         })}
         disabled={adding}
@@ -311,7 +309,7 @@ function ExercisePickerRow({
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {(
               item.body_parts?.map((part) => catalogueLabel(part, language)).join(' · ') ||
-              getTranslation(es ? 'es' : 'en')('training.gymExercise_3b38a2')
+              getTranslation(es)('training.gymExercise_3b38a2')
             ).toLowerCase()}
           </Text>
         </View>
@@ -393,11 +391,11 @@ function ExerciseCatalogueHeader({
             accessibilityRole="header"
             style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
           >
-            {getTranslation(es ? 'es' : 'en')('training.addExercise_89dbcf')}
+            {getTranslation(es)('training.addExercise_89dbcf')}
           </Text>
           <IconButton
             icon="x"
-            label={getTranslation(es ? 'es' : 'en')('training.closeExercisePicker_b009b6')}
+            label={getTranslation(es)('training.closeExercisePicker_b009b6')}
             onPress={onClose}
             disabled={adding}
           />
@@ -410,7 +408,7 @@ function ExerciseCatalogueHeader({
               search ? (
                 <IconButton
                   icon="x"
-                  label={getTranslation(es ? 'es' : 'en')('training.clearExerciseSearch_6e8166')}
+                  label={getTranslation(es)('training.clearExerciseSearch_6e8166')}
                   onPress={() => {
                     setSearch('');
                     setName('');
@@ -418,8 +416,8 @@ function ExerciseCatalogueHeader({
                 />
               ) : null
             }
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.searchExercises_17d7ef')}
-            placeholder={getTranslation(es ? 'es' : 'en')('training.searchByName_27f10c')}
+            accessibilityLabel={getTranslation(es)('training.searchExercises_17d7ef')}
+            placeholder={getTranslation(es)('training.searchByName_27f10c')}
             maxLength={200}
             value={search}
             onChangeText={setSearch}
@@ -467,9 +465,7 @@ function ExerciseCatalogueHeader({
           {bodyParts.length > 1 ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'training.clearAllBodyPartFilters_87ef3e',
-              )}
+              accessibilityLabel={getTranslation(es)('training.clearAllBodyPartFilters_87ef3e')}
               onPress={() => setBodyParts([])}
               style={({ pressed }) => ({
                 alignSelf: 'center',
@@ -480,7 +476,7 @@ function ExerciseCatalogueHeader({
               })}
             >
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                {getTranslation(es ? 'es' : 'en')('training.clearAll_715244')}
+                {getTranslation(es)('training.clearAll_715244')}
               </Text>
             </Pressable>
           ) : null}
@@ -531,7 +527,7 @@ function ExerciseSelectionAction({
     >
       {addError ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {getTranslation(es ? 'es' : 'en')('training.couldNotAddAllExercisesYourRemaining_f6542d')}
+          {getTranslation(es)('training.couldNotAddAllExercisesYourRemaining_f6542d')}
         </Text>
       ) : null}
       <Button title={title} onPress={onSubmit} disabled={adding} icon="plus" />
@@ -553,7 +549,7 @@ function CatalogueBodyPartBadges({
     <>
       {bodyParts.length === 0 ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {getTranslation(es ? 'es' : 'en')('training.allBodyParts_46db89')}
+          {getTranslation(es)('training.allBodyParts_46db89')}
         </Text>
       ) : (
         bodyParts.map((part) => (

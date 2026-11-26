@@ -45,17 +45,15 @@ function entryUnit(kind: EntrySource['kind'], amount: number): string {
 }
 
 function saveLabel(pending: boolean, editing: boolean, createLabel: string, es: boolean): string {
-  if (pending) return getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.saving');
-  return editing
-    ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.saveChanges')
-    : createLabel;
+  if (pending) return getTranslation(es)('nutrition.AddFoodScreen.saving');
+  return editing ? getTranslation(es)('nutrition.AddFoodScreen.saveChanges') : createLabel;
 }
 
 function searchStatus(searching: boolean, failed: boolean, es: boolean): string {
-  if (searching) return getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.searching');
+  if (searching) return getTranslation(es)('nutrition.AddFoodScreen.searching');
   return failed
-    ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.couldNotLoadFoods')
-    : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.noFoodsFound');
+    ? getTranslation(es)('nutrition.AddFoodScreen.couldNotLoadFoods')
+    : getTranslation(es)('nutrition.AddFoodScreen.noFoodsFound');
 }
 
 const maxEntryAmount = 999999.99;
@@ -75,19 +73,19 @@ function catalogueTypeLabel(label: EntityType, es: boolean) {
 function queueReviewTitle(count: number, es: boolean) {
   const noun =
     count === 1
-      ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.entry')
-      : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.entries');
-  return `${getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.review')} ${count} ${noun}`;
+      ? getTranslation(es)('nutrition.AddFoodScreen.entry')
+      : getTranslation(es)('nutrition.AddFoodScreen.entries');
+  return `${getTranslation(es)('nutrition.AddFoodScreen.review')} ${count} ${noun}`;
 }
 
 function catalogueFormTitle(editing: boolean, type: EntityType, es: boolean) {
   const action = editing
-    ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.edit')
-    : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.create');
+    ? getTranslation(es)('nutrition.AddFoodScreen.edit')
+    : getTranslation(es)('nutrition.AddFoodScreen.create');
   const item =
     type === 'Food'
-      ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.food')
-      : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.recipe');
+      ? getTranslation(es)('nutrition.AddFoodScreen.food')
+      : getTranslation(es)('nutrition.AddFoodScreen.recipe');
   return `${action} ${item}`;
 }
 
@@ -118,30 +116,29 @@ function reviewItemEditLabel(editing: boolean, name: string, es: boolean) {
 }
 
 function reviewConfirmLabel(pending: boolean, count: number, meal: string, es: boolean) {
-  if (pending) return getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.adding');
+  if (pending) return getTranslation(es)('nutrition.AddFoodScreen.adding');
   if (es) return `Añadir ${count} ${count === 1 ? 'registro' : 'registros'}`;
   return `Add ${count} ${count === 1 ? 'entry' : 'entries'} to ${meal}`;
 }
 
 function portionForAmount(amount: number, unit: string, es: boolean) {
   const isServing = unit === 'servings' || unit === 'serving';
-  if (!isServing)
-    return `${getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.for')} ${amount} ${unit}`;
+  if (!isServing) return `${getTranslation(es)('nutrition.AddFoodScreen.for')} ${amount} ${unit}`;
   const portionUnit =
     amount === 1
-      ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.serving')
-      : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.servings');
-  return `${getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.for')} ${amount} ${portionUnit}`;
+      ? getTranslation(es)('nutrition.AddFoodScreen.serving')
+      : getTranslation(es)('nutrition.AddFoodScreen.servings');
+  return `${getTranslation(es)('nutrition.AddFoodScreen.for')} ${amount} ${portionUnit}`;
 }
 
 function amountActionLabel(adding: boolean, label: string, es: boolean) {
   if (!es) return label;
-  return getTranslation(adding ? 'es' : 'en')('nutrition.AddFoodScreen.guardarCambios');
+  return getTranslation(adding)('nutrition.AddFoodScreen.guardarCambios');
 }
 
 function selectedFoodPortion(grams: number, es: boolean) {
-  if (grams === 100) return getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.per100G');
-  return getTranslation(es ? 'es' : 'en')('dynamicMessages.forG_283271', { value1: grams });
+  if (grams === 100) return getTranslation(es)('nutrition.AddFoodScreen.per100G');
+  return getTranslation(es)('dynamicMessages.forG_283271', { value1: grams });
 }
 
 function foodFieldLabel(field: 'calories' | 'protein' | 'carbohydrates' | 'fats', es: boolean) {
@@ -218,8 +215,8 @@ function CatalogueHeader({
           accessibilityRole="button"
           accessibilityLabel={
             reviewingEntries
-              ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.backToSelection')
-              : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.backToNutrition')
+              ? getTranslation(es)('nutrition.AddFoodScreen.backToSelection')
+              : getTranslation(es)('nutrition.AddFoodScreen.backToNutrition')
           }
           disabled={pending}
           onPress={() => {
@@ -232,8 +229,8 @@ function CatalogueHeader({
         <View style={styles.heading}>
           <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
             {reviewingEntries
-              ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.reviewEntries')
-              : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.addFood')}
+              ? getTranslation(es)('nutrition.AddFoodScreen.reviewEntries')
+              : getTranslation(es)('nutrition.AddFoodScreen.addFood')}
           </Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {es
@@ -251,13 +248,13 @@ function CatalogueHeader({
         {!reviewingEntries ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.create')}
+            accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.create')}
             onPress={() => onCreate()}
             style={[styles.createButton, { backgroundColor: p['brand-soft'] }]}
           >
             <Feather name="plus" size={20} color={p['brand-ink']} />
             <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-              {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.create')}
+              {getTranslation(es)('nutrition.AddFoodScreen.create')}
             </Text>
           </Pressable>
         ) : null}
@@ -265,9 +262,7 @@ function CatalogueHeader({
       {!reviewingEntries ? (
         <View
           accessibilityRole="tablist"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-            'nutrition.AddFoodScreen.catalogueType',
-          )}
+          accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.catalogueType')}
           style={styles.header}
         >
           {entityTypes.map((label) => (
@@ -340,7 +335,7 @@ function FoodCatalogueList({
           ListEmptyComponent={
             (visibleFoodSearch && debouncedSearch && !results.isPending && !results.isError ? (
               <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.noFoodsFound2')}
+                {getTranslation(es)('nutrition.AddFoodScreen.noFoodsFound2')}
               </Text>
             ) : null) ?? undefined
           }
@@ -452,12 +447,10 @@ export function AddFoodScreen({
           {tab === 'Food' && !reviewingEntries ? (
             <>
               <Text style={[textStyles.label, { color: p.ink }]}>
-                {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.search')}
+                {getTranslation(es)('nutrition.AddFoodScreen.search')}
               </Text>
               <TextField
-                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                  'nutrition.AddFoodScreen.searchFood',
-                )}
+                accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.searchFood')}
                 maxLength={150}
                 leading={<Feather name="search" size={20} color={p['ink-muted']} />}
                 value={search}
@@ -465,9 +458,7 @@ export function AddFoodScreen({
                   setSearch(value);
                   foodList.current?.scrollToOffset({ offset: 0, animated: false });
                 }}
-                placeholder={getTranslation(es ? 'es' : 'en')(
-                  'nutrition.AddFoodScreen.chickenRiceYogurt',
-                )}
+                placeholder={getTranslation(es)('nutrition.AddFoodScreen.chickenRiceYogurt')}
               />
             </>
           ) : null}
@@ -620,8 +611,8 @@ function CatalogueFormModal({
               accessibilityRole="button"
               accessibilityLabel={
                 editing
-                  ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.closeEditor')
-                  : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.closeCreation')
+                  ? getTranslation(es)('nutrition.AddFoodScreen.closeEditor')
+                  : getTranslation(es)('nutrition.AddFoodScreen.closeCreation')
               }
               onPress={onClose}
               style={[styles.back, { backgroundColor: p['surface-300'] }]}
@@ -632,9 +623,7 @@ function CatalogueFormModal({
           {!editing ? (
             <View
               accessibilityRole="tablist"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'nutrition.AddFoodScreen.creationType',
-              )}
+              accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.creationType')}
               style={styles.header}
             >
               {entityTypes.map((label) => (
@@ -748,7 +737,7 @@ function PortionPicker({
               </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                accessibilityLabel={getTranslation(es)(
                   'nutrition.AddFoodScreen.closeAmountSelector',
                 )}
                 onPress={onClose}
@@ -781,22 +770,18 @@ function PortionPicker({
                     portion={recipePortionLabel(previewServings, es)}
                   />
                   <Text style={[textStyles.label, { color: p.ink }]}>
-                    {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.servings2')}
+                    {getTranslation(es)('nutrition.AddFoodScreen.servings2')}
                   </Text>
                   <View style={[styles.amountRow, styles.portionRecipeRow]}>
                     <ServingsStepper
-                      label={getTranslation(es ? 'es' : 'en')(
-                        'nutrition.AddFoodScreen.recipeServingsToAdd',
-                      )}
+                      label={getTranslation(es)('nutrition.AddFoodScreen.recipeServingsToAdd')}
                       value={amount}
                       onChange={setAmount}
                       fractional
                     />
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                        'nutrition.AddFoodScreen.addRecipe',
-                      )}
+                      accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.addRecipe')}
                       accessibilityState={{ disabled: !canQueue }}
                       disabled={!canQueue}
                       onPress={submit}
@@ -809,7 +794,7 @@ function PortionPicker({
                       ]}
                     >
                       <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                        {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.add')}
+                        {getTranslation(es)('nutrition.AddFoodScreen.add')}
                       </Text>
                     </Pressable>
                   </View>
@@ -874,7 +859,7 @@ function FoodRow({
     <View style={[styles.catalogueRow, { backgroundColor: p['surface-200'] }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.select_617c5b', {
+        accessibilityLabel={getTranslation(es)('dynamicMessages.select_617c5b', {
           value1: food.name,
         })}
         accessibilityState={{ selected: isQueued }}
@@ -896,8 +881,7 @@ function FoodRow({
         <View style={styles.flex}>
           <Text style={[textStyles.body, { color: p.ink }]}>{food.name}</Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.per100G')} · {food.calories}{' '}
-            kcal
+            {getTranslation(es)('nutrition.AddFoodScreen.per100G')} · {food.calories} kcal
           </Text>
         </View>
       </Pressable>
@@ -905,7 +889,7 @@ function FoodRow({
         <View style={styles.itemActions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.edit_a899b6', {
+            accessibilityLabel={getTranslation(es)('dynamicMessages.edit_a899b6', {
               value1: food.name,
             })}
             hitSlop={spacing['space-1']}
@@ -916,7 +900,7 @@ function FoodRow({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.delete_602940', {
+            accessibilityLabel={getTranslation(es)('dynamicMessages.delete_602940', {
               value1: food.name,
             })}
             onPress={() => onRequestDelete(food)}
@@ -955,18 +939,17 @@ function DeleteFoodConfirmation({
         >
           <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
             {error
-              ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.canTDeleteFood')
-              : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.deleteFood')}
+              ? getTranslation(es)('nutrition.AddFoodScreen.canTDeleteFood')
+              : getTranslation(es)('nutrition.AddFoodScreen.deleteFood')}
           </Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {error
-              ? getTranslation(es ? 'es' : 'en')('dynamicMessages.isUsedInARecipeOr_364fe6', {
+              ? getTranslation(es)('dynamicMessages.isUsedInARecipeOr_364fe6', {
                   value1: food?.name,
                 })
-              : getTranslation(es ? 'es' : 'en')(
-                  'dynamicMessages.deleteThisCannotBeUndone_b12a2e',
-                  { value1: food?.name },
-                )}
+              : getTranslation(es)('dynamicMessages.deleteThisCannotBeUndone_b12a2e', {
+                  value1: food?.name,
+                })}
           </Text>
           <View style={styles.confirmationActions}>
             <Pressable
@@ -976,8 +959,8 @@ function DeleteFoodConfirmation({
             >
               <Text style={[textStyles.label, { color: p.ink }]}>
                 {error
-                  ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.close')
-                  : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.cancel')}
+                  ? getTranslation(es)('nutrition.AddFoodScreen.close')
+                  : getTranslation(es)('nutrition.AddFoodScreen.cancel')}
               </Text>
             </Pressable>
             {!error ? (
@@ -988,7 +971,7 @@ function DeleteFoodConfirmation({
                 style={[styles.confirmButton, { backgroundColor: p.danger }]}
               >
                 <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-                  {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.delete')}
+                  {getTranslation(es)('nutrition.AddFoodScreen.delete')}
                 </Text>
               </Pressable>
             ) : null}
@@ -1073,7 +1056,7 @@ function EntryQueueReview({
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                  accessibilityLabel={getTranslation(es)(
                     'dynamicMessages.removeFromSelection_9fb4de',
                     { value1: item.source.name },
                   )}
@@ -1116,7 +1099,7 @@ function EntryQueueReview({
       </View>
       <View style={styles.reviewTotals}>
         <Text style={[textStyles.label, { color: p.ink }]}>
-          {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.selectionTotals')}
+          {getTranslation(es)('nutrition.AddFoodScreen.selectionTotals')}
         </Text>
         <View
           accessible
@@ -1131,7 +1114,7 @@ function EntryQueueReview({
       </View>
       {error ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-          {getTranslation(es ? 'es' : 'en')(
+          {getTranslation(es)(
             'nutrition.AddFoodScreen.someEntriesCouldNotBeAddedReviewTheRemainingSelectionAndTryAgain',
           )}
         </Text>
@@ -1175,11 +1158,11 @@ function AmountActionRow({
       <TextField
         accessibilityLabel={
           unit === 'g'
-            ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.foodAmount')
-            : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.recipeServingsToAdd')
+            ? getTranslation(es)('nutrition.AddFoodScreen.foodAmount')
+            : getTranslation(es)('nutrition.AddFoodScreen.recipeServingsToAdd')
         }
         keyboardType="decimal-pad"
-        placeholder={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.amount')}
+        placeholder={getTranslation(es)('nutrition.AddFoodScreen.amount')}
         value={amount}
         onChangeText={(value) => onChange(numericAmount(value))}
         containerStyle={[styles.flex, styles.compactField]}
@@ -1258,19 +1241,17 @@ function EmptyRecipes({ searching }: Readonly<{ searching: boolean }>) {
   if (searching)
     return (
       <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-        {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.noRecipesFound')}
+        {getTranslation(es)('nutrition.AddFoodScreen.noRecipesFound')}
       </Text>
     );
   return (
     <View style={styles.emptyRecipes}>
       <Feather name="book-open" size={22} color={p['ink-muted']} />
       <Text style={[textStyles.body, { color: p.ink }]}>
-        {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.noRecipesSavedYet')}
+        {getTranslation(es)('nutrition.AddFoodScreen.noRecipesSavedYet')}
       </Text>
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {getTranslation(es ? 'es' : 'en')(
-          'nutrition.AddFoodScreen.createOneToAddItsServingsToAnyMeal',
-        )}
+        {getTranslation(es)('nutrition.AddFoodScreen.createOneToAddItsServingsToAnyMeal')}
       </Text>
     </View>
   );
@@ -1312,12 +1293,10 @@ function RecipePicker({
   return (
     <View style={[styles.list, styles.recipeForm]}>
       <Text style={[textStyles.label, { color: p.ink }]}>
-        {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.search')}
+        {getTranslation(es)('nutrition.AddFoodScreen.search')}
       </Text>
       <TextField
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-          'nutrition.AddFoodScreen.searchRecipe',
-        )}
+        accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.searchRecipe')}
         maxLength={150}
         leading={<Feather name="search" size={20} color={p['ink-muted']} />}
         value={search}
@@ -1325,7 +1304,7 @@ function RecipePicker({
           setSearch(value);
           list.current?.scrollToOffset({ offset: 0, animated: false });
         }}
-        placeholder={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.chickenRicePasta')}
+        placeholder={getTranslation(es)('nutrition.AddFoodScreen.chickenRicePasta')}
       />
       <FlatList
         ref={list}
@@ -1344,10 +1323,9 @@ function RecipePicker({
               accessibilityState={{
                 selected: queuedRecipeIds.includes(recipe.id),
               }}
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'dynamicMessages.select_617c5b',
-                { value1: recipe.name },
-              )}
+              accessibilityLabel={getTranslation(es)('dynamicMessages.select_617c5b', {
+                value1: recipe.name,
+              })}
               onPress={() => onSelect(recipe)}
               style={({ pressed }) => [styles.recipeSelect, { opacity: pressed ? 0.65 : 1 }]}
             >
@@ -1368,7 +1346,7 @@ function RecipePicker({
               <View style={styles.flex}>
                 <Text style={[textStyles.body, { color: p.ink }]}>{recipe.name}</Text>
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.perServing')} ·{' '}
+                  {getTranslation(es)('nutrition.AddFoodScreen.perServing')} ·{' '}
                   {recipe.calories.toFixed(0)} kcal
                 </Text>
               </View>
@@ -1377,10 +1355,9 @@ function RecipePicker({
               <View style={styles.itemActions}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                    'dynamicMessages.edit_a899b6',
-                    { value1: recipe.name },
-                  )}
+                  accessibilityLabel={getTranslation(es)('dynamicMessages.edit_a899b6', {
+                    value1: recipe.name,
+                  })}
                   hitSlop={spacing['space-1']}
                   onPress={() => onEdit(recipe)}
                   style={styles.editItem}
@@ -1389,10 +1366,9 @@ function RecipePicker({
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                    'dynamicMessages.delete_602940',
-                    { value1: recipe.name },
-                  )}
+                  accessibilityLabel={getTranslation(es)('dynamicMessages.delete_602940', {
+                    value1: recipe.name,
+                  })}
                   accessibilityState={{ disabled: remove.isPending }}
                   disabled={remove.isPending}
                   onPress={() => {
@@ -1436,19 +1412,17 @@ function RecipePicker({
             </View>
             <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
               {remove.isError
-                ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.canTDeleteRecipe')
-                : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.deleteRecipe')}
+                ? getTranslation(es)('nutrition.AddFoodScreen.canTDeleteRecipe')
+                : getTranslation(es)('nutrition.AddFoodScreen.deleteRecipe')}
             </Text>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
               {remove.isError
-                ? getTranslation(es ? 'es' : 'en')(
-                    'dynamicMessages.isAlreadyLoggedInYourDiary_d15a58',
-                    { value1: recipeToDelete?.name },
-                  )
-                : getTranslation(es ? 'es' : 'en')(
-                    'dynamicMessages.willBePermanentlyRemoved_fede90',
-                    { value1: recipeToDelete?.name },
-                  )}
+                ? getTranslation(es)('dynamicMessages.isAlreadyLoggedInYourDiary_d15a58', {
+                    value1: recipeToDelete?.name,
+                  })
+                : getTranslation(es)('dynamicMessages.willBePermanentlyRemoved_fede90', {
+                    value1: recipeToDelete?.name,
+                  })}
             </Text>
             <View style={styles.confirmationActions}>
               {remove.isError ? (
@@ -1458,7 +1432,7 @@ function RecipePicker({
                   style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
                 >
                   <Text style={[textStyles.label, { color: p.ink }]}>
-                    {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.close')}
+                    {getTranslation(es)('nutrition.AddFoodScreen.close')}
                   </Text>
                 </Pressable>
               ) : (
@@ -1469,7 +1443,7 @@ function RecipePicker({
                     style={[styles.confirmButton, { backgroundColor: p['surface-300'] }]}
                   >
                     <Text style={[textStyles.label, { color: p.ink }]}>
-                      {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.cancel')}
+                      {getTranslation(es)('nutrition.AddFoodScreen.cancel')}
                     </Text>
                   </Pressable>
                   <Pressable
@@ -1482,7 +1456,7 @@ function RecipePicker({
                     ]}
                   >
                     <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-                      {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.delete')}
+                      {getTranslation(es)('nutrition.AddFoodScreen.delete')}
                     </Text>
                   </Pressable>
                 </>
@@ -1518,8 +1492,8 @@ function ServingsStepper({
         accessibilityRole="button"
         accessibilityLabel={
           decrement
-            ? getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.decreaseServings')
-            : getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.increaseServings')
+            ? getTranslation(es)('nutrition.AddFoodScreen.decreaseServings')
+            : getTranslation(es)('nutrition.AddFoodScreen.increaseServings')
         }
         accessibilityState={{ disabled }}
         disabled={disabled}
@@ -1595,13 +1569,13 @@ function FoodEditor({
   return (
     <View style={styles.recipeForm}>
       <Text style={[textStyles.label, { color: p.ink }]}>
-        {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.name')}
+        {getTranslation(es)('nutrition.AddFoodScreen.name')}
       </Text>
       <TextField
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.foodName')}
+        accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.foodName')}
         value={name}
         onChangeText={setName}
-        placeholder={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.greekYogurt')}
+        placeholder={getTranslation(es)('nutrition.AddFoodScreen.greekYogurt')}
       />
       {(['calories', 'protein', 'carbohydrates', 'fats'] as const).map((field) => (
         <View key={field} style={styles.foodField}>
@@ -1641,7 +1615,7 @@ function FoodEditor({
       ))}
       {save.isError ? (
         <Text style={[textStyles['body-sm'], { color: p.danger }]}>
-          {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.couldNotSaveFood')}
+          {getTranslation(es)('nutrition.AddFoodScreen.couldNotSaveFood')}
         </Text>
       ) : null}
       <Pressable
@@ -1657,7 +1631,7 @@ function FoodEditor({
           {saveLabel(
             save.isPending,
             Boolean(food),
-            getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.saveFood'),
+            getTranslation(es)('nutrition.AddFoodScreen.saveFood'),
             es,
           )}
         </Text>
@@ -1720,7 +1694,7 @@ function RecipeIngredients({
       {ingredientsWithNutrition.length ? (
         <View style={styles.recipeFields}>
           <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-            {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.inThisRecipe')}
+            {getTranslation(es)('nutrition.AddFoodScreen.inThisRecipe')}
           </Text>
           <View style={[styles.ingredientList, { backgroundColor: p['surface-100'] }]}>
             {ingredientsWithNutrition.map(({ key, food, grams, nutrition }, index) => (
@@ -1744,10 +1718,9 @@ function RecipeIngredients({
                 </View>
                 <View style={styles.ingredientControls}>
                   <TextField
-                    accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                      'dynamicMessages.quantity_58e1cb',
-                      { value1: food.name },
-                    )}
+                    accessibilityLabel={getTranslation(es)('dynamicMessages.quantity_58e1cb', {
+                      value1: food.name,
+                    })}
                     keyboardType="decimal-pad"
                     selectTextOnFocus
                     value={grams}
@@ -1768,10 +1741,9 @@ function RecipeIngredients({
                   />
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                      'dynamicMessages.remove_dcff76',
-                      { value1: food.name },
-                    )}
+                    accessibilityLabel={getTranslation(es)('dynamicMessages.remove_dcff76', {
+                      value1: food.name,
+                    })}
                     style={styles.stepperButton}
                     onPress={() =>
                       setIngredients((current) => current.filter((item) => item.key !== key))
@@ -1809,9 +1781,7 @@ function IngredientSearchResults({
           style={[styles.ingredientResults, { backgroundColor: p['surface-100'] }]}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-            'nutrition.AddFoodScreen.ingredientSearchResults',
-          )}
+          accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.ingredientSearchResults')}
           scrollEventThrottle={32}
           onScroll={({ nativeEvent: { contentSize, contentOffset, layoutMeasurement } }) => {
             if (contentSize.height - contentOffset.y <= layoutMeasurement.height * 1.5) {
@@ -1824,10 +1794,9 @@ function IngredientSearchResults({
               <Pressable
                 key={food.id}
                 accessibilityRole="button"
-                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                  'dynamicMessages.addAsAnIngredient_1b1f8a',
-                  { value1: food.name },
-                )}
+                accessibilityLabel={getTranslation(es)('dynamicMessages.addAsAnIngredient_1b1f8a', {
+                  value1: food.name,
+                })}
                 onPress={() => chooseIngredient(food)}
                 style={({ pressed }) => [
                   styles.ingredientSearchRow,
@@ -1949,24 +1918,22 @@ function RecipeEditor({
     <View style={styles.recipeForm}>
       <View style={styles.recipeFields}>
         <Text style={[textStyles.label, { color: p.ink }]}>
-          {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.recipeName')}
+          {getTranslation(es)('nutrition.AddFoodScreen.recipeName')}
         </Text>
         <TextField
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-            'nutrition.AddFoodScreen.recipeName',
-          )}
+          accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.recipeName')}
           value={name}
           onChangeText={setName}
-          placeholder={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.chickenRiceBowl')}
+          placeholder={getTranslation(es)('nutrition.AddFoodScreen.chickenRiceBowl')}
           containerStyle={styles.compactField}
           inputStyle={styles.compactInput}
         />
         <View style={styles.servingRow}>
           <Text style={[textStyles.label, styles.flex, { color: p.ink }]}>
-            {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.servings2')}
+            {getTranslation(es)('nutrition.AddFoodScreen.servings2')}
           </Text>
           <ServingsStepper
-            label={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.recipeServings')}
+            label={getTranslation(es)('nutrition.AddFoodScreen.recipeServings')}
             value={servings}
             onChange={setServings}
           />
@@ -1974,22 +1941,20 @@ function RecipeEditor({
       </View>
       <View style={styles.recipeFields}>
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.addIngredients')}
+          {getTranslation(es)('nutrition.AddFoodScreen.addIngredients')}
         </Text>
         <TextField
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-            'nutrition.AddFoodScreen.searchIngredient',
-          )}
+          accessibilityLabel={getTranslation(es)('nutrition.AddFoodScreen.searchIngredient')}
           maxLength={150}
           leading={<Feather name="search" size={18} color={p['ink-muted']} />}
           value={search}
           onChangeText={setSearch}
-          placeholder={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.searchForAFood')}
+          placeholder={getTranslation(es)('nutrition.AddFoodScreen.searchForAFood')}
           trailing={
             search ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                accessibilityLabel={getTranslation(es)(
                   'nutrition.AddFoodScreen.clearIngredientSearch',
                 )}
                 onPress={clearIngredientSearch}
@@ -2018,7 +1983,7 @@ function RecipeEditor({
           <PortionNutritionPreview
             values={preview}
             factor={matchesSavedPortions ? 1 : 1 / servingCount}
-            portion={getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.perServing')}
+            portion={getTranslation(es)('nutrition.AddFoodScreen.perServing')}
             precision={2}
             embedded
           />
@@ -2029,14 +1994,14 @@ function RecipeEditor({
       validQuantities &&
       existingFoods.some((result) => result.isError) ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {getTranslation(es ? 'es' : 'en')(
+          {getTranslation(es)(
             'nutrition.AddFoodScreen.nutritionIsUnavailableForOneOrMoreIngredients',
           )}
         </Text>
       ) : null}
       {save.isError ? (
         <Text style={[textStyles['body-sm'], { color: p.danger }]}>
-          {getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.couldNotSaveRecipe')}
+          {getTranslation(es)('nutrition.AddFoodScreen.couldNotSaveRecipe')}
         </Text>
       ) : null}
       <Pressable
@@ -2053,7 +2018,7 @@ function RecipeEditor({
           {saveLabel(
             save.isPending,
             Boolean(recipe),
-            getTranslation(es ? 'es' : 'en')('nutrition.AddFoodScreen.createRecipe'),
+            getTranslation(es)('nutrition.AddFoodScreen.createRecipe'),
             es,
           )}
         </Text>

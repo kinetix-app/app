@@ -35,29 +35,27 @@ export function CannotAssessScreen({
   const es = useLanguage() === 'es';
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es ? 'es' : 'en')('formcheck.CannotAssessScreen.sET')} ${setNumber}`}
+      overline={`${exerciseName.toUpperCase()} · ${getTranslation(es)('formcheck.CannotAssessScreen.sET')} ${setNumber}`}
       backIcon="x"
-      backLabel={getTranslation(es ? 'es' : 'en')('formcheck.CannotAssessScreen.backToWorkout')}
+      backLabel={getTranslation(es)('formcheck.CannotAssessScreen.backToWorkout')}
       onBack={onLogByHand}
       footer={
         <>
           <Button
-            title={getTranslation(es ? 'es' : 'en')('formcheck.CannotAssessScreen.recordAgain')}
+            title={getTranslation(es)('formcheck.CannotAssessScreen.recordAgain')}
             icon="video"
             onPress={onRecordAgain}
           />
           {hasVideo ? (
             <Button
-              title={getTranslation(es ? 'es' : 'en')(
-                'formcheck.CannotAssessScreen.watchRecording',
-              )}
+              title={getTranslation(es)('formcheck.CannotAssessScreen.watchRecording')}
               icon="play"
               onPress={onWatchVideo}
               secondary
             />
           ) : null}
           <Button
-            title={getTranslation(es ? 'es' : 'en')('formcheck.CannotAssessScreen.logSetByHand')}
+            title={getTranslation(es)('formcheck.CannotAssessScreen.logSetByHand')}
             onPress={onLogByHand}
             secondary
           />
@@ -79,7 +77,7 @@ export function CannotAssessScreen({
           <Feather name="video-off" size={32} color={p.warning} />
         </View>
         <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-          {getTranslation(es ? 'es' : 'en')('formcheck.CannotAssessScreen.weCouldnTCheckYourForm')}
+          {getTranslation(es)('formcheck.CannotAssessScreen.weCouldnTCheckYourForm')}
         </Text>
       </View>
       {view.reasons.map((reason) => (
@@ -100,7 +98,7 @@ export function CannotAssessScreen({
         </View>
       ))}
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {getTranslation(es ? 'es' : 'en')(
+        {getTranslation(es)(
           'formcheck.CannotAssessScreen.yourSetIsNotMarkedAsGoodOrBadYouCanStillLogItByHand',
         )}
       </Text>

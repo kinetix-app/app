@@ -42,8 +42,8 @@ function objectivePurpose(objective: keyof typeof targetPurpose, es: boolean) {
 function mealEditLabel(meal: (typeof mealTypes)[number], editing: boolean, es: boolean) {
   const mealEs = { Breakfast: 'desayuno', Lunch: 'comida', Dinner: 'cena', Snacks: 'tentempiés' };
   const action = editing
-    ? getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.finishEditing')
-    : getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.edit');
+    ? getTranslation(es)('nutrition.NutritionDiaryScreen.finishEditing')
+    : getTranslation(es)('nutrition.NutritionDiaryScreen.edit');
   return `${action} ${es ? mealEs[meal] : meal}`;
 }
 
@@ -215,12 +215,12 @@ export function NutritionDiaryScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={[screenContentStyle, styles.content]}>
           <ScreenHeader
-            title={getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.nutrition')}
+            title={getTranslation(es)('nutrition.NutritionDiaryScreen.nutrition')}
             leading={
               onBack ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                  accessibilityLabel={getTranslation(es)(
                     'nutrition.NutritionDiaryScreen.backToFeed',
                   )}
                   onPress={onBack}
@@ -236,15 +236,13 @@ export function NutritionDiaryScreen({
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'nutrition.NutritionDiaryScreen.openCalendar',
-              )}
+              accessibilityLabel={getTranslation(es)('nutrition.NutritionDiaryScreen.openCalendar')}
               onPress={openCalendar}
               style={styles.dateButton}
             >
               <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                 {selected.isToday
-                  ? getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.today')
+                  ? getTranslation(es)('nutrition.NutritionDiaryScreen.today')
                   : `${selected.weekday}, ${selected.month} ${selected.day}, ${dateFromId(selectedDay).getFullYear()}`}
               </Text>
               <Feather name="calendar" size={18} color={p['ink-muted']} />
@@ -253,16 +251,12 @@ export function NutritionDiaryScreen({
 
           <View
             accessibilityRole="tablist"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-              'nutrition.NutritionDiaryScreen.nutritionWeek',
-            )}
+            accessibilityLabel={getTranslation(es)('nutrition.NutritionDiaryScreen.nutritionWeek')}
             style={styles.weekNavigation}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'nutrition.NutritionDiaryScreen.previousWeek',
-              )}
+              accessibilityLabel={getTranslation(es)('nutrition.NutritionDiaryScreen.previousWeek')}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(-1)}
@@ -296,7 +290,7 @@ export function NutritionDiaryScreen({
                     <Pressable
                       key={day.id}
                       accessibilityRole="tab"
-                      accessibilityLabel={`${day.weekday} ${day.month} ${day.day}${day.isToday ? getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.today2') : ''}`}
+                      accessibilityLabel={`${day.weekday} ${day.month} ${day.day}${day.isToday ? getTranslation(es)('nutrition.NutritionDiaryScreen.today2') : ''}`}
                       accessibilityState={{ selected: isSelected }}
                       onPress={() => {
                         setSelectedDay(day.id);
@@ -329,9 +323,7 @@ export function NutritionDiaryScreen({
             </Animated.View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'nutrition.NutritionDiaryScreen.nextWeek',
-              )}
+              accessibilityLabel={getTranslation(es)('nutrition.NutritionDiaryScreen.nextWeek')}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(1)}
@@ -348,7 +340,7 @@ export function NutritionDiaryScreen({
                   {formatNumber(consumed.calories)} kcal
                 </Text>
                 <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                  {getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.of')}{' '}
+                  {getTranslation(es)('nutrition.NutritionDiaryScreen.of')}{' '}
                   {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
                   {goal.data?.objective ? ` ${objectivePurpose(goal.data.objective, es)}` : ''}
                 </Text>
@@ -356,13 +348,13 @@ export function NutritionDiaryScreen({
               {onEditGoal ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                  accessibilityLabel={getTranslation(es)(
                     'nutrition.NutritionDiaryScreen.editNutritionGoal',
                   )}
                   onPress={onEditGoal}
                 >
                   <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                    {getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.editGoal')}
+                    {getTranslation(es)('nutrition.NutritionDiaryScreen.editGoal')}
                   </Text>
                 </Pressable>
               ) : null}
@@ -408,7 +400,7 @@ export function NutritionDiaryScreen({
             ))}
             {goal.data === null ? (
               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                {getTranslation(es ? 'es' : 'en')(
+                {getTranslation(es)(
                   'nutrition.NutritionDiaryScreen.noNutritionTargetYetYouCanKeepRecordingFoodAndSetOneLater',
                 )}
               </Text>
@@ -419,19 +411,19 @@ export function NutritionDiaryScreen({
                   accessibilityRole="alert"
                   style={[textStyles['body-sm'], { color: p.danger }]}
                 >
-                  {getTranslation(es ? 'es' : 'en')(
+                  {getTranslation(es)(
                     'nutrition.NutritionDiaryScreen.weCouldNotLoadYourNutritionGoal',
                   )}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                  accessibilityLabel={getTranslation(es)(
                     'nutrition.NutritionDiaryScreen.retryLoadingNutritionGoal',
                   )}
                   onPress={() => void goal.refetch()}
                 >
                   <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                    {getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.retry')}
+                    {getTranslation(es)('nutrition.NutritionDiaryScreen.retry')}
                   </Text>
                 </Pressable>
               </View>
@@ -475,8 +467,8 @@ export function NutritionDiaryScreen({
                   >
                     <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
                       {editingMeal === meal
-                        ? getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.done')
-                        : getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.edit')}
+                        ? getTranslation(es)('nutrition.NutritionDiaryScreen.done')
+                        : getTranslation(es)('nutrition.NutritionDiaryScreen.edit')}
                     </Text>
                   </Pressable>
                 </View>
@@ -492,7 +484,7 @@ export function NutritionDiaryScreen({
                             <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                             <View style={styles.itemLine}>
                               <TextField
-                                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                                accessibilityLabel={getTranslation(es)(
                                   'dynamicMessages.editQuantity_a400d2',
                                   { value1: item.name },
                                 )}
@@ -506,7 +498,7 @@ export function NutritionDiaryScreen({
                                 trailing={
                                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
                                     {item.recipe_id
-                                      ? getTranslation(es ? 'es' : 'en')(
+                                      ? getTranslation(es)(
                                           'nutrition.NutritionDiaryScreen.servings',
                                         )
                                       : 'g'}
@@ -526,7 +518,7 @@ export function NutritionDiaryScreen({
                               <View style={styles.itemEditActions}>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                                  accessibilityLabel={getTranslation(es)(
                                     'dynamicMessages.saveQuantity_7bdad5',
                                     { value1: item.name },
                                   )}
@@ -550,7 +542,7 @@ export function NutritionDiaryScreen({
                                 </Pressable>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+                                  accessibilityLabel={getTranslation(es)(
                                     'dynamicMessages.delete_602940',
                                     { value1: item.name },
                                   )}
@@ -587,16 +579,14 @@ export function NutritionDiaryScreen({
                       accessibilityRole="alert"
                       style={[textStyles['body-sm'], { color: p.danger }]}
                     >
-                      {getTranslation(es ? 'es' : 'en')(
+                      {getTranslation(es)(
                         'nutrition.NutritionDiaryScreen.weCouldNotUpdateThisEntry',
                       )}
                     </Text>
                   ) : null}
                   {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
                     <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                      {getTranslation(es ? 'es' : 'en')(
-                        'nutrition.NutritionDiaryScreen.noFoodLoggedYet',
-                      )}
+                      {getTranslation(es)('nutrition.NutritionDiaryScreen.noFoodLoggedYet')}
                     </Text>
                   ) : null}
                 </View>
@@ -668,7 +658,7 @@ function CalendarModal({
           <View style={styles.calendarHeader}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
+              accessibilityLabel={getTranslation(es)(
                 'nutrition.NutritionDiaryScreen.previousMonth',
               )}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
@@ -679,9 +669,7 @@ function CalendarModal({
             <Text style={[textStyles['title-md'], { color: p.ink }]}>{monthLabel}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'nutrition.NutritionDiaryScreen.nextMonth',
-              )}
+              accessibilityLabel={getTranslation(es)('nutrition.NutritionDiaryScreen.nextMonth')}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
               style={styles.calendarArrow}
             >
@@ -700,7 +688,7 @@ function CalendarModal({
             style={[styles.calendarClose, { backgroundColor: p['surface-300'] }]}
           >
             <Text style={[textStyles.label, { color: p.ink }]}>
-              {getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.cancel')}
+              {getTranslation(es)('nutrition.NutritionDiaryScreen.cancel')}
             </Text>
           </Pressable>
         </View>
@@ -712,8 +700,8 @@ function CalendarModal({
 function servingLabel(servings: number | null | undefined, es: boolean) {
   const unit =
     servings === 1
-      ? getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.serving')
-      : getTranslation(es ? 'es' : 'en')('nutrition.NutritionDiaryScreen.servings');
+      ? getTranslation(es)('nutrition.NutritionDiaryScreen.serving')
+      : getTranslation(es)('nutrition.NutritionDiaryScreen.servings');
   return `${servings} ${unit}`;
 }
 

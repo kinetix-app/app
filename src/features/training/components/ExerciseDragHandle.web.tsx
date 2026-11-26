@@ -12,7 +12,7 @@ export function ExerciseDragHandle({ id, label, disabled, onMove }: Readonly<Dra
       type="button"
       id={id}
       aria-label={label}
-      title={getTranslation(es ? 'es' : 'en')('training.dragToReorderUseArrowKeysTo_835b9f')}
+      title={getTranslation(es)('training.dragToReorderUseArrowKeysTo_835b9f')}
       disabled={disabled}
       onDragStart={(event) => event.preventDefault()}
       onKeyDown={(event) => {

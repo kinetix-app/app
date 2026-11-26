@@ -48,7 +48,7 @@ export function ExerciseDetails({
         <SessionWorkoutDetail
           accountId={accountId}
           sessionId={workoutId}
-          backLabel={getTranslation(es ? 'es' : 'en')('training.backToExerciseHistory_169d17')}
+          backLabel={getTranslation(es)('training.backToExerciseHistory_169d17')}
           onBack={closeWorkout}
         />
       ) : null}
@@ -63,7 +63,7 @@ export function ExerciseDetails({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <IconButton
               icon="arrow-left"
-              label={getTranslation(es ? 'es' : 'en')('training.back_c16499')}
+              label={getTranslation(es)('training.back_c16499')}
               onPress={onClose}
             />
             {detail.data ? (
@@ -121,11 +121,10 @@ export function ExerciseDetails({
               {tab === 'Instructions' ? <ExerciseInstructions exercise={detail.data} /> : null}
               {onAdd ? (
                 <Button
-                  title={getTranslation(es ? 'es' : 'en')('training.add_8d5f06')}
-                  accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                    'dynamicMessages.add_345e7a',
-                    { value1: detail.data.name },
-                  )}
+                  title={getTranslation(es)('training.add_8d5f06')}
+                  accessibilityLabel={getTranslation(es)('dynamicMessages.add_345e7a', {
+                    value1: detail.data.name,
+                  })}
                   tone="positive"
                   onPress={() => {
                     if (detail.data) onAdd(detail.data);
@@ -155,13 +154,13 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
       <View style={ui.gap}>
         {exercise.equipments?.length ? (
           <Text style={{ color: p['ink-muted'] }}>
-            {getTranslation(es ? 'es' : 'en')('training.equipment_0cd9d5')}:{' '}
+            {getTranslation(es)('training.equipment_0cd9d5')}:{' '}
             {exercise.equipments.map((value) => catalogueLabel(value, language)).join(' · ')}
           </Text>
         ) : null}
       </View>
       <Text style={[ui.heading, { color: p.ink }]}>
-        {getTranslation(es ? 'es' : 'en')('training.instructions_37a236')}
+        {getTranslation(es)('training.instructions_37a236')}
       </Text>
       {exercise.instructions?.length ? (
         exercise.instructions.map((text, i) => (
@@ -171,7 +170,7 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
         ))
       ) : (
         <Text style={{ color: p['ink-muted'] }}>
-          {getTranslation(es ? 'es' : 'en')('training.noInstructionsAvailable_bfe88c')}
+          {getTranslation(es)('training.noInstructionsAvailable_bfe88c')}
         </Text>
       )}
     </>

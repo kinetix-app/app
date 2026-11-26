@@ -29,9 +29,7 @@ export function MeasurementSystemSelector({
   return (
     <View
       accessibilityRole="radiogroup"
-      accessibilityLabel={
-        label ?? getTranslation(es ? 'es' : 'en')('accountsUi.measurement_system')
-      }
+      accessibilityLabel={label ?? getTranslation(es)('accountsUi.measurement_system')}
       style={styles.group}
     >
       {systems.map((system) => {

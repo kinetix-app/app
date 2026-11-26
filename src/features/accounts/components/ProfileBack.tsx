@@ -15,7 +15,7 @@ export function ProfileBack({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label ?? getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile')}
+      accessibilityLabel={label ?? getTranslation(es)('accountsUi.back_to_profile')}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}

@@ -50,11 +50,7 @@ export function ActivityEditor({
       const updated = await updateProfile(apiClient, { activity_level: activity });
       onSaved(updated);
     } catch {
-      setFailure(
-        getTranslation(es ? 'es' : 'en')(
-          'accountsUi.could_not_save_your_activity_please_try_again',
-        ),
-      );
+      setFailure(getTranslation(es)('accountsUi.could_not_save_your_activity_please_try_again'));
     } finally {
       busy.current = false;
       setPending(false);
@@ -67,13 +63,13 @@ export function ActivityEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title={getTranslation(es ? 'es' : 'en')('accountsUi.usual_activity')}
+          title={getTranslation(es)('accountsUi.usual_activity')}
           leading={
             <ProfileBack
               onPress={() => {
                 if (!pending) onCancel();
               }}
-              label={getTranslation(es ? 'es' : 'en')('accountsUi.back_to_profile')}
+              label={getTranslation(es)('accountsUi.back_to_profile')}
             />
           }
         />
@@ -90,8 +86,8 @@ export function ActivityEditor({
         <SetupButton
           title={
             pending
-              ? getTranslation(es ? 'es' : 'en')('accountsUi.saving')
-              : getTranslation(es ? 'es' : 'en')('accountsUi.save_activity')
+              ? getTranslation(es)('accountsUi.saving')
+              : getTranslation(es)('accountsUi.save_activity')
           }
           disabled={pending}
           onPress={() => {
@@ -99,7 +95,7 @@ export function ActivityEditor({
           }}
         />
         <SetupButton
-          title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
+          title={getTranslation(es)('accountsUi.cancel')}
           secondary
           disabled={pending}
           onPress={onCancel}

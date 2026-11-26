@@ -91,10 +91,9 @@ export function SetFields({
             </View>
             <View style={{ flex: 1 }}>
               <TextField
-                accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                  'dynamicMessages.reps_072a21',
-                  { value1: label },
-                )}
+                accessibilityLabel={getTranslation(es)('dynamicMessages.reps_072a21', {
+                  value1: label,
+                })}
                 keyboardType="number-pad"
                 editable={!disabled}
                 value={set.reps}
@@ -111,15 +110,14 @@ export function SetFields({
       {cardio ? <CardioGuidance set={set} guidance={guidance} /> : null}
       {!cardio && !weightValid ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {getTranslation(es ? 'es' : 'en')(
-            'dynamicMessages.enterPositiveWeightUpTo999999_5cd598',
-            { value1: decimals },
-          )}
+          {getTranslation(es)('dynamicMessages.enterPositiveWeightUpTo999999_5cd598', {
+            value1: decimals,
+          })}
         </Text>
       ) : null}
       {!cardio && !validReps ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {getTranslation(es ? 'es' : 'en')('training.enterPositiveWholeRepetitions_7fdb51')}
+          {getTranslation(es)('training.enterPositiveWholeRepetitions_7fdb51')}
         </Text>
       ) : null}
     </View>
@@ -147,7 +145,7 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
     <>
       <View style={{ flex: 1 }}>
         <TextField
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.distance_d009d7', {
+          accessibilityLabel={getTranslation(es)('dynamicMessages.distance_d009d7', {
             value1: label,
           })}
           keyboardType="decimal-pad"
@@ -160,10 +158,10 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
       </View>
       <View style={{ flex: 1.5, minWidth: 104 }}>
         <TextField
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.time_f77570', {
+          accessibilityLabel={getTranslation(es)('dynamicMessages.time_f77570', {
             value1: label,
           })}
-          accessibilityHint={getTranslation(es ? 'es' : 'en')(
+          accessibilityHint={getTranslation(es)(
             'training.enterDigitsForHoursMinutesAndSeconds_e74bb4',
           )}
           keyboardType="number-pad"
@@ -196,7 +194,7 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
         />
         {invalidTime ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {getTranslation(es ? 'es' : 'en')('training.minutesAndSecondsMustBeBetween00_613237')}
+            {getTranslation(es)('training.minutesAndSecondsMustBeBetween00_613237')}
           </Text>
         ) : null}
       </View>
@@ -267,7 +265,7 @@ function SetPosition({
         accessibilityLabel={
           es ? `Acciones para ${label.toLowerCase()}` : `Actions for ${label.toLowerCase()}`
         }
-        accessibilityHint={getTranslation(es ? 'es' : 'en')('training.openSetActions_03e8df')}
+        accessibilityHint={getTranslation(es)('training.openSetActions_03e8df')}
         disabled={disabled}
         onPress={() => setOpen(true)}
         style={{
@@ -283,11 +281,11 @@ function SetPosition({
       </Pressable>
       {open ? (
         <ActionMenu
-          title={getTranslation(es ? 'es' : 'en')('dynamicMessages.set_1c9335', { value1: number })}
+          title={getTranslation(es)('dynamicMessages.set_1c9335', { value1: number })}
           onClose={() => setOpen(false)}
           actions={[
             {
-              title: getTranslation(es ? 'es' : 'en')('training.removeSet_00ca32'),
+              title: getTranslation(es)('training.removeSet_00ca32'),
               onPress: onRemove,
             },
           ]}
@@ -303,11 +301,11 @@ export function SetColumnHeaders({ confirmation = false }: Readonly<{ confirmati
   return (
     <View style={[ui.row, { paddingHorizontal: spacing['space-3'] }]}>
       <Text style={{ width: 44, textAlign: 'center', color: p['ink-muted'] }}>
-        {getTranslation(es ? 'es' : 'en')('training.set_367fa4')}
+        {getTranslation(es)('training.set_367fa4')}
       </Text>
       <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>kg</Text>
       <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>
-        {getTranslation(es ? 'es' : 'en')('training.reps_523160')}
+        {getTranslation(es)('training.reps_523160')}
       </Text>
       {confirmation ? <View style={{ width: sizes['tap-min'] }} /> : null}
     </View>
@@ -331,7 +329,7 @@ function SetAction({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${saved ? getTranslation(es ? 'es' : 'en')('training.unsave_842e92') : getTranslation(es ? 'es' : 'en')('training.save_5bd05a')} ${label.toLowerCase()}`}
+      accessibilityLabel={`${saved ? getTranslation(es)('training.unsave_842e92') : getTranslation(es)('training.save_5bd05a')} ${label.toLowerCase()}`}
       accessibilityState={{ disabled, selected: saved }}
       disabled={disabled}
       onPress={onConfirm}

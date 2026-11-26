@@ -75,12 +75,12 @@ function PendingSessionState({ onDiscard }: Readonly<{ onDiscard: () => void }>)
         {session.error}
       </Text>
       <Button
-        title={getTranslation(es ? 'es' : 'en')('training.retryStorage_13babc')}
+        title={getTranslation(es)('training.retryStorage_13babc')}
         onPress={() => void session.retryStorage()}
         secondary
       />
       <Button
-        title={getTranslation(es ? 'es' : 'en')('training.discardStoredWorkout_8ad6fd')}
+        title={getTranslation(es)('training.discardStoredWorkout_8ad6fd')}
         onPress={onDiscard}
         tone="danger"
       />
@@ -98,7 +98,7 @@ function StorageErrorState() {
         {session.error}
       </Text>
       <Button
-        title={getTranslation(es ? 'es' : 'en')('training.retryStorage_13babc')}
+        title={getTranslation(es)('training.retryStorage_13babc')}
         onPress={() => {
           void session.retryStorage();
         }}
@@ -152,10 +152,8 @@ function MinimizedWorkoutCard({
         <View style={ui.row}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-              'training.ongoingWorkoutOptions_33fd0e',
-            )}
-            accessibilityHint={getTranslation(es ? 'es' : 'en')(
+            accessibilityLabel={getTranslation(es)('training.ongoingWorkoutOptions_33fd0e')}
+            accessibilityHint={getTranslation(es)(
               'training.opensTheDiscardWorkoutConfirmation_402f0e',
             )}
             disabled={session.pending}
@@ -168,7 +166,7 @@ function MinimizedWorkoutCard({
             }}
           >
             <Text numberOfLines={1} style={{ color: p['overlay-ink'] }}>
-              {getTranslation(es ? 'es' : 'en')('training.workoutOngoing_cf2159')}
+              {getTranslation(es)('training.workoutOngoing_cf2159')}
             </Text>
             <WorkoutTimer
               compact
@@ -180,7 +178,7 @@ function MinimizedWorkoutCard({
           <IconButton
             icon="play"
             onOverlay
-            label={getTranslation(es ? 'es' : 'en')('training.resumeWorkout_56d326')}
+            label={getTranslation(es)('training.resumeWorkout_56d326')}
             bare
             disabled={session.pending}
             onPress={() => session.change((value) => ({ ...value, minimized: false }))}
@@ -193,7 +191,7 @@ function MinimizedWorkoutCard({
         ) : null}
         {session.storageError ? (
           <Button
-            title={getTranslation(es ? 'es' : 'en')('training.retryStorage_13babc')}
+            title={getTranslation(es)('training.retryStorage_13babc')}
             onPress={() => {
               void session.retryStorage();
             }}
@@ -230,25 +228,21 @@ function DiscardConfirmation({
         >
           <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
             {session.draft
-              ? getTranslation(es ? 'es' : 'en')('training.discardThisWorkout_a7a3ef')
-              : getTranslation(es ? 'es' : 'en')('training.discardStoredWorkout_65ff6d')}
+              ? getTranslation(es)('training.discardThisWorkout_a7a3ef')
+              : getTranslation(es)('training.discardStoredWorkout_65ff6d')}
           </Text>
           <Text style={{ color: p['ink-muted'] }}>
             {session.draft?.frozen
-              ? getTranslation(es ? 'es' : 'en')(
-                  'training.finishDeliveryIsPendingResumeTheWorkout_fd46a7',
-                )
-              : getTranslation(es ? 'es' : 'en')(
-                  'training.theWorkoutDraftAndItsSavedResults_0faabd',
-                )}
+              ? getTranslation(es)('training.finishDeliveryIsPendingResumeTheWorkout_fd46a7')
+              : getTranslation(es)('training.theWorkoutDraftAndItsSavedResults_0faabd')}
           </Text>
           <Button
-            title={getTranslation(es ? 'es' : 'en')('training.cancel_a25d0b')}
+            title={getTranslation(es)('training.cancel_a25d0b')}
             secondary
             onPress={onCancel}
           />
           <Button
-            title={getTranslation(es ? 'es' : 'en')('training.discard_671592')}
+            title={getTranslation(es)('training.discard_671592')}
             disabled={session.pending || Boolean(session.draft?.frozen)}
             tone="danger"
             onPress={onDiscard}

@@ -70,7 +70,7 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
   if (uri) {
     picture = (
       <Image
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.profile_picture')}
+        accessibilityLabel={getTranslation(es)('accountsUi.profile_picture')}
         source={{ uri }}
         style={{ width: '100%', height: '100%' }}
       />
@@ -78,14 +78,14 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
   } else if (privatePhoto && (photo.isPending || (!failed && !uri))) {
     picture = (
       <ActivityIndicator
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.loading_profile_picture')}
+        accessibilityLabel={getTranslation(es)('accountsUi.loading_profile_picture')}
         color={p['brand-ink']}
       />
     );
   } else {
     picture = (
       <Text
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.no_profile_picture')}
+        accessibilityLabel={getTranslation(es)('accountsUi.no_profile_picture')}
         style={[textStyles[size < 112 ? 'metric-md' : 'display-lg'], { color: p['brand-ink'] }]}
       >
         {account.profile.display_name?.slice(0, 1).toUpperCase() || '+'}
@@ -111,10 +111,10 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
       {privatePhoto && failed && !compact ? (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {getTranslation(es ? 'es' : 'en')('accountsUi.could_not_load_your_picture')}
+            {getTranslation(es)('accountsUi.could_not_load_your_picture')}
           </Text>
           <SetupButton
-            title={getTranslation(es ? 'es' : 'en')('accountsUi.retry_picture')}
+            title={getTranslation(es)('accountsUi.retry_picture')}
             secondary
             onPress={() => {
               void photo.refetch();

@@ -53,10 +53,9 @@ export function WorkoutExerciseResults({
           {image ? (
             <Image
               source={{ uri: image }}
-              accessibilityLabel={getTranslation(es ? 'es' : 'en')(
-                'dynamicMessages.imageOf_9bfc5d',
-                { value1: exercise.name },
-              )}
+              accessibilityLabel={getTranslation(es)('dynamicMessages.imageOf_9bfc5d', {
+                value1: exercise.name,
+              })}
               resizeMode="contain"
               style={styles.image}
               onError={() => setFailedImage(image)}
@@ -70,7 +69,7 @@ export function WorkoutExerciseResults({
           {cardio.length > 0 ? <SetTable sets={cardio} cardio /> : null}
           {sets.length === 0 ? (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {getTranslation(es ? 'es' : 'en')('training.noSetsRecorded_bfc086')}
+              {getTranslation(es)('training.noSetsRecorded_bfc086')}
             </Text>
           ) : null}
         </View>
@@ -119,7 +118,7 @@ function SetTable({
     <View role="table" accessibilityLabel={tableLabel[language]}>
       <View role="row" style={[styles.row, styles.tableHeader]}>
         <Text role="columnheader" style={[columnTitle, styles.setNumber]}>
-          {getTranslation(es ? 'es' : 'en')('training.set_367fa4')}
+          {getTranslation(es)('training.set_367fa4')}
         </Text>
         <Text role="columnheader" style={[columnTitle, styles.measurement]}>
           {measurementLabel[language]}

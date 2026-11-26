@@ -70,7 +70,7 @@ function ExerciseVideo({
     return (
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          {getTranslation(es ? 'es' : 'en')('training.videoUnavailable_af9b60')}
+          {getTranslation(es)('training.videoUnavailable_af9b60')}
         </Text>
         <ExerciseMedia name={name} videoUrl={null} imageUrl={imageUrl} />
       </View>
@@ -89,7 +89,7 @@ function ExerciseVideo({
         style={mediaStyle}
         contentFit="contain"
         nativeControls={false}
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('dynamicMessages.videoFor_47fd4e', {
+        accessibilityLabel={getTranslation(es)('dynamicMessages.videoFor_47fd4e', {
           value1: name,
         })}
       />
@@ -137,7 +137,7 @@ function VideoControls({
     <View style={{ padding: spacing['space-3'], gap: spacing['space-2'] }}>
       <View
         accessibilityRole="progressbar"
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.videoProgress_205c89')}
+        accessibilityLabel={getTranslation(es)('training.videoProgress_205c89')}
         accessibilityValue={{ min: 0, max: player.duration || 1, now: currentTime }}
         style={{ height: 4, borderRadius: radii['radius-pill'], backgroundColor: p['surface-300'] }}
       >
@@ -158,7 +158,7 @@ function VideoControls({
         />
         <IconButton
           icon="rotate-ccw"
-          label={getTranslation(es ? 'es' : 'en')('training.replayVideo_70b744')}
+          label={getTranslation(es)('training.replayVideo_70b744')}
           onPress={() => player.replay()}
         />
         <Text
@@ -179,7 +179,7 @@ function VideoControls({
         />
         <IconButton
           icon="maximize"
-          label={getTranslation(es ? 'es' : 'en')('training.fullScreenVideo_e239c9')}
+          label={getTranslation(es)('training.fullScreenVideo_e239c9')}
           onPress={() => void view.current?.enterFullscreen()}
         />
       </View>

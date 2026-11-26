@@ -102,7 +102,7 @@ export function ObjectiveEditor({
     if (query.isPending)
       return (
         <ActivityIndicator
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.loading_objective')}
+          accessibilityLabel={getTranslation(es)('accountsUi.loading_objective')}
           color={p.brand}
         />
       );
@@ -110,10 +110,10 @@ export function ObjectiveEditor({
       return (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {getTranslation(es ? 'es' : 'en')('accountsUi.could_not_load_your_objective')}
+            {getTranslation(es)('accountsUi.could_not_load_your_objective')}
           </Text>
           <SetupButton
-            title={getTranslation(es ? 'es' : 'en')('accountsUi.retry')}
+            title={getTranslation(es)('accountsUi.retry')}
             secondary
             onPress={() => {
               void query.refetch();
@@ -124,7 +124,7 @@ export function ObjectiveEditor({
     return (
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('accountsUi.objective')}
+        accessibilityLabel={getTranslation(es)('accountsUi.objective')}
         style={{ gap: 12 }}
       >
         {objectiveOptions.map((option) => (
@@ -178,20 +178,20 @@ export function ObjectiveEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title={getTranslation(es ? 'es' : 'en')('accountsUi.what_s_your_goal')}
+          title={getTranslation(es)('accountsUi.what_s_your_goal')}
           leading={
             onCancel ? <ProfileBack onPress={onCancel} disabled={mutation.isPending} /> : undefined
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {getTranslation(es ? 'es' : 'en')(
+          {getTranslation(es)(
             'accountsUi.choose_your_objective_you_can_change_it_anytime_a_numerical_',
           )}
         </Text>
         {renderObjectiveChoices()}
         {mutation.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {getTranslation(es ? 'es' : 'en')(
+            {getTranslation(es)(
               'accountsUi.could_not_finish_saving_your_objective_your_selection_is_kep',
             )}
           </Text>
@@ -199,8 +199,8 @@ export function ObjectiveEditor({
         <SetupButton
           title={
             mutation.isPending
-              ? getTranslation(es ? 'es' : 'en')('accountsUi.saving')
-              : getTranslation(es ? 'es' : 'en')('accountsUi.save_objective')
+              ? getTranslation(es)('accountsUi.saving')
+              : getTranslation(es)('accountsUi.save_objective')
           }
           disabled={!choice || query.isPending || query.isError || mutation.isPending}
           onPress={() => {
@@ -209,7 +209,7 @@ export function ObjectiveEditor({
         />
         {onCancel ? (
           <SetupButton
-            title={getTranslation(es ? 'es' : 'en')('accountsUi.cancel')}
+            title={getTranslation(es)('accountsUi.cancel')}
             secondary
             disabled={mutation.isPending}
             onPress={onCancel}

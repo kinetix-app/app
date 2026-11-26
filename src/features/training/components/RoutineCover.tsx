@@ -61,7 +61,7 @@ export function RoutineCover({
     (uri && failedUri === uri);
   let content = (
     <MaterialCommunityIcons
-      accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.gymRoutine_2a1a6a')}
+      accessibilityLabel={getTranslation(es)('training.gymRoutine_2a1a6a')}
       name="dumbbell"
       size={28}
       color={p['brand-ink']}
@@ -70,7 +70,7 @@ export function RoutineCover({
   if (uri && !failed)
     content = (
       <Image
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.routineCover_1f61db')}
+        accessibilityLabel={getTranslation(es)('training.routineCover_1f61db')}
         source={{ uri }}
         onError={() => setFailedUri(uri)}
         style={{ width: '100%', height: '100%' }}
@@ -79,7 +79,7 @@ export function RoutineCover({
   else if (path && !preview && !failed)
     content = (
       <ActivityIndicator
-        accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.loadingRoutineCover_3096d8')}
+        accessibilityLabel={getTranslation(es)('training.loadingRoutineCover_3096d8')}
         color={p['brand-ink']}
       />
     );
@@ -102,7 +102,7 @@ export function RoutineCover({
       {retryVisible ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={getTranslation(es ? 'es' : 'en')('training.retryRoutineCover_ce1388')}
+          accessibilityLabel={getTranslation(es)('training.retryRoutineCover_ce1388')}
           disabled={disabled}
           accessibilityState={{ disabled }}
           onPress={() => {
