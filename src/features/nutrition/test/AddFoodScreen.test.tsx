@@ -10,6 +10,7 @@ import {
   within,
 } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LanguageProvider } from '@/i18n/Language';
 import { nutritionApi } from '../api';
 import { AddFoodScreen } from '../components/AddFoodScreen';
 import type { Food, Recipe } from '../schemas';
@@ -55,7 +56,7 @@ const recipe: Recipe = {
   fats: 2,
   ingredients: [{ food_id: food.id, name: food.name, quantity_grams: 100 }],
 };
-function open() {
+function open(language: 'en' | 'es' = 'en') {
   const onSaved = jest.fn();
   const onClose = jest.fn();
   const client = new QueryClient({
@@ -65,15 +66,17 @@ function open() {
     },
   });
   render(
-    <QueryClientProvider client={client}>
-      <AddFoodScreen
-        accountId={1}
-        meal="Lunch"
-        date="2026-10-28"
-        onSaved={onSaved}
-        onClose={onClose}
-      />
-    </QueryClientProvider>,
+    <LanguageProvider language={language}>
+      <QueryClientProvider client={client}>
+        <AddFoodScreen
+          accountId={1}
+          meal="Lunch"
+          date="2026-10-28"
+          onSaved={onSaved}
+          onClose={onClose}
+        />
+      </QueryClientProvider>
+    </LanguageProvider>,
   );
   return { onSaved, onClose };
 }
@@ -557,3 +560,11 @@ test('builds a recipe from searched ingredients, edits quantities and removes un
     ingredients: [{ food_id: 1, quantity_grams: 150 }],
   });
 }, 20000);
+
+test('localizes food selection while preserving catalogue names', async () => {
+  open('es');
+  expect(screen.getByLabelText('Buscar alimento')).toBeTruthy();
+  fireEvent.press(await screen.findByLabelText('Seleccionar Rice'));
+  expect(screen.getByLabelText('Cantidad de alimento')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Añadir alimento' })).toBeTruthy();
+});

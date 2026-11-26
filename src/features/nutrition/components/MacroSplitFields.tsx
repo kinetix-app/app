@@ -2,6 +2,7 @@ import React from 'react';
 import { Controller, useWatch, type UseFormReturn } from 'react-hook-form';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage } from '@/i18n/Language';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import {
@@ -26,6 +27,7 @@ type Props = Readonly<{
 
 export function MacroSplitFields({ form, calories, mode, onModeChange, saving }: Props) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const watched = useWatch({ control: form.control });
   const values: MacroGoalValues = {
     calories,
@@ -64,17 +66,21 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
   return (
     <>
       <View style={styles.sectionHeader}>
-        <Text style={[textStyles['title-md'], { color: p.ink }]}>Daily macros</Text>
+        <Text style={[textStyles['title-md'], { color: p.ink }]}>
+          {es ? 'Macronutrientes diarios' : 'Daily macros'}
+        </Text>
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel="Macro entry mode"
+          accessibilityLabel={es ? 'Modo de introducción de macronutrientes' : 'Macro entry mode'}
           style={[styles.modes, { backgroundColor: p['surface-300'] }]}
         >
           {(['percentages', 'grams'] as const).map((entry) => (
             <Pressable
               key={entry}
               accessibilityRole="radio"
-              accessibilityLabel={entry === 'grams' ? 'Grams' : 'Percentages'}
+              accessibilityLabel={
+                entry === 'grams' ? (es ? 'Gramos' : 'Grams') : es ? 'Porcentajes' : 'Percentages'
+              }
               accessibilityState={{ checked: mode === entry, disabled: saving }}
               disabled={saving}
               onPress={() => onModeChange(entry)}
@@ -86,88 +92,97 @@ export function MacroSplitFields({ form, calories, mode, onModeChange, saving }:
                   { color: mode === entry ? p['brand-ink'] : p['ink-muted'] },
                 ]}
               >
-                {entry === 'grams' ? 'Grams' : '%'}
+                {entry === 'grams' ? (es ? 'Gramos' : 'Grams') : '%'}
               </Text>
             </Pressable>
           ))}
         </View>
       </View>
       <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-        {macroFields.map(([macro, label, factor], index) => (
-          <View
-            key={macro}
-            style={[styles.macro, index > 0 && { borderTopWidth: 1, borderTopColor: p.line }]}
-          >
-            <View style={styles.row}>
-              <View style={styles.name}>
-                <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
-                <MacroEnergyInfo label={label} factor={factor} />
-              </View>
-              <Controller
-                control={form.control}
-                name={macro}
-                render={({ field: input }) => {
-                  const amount = hundredths(input.value);
-                  const invalid = input.value !== '' && (amount === undefined || amount > 99999999);
-                  return (
-                    <TextField
-                      accessibilityLabel={`${label} ${mode === 'grams' ? 'grams' : 'percentage'}`}
-                      keyboardType="decimal-pad"
-                      value={input.value}
-                      onChangeText={(value) =>
-                        mode === 'grams' ? input.onChange(value) : updateMacro(macro, value)
-                      }
-                      onBlur={() => {
-                        if (mode === 'grams' && input.value !== '') updateMacro(macro, input.value);
-                        input.onBlur();
-                      }}
-                      selectTextOnFocus
-                      editable={!saving}
-                      invalid={invalid}
-                      containerStyle={styles.number}
-                      inputStyle={styles.numberInput}
-                      trailing={
-                        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                          {mode === 'grams' ? 'g' : '%'}
-                        </Text>
-                      }
-                    />
-                  );
-                }}
-              />
-            </View>
-            <View style={styles.row}>
-              <View style={styles.range}>
+        {macroFields.map(([macro, englishLabel, factor], index) => {
+          const label = es
+            ? { carbohydrates: 'Carbohidratos', protein: 'Proteínas', fats: 'Grasas' }[macro]
+            : englishLabel;
+          return (
+            <View
+              key={macro}
+              style={[styles.macro, index > 0 && { borderTopWidth: 1, borderTopColor: p.line }]}
+            >
+              <View style={styles.row}>
+                <View style={styles.name}>
+                  <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
+                  <MacroEnergyInfo label={label} factor={factor} />
+                </View>
                 <Controller
                   control={form.control}
                   name={macro}
                   render={({ field: input }) => {
-                    const maximum =
-                      mode === 'grams' && energy ? Math.max(0.01, energy / 100 / factor) : 100;
+                    const amount = hundredths(input.value);
+                    const invalid =
+                      input.value !== '' && (amount === undefined || amount > 99999999);
                     return (
-                      <MacroRange
-                        label={`${label} range`}
-                        maximum={maximum}
-                        value={Math.min(maximum, (hundredths(input.value) ?? 0) / 100)}
-                        onChange={(value) => updateMacro(macro, value.toFixed(2))}
-                        onBlur={input.onBlur}
-                        disabled={saving}
+                      <TextField
+                        accessibilityLabel={`${label} ${mode === 'grams' ? (es ? 'gramos' : 'grams') : es ? 'porcentaje' : 'percentage'}`}
+                        keyboardType="decimal-pad"
+                        value={input.value}
+                        onChangeText={(value) =>
+                          mode === 'grams' ? input.onChange(value) : updateMacro(macro, value)
+                        }
+                        onBlur={() => {
+                          if (mode === 'grams' && input.value !== '')
+                            updateMacro(macro, input.value);
+                          input.onBlur();
+                        }}
+                        selectTextOnFocus
+                        editable={!saving}
+                        invalid={invalid}
+                        containerStyle={styles.number}
+                        inputStyle={styles.numberInput}
+                        trailing={
+                          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                            {mode === 'grams' ? 'g' : '%'}
+                          </Text>
+                        }
                       />
                     );
                   }}
                 />
               </View>
-              <Text style={[textStyles['body-sm'], styles.equivalent, { color: p['ink-muted'] }]}>
-                {equivalents[macro] || '—'}
-                {mode === 'percentages' ? ' g' : '%'}
-              </Text>
+              <View style={styles.row}>
+                <View style={styles.range}>
+                  <Controller
+                    control={form.control}
+                    name={macro}
+                    render={({ field: input }) => {
+                      const maximum =
+                        mode === 'grams' && energy ? Math.max(0.01, energy / 100 / factor) : 100;
+                      return (
+                        <MacroRange
+                          label={es ? `Intervalo de ${label}` : `${label} range`}
+                          maximum={maximum}
+                          value={Math.min(maximum, (hundredths(input.value) ?? 0) / 100)}
+                          onChange={(value) => updateMacro(macro, value.toFixed(2))}
+                          onBlur={input.onBlur}
+                          disabled={saving}
+                        />
+                      );
+                    }}
+                  />
+                </View>
+                <Text style={[textStyles['body-sm'], styles.equivalent, { color: p['ink-muted'] }]}>
+                  {equivalents[macro] || '—'}
+                  {mode === 'percentages' ? ' g' : '%'}
+                </Text>
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
       {invalidAmounts ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-          Use nonnegative numbers with up to two decimals.
+          {es
+            ? 'Usa números no negativos con hasta dos decimales.'
+            : 'Use nonnegative numbers with up to two decimals.'}
         </Text>
       ) : null}
     </>

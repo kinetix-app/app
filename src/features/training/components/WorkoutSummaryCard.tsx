@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useLanguage } from '@/i18n/Language';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -27,11 +28,12 @@ export function WorkoutSummaryCard({
   testID?: string;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [focused, setFocused] = useState(false);
   const metrics = [
-    { label: 'Duration', value: formatElapsedDuration(durationSeconds) },
-    { label: 'Volume', value: formatWorkoutVolume(volumeKg) },
-    { label: 'Exercises', value: exerciseCount.toLocaleString() },
+    { label: es ? 'Duración' : 'Duration', value: formatElapsedDuration(durationSeconds) },
+    { label: es ? 'Volumen' : 'Volume', value: formatWorkoutVolume(volumeKg) },
+    { label: es ? 'Ejercicios' : 'Exercises', value: exerciseCount.toLocaleString() },
   ];
   const summary = (
     <>

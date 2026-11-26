@@ -21,6 +21,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
+import { useLanguage } from '@/i18n/Language';
 import { Button } from '@/components/Button';
 import { DatePickerCalendar, DatePickerField } from '@/components/DatePickerField';
 import { TextField } from '@/components/TextField';
@@ -45,6 +46,41 @@ import {
   type PhysicalTarget,
 } from '../progressSchemas';
 import type { Objective } from '../schemas';
+
+function progressError(message: string, es: boolean) {
+  if (!es) return message;
+  const messages: Record<string, string> = {
+    'Enter whole feet from 0 to 9.': 'Introduce pies enteros entre 0 y 9.',
+    'Enter inches from 0 to less than 12.': 'Introduce pulgadas desde 0 hasta menos de 12.',
+    'Enter a number with up to two decimal places.':
+      'Introduce un número con dos decimales como máximo.',
+    'Enter a valid date in YYYY-MM-DD format.': 'Introduce una fecha válida en formato AAAA-MM-DD.',
+    'Choose today or an earlier date.': 'Elige hoy o una fecha anterior.',
+    'Enter at least one measurement.': 'Introduce al menos una medida.',
+    'Enter a target weight with up to two decimal places.':
+      'Introduce un peso objetivo con dos decimales como máximo.',
+    'Could not save your measurements. Try again.':
+      'No se pudieron guardar tus medidas. Inténtalo de nuevo.',
+    'Your objective changed. Close this form to load the current target.':
+      'Tu objetivo ha cambiado. Cierra este formulario para cargar el objetivo actual.',
+    'Could not save your target. Try again.': 'No se pudo guardar tu objetivo. Inténtalo de nuevo.',
+  };
+  if (messages[message]) return messages[message];
+  for (const definition of Object.values(measurementDefinitions)) {
+    if (message.startsWith(`${definition.label} must be `)) {
+      return message
+        .replace(
+          `${definition.label} must be greater than 0 and at most `,
+          `${definition.labelEs}: introduce un valor mayor que 0 y como máximo `,
+        )
+        .replace(
+          `${definition.label} must be 0 to `,
+          `${definition.labelEs}: introduce un valor entre 0 y `,
+        );
+    }
+  }
+  return message;
+}
 
 type CalendarRequest = Readonly<{
   label: string;
@@ -72,6 +108,7 @@ function ProgressDialog({
   children: (openCalendar: (request: CalendarRequest) => void) => React.ReactNode;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const { height } = useWindowDimensions();
   const [calendar, setCalendar] = useState<CalendarRequest | null>(null);
   const dialogColors = {
@@ -123,13 +160,13 @@ function ProgressDialog({
           <View style={[styles.actions, { borderTopColor: p.line }]}>
             {error ? (
               <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-                {error}
+                {progressError(error, es)}
               </Text>
             ) : null}
             <View style={styles.actionRow}>
               <View style={styles.grow}>
                 <Button
-                  title="Cancel"
+                  title={es ? 'Cancelar' : 'Cancel'}
                   shape="rounded"
                   secondary
                   disabled={busy}
@@ -139,7 +176,7 @@ function ProgressDialog({
               <View style={styles.saveAction}>
                 <Button
                   shape="rounded"
-                  title={busy ? 'Saving…' : saveLabel}
+                  title={busy ? (es ? 'Guardando…' : 'Saving…') : saveLabel}
                   accessibilityLabel={saveLabel}
                   disabled={busy}
                   onPress={onSave}
@@ -171,7 +208,12 @@ function ProgressDialog({
               />
             </ScrollView>
             <View style={[styles.actions, { borderTopColor: p.line }]}>
-              <Button title="Cancel" shape="rounded" secondary onPress={closeCalendar} />
+              <Button
+                title={es ? 'Cancelar' : 'Cancel'}
+                shape="rounded"
+                secondary
+                onPress={closeCalendar}
+              />
             </View>
           </View>
         ) : null}
@@ -196,6 +238,7 @@ function ProgressField<T extends FieldValues>({
   compact?: boolean;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <Controller
       control={control}
@@ -217,7 +260,7 @@ function ProgressField<T extends FieldValues>({
           />
           {fieldState.error?.message ? (
             <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-              {fieldState.error.message}
+              {progressError(fieldState.error.message, es)}
             </Text>
           ) : null}
         </View>
@@ -244,6 +287,7 @@ function ProgressDate<T extends FieldValues>({
   openCalendar: (request: CalendarRequest) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <Controller
       control={control}
@@ -275,7 +319,7 @@ function ProgressDate<T extends FieldValues>({
             />
             {fieldState.error?.message ? (
               <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-                {fieldState.error.message}
+                {progressError(fieldState.error.message, es)}
               </Text>
             ) : null}
           </View>
@@ -301,6 +345,7 @@ export function MeasurementEditor({
   onSaved: (measurement: BodyMeasurement) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const today = todayForProfile(timeZone);
   const [initial] = useState(() => latestMeasurementDraft(today, system, history));
   const { control, handleSubmit, setError } = useForm<MeasurementFormValues>({
@@ -342,7 +387,8 @@ export function MeasurementEditor({
   }
 
   function field(metric: MeasurementMetric) {
-    const { label } = measurementDefinitions[metric];
+    const definition = measurementDefinitions[metric];
+    const label = es ? definition.labelEs : definition.label;
     return (
       <ProgressField
         key={metric}
@@ -357,10 +403,10 @@ export function MeasurementEditor({
 
   return (
     <ProgressDialog
-      title="Log measurements"
+      title={es ? 'Registrar medidas' : 'Log measurements'}
       busy={mutation.isPending}
       error={formError}
-      saveLabel="Save measurements"
+      saveLabel={es ? 'Guardar medidas' : 'Save measurements'}
       onClose={dismiss}
       onSave={() => void handleSubmit(save)()}
     >
@@ -370,14 +416,18 @@ export function MeasurementEditor({
             name="date"
             control={control}
             openCalendar={openCalendar}
-            label="Measurement date"
+            label={es ? 'Fecha de medición' : 'Measurement date'}
             today={today}
             disabled={mutation.isPending}
           />
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {Object.keys(initial.previous).length
-              ? 'Previous values are filled in. Clear any you want to skip.'
-              : 'Add the measurements you took. Leave the others blank.'}
+              ? es
+                ? 'Se han rellenado los valores anteriores. Borra los que quieras omitir.'
+                : 'Previous values are filled in. Clear any you want to skip.'
+              : es
+                ? 'Añade las medidas que tomaste. Deja las demás vacías.'
+                : 'Add the measurements you took. Leave the others blank.'}
           </Text>
           <View style={styles.fieldGroup}>
             {field('weight_kg')}
@@ -388,7 +438,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_ft"
                   control={control}
-                  label="Height (ft)"
+                  label={es ? 'Altura (pies)' : 'Height (ft)'}
                   compact
                   disabled={mutation.isPending}
                   mode="integer"
@@ -396,7 +446,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_in"
                   control={control}
-                  label="Height (in)"
+                  label={es ? 'Altura (pulgadas)' : 'Height (in)'}
                   compact
                   disabled={mutation.isPending}
                 />
@@ -407,7 +457,7 @@ export function MeasurementEditor({
           </View>
           <View style={[styles.section, { borderTopColor: p.line }]}>
             <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-              Circumference
+              {es ? 'Perímetro' : 'Circumference'}
             </Text>
             <View style={styles.fieldGroup}>{circumferenceMetrics.map(field)}</View>
           </View>
@@ -436,6 +486,7 @@ export function PhysicalTargetEditor({
   onSaved: (result: PhysicalTarget) => void;
   onObjectiveChanged: () => void;
 }>) {
+  const es = useLanguage() === 'es';
   const { control, handleSubmit, setError } = useForm<TargetFormValues>({
     defaultValues: {
       weight_kg: target ? displayWeight(target.weight_kg, system) : '',
@@ -478,10 +529,18 @@ export function PhysicalTargetEditor({
   }
   return (
     <ProgressDialog
-      title={target ? 'Edit weight target' : 'Set weight target'}
+      title={
+        target
+          ? es
+            ? 'Editar peso objetivo'
+            : 'Edit weight target'
+          : es
+            ? 'Fijar peso objetivo'
+            : 'Set weight target'
+      }
       busy={mutation.isPending}
       error={formError}
-      saveLabel={staleObjective ? 'Done' : 'Save target'}
+      saveLabel={staleObjective ? (es ? 'Listo' : 'Done') : es ? 'Guardar objetivo' : 'Save target'}
       onSave={staleObjective ? dismiss : () => void handleSubmit(save)()}
       onClose={dismiss}
     >
@@ -490,14 +549,14 @@ export function PhysicalTargetEditor({
           <ProgressField
             name="weight_kg"
             control={control}
-            label={`Target weight (${measurementUnit('weight_kg', system)})`}
+            label={`${es ? 'Peso objetivo' : 'Target weight'} (${measurementUnit('weight_kg', system)})`}
             disabled={mutation.isPending || staleObjective}
           />
           <ProgressDate
             name="target_date"
             control={control}
             openCalendar={openCalendar}
-            label="Target date"
+            label={es ? 'Fecha objetivo' : 'Target date'}
             today={todayForProfile(timeZone)}
             disabled={mutation.isPending || staleObjective}
             optional

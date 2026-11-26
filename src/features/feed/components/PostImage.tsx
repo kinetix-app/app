@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
@@ -25,6 +26,7 @@ export function PostImage({
   label,
   style,
 }: Readonly<{ accountId: number; path: string; label: string; style?: StyleProp<ViewStyle> }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [expanded, setExpanded] = useState(false);
   const image = useQuery({
@@ -40,7 +42,7 @@ export function PostImage({
       <>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`View ${label}`}
+          accessibilityLabel={language === 'es' ? `Ver ${label}` : `View ${label}`}
           onPress={() => setExpanded(true)}
           style={StyleSheet.absoluteFill}
         >
@@ -60,7 +62,9 @@ export function PostImage({
     content = (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Retry loading ${label}`}
+        accessibilityLabel={
+          language === 'es' ? `Reintentar cargar ${label}` : `Retry loading ${label}`
+        }
         onPress={() => {
           void image.refetch();
         }}
@@ -68,11 +72,19 @@ export function PostImage({
       >
         <Feather name="image" size={28} color={p['ink-muted']} />
         <Text style={[textStyles['body-sm'], { color: p.ink, textAlign: 'center' }]}>
-          Could not load photo. Tap to retry.
+          {language === 'es'
+            ? 'No se pudo cargar la foto. Pulsa para reintentar.'
+            : 'Could not load photo. Tap to retry.'}
         </Text>
       </Pressable>
     );
-  else content = <ActivityIndicator accessibilityLabel={`Loading ${label}`} color={p.brand} />;
+  else
+    content = (
+      <ActivityIndicator
+        accessibilityLabel={language === 'es' ? `Cargando ${label}` : `Loading ${label}`}
+        color={p.brand}
+      />
+    );
   return (
     <View style={[styles.frame, { backgroundColor: p['surface-300'] }, style]}>{content}</View>
   );
@@ -83,6 +95,7 @@ function PhotoViewer({
   label,
   onClose,
 }: Readonly<{ uri: string; label: string; onClose: () => void }>) {
+  const language = useLanguage();
   const p = usePalette();
   return (
     <Modal animationType="fade" onRequestClose={onClose}>
@@ -91,10 +104,14 @@ function PhotoViewer({
         style={[styles.viewer, { backgroundColor: p['surface-100'] }]}
       >
         <View style={styles.viewerHeader}>
-          <IconButton icon="x" label="Close photo" onPress={onClose} />
+          <IconButton
+            icon="x"
+            label={language === 'es' ? 'Cerrar foto' : 'Close photo'}
+            onPress={onClose}
+          />
         </View>
         <Image
-          accessibilityLabel={`Enlarged ${label}`}
+          accessibilityLabel={language === 'es' ? `${label} ampliada` : `Enlarged ${label}`}
           source={{ uri }}
           resizeMode="contain"
           style={styles.fullPhoto}

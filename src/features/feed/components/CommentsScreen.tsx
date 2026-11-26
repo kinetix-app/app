@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import {
   useInfiniteQuery,
   useQuery,
@@ -29,6 +30,7 @@ export function CommentsScreen({
   postId,
   onBack,
 }: Readonly<{ accountId: number; postId: number; onBack: () => void }>) {
+  const language = useLanguage();
   const p = usePalette();
   const cache = useQueryClient();
   const post = useQuery({
@@ -49,7 +51,9 @@ export function CommentsScreen({
   if (gone) {
     content = (
       <Text accessibilityRole="alert" style={[ui.content, { color: p.ink }]}>
-        This post is no longer available.
+        {language === 'es'
+          ? 'Esta publicación ya no está disponible.'
+          : 'This post is no longer available.'}
       </Text>
     );
   } else if (post.isPending) {
@@ -58,9 +62,13 @@ export function CommentsScreen({
     content = (
       <View style={ui.content}>
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Could not load this post.
+          {language === 'es' ? 'No se pudo cargar esta publicación.' : 'Could not load this post.'}
         </Text>
-        <Button title="Retry" secondary onPress={() => void post.refetch()} />
+        <Button
+          title={language === 'es' ? 'Reintentar' : 'Retry'}
+          secondary
+          onPress={() => void post.refetch()}
+        />
       </View>
     );
   } else {
@@ -75,9 +83,13 @@ export function CommentsScreen({
       style={[ui.screen, { backgroundColor: p['surface-100'] }]}
     >
       <View style={[ui.row, styles.header]}>
-        <IconButton icon="arrow-left" label="Back to feed" onPress={onBack} />
+        <IconButton
+          icon="arrow-left"
+          label={language === 'es' ? 'Volver al feed' : 'Back to feed'}
+          onPress={onBack}
+        />
         <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-          Comments
+          {language === 'es' ? 'Comentarios' : 'Comments'}
         </Text>
       </View>
       {content}
@@ -90,6 +102,7 @@ function PostComments({
   post,
   onUnavailable,
 }: Readonly<{ accountId: number; post: Post; onUnavailable: () => void }>) {
+  const language = useLanguage();
   const p = usePalette();
   const cache = useQueryClient();
   const key = commentsKey(accountId, post.id);
@@ -138,7 +151,12 @@ function PostComments({
       setDraft('');
     } catch (error_) {
       if (postMissing(error_)) onUnavailable();
-      else setError('Could not post your comment. Your text is kept. Try again.');
+      else
+        setError(
+          language === 'es'
+            ? 'No se pudo publicar tu comentario. El texto se conserva. Inténtalo de nuevo.'
+            : 'Could not post your comment. Your text is kept. Try again.',
+        );
     } finally {
       busy.current = false;
       setSending(false);
@@ -165,7 +183,12 @@ function PostComments({
       changeCount(-1);
     } catch (error_) {
       if (postMissing(error_)) void comments.refetch();
-      else setError('Could not delete the comment. Try again.');
+      else
+        setError(
+          language === 'es'
+            ? 'No se pudo eliminar el comentario. Inténtalo de nuevo.'
+            : 'Could not delete the comment. Try again.',
+        );
     } finally {
       setRemoving(null);
     }
@@ -178,10 +201,12 @@ function PostComments({
     footer = (
       <View style={ui.gap}>
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Could not load more comments.
+          {language === 'es'
+            ? 'No se pudieron cargar más comentarios.'
+            : 'Could not load more comments.'}
         </Text>
         <Button
-          title="Retry"
+          title={language === 'es' ? 'Reintentar' : 'Retry'}
           secondary
           onPress={() => void comments.fetchNextPage({ cancelRefetch: false })}
         />
@@ -207,16 +232,26 @@ function PostComments({
             {comments.isError && !comments.data ? (
               <View style={ui.gap}>
                 <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                  Could not load comments.
+                  {language === 'es'
+                    ? 'No se pudieron cargar los comentarios.'
+                    : 'Could not load comments.'}
                 </Text>
-                <Button title="Retry" secondary onPress={() => void comments.refetch()} />
+                <Button
+                  title={language === 'es' ? 'Reintentar' : 'Retry'}
+                  secondary
+                  onPress={() => void comments.refetch()}
+                />
               </View>
             ) : null}
           </View>
         }
         ListEmptyComponent={
           (comments.data ? (
-            <Text style={{ color: p['ink-muted'] }}>No comments yet. Start the conversation.</Text>
+            <Text style={{ color: p['ink-muted'] }}>
+              {language === 'es'
+                ? 'Aún no hay comentarios. Inicia la conversación.'
+                : 'No comments yet. Start the conversation.'}
+            </Text>
           ) : null) ?? undefined
         }
         renderItem={({ item }) => (
@@ -228,14 +263,18 @@ function PostComments({
                   {authorName(item.author.display_name)}
                 </Text>
                 {' · '}
-                {relativeTime(item.created_at)}
+                {relativeTime(item.created_at, undefined, language)}
               </Text>
               <Text style={[textStyles.body, { color: p.ink }]}>{item.comment}</Text>
             </View>
             {item.is_mine || post.is_mine ? (
               <IconButton
                 icon="trash-2"
-                label={`Delete comment by ${authorName(item.author.display_name)}`}
+                label={
+                  language === 'es'
+                    ? `Eliminar comentario de ${authorName(item.author.display_name)}`
+                    : `Delete comment by ${authorName(item.author.display_name)}`
+                }
                 disabled={removing !== null}
                 onPress={() => {
                   void remove(item);
@@ -259,8 +298,8 @@ function PostComments({
         ) : null}
         <View style={ui.row}>
           <TextField
-            accessibilityLabel="Write a comment"
-            placeholder="Write a comment"
+            accessibilityLabel={language === 'es' ? 'Escribe un comentario' : 'Write a comment'}
+            placeholder={language === 'es' ? 'Escribe un comentario' : 'Write a comment'}
             value={draft}
             onChangeText={setDraft}
             maxLength={MAX_COMMENT_TEXT}
@@ -270,7 +309,7 @@ function PostComments({
           />
           <IconButton
             icon={sending ? 'clock' : 'send'}
-            label="Send comment"
+            label={language === 'es' ? 'Enviar comentario' : 'Send comment'}
             onOverlay
             busy={sending}
             disabled={sending || !draft.trim()}

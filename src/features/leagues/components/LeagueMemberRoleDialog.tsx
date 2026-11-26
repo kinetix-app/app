@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
@@ -16,6 +17,8 @@ export function LeagueMemberRoleDialog({
   onConfirm: () => Promise<void>;
   onCancel: () => void;
 }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -42,7 +45,9 @@ export function LeagueMemberRoleDialog({
     }
   }
 
-  const actionLabel = promoting ? 'Make admin' : 'Make member';
+  const actionLabel = promoting
+    ? t('Make admin', 'Hacer administrador')
+    : t('Make member', 'Hacer miembro');
   return (
     <Modal visible transparent animationType="fade" onRequestClose={close}>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing['space-4'] }}>
@@ -77,28 +82,35 @@ export function LeagueMemberRoleDialog({
                 accessibilityRole="header"
                 style={[textStyles['title-md'], { flex: 1, color: p.ink }]}
               >
-                Change member role
+                {t('Change member role', 'Cambiar rol del miembro')}
               </Text>
             </View>
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
               {promoting
-                ? `${name} will be able to edit the league, invite people and manage member roles.`
-                : `${name} will keep their membership and scores. Admin controls will be removed.`}
+                ? language === 'es'
+                  ? `${name} podrá editar la liga, invitar a personas y gestionar los roles.`
+                  : `${name} will be able to edit the league, invite people and manage member roles.`
+                : language === 'es'
+                  ? `${name} conservará su membresía y puntuaciones. Se eliminarán los controles de administrador.`
+                  : `${name} will keep their membership and scores. Admin controls will be removed.`}
             </Text>
             {error ? (
               <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-                Could not change this role. Please try again.
+                {t(
+                  'Could not change this role. Please try again.',
+                  'No se pudo cambiar este rol. Inténtalo de nuevo.',
+                )}
               </Text>
             ) : null}
             <LeagueAction
-              label={busy ? 'Saving…' : actionLabel}
+              label={busy ? t('Saving…', 'Guardando…') : actionLabel}
               disabled={busy}
               variant="primary"
               onPress={() => {
                 void confirm();
               }}
             />
-            <LeagueAction label="Cancel" disabled={busy} onPress={close} />
+            <LeagueAction label={t('Cancel', 'Cancelar')} disabled={busy} onPress={close} />
           </ScrollView>
         </View>
       </SafeAreaView>

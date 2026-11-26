@@ -1,6 +1,8 @@
+import { useLanguage } from '@/i18n/Language';
 import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Modal } from 'react-native';
 import { useCameraPermissions } from 'expo-camera';
+import { bundledSpecs } from '../engine';
 import { formCheckProfiles, profileById, type FormCheckProfile } from '../profiles';
 import type { Recording } from '../schemas';
 import { buildAnalysisView } from '../view';
@@ -31,6 +33,7 @@ export function FormCheckFlow({
   setNumber: number;
   onClose: () => void;
 }>) {
+  const language = useLanguage();
   const { analyzer, entryFor, save } = useFormCheck();
   const entry = entryFor(setId);
   const [permission, requestPermission] = useCameraPermissions();
@@ -67,7 +70,11 @@ export function FormCheckFlow({
       if (!permission.granted)
         return (
           <ConsentScreen
-            supportedNames={formCheckProfiles.map((value) => value.name.toLowerCase())}
+            supportedNames={formCheckProfiles.map((value) =>
+              language === 'es'
+                ? (bundledSpecs[value.specId]?.name.es ?? value.name).toLowerCase()
+                : value.name.toLowerCase(),
+            )}
             denied={!permission.canAskAgain}
             onAllow={() => void requestPermission()}
             onOpenSettings={() => void Linking.openSettings()}
@@ -99,7 +106,7 @@ export function FormCheckFlow({
       return (
         <RecordingPlayer
           uri={entry.recording.uri}
-          title={`${exerciseName} · set ${setNumber}`}
+          title={`${exerciseName} · ${language === 'es' ? 'serie' : 'set'} ${setNumber}`}
           pose={entry.analysis.pose}
           onBack={() => setStep('result')}
         />
@@ -107,6 +114,7 @@ export function FormCheckFlow({
     const view = buildAnalysisView(
       profileById(entry.analysis.profileId) ?? profile,
       entry.analysis,
+      language,
     );
     const shared = {
       exerciseName,

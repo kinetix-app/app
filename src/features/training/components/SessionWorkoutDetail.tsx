@@ -4,6 +4,7 @@ import { Modal } from 'react-native';
 import { InitialAvatar } from '@/components/InitialAvatar';
 import { getAccount } from '@/features/accounts/api';
 import { ProfileAvatar } from '@/features/accounts/components/ProfileAvatar';
+import { useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import type { CompletedSession } from '../schemas';
 import { WorkoutDetail, type WorkoutDetailData } from './WorkoutDetail';
@@ -38,7 +39,8 @@ export function SessionWorkoutDetail({
     queryFn: ({ signal }) => getAccount(undefined, signal),
     enabled: false,
   });
-  const name = account?.profile.display_name?.trim() || 'You';
+  const es = useLanguage() === 'es';
+  const name = account?.profile.display_name?.trim() || (es ? 'Tú' : 'You');
   return (
     <WorkoutDetail
       workout={detail.isSuccess ? detail.data : undefined}

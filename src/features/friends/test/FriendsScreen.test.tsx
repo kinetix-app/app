@@ -1,4 +1,5 @@
 import React from 'react';
+import { LanguageProvider } from '@/i18n/Language';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { friendsApi } from '../api';
@@ -119,4 +120,20 @@ test('search waits for two letters, debounces and sends a request', async () => 
   } finally {
     jest.useRealTimers();
   }
+});
+
+test('Spanish localizes friend requests and preserves names', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  clients.push(client);
+  render(
+    <QueryClientProvider client={client}>
+      <LanguageProvider language="es">
+        <FriendsScreen accountId={1} onClose={jest.fn()} initialTab="requests" />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText('Quiere ser tu amigo')).toBeTruthy();
+  expect(
+    screen.getByRole('button', { name: 'Aceptar solicitud de amistad de Carol' }),
+  ).toBeTruthy();
 });

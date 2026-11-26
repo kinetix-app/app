@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useLanguage } from '@/i18n/Language';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -26,6 +27,7 @@ export function WorkoutExerciseResults({
   position,
 }: Readonly<{ exercise: WorkoutExercise; position: number }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const image = exercise.imageUrl !== failedImage ? exercise.imageUrl : null;
   const { sets } = exercise;
@@ -49,7 +51,7 @@ export function WorkoutExerciseResults({
           {image ? (
             <Image
               source={{ uri: image }}
-              accessibilityLabel={`Image of ${exercise.name}`}
+              accessibilityLabel={es ? `Imagen de ${exercise.name}` : `Image of ${exercise.name}`}
               resizeMode="contain"
               style={styles.image}
               onError={() => setFailedImage(image)}
@@ -62,7 +64,9 @@ export function WorkoutExerciseResults({
           {lifting.length > 0 ? <SetTable sets={lifting} /> : null}
           {cardio.length > 0 ? <SetTable sets={cardio} cardio /> : null}
           {sets.length === 0 ? (
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>No sets recorded</Text>
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+              {es ? 'No hay series registradas' : 'No sets recorded'}
+            </Text>
           ) : null}
         </View>
       </View>
@@ -88,24 +92,42 @@ function SetTable({
   cardio = false,
 }: Readonly<{ sets: readonly RecordedSet[]; cardio?: boolean }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const columnTitle = [textStyles['body-sm'], { color: p['ink-muted'] }];
   const value = [textStyles.body, styles.number, { color: p.ink }];
 
   return (
-    <View role="table" accessibilityLabel={cardio ? 'Cardio sets' : 'Strength sets'}>
+    <View
+      role="table"
+      accessibilityLabel={
+        cardio
+          ? es
+            ? 'Series de cardio'
+            : 'Cardio sets'
+          : es
+            ? 'Series de fuerza'
+            : 'Strength sets'
+      }
+    >
       <View role="row" style={[styles.row, styles.tableHeader]}>
         <Text role="columnheader" style={[columnTitle, styles.setNumber]}>
-          Set
+          {es ? 'Serie' : 'Set'}
         </Text>
         <Text role="columnheader" style={[columnTitle, styles.measurement]}>
-          {cardio ? 'Distance (km)' : 'Weight (kg)'}
+          {cardio ? (es ? 'Distancia (km)' : 'Distance (km)') : es ? 'Peso (kg)' : 'Weight (kg)'}
         </Text>
         <Text
           role="columnheader"
-          accessibilityLabel={cardio ? 'Time in hours, minutes and seconds' : undefined}
+          accessibilityLabel={
+            cardio
+              ? es
+                ? 'Tiempo en horas, minutos y segundos'
+                : 'Time in hours, minutes and seconds'
+              : undefined
+          }
           style={[columnTitle, styles.measurement]}
         >
-          {cardio ? 'Time (h:m:s)' : 'Reps'}
+          {cardio ? (es ? 'Tiempo (h:m:s)' : 'Time (h:m:s)') : es ? 'Repeticiones' : 'Reps'}
         </Text>
       </View>
       {sets.map((set, index) => (

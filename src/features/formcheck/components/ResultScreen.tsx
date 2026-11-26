@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { AnalysisView } from '../view';
@@ -11,6 +12,7 @@ type Assessed = Extract<AnalysisView, { kind: 'assessed' }>;
 /** Placeholder results must never read as a real assessment. */
 export function DemoNotice() {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <View
       accessibilityRole="alert"
@@ -18,7 +20,9 @@ export function DemoNotice() {
     >
       <Feather name="info" size={18} color={p.info} style={{ marginTop: 2 }} />
       <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-        Demo analysis: this result is a placeholder, not a real check of your form yet.
+        {es
+          ? 'Análisis de demostración: este resultado es provisional y aún no evalúa tu técnica.'
+          : 'Demo analysis: this result is a placeholder, not a real check of your form yet.'}
       </Text>
     </View>
   );
@@ -60,20 +64,31 @@ export function ResultScreen({
   onDone: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · SET ${setNumber}`}
-      title="Set analyzed"
+      overline={`${exerciseName.toUpperCase()} · ${es ? 'SERIE' : 'SET'} ${setNumber}`}
+      title={es ? 'Serie analizada' : 'Set analyzed'}
       backIcon="x"
-      backLabel="Back to workout"
+      backLabel={es ? 'Volver al entrenamiento' : 'Back to workout'}
       onBack={onDone}
       footer={
         <>
-          <Button title="Done" onPress={onDone} />
+          <Button title={es ? 'Listo' : 'Done'} onPress={onDone} />
           {hasVideo ? (
-            <Button title="Watch recording" icon="play" onPress={onWatchVideo} secondary />
+            <Button
+              title={es ? 'Ver grabación' : 'Watch recording'}
+              icon="play"
+              onPress={onWatchVideo}
+              secondary
+            />
           ) : null}
-          <Button title="Record again" icon="video" onPress={onRecordAgain} secondary />
+          <Button
+            title={es ? 'Grabar de nuevo' : 'Record again'}
+            icon="video"
+            onPress={onRecordAgain}
+            secondary
+          />
         </>
       }
     >
@@ -83,12 +98,18 @@ export function ResultScreen({
           {view.repCount}
         </Text>
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {view.repCount === 1 ? 'rep detected' : 'reps detected'}
+          {es
+            ? view.repCount === 1
+              ? 'repetición detectada'
+              : 'repeticiones detectadas'
+            : view.repCount === 1
+              ? 'rep detected'
+              : 'reps detected'}
         </Text>
       </View>
       {view.score !== null ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          Technique score{' '}
+          {es ? 'Puntuación técnica' : 'Technique score'}{' '}
           <Text style={{ color: p.ink, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
             {Math.round(view.score)}
           </Text>{' '}
@@ -96,12 +117,18 @@ export function ResultScreen({
         </Text>
       ) : null}
       <View style={ui.gap}>
-        <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>REP BY REP</Text>
+        <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
+          {es ? 'REPETICIÓN A REPETICIÓN' : 'REP BY REP'}
+        </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
           {view.reps.map((rep) => (
             <View
               key={rep.index}
-              accessibilityLabel={`Rep ${rep.index}: ${rep.ok ? 'no issues' : rep.label}`}
+              accessibilityLabel={
+                es
+                  ? `Repetición ${rep.index}: ${rep.ok ? 'sin problemas' : rep.label}`
+                  : `Rep ${rep.index}: ${rep.ok ? 'no issues' : rep.label}`
+              }
               style={{
                 minWidth: 52,
                 alignItems: 'center',
@@ -126,14 +153,16 @@ export function ResultScreen({
         <>
           {view.praise.length ? (
             <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
-              <Text style={[textStyles.overline, { color: p.success }]}>WHAT WENT WELL</Text>
+              <Text style={[textStyles.overline, { color: p.success }]}>
+                {es ? 'QUÉ HA IDO BIEN' : 'WHAT WENT WELL'}
+              </Text>
               <PraiseList items={view.praise} />
             </View>
           ) : null}
           {view.issues.map((issue) => (
             <View key={issue.id} style={[ui.card, { backgroundColor: p['surface-200'] }]}>
               <Text style={[textStyles.overline, { color: p.warning }]}>
-                ISSUE · {issue.label.toUpperCase()}
+                {es ? 'PROBLEMA' : 'ISSUE'} · {issue.label.toUpperCase()}
               </Text>
               <Text style={[textStyles['title-md'], { color: p.ink }]}>{issue.title}</Text>
               {issue.explanation ? (
@@ -154,19 +183,25 @@ export function ResultScreen({
             <PraiseList items={view.praise} />
           ) : (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              Every rep looked good. Keep it up.
+              {es
+                ? 'Todas las repeticiones se veían bien. Sigue así.'
+                : 'Every rep looked good. Keep it up.'}
             </Text>
           )}
         </View>
       )}
       {view.tip ? (
         <View style={[ui.card, { backgroundColor: p['brand-soft'], gap: spacing['space-1'] }]}>
-          <Text style={[textStyles.overline, { color: p['brand-ink'] }]}>NEXT SET</Text>
+          <Text style={[textStyles.overline, { color: p['brand-ink'] }]}>
+            {es ? 'PRÓXIMA SERIE' : 'NEXT SET'}
+          </Text>
           <Text style={[textStyles.body, { color: p['brand-ink'] }]}>{view.tip}</Text>
         </View>
       ) : null}
       <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
-        Wrong count? You can edit the reps in the set.
+        {es
+          ? '¿El recuento es incorrecto? Puedes editar las repeticiones de la serie.'
+          : 'Wrong count? You can edit the reps in the set.'}
       </Text>
     </FormCheckScreen>
   );

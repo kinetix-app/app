@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LanguageProvider } from '@/i18n/Language';
 import { nutritionApi } from '../api';
 import { NutritionGoalRecommendation } from '../components/NutritionGoalRecommendation';
 
@@ -32,21 +33,23 @@ const suggestion = {
   protein_per_kg: 1.6,
   goal,
 };
-function open() {
+function open(language: 'en' | 'es' = 'en') {
   const onClose = jest.fn();
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: {
-            queries: { retry: false, gcTime: 0 },
-            mutations: { retry: false, gcTime: 0 },
-          },
-        })
-      }
-    >
-      <NutritionGoalRecommendation accountId={1} onClose={onClose} />
-    </QueryClientProvider>,
+    <LanguageProvider language={language}>
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: {
+              queries: { retry: false, gcTime: 0 },
+              mutations: { retry: false, gcTime: 0 },
+            },
+          })
+        }
+      >
+        <NutritionGoalRecommendation accountId={1} onClose={onClose} />
+      </QueryClientProvider>
+    </LanguageProvider>,
   );
   return onClose;
 }
@@ -119,4 +122,20 @@ test('unavailable estimates explain missing inputs and allow manual entry', asyn
   expect(screen.queryByText('Accept suggestion')).toBeNull();
   fireEvent.press(screen.getByText('Enter manually'));
   expect(nutritionApi.createGoal).not.toHaveBeenCalled();
+});
+
+test('uses stable reason codes for Spanish unavailable recommendations', async () => {
+  jest.mocked(nutritionApi.recommendation).mockResolvedValue({
+    ...suggestion,
+    available: false,
+    goal: null,
+    reason: 'Changed server wording',
+    reason_code: 'underage',
+  });
+  open('es');
+  expect(
+    await screen.findByText(
+      'Las sugerencias automáticas están disponibles para mayores de 18 años.',
+    ),
+  ).toBeTruthy();
 });

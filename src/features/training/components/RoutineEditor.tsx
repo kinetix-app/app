@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { cardioInput, cardioValues, type CardioValues } from '../cardio';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
@@ -71,6 +72,7 @@ function RoutineExerciseEditor({
   >
 >) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const unit: WeightUnit = 'kg';
   const exercise = useWatch({ control, name: `exercises.${index}.exercise` });
   const cardio = exercise.activity_type === 'cardio';
@@ -94,14 +96,16 @@ function RoutineExerciseEditor({
                 : validWeight(value.weight, value.unit, 2) &&
                   /^\d+$/.test(value.reps) &&
                   Number(value.reps) >= 1 &&
-                  Number(value.reps) <= 2147483647) || 'Enter valid set values.',
+                  Number(value.reps) <= 2147483647) ||
+              (es ? 'Introduce valores válidos para la serie.' : 'Enter valid set values.'),
           }}
           render={({ field, fieldState }) => (
             <View style={ui.gap}>
               {cardio && field.value.legacy ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  Previous default: {field.value.weight || '—'} kg · {field.value.reps || '—'} reps.
-                  Enter distance and time to replace it.
+                  {es
+                    ? `Plan anterior: ${field.value.weight || '—'} kg · ${field.value.reps || '—'} rep. Introduce la distancia y el tiempo para sustituirlo.`
+                    : `Previous default: ${field.value.weight || '—'} kg · ${field.value.reps || '—'} reps. Enter distance and time to replace it.`}
                 </Text>
               ) : null}
               <SetFields
@@ -116,7 +120,11 @@ function RoutineExerciseEditor({
                 unit={unit}
                 decimals={2}
                 number={i + 1}
-                label={`Exercise ${index + 1} set ${i + 1}`}
+                label={
+                  es
+                    ? `Ejercicio ${index + 1}, serie ${i + 1}`
+                    : `Exercise ${index + 1} set ${i + 1}`
+                }
                 disabled={card.disabled}
                 onChange={(next) =>
                   field.onChange({
@@ -161,6 +169,7 @@ export function RoutineEditor({
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
@@ -255,7 +264,9 @@ export function RoutineEditor({
       if (issue && typeof issue.path[1] === 'number')
         setEditingSlot(fields[issue.path[1]]?.id ?? null);
       setError('root', {
-        message: parsed.error.issues[0]?.message ?? 'Check the routine fields.',
+        message:
+          parsed.error.issues[0]?.message ??
+          (es ? 'Comprueba los campos de la rutina.' : 'Check the routine fields.'),
       });
       return;
     }
@@ -274,16 +285,22 @@ export function RoutineEditor({
         <View style={[ui.row, { padding: spacing['space-4'] }]}>
           <IconButton
             icon="arrow-left"
-            label="Back to routines"
+            label={es ? 'Volver a rutinas' : es ? 'Volver a rutinas' : 'Back to routines'}
             onPress={close}
             disabled={disabled}
           />
           <Text accessibilityRole="header" style={[ui.heading, { flex: 1, color: p.ink }]}>
-            {routine ? 'Edit routine' : 'New routine'}
+            {routine
+              ? es
+                ? 'Editar rutina'
+                : 'Edit routine'
+              : es
+                ? 'Nueva rutina'
+                : 'New routine'}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save routine"
+            accessibilityLabel={es ? 'Guardar rutina' : es ? 'Guardar rutina' : 'Save routine'}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={() => void submit()}
@@ -296,7 +313,7 @@ export function RoutineEditor({
             })}
           >
             <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-              {save.isPending ? 'Saving…' : 'Save'}
+              {save.isPending ? (es ? 'Guardando…' : 'Saving…') : es ? 'Guardar' : 'Save'}
             </Text>
           </Pressable>
         </View>
@@ -322,17 +339,29 @@ export function RoutineEditor({
                 control={control}
                 name="name"
                 rules={{
-                  validate: (value) => value.trim().length > 0 || 'Enter a routine name.',
+                  validate: (value) =>
+                    value.trim().length > 0 ||
+                    (es ? 'Introduce el nombre de la rutina.' : 'Enter a routine name.'),
                   maxLength: {
                     value: 150,
-                    message: 'Use at most 150 characters.',
+                    message: es
+                      ? 'Usa un máximo de 150 caracteres.'
+                      : 'Use at most 150 characters.',
                   },
                 }}
                 render={({ field, fieldState }) => (
                   <>
                     <TextField
-                      accessibilityLabel="Routine name"
-                      placeholder="Name your routine"
+                      accessibilityLabel={
+                        es ? 'Nombre de la rutina' : es ? 'Nombre de la rutina' : 'Routine name'
+                      }
+                      placeholder={
+                        es
+                          ? 'Ponle un nombre a la rutina'
+                          : es
+                            ? 'Ponle un nombre a la rutina'
+                            : 'Name your routine'
+                      }
                       maxLength={150}
                       inputStyle={textStyles['title-lg']}
                       containerStyle={{
@@ -357,26 +386,55 @@ export function RoutineEditor({
               />
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={notesOpen ? 'Hide routine notes' : 'Add routine notes'}
+                accessibilityLabel={
+                  notesOpen
+                    ? es
+                      ? 'Ocultar notas de la rutina'
+                      : 'Hide routine notes'
+                    : es
+                      ? 'Añadir notas a la rutina'
+                      : 'Add routine notes'
+                }
                 accessibilityState={{ expanded: notesOpen, disabled }}
                 disabled={disabled}
                 onPress={() => setNotesOpen(!notesOpen)}
                 style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
               >
                 <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
-                  {notesOpen ? 'Notes (optional) −' : '+ Add notes'}
+                  {notesOpen
+                    ? es
+                      ? 'Notas (opcional) −'
+                      : 'Notes (optional) −'
+                    : es
+                      ? '+ Añadir notas'
+                      : '+ Add notes'}
                 </Text>
               </Pressable>
               {notesOpen ? (
                 <Controller
                   control={control}
                   name="notes"
-                  rules={{ maxLength: { value: 1000, message: 'Use at most 1000 characters.' } }}
+                  rules={{
+                    maxLength: {
+                      value: 1000,
+                      message: es
+                        ? 'Usa un máximo de 1000 caracteres.'
+                        : 'Use at most 1000 characters.',
+                    },
+                  }}
                   render={({ field, fieldState }) => (
                     <View style={ui.gap}>
                       <TextField
-                        accessibilityLabel="Routine notes"
-                        placeholder="Focus, reminders or a plan for this routine…"
+                        accessibilityLabel={
+                          es ? 'Notas de la rutina' : es ? 'Notas de la rutina' : 'Routine notes'
+                        }
+                        placeholder={
+                          es
+                            ? 'Objetivos, recordatorios o un plan para esta rutina…'
+                            : es
+                              ? 'Objetivos, recordatorios o un plan para esta rutina…'
+                              : 'Focus, reminders or a plan for this routine…'
+                        }
                         value={field.value}
                         onChangeText={field.onChange}
                         onBlur={field.onBlur}
@@ -427,7 +485,9 @@ export function RoutineEditor({
                   remove(index);
                   if (editingSlot === slot.id) setEditingSlot(null);
                 }}
-                addSetLabel={`Add set to exercise ${index + 1}`}
+                addSetLabel={
+                  es ? `Añadir serie al ejercicio ${index + 1}` : `Add set to exercise ${index + 1}`
+                }
                 disabled={disabled}
                 onSets={() => setEditingSlot(editingSlot === slot.id ? null : slot.id)}
                 expanded={editingSlot === slot.id}
@@ -438,7 +498,7 @@ export function RoutineEditor({
           ListFooterComponent={
             <View style={ui.gap}>
               <Button
-                title="Add exercise"
+                title={es ? 'Añadir ejercicio' : es ? 'Añadir ejercicio' : 'Add exercise'}
                 onPress={() => setPicker(true)}
                 disabled={disabled || fields.length >= 500}
                 tone="positive"
@@ -504,11 +564,21 @@ export function RoutineEditor({
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              Discard your unsaved changes?
+              {es ? '¿Descartar los cambios sin guardar?' : 'Discard your unsaved changes?'}
             </Text>
-            <Text style={{ color: p['ink-muted'] }}>Your changes have not been saved.</Text>
-            <Button title="Keep editing" onPress={() => setDiscard(false)} secondary />
-            <Button title="Discard" onPress={onClose} tone="danger" />
+            <Text style={{ color: p['ink-muted'] }}>
+              {es ? 'Tus cambios no se han guardado.' : 'Your changes have not been saved.'}
+            </Text>
+            <Button
+              title={es ? 'Seguir editando' : es ? 'Seguir editando' : 'Keep editing'}
+              onPress={() => setDiscard(false)}
+              secondary
+            />
+            <Button
+              title={es ? 'Descartar' : es ? 'Descartar' : 'Discard'}
+              onPress={onClose}
+              tone="danger"
+            />
           </View>
         </View>
       </Modal>

@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '@/i18n/Language';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 /** Profile is a shell destination opened from the Home header, not a bottom-bar tab. */
@@ -19,17 +20,18 @@ export function BottomBar({
   canStart: boolean;
 }>) {
   const p = usePalette();
+  const spanish = useLanguage() === 'es';
   const tabs = [
-    { id: 'home', icon: 'home', label: 'Feed' },
-    { id: 'workout', icon: 'activity', label: 'Workout' },
-    { id: 'nutrition', icon: 'coffee', label: 'Nutrition' },
-    { id: 'league', icon: 'award', label: 'League' },
+    { id: 'home', icon: 'home', label: spanish ? 'Inicio' : 'Feed' },
+    { id: 'workout', icon: 'activity', label: spanish ? 'Entreno' : 'Workout' },
+    { id: 'nutrition', icon: 'coffee', label: spanish ? 'Nutrición' : 'Nutrition' },
+    { id: 'league', icon: 'award', label: spanish ? 'Liga' : 'League' },
   ] as const;
   return (
     <SafeAreaView edges={['bottom']} style={{ backgroundColor: p['surface-200'] }}>
       <View
         accessibilityRole="tablist"
-        accessibilityLabel="Main navigation"
+        accessibilityLabel={spanish ? 'Navegación principal' : 'Main navigation'}
         style={[styles.bar, { backgroundColor: p['surface-200'], borderColor: p.line }]}
       >
         {tabs.map((item, index) => (
@@ -37,7 +39,7 @@ export function BottomBar({
             {index === 2 ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Start workout"
+                accessibilityLabel={spanish ? 'Iniciar entrenamiento' : 'Start workout'}
                 accessibilityState={{ disabled: !canStart }}
                 disabled={!canStart}
                 onPress={onStart}

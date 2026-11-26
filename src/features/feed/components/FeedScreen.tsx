@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -49,6 +50,7 @@ export function FeedScreen({
   onFindFriends,
   workoutActions,
 }: FeedScreenProps) {
+  const language = useLanguage();
   const p = usePalette();
   const cache = useQueryClient();
   const [panel, setPanel] = useState<Panel>({ kind: 'feed' });
@@ -106,10 +108,12 @@ export function FeedScreen({
     footer = (
       <View style={ui.gap}>
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Could not load more posts. Your feed is kept.
+          {language === 'es'
+            ? 'No se pudieron cargar más publicaciones. Tu feed se conserva.'
+            : 'Could not load more posts. Your feed is kept.'}
         </Text>
         <Button
-          title="Retry"
+          title={language === 'es' ? 'Reintentar' : 'Retry'}
           secondary
           onPress={() => void feed.fetchNextPage({ cancelRefetch: false })}
         />
@@ -118,11 +122,11 @@ export function FeedScreen({
 
   const header = (
     <View style={ui.gap}>
-      <ScreenHeader title="Feed">
+      <ScreenHeader title={language === 'es' ? 'Feed' : 'Feed'}>
         <View style={ui.row}>
           <IconButton
             icon={<Ionicons name="create-outline" size={24} color={p.ink} />}
-            label="New post"
+            label={language === 'es' ? 'Nueva publicación' : 'New post'}
             bare
             onPress={() => setPanel({ kind: 'share' })}
           />
@@ -133,9 +137,13 @@ export function FeedScreen({
       {feed.isError && !feed.data ? (
         <View style={ui.gap}>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {feedErrorMessage(feed.error)}
+            {feedErrorMessage(feed.error, language)}
           </Text>
-          <Button title="Retry" secondary onPress={() => void feed.refetch()} />
+          <Button
+            title={language === 'es' ? 'Reintentar' : 'Retry'}
+            secondary
+            onPress={() => void feed.refetch()}
+          />
         </View>
       ) : null}
     </View>
@@ -163,19 +171,22 @@ export function FeedScreen({
           ListEmptyComponent={
             (feed.data ? (
               <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
-                <Text style={[textStyles['title-md'], { color: p.ink }]}>No posts yet</Text>
+                <Text style={[textStyles['title-md'], { color: p.ink }]}>
+                  {language === 'es' ? 'Aún no hay publicaciones' : 'No posts yet'}
+                </Text>
                 <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
-                  Your feed shows posts from you and your friends. Add friends or share something to
-                  get started.
+                  {language === 'es'
+                    ? 'Tu feed muestra tus publicaciones y las de tus amigos. Añade amigos o comparte algo para empezar.'
+                    : 'Your feed shows posts from you and your friends. Add friends or share something to get started.'}
                 </Text>
                 <Button
-                  title="Find friends"
+                  title={language === 'es' ? 'Buscar amigos' : 'Find friends'}
                   tone="positive"
                   icon="user-plus"
                   onPress={() => onFindFriends?.()}
                 />
                 <Button
-                  title="Create a post"
+                  title={language === 'es' ? 'Crear publicación' : 'Create a post'}
                   secondary
                   icon="plus"
                   onPress={() => setPanel({ kind: 'share' })}
@@ -222,7 +233,7 @@ export function FeedScreen({
           personId={view.id}
           fallbackName={view.name}
           onBack={closePanel}
-          backLabel="Back to feed"
+          backLabel={language === 'es' ? 'Volver al feed' : 'Back to feed'}
         />
       ) : null}
       {view.kind === 'comments' ? (
@@ -278,6 +289,7 @@ function DeleteConfirmation({
   onCancel,
   onDeleted,
 }: Readonly<{ post: Post | null; onCancel: () => void; onDeleted: (post: Post) => void }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -295,7 +307,12 @@ function DeleteConfirmation({
       onDeleted(post);
     } catch (error_) {
       if (error_ instanceof ApiError && error_.status === 404) onDeleted(post);
-      else setError('Could not delete the post. Try again.');
+      else
+        setError(
+          language === 'es'
+            ? 'No se pudo eliminar la publicación. Inténtalo de nuevo.'
+            : 'Could not delete the post. Try again.',
+        );
     } finally {
       setPending(false);
     }
@@ -308,19 +325,34 @@ function DeleteConfirmation({
           style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
         >
           <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-            Delete this post?
+            {language === 'es' ? '¿Eliminar esta publicación?' : 'Delete this post?'}
           </Text>
           <Text style={{ color: p['ink-muted'] }}>
-            Its photos, likes and comments are removed. The workout stays in your history.
+            {language === 'es'
+              ? 'Se eliminarán sus fotos, me gusta y comentarios. El entrenamiento permanecerá en tu historial.'
+              : 'Its photos, likes and comments are removed. The workout stays in your history.'}
           </Text>
           {error ? (
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
               {error}
             </Text>
           ) : null}
-          <Button title="Cancel" secondary disabled={pending} onPress={cancel} />
           <Button
-            title={pending ? 'Deleting…' : 'Delete'}
+            title={language === 'es' ? 'Cancelar' : 'Cancel'}
+            secondary
+            disabled={pending}
+            onPress={cancel}
+          />
+          <Button
+            title={
+              pending
+                ? language === 'es'
+                  ? 'Eliminando…'
+                  : 'Deleting…'
+                : language === 'es'
+                  ? 'Eliminar'
+                  : 'Delete'
+            }
             tone="danger"
             disabled={pending}
             onPress={() => {
@@ -339,10 +371,14 @@ function without(values: ReadonlySet<number>, value: number) {
   return next;
 }
 
-function feedErrorMessage(error: unknown) {
+function feedErrorMessage(error: unknown, language: 'en' | 'es') {
   if (error instanceof ApiError && [401, 403].includes(error.status))
-    return 'Your account cannot load the feed. Sign out and sign in again.';
-  return 'Could not load your feed. Check your connection and try again.';
+    return language === 'es'
+      ? 'Tu cuenta no puede cargar el feed. Cierra sesión y vuelve a iniciarla.'
+      : 'Your account cannot load the feed. Sign out and sign in again.';
+  return language === 'es'
+    ? 'No se pudo cargar tu feed. Comprueba tu conexión e inténtalo de nuevo.'
+    : 'Could not load your feed. Check your connection and try again.';
 }
 
 const styles = StyleSheet.create({

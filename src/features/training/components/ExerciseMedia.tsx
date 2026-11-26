@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView, type VideoPlayer } from 'expo-video';
 import { Image, Text, View } from 'react-native';
@@ -39,6 +40,7 @@ function ExerciseVideo({
   imageUrl: string | null;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const view = useRef<VideoView>(null);
   const [muted, setMuted] = useState(true);
   const player = useVideoPlayer(url, (player) => {
@@ -68,7 +70,7 @@ function ExerciseVideo({
     return (
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          Video unavailable.
+          {es ? 'Vídeo no disponible.' : 'Video unavailable.'}
         </Text>
         <ExerciseMedia name={name} videoUrl={null} imageUrl={imageUrl} />
       </View>
@@ -87,13 +89,15 @@ function ExerciseVideo({
         style={mediaStyle}
         contentFit="contain"
         nativeControls={false}
-        accessibilityLabel={`Video for ${name}`}
+        accessibilityLabel={es ? `Vídeo de ${name}` : `Video for ${name}`}
       />
       {status === 'loading' ? <Loading /> : null}
       <View style={{ padding: spacing['space-3'], gap: spacing['space-2'] }}>
         <View
           accessibilityRole="progressbar"
-          accessibilityLabel="Video progress"
+          accessibilityLabel={
+            es ? 'Progreso del vídeo' : es ? 'Progreso del vídeo' : 'Video progress'
+          }
           accessibilityValue={{ min: 0, max: player.duration || 1, now: currentTime }}
           style={{
             height: 4,
@@ -113,7 +117,15 @@ function ExerciseVideo({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-2'] }}>
           <IconButton
             icon={isPlaying ? 'pause' : 'play'}
-            label={isPlaying ? 'Pause video' : 'Play video'}
+            label={
+              isPlaying
+                ? es
+                  ? 'Pausar vídeo'
+                  : 'Pause video'
+                : es
+                  ? 'Reproducir vídeo'
+                  : 'Play video'
+            }
             onPress={() => {
               if (isPlaying) player.pause();
               else player.play();
@@ -121,7 +133,13 @@ function ExerciseVideo({
           />
           <IconButton
             icon="rotate-ccw"
-            label="Replay video"
+            label={
+              es
+                ? 'Volver a reproducir el vídeo'
+                : es
+                  ? 'Volver a reproducir el vídeo'
+                  : 'Replay video'
+            }
             onPress={() => {
               player.replay();
             }}
@@ -136,7 +154,15 @@ function ExerciseVideo({
           </Text>
           <IconButton
             icon={muted ? 'volume-x' : 'volume-2'}
-            label={muted ? 'Unmute video' : 'Mute video'}
+            label={
+              muted
+                ? es
+                  ? 'Activar sonido'
+                  : 'Unmute video'
+                : es
+                  ? 'Silenciar vídeo'
+                  : 'Mute video'
+            }
             onPress={() => {
               setPlayerMuted(player, !muted);
               setMuted(!muted);
@@ -144,7 +170,13 @@ function ExerciseVideo({
           />
           <IconButton
             icon="maximize"
-            label="Full screen video"
+            label={
+              es
+                ? 'Vídeo a pantalla completa'
+                : es
+                  ? 'Vídeo a pantalla completa'
+                  : 'Full screen video'
+            }
             onPress={() => {
               void view.current?.enterFullscreen();
             }}

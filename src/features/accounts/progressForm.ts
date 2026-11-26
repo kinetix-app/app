@@ -91,9 +91,11 @@ export function todayForProfile(timeZone: string | null, now = new Date()) {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-const dateFormatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' });
-export function displayProgressDate(date: string) {
-  return dateFormatter.format(new Date(`${date}T00:00:00Z`));
+export function displayProgressDate(date: string, language: 'en' | 'es' = 'en') {
+  return new Intl.DateTimeFormat(language === 'es' ? 'es-ES' : 'en-US', {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00Z`));
 }
 
 export function measurementUnit(metric: MeasurementMetric, system: MeasurementSystem) {

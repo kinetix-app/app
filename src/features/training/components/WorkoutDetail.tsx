@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/services/apiClient';
@@ -40,6 +41,7 @@ export function WorkoutDetail({
   onShare,
 }: WorkoutDetailProps) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const unavailable = error instanceof ApiError && error.status === 404;
 
   return (
@@ -48,7 +50,7 @@ export function WorkoutDetail({
         <View style={[styles.frame, ui.row, styles.headerContent]}>
           <IconButton icon="arrow-left" label={backLabel} onPress={onBack} />
           <Text accessibilityRole="header" style={[ui.heading, styles.fill, { color: p.ink }]}>
-            Workout detail
+            {es ? 'Detalles del entrenamiento' : 'Workout detail'}
           </Text>
         </View>
       </View>
@@ -62,7 +64,7 @@ export function WorkoutDetail({
             <View style={styles.summarySection}>
               <WorkoutSummary workout={workout} author={author} />
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                Exercise results
+                {es ? 'Resultados de los ejercicios' : 'Exercise results'}
               </Text>
             </View>
           ) : null) ?? undefined
@@ -70,14 +72,16 @@ export function WorkoutDetail({
         ListEmptyComponent={
           workout ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              No exercises were recorded.
+              {es ? 'No se registraron ejercicios.' : 'No exercises were recorded.'}
             </Text>
           ) : (
             <View style={ui.gap}>
               {!error ? <Loading /> : null}
               {unavailable ? (
                 <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                  This workout is no longer available.
+                  {es
+                    ? 'Este entrenamiento ya no está disponible.'
+                    : 'This workout is no longer available.'}
                 </Text>
               ) : null}
               {error && !unavailable ? <Failure error={error} retry={onRetry} /> : null}
@@ -93,7 +97,11 @@ export function WorkoutDetail({
           style={[styles.footer, { backgroundColor: p['surface-100'], borderTopColor: p.line }]}
         >
           <View style={[styles.frame, styles.footerContent]}>
-            <Button title="Share to feed" icon="share" onPress={onShare} />
+            <Button
+              title={es ? 'Compartir en el muro' : es ? 'Compartir en el muro' : 'Share to feed'}
+              icon="share"
+              onPress={onShare}
+            />
           </View>
         </View>
       ) : null}
@@ -106,17 +114,18 @@ function WorkoutSummary({
   author,
 }: Readonly<{ workout: WorkoutDetailData; author: WorkoutAuthor }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const completed = new Date(workout.endedAt);
   const elapsedSeconds = Math.max(
     0,
     Math.floor((completed.getTime() - Date.parse(workout.startedAt)) / 1000),
   );
-  const completionDate = completed.toLocaleDateString(undefined, {
+  const completionDate = completed.toLocaleDateString(es ? 'es' : undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
-  const completionTime = completed.toLocaleTimeString(undefined, {
+  const completionTime = completed.toLocaleTimeString(es ? 'es' : undefined, {
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -148,17 +157,20 @@ function WorkoutSummary({
         <MetricRow
           testID="workout-detail-primary-metrics"
           metrics={[
-            { label: 'Duration', value: formatElapsedDuration(elapsedSeconds) },
-            { label: 'Volume', value: formatWorkoutVolume(workout.volumeKg) },
-            { label: 'Exercises', value: workout.exercises.length.toLocaleString() },
+            { label: es ? 'Duración' : 'Duration', value: formatElapsedDuration(elapsedSeconds) },
+            { label: es ? 'Volumen' : 'Volume', value: formatWorkoutVolume(workout.volumeKg) },
+            {
+              label: es ? 'Ejercicios' : 'Exercises',
+              value: workout.exercises.length.toLocaleString(es ? 'es' : undefined),
+            },
           ]}
         />
         <MetricRow
           testID="workout-detail-secondary-metrics"
           divided
           metrics={[
-            { label: 'Sets', value: sets.toLocaleString() },
-            { label: 'Reps', value: workout.reps?.toLocaleString() ?? '—' },
+            { label: es ? 'Series' : 'Sets', value: sets.toLocaleString() },
+            { label: es ? 'Repeticiones' : 'Reps', value: workout.reps?.toLocaleString() ?? '—' },
           ]}
         />
       </View>

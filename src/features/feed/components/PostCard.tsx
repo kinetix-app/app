@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -32,6 +33,7 @@ export function PostCard({
   onAuthor,
   onWorkout,
 }: PostCardProps) {
+  const language = useLanguage();
   const p = usePalette();
   const name = authorName(post.author.display_name);
   return (
@@ -44,7 +46,7 @@ export function PostCard({
         {onOptions && (post.is_mine || post.workout) ? (
           <IconButton
             icon={<Feather name="more-horizontal" size={24} color={p.ink} />}
-            label="Post options"
+            label={language === 'es' ? 'Opciones de la publicación' : 'Post options'}
             bare
             onPress={() => onOptions(post)}
           />
@@ -66,7 +68,7 @@ export function PostCard({
       {post.workout ? (
         <PostWorkoutSummary
           workout={post.workout}
-          label={`See ${name}’s workout`}
+          label={language === 'es' ? `Ver el entrenamiento de ${name}` : `See ${name}’s workout`}
           onPress={onWorkout ? () => onWorkout(post) : undefined}
         />
       ) : null}
@@ -81,7 +83,9 @@ export function PostCard({
       ) : null}
       {likeError ? (
         <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-          Could not update your like. Try again.
+          {language === 'es'
+            ? 'No se pudo actualizar tu me gusta. Inténtalo de nuevo.'
+            : 'Could not update your like. Try again.'}
         </Text>
       ) : null}
     </View>
@@ -101,12 +105,17 @@ function PostReactions({
   onLike: () => void;
   onComments: () => void;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   return (
     <View style={styles.actions}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`}
+        accessibilityLabel={
+          language === 'es'
+            ? `${post.liked_by_me ? 'Ya no me gusta' : 'Me gusta'} la publicación de ${name}`
+            : `${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`
+        }
         accessibilityState={{
           selected: post.liked_by_me,
           disabled: likePending,
@@ -122,18 +131,26 @@ function PostReactions({
           color={post.liked_by_me ? p.brand : p.ink}
         />
         <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-          {countLabel(post.like_count, 'like')}
+          {countLabel(
+            post.like_count,
+            language === 'es' ? 'me gusta' : 'like',
+            language === 'es' ? 'me gusta' : 'likes',
+          )}
         </Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Comments on post by ${name}, ${countLabel(post.comment_count, 'comment')}`}
+        accessibilityLabel={`${language === 'es' ? `Comentarios de la publicación de ${name}` : `Comments on post by ${name}`}, ${countLabel(post.comment_count, language === 'es' ? 'comentario' : 'comment', language === 'es' ? 'comentarios' : 'comments')}`}
         onPress={onComments}
         style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
       >
         <Ionicons name="chatbubble-outline" size={22} color={p.ink} />
         <Text style={[textStyles.label, styles.tabular, { color: p.ink }]}>
-          {countLabel(post.comment_count, 'comment')}
+          {countLabel(
+            post.comment_count,
+            language === 'es' ? 'comentario' : 'comment',
+            language === 'es' ? 'comentarios' : 'comments',
+          )}
         </Text>
       </Pressable>
     </View>
@@ -146,6 +163,7 @@ function PostByline({
   name,
   onAuthor,
 }: Readonly<{ accountId: number; post: Post; name: string; onAuthor?: (post: Post) => void }>) {
+  const language = useLanguage();
   const p = usePalette();
   const byline = (
     <>
@@ -155,8 +173,8 @@ function PostByline({
           {name}
         </Text>
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {relativeTime(post.created_at)}
-          {visibilityNote[post.visibility] ?? ''}
+          {relativeTime(post.created_at, undefined, language)}
+          {post.visibility === 'PRIVATE' ? (language === 'es' ? ' · Solo tú' : ' · Only you') : ''}
         </Text>
       </View>
     </>
@@ -165,7 +183,9 @@ function PostByline({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open ${name}’s profile`}
+      accessibilityLabel={
+        language === 'es' ? `Abrir el perfil de ${name}` : `Open ${name}’s profile`
+      }
       onPress={() => onAuthor(post)}
       style={({ pressed }) => [styles.author, { opacity: pressed ? 0.65 : 1 }]}
     >
@@ -179,6 +199,7 @@ function MediaCarousel({
   post,
   name,
 }: Readonly<{ accountId: number; post: Post; name: string }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
@@ -201,7 +222,11 @@ function MediaCarousel({
               key={item.id}
               accountId={accountId}
               path={item.url}
-              label={`Photo ${position + 1} of ${total} by ${name}`}
+              label={
+                language === 'es'
+                  ? `Foto ${position + 1} de ${total} de ${name}`
+                  : `Photo ${position + 1} of ${total} by ${name}`
+              }
               style={{ width, height: 160, borderRadius: radii['radius-md'] }}
             />
           ))}
@@ -210,7 +235,12 @@ function MediaCarousel({
         <View style={styles.photoPlaceholder} />
       )}
       {total > 1 ? (
-        <View style={styles.dots} accessibilityLabel={`Photo ${index + 1} of ${total}`}>
+        <View
+          style={styles.dots}
+          accessibilityLabel={
+            language === 'es' ? `Foto ${index + 1} de ${total}` : `Photo ${index + 1} of ${total}`
+          }
+        >
           {post.media.map((item, position) => (
             <View
               key={item.id}
@@ -237,7 +267,13 @@ function PostWorkoutSummary({
   label,
   onPress,
 }: Readonly<{ workout: WorkoutSummary; label: string; onPress?: () => void }>) {
-  const date = workoutDate.format(new Date(workout.ended_at));
+  const language = useLanguage();
+  const date =
+    language === 'es'
+      ? new Intl.DateTimeFormat('es', { month: 'short', day: 'numeric', year: 'numeric' }).format(
+          new Date(workout.ended_at),
+        )
+      : workoutDate.format(new Date(workout.ended_at));
   return (
     <WorkoutSummaryCard
       embedded
@@ -250,10 +286,6 @@ function PostWorkoutSummary({
     />
   );
 }
-
-const visibilityNote: Partial<Record<Post['visibility'], string>> = {
-  PRIVATE: ' · Only you',
-};
 
 const styles = StyleSheet.create({
   author: {

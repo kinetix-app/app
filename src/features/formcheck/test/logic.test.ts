@@ -143,3 +143,23 @@ test('praises what passed on every rep and calls a clean high-scoring set great'
   expect(solid.verdict).toBe('Solid set');
   expect(solid.praise).toEqual([]);
 });
+
+test('builds Spanish analysis copy from stable criterion IDs', () => {
+  const profile = profileForExercise('Back squat')!;
+  const result = buildAnalysisView(
+    profile,
+    {
+      profileId: profile.id,
+      analyzedAt: '2026-10-25T10:00:00.000Z',
+      durationSeconds: 5,
+      status: 'assessed',
+      reps: [{ index: 1, issues: ['depth'] }],
+    },
+    'es',
+  );
+  expect(result.kind).toBe('assessed');
+  if (result.kind === 'assessed') {
+    expect(result.issues[0].title).toContain('Repetición 1');
+    expect(result.tip).toContain('banco');
+  }
+});

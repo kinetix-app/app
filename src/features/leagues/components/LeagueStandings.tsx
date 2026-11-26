@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
@@ -14,23 +15,29 @@ import { roundRange } from '../scoreDisplay';
 import { LeagueScoreHistory } from './LeagueScoreHistory';
 import { LeagueAction, LeagueRankingRow, leagueStyles } from './LeagueUI';
 
-function roundOptions(catalog: Awaited<ReturnType<typeof leaguesApi.rounds>> | undefined) {
+function roundOptions(
+  catalog: Awaited<ReturnType<typeof leaguesApi.rounds>> | undefined,
+  language: 'en' | 'es',
+) {
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const options: { value: RoundSelection; label: string; detail?: string }[] = [
-    { value: null, label: 'All rounds' },
+    { value: null, label: t('All rounds', 'Todas las rondas') },
   ];
   if (catalog) {
     const { timezone, current_round_id } = catalog;
     const current = catalog.rounds.find((round) => round.id === current_round_id);
     options.push({
       value: 'current',
-      label: 'Current round',
-      detail: current ? roundRange(current.start_at, current.end_at, timezone) : undefined,
+      label: t('Current round', 'Ronda actual'),
+      detail: current
+        ? roundRange(current.start_at, current.end_at, timezone, language)
+        : undefined,
     });
     for (const round of catalog.rounds) {
       if (round.id !== current_round_id)
         options.push({
           value: round.id,
-          label: roundRange(round.start_at, round.end_at, timezone),
+          label: roundRange(round.start_at, round.end_at, timezone, language),
         });
     }
   }
@@ -50,6 +57,8 @@ export function LeagueStandings({
   active?: boolean;
   onBack?: () => void;
 }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   const [view, setView] = useState<'rankings' | 'breakdown'>('rankings');
   const [roundSelection, setRoundSelection] = useState<RoundSelection>('current');
@@ -100,7 +109,7 @@ export function LeagueStandings({
       />
     );
   }
-  const options = roundOptions(rounds.data);
+  const options = roundOptions(rounds.data, language);
   const showingRankings = view === 'rankings';
   const page = showingRankings ? rankings : contributions;
   const next = () => {
@@ -128,14 +137,20 @@ export function LeagueStandings({
         <ActivityIndicator
           color={p.brand}
           accessibilityLabel={
-            showingRankings ? 'Loading more standings' : 'Loading more contributions'
+            showingRankings
+              ? t('Loading more standings', 'Cargando más clasificaciones')
+              : t('Loading more contributions', 'Cargando más aportaciones')
           }
         />
       );
     if (page.isFetchNextPageError)
       return (
         <LeagueAction
-          label={showingRankings ? 'Retry more standings' : 'Retry more contributions'}
+          label={
+            showingRankings
+              ? t('Retry more standings', 'Reintentar más clasificaciones')
+              : t('Retry more contributions', 'Reintentar más aportaciones')
+          }
           onPress={next}
         />
       );
@@ -144,18 +159,25 @@ export function LeagueStandings({
 
   function renderStatus() {
     const loadError = showingRankings
-      ? 'Could not load standings.'
-      : 'Could not load the points breakdown.';
+      ? t('Could not load standings.', 'No se pudo cargar la clasificación.')
+      : t('Could not load the points breakdown.', 'No se pudo cargar el desglose de puntos.');
     if (initialError)
       return (
         <>
           <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
             {initialError instanceof ApiError && initialError.status === 409
-              ? 'Standings are unavailable because this older league has no calendar.'
+              ? t(
+                  'Standings are unavailable because this older league has no calendar.',
+                  'La clasificación no está disponible porque esta liga antigua no tiene calendario.',
+                )
               : loadError}
           </Text>
           <LeagueAction
-            label={showingRankings ? 'Retry standings' : 'Retry points breakdown'}
+            label={
+              showingRankings
+                ? t('Retry standings', 'Reintentar clasificación')
+                : t('Retry points breakdown', 'Reintentar desglose de puntos')
+            }
             onPress={() => (rounds.isError ? rounds.refetch() : page.refetch())}
           />
         </>
@@ -164,7 +186,11 @@ export function LeagueStandings({
       return (
         <ActivityIndicator
           color={p.brand}
-          accessibilityLabel={showingRankings ? 'Loading standings' : 'Loading points breakdown'}
+          accessibilityLabel={
+            showingRankings
+              ? t('Loading standings', 'Cargando clasificación')
+              : t('Loading points breakdown', 'Cargando desglose de puntos')
+          }
         />
       );
     return null;
@@ -189,7 +215,7 @@ export function LeagueStandings({
         <View style={leagueStyles.section}>
           {header}
           <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-            Standings
+            {t('Standings', 'Clasificación')}
           </Text>
           {rounds.data ? (
             <>
@@ -200,12 +226,12 @@ export function LeagueStandings({
               />
               <View
                 accessibilityRole="tablist"
-                accessibilityLabel="Standings views"
+                accessibilityLabel={t('Standings views', 'Vistas de clasificación')}
                 style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: p.line }}
               >
                 <AnimatedTextSelector
                   role="tab"
-                  label="Rankings"
+                  label={t('Rankings', 'Clasificación')}
                   selected={showingRankings}
                   reduceMotion
                   equalWidth
@@ -213,7 +239,7 @@ export function LeagueStandings({
                 />
                 <AnimatedTextSelector
                   role="tab"
-                  label="Points breakdown"
+                  label={t('Points breakdown', 'Desglose de puntos')}
                   selected={!showingRankings}
                   reduceMotion
                   equalWidth
@@ -228,7 +254,12 @@ export function LeagueStandings({
       ListEmptyComponent={
         (page.isSuccess ? (
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            {showingRankings ? 'No standings yet.' : 'No credited workouts in this period.'}
+            {showingRankings
+              ? t('No standings yet.', 'Aún no hay clasificación.')
+              : t(
+                  'No credited workouts in this period.',
+                  'No hay entrenamientos puntuados en este periodo.',
+                )}
           </Text>
         ) : null) ?? undefined
       }

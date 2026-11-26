@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
@@ -69,6 +70,7 @@ export function LeagueAvatar({
   retryable?: boolean;
   invitationToken?: string;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   const { uri, failed, loading, setFailedUri, retry } = useLeaguePhoto(
     accountId,
@@ -76,7 +78,10 @@ export function LeagueAvatar({
     preview,
     invitationToken,
   );
-  const label = `${name} ${member ? 'profile' : 'league'} picture`;
+  const label =
+    language === 'es'
+      ? `Imagen ${member ? 'de perfil' : 'de liga'} de ${name}`
+      : `${name} ${member ? 'profile' : 'league'} picture`;
   let picture;
   if (uri && !failed) {
     picture = (
@@ -88,11 +93,20 @@ export function LeagueAvatar({
       />
     );
   } else if (loading) {
-    picture = <ActivityIndicator accessibilityLabel={`Loading ${label}`} color={p['brand-ink']} />;
+    picture = (
+      <ActivityIndicator
+        accessibilityLabel={language === 'es' ? `Cargando ${label}` : `Loading ${label}`}
+        color={p['brand-ink']}
+      />
+    );
   } else if (member) {
     picture = (
       <Text
-        accessibilityLabel={`${name} profile picture unavailable`}
+        accessibilityLabel={
+          language === 'es'
+            ? `Imagen de perfil de ${name} no disponible`
+            : `${name} profile picture unavailable`
+        }
         style={[textStyles.label, { color: p['brand-ink'] }]}
       >
         {name.slice(0, 1).toUpperCase()}
@@ -101,7 +115,9 @@ export function LeagueAvatar({
   } else {
     picture = (
       <Ionicons
-        accessibilityLabel="Default league picture"
+        accessibilityLabel={
+          language === 'es' ? 'Imagen predeterminada de liga' : 'Default league picture'
+        }
         name="trophy-outline"
         size={size > 64 ? 40 : 24}
         color={p['brand-ink']}
@@ -126,11 +142,13 @@ export function LeagueAvatar({
       {failed && retryable && path ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Retry ${label}`}
+          accessibilityLabel={language === 'es' ? `Reintentar ${label}` : `Retry ${label}`}
           onPress={retry}
           style={{ minHeight: 44, justifyContent: 'center' }}
         >
-          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry picture</Text>
+          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+            {language === 'es' ? 'Reintentar imagen' : 'Retry picture'}
+          </Text>
         </Pressable>
       ) : null}
     </View>

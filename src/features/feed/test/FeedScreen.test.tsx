@@ -1,4 +1,5 @@
 import React from 'react';
+import { LanguageProvider } from '@/i18n/Language';
 import { AccessibilityInfo, BackHandler, FlatList, Image, Modal, View } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -880,4 +881,19 @@ test('your comments can be deleted and older pages load at the end of the list',
   expect(feedApi.comments).toHaveBeenLastCalledWith(10, 2, expect.any(AbortSignal));
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(await screen.findByText('2 comments')).toBeTruthy();
+});
+
+test('Spanish feed localizes comments and keeps post content', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  clients.push(client);
+  render(
+    <QueryClientProvider client={client}>
+      <LanguageProvider language="es">
+        <FeedScreen accountId={1} />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+  fireEvent.press(await screen.findByRole('button', { name: /Comentarios de la publicación/ }));
+  expect(await screen.findByText('Aún no hay comentarios. Inicia la conversación.')).toBeTruthy();
+  expect(screen.getByLabelText('Escribe un comentario')).toBeTruthy();
 });

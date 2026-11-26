@@ -4,6 +4,7 @@ import React from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useLanguage } from '@/i18n/Language';
 import { CalendarGrid } from '@/components/CalendarGrid';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
@@ -42,14 +43,14 @@ const dateFromId = (id: string) => {
 const addDays = (date: Date, days: number) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 const mondayFor = (date: Date) => addDays(date, -((date.getDay() + 6) % 7));
-const weekFor = (monday: Date) => {
+const weekFor = (monday: Date, es: boolean) => {
   const today = new Date();
   return Array.from({ length: 7 }, (_, index) => {
     const date = addDays(monday, index);
     return {
       id: localDateId(date),
-      weekday: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date),
-      month: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date),
+      weekday: new Intl.DateTimeFormat(es ? 'es-ES' : 'en-US', { weekday: 'short' }).format(date),
+      month: new Intl.DateTimeFormat(es ? 'es-ES' : 'en-US', { month: 'short' }).format(date),
       day: String(date.getDate()),
       isToday: localDateId(date) === localDateId(today),
     };
@@ -68,8 +69,9 @@ export function NutritionDiaryScreen({
   onAddFoodOpenChange?: (isOpen: boolean) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [weekStart, setWeekStart] = React.useState(() => mondayFor(new Date()));
-  const week = React.useMemo(() => weekFor(weekStart), [weekStart]);
+  const week = React.useMemo(() => weekFor(weekStart, es), [weekStart, es]);
   const [selectedDay, setSelectedDay] = React.useState(() => localDateId(new Date()));
   const [selectedMeal, setSelectedMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
   const [editingMeal, setEditingMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
@@ -157,6 +159,9 @@ export function NutritionDiaryScreen({
     const goalValue = goal.data?.[macro.field];
     return {
       ...macro,
+      label: es
+        ? { protein: 'Proteínas', carbohydrates: 'Carbohidratos', fats: 'Grasas' }[macro.field]
+        : macro.label,
       value: consumed[macro.field],
       goalValue,
       progress:
@@ -186,12 +191,12 @@ export function NutritionDiaryScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={[screenContentStyle, styles.content]}>
           <ScreenHeader
-            title="Nutrition"
+            title={es ? 'Nutrición' : 'Nutrition'}
             leading={
               onBack ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Back to feed"
+                  accessibilityLabel={es ? 'Volver al inicio' : 'Back to feed'}
                   onPress={onBack}
                   style={({ pressed }) => [
                     styles.backButton,
@@ -205,13 +210,15 @@ export function NutritionDiaryScreen({
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open calendar"
+              accessibilityLabel={es ? 'Abrir calendario' : 'Open calendar'}
               onPress={openCalendar}
               style={styles.dateButton}
             >
               <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                 {selected.isToday
-                  ? 'Today'
+                  ? es
+                    ? 'Hoy'
+                    : 'Today'
                   : `${selected.weekday}, ${selected.month} ${selected.day}, ${dateFromId(selectedDay).getFullYear()}`}
               </Text>
               <Feather name="calendar" size={18} color={p['ink-muted']} />
@@ -220,12 +227,12 @@ export function NutritionDiaryScreen({
 
           <View
             accessibilityRole="tablist"
-            accessibilityLabel="Nutrition week"
+            accessibilityLabel={es ? 'Semana de nutrición' : 'Nutrition week'}
             style={styles.weekNavigation}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Previous week"
+              accessibilityLabel={es ? 'Semana anterior' : 'Previous week'}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(-1)}
@@ -259,7 +266,7 @@ export function NutritionDiaryScreen({
                     <Pressable
                       key={day.id}
                       accessibilityRole="tab"
-                      accessibilityLabel={`${day.weekday} October ${day.day}${day.isToday ? ', today' : ''}`}
+                      accessibilityLabel={`${day.weekday} ${day.month} ${day.day}${day.isToday ? (es ? ', hoy' : ', today') : ''}`}
                       accessibilityState={{ selected: isSelected }}
                       onPress={() => {
                         setSelectedDay(day.id);
@@ -292,7 +299,7 @@ export function NutritionDiaryScreen({
             </Animated.View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Next week"
+              accessibilityLabel={es ? 'Semana siguiente' : 'Next week'}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(1)}
@@ -309,17 +316,21 @@ export function NutritionDiaryScreen({
                   {formatNumber(consumed.calories)} kcal
                 </Text>
                 <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                  of {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
-                  {goal.data?.objective ? ` ${targetPurpose[goal.data.objective]}` : ''}
+                  {es ? 'de' : 'of'} {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
+                  {goal.data?.objective
+                    ? ` ${es ? { lose_fat: 'para perder grasa', build_muscle: 'para ganar músculo', gain_weight: 'para ganar peso', maintain_weight: 'para mantener el peso' }[goal.data.objective] : targetPurpose[goal.data.objective]}`
+                    : ''}
                 </Text>
               </View>
               {onEditGoal ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Edit nutrition goal"
+                  accessibilityLabel={es ? 'Editar objetivo nutricional' : 'Edit nutrition goal'}
                   onPress={onEditGoal}
                 >
-                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Edit goal</Text>
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                    {es ? 'Editar objetivo' : 'Edit goal'}
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
@@ -333,7 +344,11 @@ export function NutritionDiaryScreen({
                   </Text>
                 </View>
                 <View
-                  accessibilityLabel={`${macro.label}: ${macro.value} of ${macro.goalValue ?? 'unknown'} grams`}
+                  accessibilityLabel={
+                    es
+                      ? `${macro.label}: ${macro.value} de ${macro.goalValue ?? 'desconocido'} gramos`
+                      : `${macro.label}: ${macro.value} of ${macro.goalValue ?? 'unknown'} grams`
+                  }
                   accessibilityRole="progressbar"
                   accessibilityValue={
                     macro.goalValue === undefined || macro.goalValue === 0
@@ -360,7 +375,9 @@ export function NutritionDiaryScreen({
             ))}
             {goal.data === null ? (
               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                No nutrition target yet. You can keep recording food and set one later.
+                {es
+                  ? 'Todavía no tienes un objetivo nutricional. Puedes seguir registrando alimentos y definirlo más tarde.'
+                  : 'No nutrition target yet. You can keep recording food and set one later.'}
               </Text>
             ) : null}
             {goal.isError ? (
@@ -369,14 +386,20 @@ export function NutritionDiaryScreen({
                   accessibilityRole="alert"
                   style={[textStyles['body-sm'], { color: p.danger }]}
                 >
-                  We could not load your nutrition goal.
+                  {es
+                    ? 'No se pudo cargar tu objetivo nutricional.'
+                    : 'We could not load your nutrition goal.'}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Retry loading nutrition goal"
+                  accessibilityLabel={
+                    es ? 'Volver a cargar el objetivo nutricional' : 'Retry loading nutrition goal'
+                  }
                   onPress={() => void goal.refetch()}
                 >
-                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry</Text>
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                    {es ? 'Reintentar' : 'Retry'}
+                  </Text>
                 </Pressable>
               </View>
             ) : null}
@@ -386,7 +409,15 @@ export function NutritionDiaryScreen({
             <View key={meal} style={styles.mealGroup}>
               <View style={styles.mealHeading}>
                 <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-                  {meal.toUpperCase()}
+                  {(es
+                    ? {
+                        Breakfast: 'Desayuno',
+                        Lunch: 'Comida',
+                        Dinner: 'Cena',
+                        Snacks: 'Tentempiés',
+                      }[meal]
+                    : meal
+                  ).toUpperCase()}
                 </Text>
                 <View style={styles.mealHeaderActions}>
                   {consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
@@ -406,11 +437,15 @@ export function NutritionDiaryScreen({
                   ) : null}
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`${editingMeal === meal ? 'Finish editing' : 'Edit'} ${meal}`}
+                    accessibilityLabel={
+                      es
+                        ? `${editingMeal === meal ? 'Terminar edición de' : 'Editar'} ${{ Breakfast: 'desayuno', Lunch: 'comida', Dinner: 'cena', Snacks: 'tentempiés' }[meal]}`
+                        : `${editingMeal === meal ? 'Finish editing' : 'Edit'} ${meal}`
+                    }
                     onPress={() => toggleMealEditing(meal)}
                   >
                     <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                      {editingMeal === meal ? 'Done' : 'Edit'}
+                      {editingMeal === meal ? (es ? 'Listo' : 'Done') : es ? 'Editar' : 'Edit'}
                     </Text>
                   </Pressable>
                 </View>
@@ -426,7 +461,11 @@ export function NutritionDiaryScreen({
                             <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                             <View style={styles.itemLine}>
                               <TextField
-                                accessibilityLabel={`Edit ${item.name} quantity`}
+                                accessibilityLabel={
+                                  es
+                                    ? `Editar cantidad de ${item.name}`
+                                    : `Edit ${item.name} quantity`
+                                }
                                 keyboardType="decimal-pad"
                                 value={draftAmounts[item.id] ?? ''}
                                 onChangeText={(value) =>
@@ -436,7 +475,7 @@ export function NutritionDiaryScreen({
                                 inputStyle={styles.quantityInput}
                                 trailing={
                                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                                    {item.recipe_id ? 'servings' : 'g'}
+                                    {item.recipe_id ? (es ? 'raciones' : 'servings') : 'g'}
                                   </Text>
                                 }
                               />
@@ -453,7 +492,11 @@ export function NutritionDiaryScreen({
                               <View style={styles.itemEditActions}>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={`Save ${item.name} quantity`}
+                                  accessibilityLabel={
+                                    es
+                                      ? `Guardar cantidad de ${item.name}`
+                                      : `Save ${item.name} quantity`
+                                  }
                                   accessibilityState={{
                                     disabled:
                                       updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
@@ -474,7 +517,9 @@ export function NutritionDiaryScreen({
                                 </Pressable>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={`Delete ${item.name}`}
+                                  accessibilityLabel={
+                                    es ? `Eliminar ${item.name}` : `Delete ${item.name}`
+                                  }
                                   disabled={removeItem.isPending}
                                   onPress={() => removeItem.mutate(item.id)}
                                   style={styles.deleteItem}
@@ -490,7 +535,7 @@ export function NutritionDiaryScreen({
                               <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
                                 {item.recipe_id
-                                  ? servingLabel(item.servings)
+                                  ? servingLabel(item.servings, es)
                                   : `${item.quantity_grams} g`}
                               </Text>
                             </View>
@@ -508,19 +553,25 @@ export function NutritionDiaryScreen({
                       accessibilityRole="alert"
                       style={[textStyles['body-sm'], { color: p.danger }]}
                     >
-                      We could not update this entry.
+                      {es
+                        ? 'No se pudo actualizar este registro.'
+                        : 'We could not update this entry.'}
                     </Text>
                   ) : null}
                   {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
                     <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                      No food logged yet
+                      {es ? 'Aún no hay alimentos registrados' : 'No food logged yet'}
                     </Text>
                   ) : null}
                 </View>
                 {editingMeal !== meal ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Add food to ${meal}`}
+                    accessibilityLabel={
+                      es
+                        ? `Añadir alimentos a ${{ Breakfast: 'desayuno', Lunch: 'comida', Dinner: 'cena', Snacks: 'tentempiés' }[meal]}`
+                        : `Add food to ${meal}`
+                    }
                     onPress={() => {
                       setSelectedMeal(meal);
                       onAddFoodOpenChange?.(true);
@@ -566,7 +617,8 @@ function CalendarModal({
   onClose: () => void;
 }>) {
   const p = usePalette();
-  const monthLabel = new Intl.DateTimeFormat('en-US', {
+  const es = useLanguage() === 'es';
+  const monthLabel = new Intl.DateTimeFormat(es ? 'es-ES' : 'en-US', {
     month: 'long',
     year: 'numeric',
   }).format(month);
@@ -580,7 +632,7 @@ function CalendarModal({
           <View style={styles.calendarHeader}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Previous month"
+              accessibilityLabel={es ? 'Mes anterior' : 'Previous month'}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
               style={styles.calendarArrow}
             >
@@ -589,7 +641,7 @@ function CalendarModal({
             <Text style={[textStyles['title-md'], { color: p.ink }]}>{monthLabel}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Next month"
+              accessibilityLabel={es ? 'Mes siguiente' : 'Next month'}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
               style={styles.calendarArrow}
             >
@@ -607,7 +659,7 @@ function CalendarModal({
             onPress={onClose}
             style={[styles.calendarClose, { backgroundColor: p['surface-300'] }]}
           >
-            <Text style={[textStyles.label, { color: p.ink }]}>Cancel</Text>
+            <Text style={[textStyles.label, { color: p.ink }]}>{es ? 'Cancelar' : 'Cancel'}</Text>
           </Pressable>
         </View>
       </View>
@@ -615,8 +667,14 @@ function CalendarModal({
   );
 }
 
-function servingLabel(servings: number | null | undefined) {
-  const unit = servings === 1 ? 'serving' : 'servings';
+function servingLabel(servings: number | null | undefined, es: boolean) {
+  const unit = es
+    ? servings === 1
+      ? 'ración'
+      : 'raciones'
+    : servings === 1
+      ? 'serving'
+      : 'servings';
   return `${servings} ${unit}`;
 }
 

@@ -4,23 +4,16 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
+import { useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import { Failure, IconButton, Loading, ui } from './ui';
 import { SessionWorkoutDetailModal } from './SessionWorkoutDetail';
 import { WorkoutSummaryCard } from './WorkoutSummaryCard';
 
-const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
-const dayFormat = new Intl.DateTimeFormat(undefined, {
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-});
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
-
 export function WorkoutHistory({
   accountId,
   onClose,
-  backLabel = 'Back to routines',
+  backLabel,
   active = true,
   onShare,
 }: Readonly<{
@@ -32,6 +25,15 @@ export function WorkoutHistory({
   onShare?: (sessionId: number) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
+  const locale = es ? 'es' : undefined;
+  const monthFormat = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
+  const dayFormat = new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  const timeFormat = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' });
   const unit = 'kg';
   const [selected, setSelected] = useState<number | null>(null);
   const detailOpen = active && selected !== null;
@@ -75,9 +77,13 @@ export function WorkoutHistory({
         style={[styles.header, { borderColor: p.line }]}
       >
         <View style={[ui.row, styles.headerContent]}>
-          <IconButton icon="arrow-left" label={backLabel} onPress={onClose} />
+          <IconButton
+            icon="arrow-left"
+            label={backLabel ?? (es ? 'Volver a rutinas' : 'Back to routines')}
+            onPress={onClose}
+          />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
-            Workout history
+            {es ? 'Historial de entrenamientos' : 'Workout history'}
           </Text>
         </View>
       </View>
@@ -91,7 +97,9 @@ export function WorkoutHistory({
         ListHeaderComponent={listHeader ?? undefined}
         ListEmptyComponent={
           (!list.isPending && !list.isError ? (
-            <Text style={{ color: p['ink-muted'] }}>No completed workouts yet.</Text>
+            <Text style={{ color: p['ink-muted'] }}>
+              {es ? 'Aún no hay entrenamientos completados.' : 'No completed workouts yet.'}
+            </Text>
           ) : null) ?? undefined
         }
         renderItem={({ item, index }) => {
@@ -102,7 +110,7 @@ export function WorkoutHistory({
             !previous || month !== monthFormat.format(new Date(previous.ended_at));
           const day = dayFormat.format(completed);
           const time = timeFormat.format(completed);
-          const when = `${day} at ${time}`;
+          const when = es ? `${day} a las ${time}` : `${day} at ${time}`;
           const seconds = Math.max(
             0,
             Math.floor((completed.getTime() - Date.parse(item.started_at)) / 1000),
@@ -125,7 +133,7 @@ export function WorkoutHistory({
                 volumeKg={item.total_volume_kg}
                 exerciseCount={item.exercises.length}
                 open={{
-                  label: `View ${item.title} from ${when}`,
+                  label: es ? `Ver ${item.title} del ${when}` : `View ${item.title} from ${when}`,
                   onPress: () => setSelected(item.id),
                 }}
               />
@@ -143,7 +151,7 @@ export function WorkoutHistory({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={selected}
-          backLabel="Back to history"
+          backLabel={es ? 'Volver al historial' : 'Back to history'}
           onBack={() => setSelected(null)}
           showShare={Boolean(onShare)}
           onShare={shareSelected}

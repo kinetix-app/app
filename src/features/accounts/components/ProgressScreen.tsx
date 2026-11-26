@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useLanguage } from '@/i18n/Language';
 import { ChartMetricSelector } from '@/components/ChartMetricSelector';
 import { Button } from '@/components/Button';
 import { EvolutionGraph } from '@/components/EvolutionGraph';
@@ -52,6 +53,8 @@ export function ProgressScreen({
   onClose,
 }: Readonly<{ account: Account; onClose: () => void }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const cache = useQueryClient();
   const system = account.profile.measurement_system ?? 'metric';
   const accountId = account.id;
@@ -71,14 +74,14 @@ export function ProgressScreen({
   const items = measurements.data?.items ?? noMeasurements;
   const points = useMemo(() => measurementSeries(items, metric, system), [items, metric, system]);
   const highlighted = points.find((point) => point.date === selected) ?? points.at(-1);
-  const label = measurementDefinitions[metric].label;
+  const label = es ? measurementDefinitions[metric].labelEs : measurementDefinitions[metric].label;
 
   function measurementSaved(measurement: BodyMeasurement) {
     const measured = measurementMetrics.find((key) => measurement[key] !== null);
     if (measured && measurement[metric] === null) setMetric(measured);
     setSelected(null);
     setEditor(null);
-    setToast('Measurements saved.');
+    setToast(es ? 'Medidas guardadas.' : 'Measurements saved.');
     const queryKey = measurementKey(accountId);
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData<typeof measurements.data>(queryKey, (previous) =>
@@ -93,7 +96,7 @@ export function ProgressScreen({
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData(queryKey, result);
     setEditor(null);
-    setToast('Weight target saved.');
+    setToast(es ? 'Peso objetivo guardado.' : 'Weight target saved.');
   }
 
   return (
@@ -114,9 +117,12 @@ export function ProgressScreen({
           contentContainerStyle={[screenContentStyle, styles.content]}
           ListHeaderComponent={
             <View style={styles.sections}>
-              <ScreenHeader title="Progress" leading={<ProfileBack onPress={onClose} />} />
+              <ScreenHeader
+                title={es ? 'Progreso' : 'Progress'}
+                leading={<ProfileBack onPress={onClose} />}
+              />
               <Button
-                title="Log measurements"
+                title={es ? 'Registrar medidas' : 'Log measurements'}
                 tone="positive"
                 shape="rounded"
                 icon="plus"
@@ -128,24 +134,31 @@ export function ProgressScreen({
               />
               <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  Measurement trends
+                  {es ? 'Evolución de medidas' : 'Measurement trends'}
                 </Text>
                 <ChartMetricSelector
                   metrics={measurementMetrics}
                   value={metric}
-                  label="Measurement metric"
-                  labelFor={(key) => measurementDefinitions[key].label}
+                  label={es ? 'Medida' : 'Measurement metric'}
+                  labelFor={(key) =>
+                    es ? measurementDefinitions[key].labelEs : measurementDefinitions[key].label
+                  }
                   onChange={(key) => {
                     setMetric(key);
                     setSelected(null);
                   }}
                 />
                 {measurements.isPending ? (
-                  <ActivityIndicator accessibilityLabel="Loading measurements" color={p.brand} />
+                  <ActivityIndicator
+                    accessibilityLabel={es ? 'Cargando medidas' : 'Loading measurements'}
+                    color={p.brand}
+                  />
                 ) : null}
                 {measurements.isError ? (
                   <LoadProblem
-                    message="Could not load measurements."
+                    message={
+                      es ? 'No se pudieron cargar las medidas.' : 'Could not load measurements.'
+                    }
                     onRetry={() => void measurements.refetch()}
                   />
                 ) : null}
@@ -159,8 +172,12 @@ export function ProgressScreen({
                         measurements.isError
                           ? undefined
                           : {
-                              title: `No ${label.toLowerCase()} measurements yet.`,
-                              hint: 'Log a measurement to start tracking.',
+                              title: es
+                                ? `Aún no hay medidas de ${label.toLowerCase()}.`
+                                : `No ${label.toLowerCase()} measurements yet.`,
+                              hint: es
+                                ? 'Registra una medida para empezar.'
+                                : 'Log a measurement to start tracking.',
                             }
                       }
                       selected={selected}
@@ -181,15 +198,22 @@ export function ProgressScreen({
                     accessibilityRole="header"
                     style={[textStyles['title-md'], { color: p.ink }]}
                   >
-                    Weight target
+                    {es ? 'Peso objetivo' : 'Weight target'}
                   </Text>
                 </View>
                 {target.isPending ? (
-                  <ActivityIndicator accessibilityLabel="Loading weight target" color={p.brand} />
+                  <ActivityIndicator
+                    accessibilityLabel={es ? 'Cargando peso objetivo' : 'Loading weight target'}
+                    color={p.brand}
+                  />
                 ) : null}
                 {target.isError ? (
                   <LoadProblem
-                    message="Could not load your weight target."
+                    message={
+                      es
+                        ? 'No se pudo cargar tu peso objetivo.'
+                        : 'Could not load your weight target.'
+                    }
                     onRetry={() => void target.refetch()}
                   />
                 ) : null}
@@ -206,11 +230,13 @@ export function ProgressScreen({
               </View>
               <View style={styles.historyHead}>
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  Measurement history
+                  {es ? 'Historial de medidas' : 'Measurement history'}
                 </Text>
                 {measurements.isSuccess && items.length === 0 ? (
                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    Saved check-ins will appear here.
+                    {es
+                      ? 'Las medidas guardadas aparecerán aquí.'
+                      : 'Saved check-ins will appear here.'}
                   </Text>
                 ) : null}
               </View>
@@ -281,13 +307,14 @@ function MeasurementHeadline({
   highlighted,
 }: Readonly<{ highlighted: ReturnType<typeof measurementSeries>[number] }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <View style={styles.metric}>
       <Text style={[textStyles['metric-lg'], styles.numbers, { color: p.ink }]}>
         {highlighted.label}
       </Text>
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {displayProgressDate(highlighted.date)}
+        {displayProgressDate(highlighted.date, language)}
       </Text>
     </View>
   );
@@ -295,15 +322,16 @@ function MeasurementHeadline({
 
 function LoadProblem({ message, onRetry }: Readonly<{ message: string; onRetry: () => void }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   return (
     <View style={styles.metric}>
       <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
         {message}
       </Text>
       <Button
-        title="Retry"
+        title={es ? 'Reintentar' : 'Retry'}
         shape="rounded"
-        accessibilityLabel={`Retry. ${message}`}
+        accessibilityLabel={`${es ? 'Reintentar' : 'Retry'}. ${message}`}
         onPress={onRetry}
         secondary
       />
@@ -321,11 +349,15 @@ function TargetCardContent({
   onEdit: (objective: Objective, target: PhysicalTarget['target']) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const { objective, target } = data;
   if (!objective) {
     return (
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        Choose an objective in Profile to set a weight target.
+        {es
+          ? 'Elige un objetivo en tu perfil para fijar un peso objetivo.'
+          : 'Choose an objective in Profile to set a weight target.'}
       </Text>
     );
   }
@@ -333,7 +365,10 @@ function TargetCardContent({
     <View style={styles.targetRow}>
       <View style={styles.targetDetails}>
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {objectiveOptions.find((option) => option.value === objective)?.label}
+          {(() => {
+            const option = objectiveOptions.find((item) => item.value === objective);
+            return option ? (es ? option.labelEs : option.label) : '';
+          })()}
         </Text>
         {target ? (
           <>
@@ -342,16 +377,21 @@ function TargetCardContent({
             </Text>
             {target.target_date ? (
               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                Target date · {displayProgressDate(target.target_date)}
+                {es ? 'Fecha objetivo' : 'Target date'} ·{' '}
+                {displayProgressDate(target.target_date, language)}
               </Text>
             ) : null}
           </>
         ) : (
-          <Text style={[textStyles.body, { color: p.ink }]}>No weight target set.</Text>
+          <Text style={[textStyles.body, { color: p.ink }]}>
+            {es ? 'No hay peso objetivo.' : 'No weight target set.'}
+          </Text>
         )}
       </View>
       <Button
-        title={target ? 'Edit target' : 'Set target'}
+        title={
+          target ? (es ? 'Editar objetivo' : 'Edit target') : es ? 'Fijar objetivo' : 'Set target'
+        }
         shape="rounded"
         secondary
         onPress={() => onEdit(objective, target)}
@@ -365,9 +405,13 @@ function MeasurementHistoryRow({
   system,
 }: Readonly<{ item: BodyMeasurement; system: MeasurementSystem }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   return (
     <View style={[styles.historyCard, { backgroundColor: p['surface-200'] }]}>
-      <Text style={[textStyles.label, { color: p.ink }]}>{displayProgressDate(item.date)}</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>
+        {displayProgressDate(item.date, language)}
+      </Text>
       <View style={styles.historyMetrics}>
         {measurementMetrics.map((metric) => {
           const raw = item[metric];
@@ -377,7 +421,7 @@ function MeasurementHistoryRow({
               key={metric}
               style={[textStyles['body-sm'], styles.numbers, { color: p['ink-muted'] }]}
             >
-              {measurementDefinitions[metric].label}{' '}
+              {es ? measurementDefinitions[metric].labelEs : measurementDefinitions[metric].label}{' '}
               <Text style={[textStyles.label, { color: p.ink }]}>
                 {shownMeasurement(metric, raw, system)}
               </Text>

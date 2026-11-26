@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LanguageProvider } from '@/i18n/Language';
 import { getObjective } from '@/features/accounts/api';
 import { nutritionApi } from '../api';
 import { NutritionGoalEditor } from '../components/NutritionGoalEditor';
@@ -25,18 +26,20 @@ const existing = {
   carbohydrates: 250.25,
   fats: 0,
 };
-function editor() {
+function editor(language: 'en' | 'es' = 'en') {
   const onClose = jest.fn();
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { gcTime: 0 } },
-        })
-      }
-    >
-      <NutritionGoalEditor accountId={1} onClose={onClose} />
-    </QueryClientProvider>,
+    <LanguageProvider language={language}>
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { gcTime: 0 } },
+          })
+        }
+      >
+        <NutritionGoalEditor accountId={1} onClose={onClose} />
+      </QueryClientProvider>
+    </LanguageProvider>,
   );
   return onClose;
 }
@@ -224,4 +227,12 @@ test('percentage changes stay within the calorie split and never show an over-bu
   expect(screen.queryByText(/Out of budget/)).toBeNull();
   expect(screen.getByRole('button', { name: 'Save goal' })).toBeEnabled();
   expect(nutritionApi.createGoal).not.toHaveBeenCalled();
+});
+
+test('shows the goal editor and macro controls in Spanish', async () => {
+  jest.mocked(nutritionApi.goal).mockResolvedValue(null);
+  editor('es');
+  expect(await screen.findByLabelText('Objetivo diario de calorías')).toBeTruthy();
+  expect(screen.getByLabelText('Proteínas porcentaje')).toBeTruthy();
+  expect(screen.getByText('Guardar objetivo')).toBeTruthy();
 });

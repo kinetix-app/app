@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { LanguageProvider } from '@/i18n/Language';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ObjectiveEditor, objectiveOptions } from '../components/ObjectiveEditor';
 import { getAccount, getObjective, setObjective } from '../api';
@@ -69,4 +70,26 @@ test('an objective save failure keeps its selection and retries only on explicit
   fireEvent.press(screen.getByText('Save objective'));
   await waitFor(() => expect(saved).toHaveBeenCalledWith(completeAccount));
   expect(setObjective).toHaveBeenCalledTimes(2);
+});
+
+test('saved Spanish preference localizes objective choices and submission', async () => {
+  jest.mocked(setObjective).mockResolvedValue({ objective: 'build_muscle' });
+  const onSaved = jest.fn();
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { gcTime: 0 }, mutations: { gcTime: 0 } } })
+      }
+    >
+      <LanguageProvider language="es">
+        <ObjectiveEditor accountId={1} onSaved={onSaved} />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole('radio', { name: 'Ganar músculo' });
+  expect(screen.getByText('¿Cuál es tu objetivo?')).toBeTruthy();
+  fireEvent.press(screen.getByRole('radio', { name: 'Ganar músculo' }));
+  fireEvent.press(screen.getByText('Guardar objetivo'));
+  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(setObjective).toHaveBeenCalledWith('build_muscle');
 });

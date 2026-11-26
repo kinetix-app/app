@@ -1,6 +1,13 @@
+import type { Language } from '@/i18n/Language';
 import { bundledSpecs } from './engine';
 import type { FormCheckProfile } from './profiles';
-import { genericReasons, unknownReason, type NotAssessableReason } from './reasons';
+import {
+  genericReasons,
+  unknownReason,
+  spanishReasons,
+  spanishUnknownReason,
+  type NotAssessableReason,
+} from './reasons';
 import type { FormAnalysis } from './schemas';
 
 export type RepView = { index: number; ok: boolean; label: string };
@@ -32,22 +39,29 @@ const MAX_PRAISE = 3;
 const GREAT_SCORE = 90;
 
 /** "4", "4 and 5", "1, 3 and 4". */
-export function listReps(reps: number[]): string {
+export function listReps(reps: number[], language: Language = 'en'): string {
   if (reps.length <= 1) return reps.join('');
-  return `${reps.slice(0, -1).join(', ')} and ${reps.at(-1)}`;
+  return `${reps.slice(0, -1).join(', ')} ${language === 'es' ? 'y' : 'and'} ${reps.at(-1)}`;
 }
 
 /** Turns stored ids into display text. Unknown ids degrade to generic text instead of failing. */
-export function buildAnalysisView(profile: FormCheckProfile, analysis: FormAnalysis): AnalysisView {
+export function buildAnalysisView(
+  profile: FormCheckProfile,
+  analysis: FormAnalysis,
+  language: Language = 'en',
+): AnalysisView {
   if (analysis.status === 'not_assessable') {
     return {
       kind: 'not_assessable',
       reasons: analysis.reasons.map((id) => ({
         id,
-        ...(profile.reasonOverrides?.[id] ?? genericReasons[id] ?? unknownReason),
+        ...(language === 'es'
+          ? (spanishReasons[id] ?? spanishUnknownReason)
+          : (profile.reasonOverrides?.[id] ?? genericReasons[id] ?? unknownReason)),
       })),
     };
   }
+  const cues = bundledSpecs[profile.specId]?.cues ?? {};
   const checks = new Map(profile.checks.map((check) => [check.id, check]));
   const affected = new Map<string, number[]>();
   for (const rep of analysis.reps)
@@ -55,35 +69,53 @@ export function buildAnalysisView(profile: FormCheckProfile, analysis: FormAnaly
   const issues = [...affected.entries()]
     .map(([id, reps]) => {
       const check = checks.get(id);
-      const text = check?.title[reps.length === 1 ? 'one' : 'other'] ?? 'Form issue on rep {reps}';
+      const text =
+        language === 'es'
+          ? `${reps.length === 1 ? 'Repetición' : 'Repeticiones'} {reps}: ${cues[id]?.live.es ?? 'revisa la técnica'}`
+          : (check?.title[reps.length === 1 ? 'one' : 'other'] ?? 'Form issue on rep {reps}');
       return {
         id,
-        label: check?.label ?? 'Form',
-        title: text.replace('{reps}', listReps(reps)),
-        explanation: check?.explanation ?? '',
+        label: language === 'es' ? (cues[id]?.label.es ?? 'Técnica') : (check?.label ?? 'Form'),
+        title: text.replace('{reps}', listReps(reps, language)),
+        explanation: language === 'es' ? '' : (check?.explanation ?? ''),
         reps,
       };
     })
     .sort((a, b) => b.reps.length - a.reps.length);
-  const cues = bundledSpecs[profile.specId]?.cues ?? {};
   const praise = (analysis.strengths ?? [])
-    .map((id) => checks.get(id)?.praise ?? cues[id]?.good.en)
+    .map((id) =>
+      language === 'es' ? cues[id]?.good.es : (checks.get(id)?.praise ?? cues[id]?.good.en),
+    )
     .filter((text): text is string => Boolean(text))
     .slice(0, MAX_PRAISE);
   const score = analysis.score ?? null;
-  const first = (rep: { issues: string[] }) => checks.get(rep.issues[0])?.repLabel ?? 'Check';
+  const first = (rep: { issues: string[] }) =>
+    language === 'es'
+      ? (cues[rep.issues[0]]?.live.es ?? 'Revisar')
+      : (checks.get(rep.issues[0])?.repLabel ?? 'Check');
   return {
     kind: 'assessed',
     repCount: analysis.reps.length,
     reps: analysis.reps.map((rep) => ({
       index: rep.index,
       ok: rep.issues.length === 0,
-      label: rep.issues.length === 0 ? 'Good' : first(rep),
+      label: rep.issues.length === 0 ? (language === 'es' ? 'Bien' : 'Good') : first(rep),
     })),
     issues,
-    tip: issues.length ? (checks.get(issues[0].id)?.tip ?? null) : null,
+    tip: issues.length
+      ? language === 'es'
+        ? (cues[issues[0].id]?.fix.es ?? null)
+        : (checks.get(issues[0].id)?.tip ?? null)
+      : null,
     score,
     praise,
-    verdict: score !== null && score >= GREAT_SCORE ? 'Great set' : 'Solid set',
+    verdict:
+      score !== null && score >= GREAT_SCORE
+        ? language === 'es'
+          ? 'Gran serie'
+          : 'Great set'
+        : language === 'es'
+          ? 'Buena serie'
+          : 'Solid set',
   };
 }

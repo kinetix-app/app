@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -16,7 +17,7 @@ export function PersonScreen({
   personId,
   fallbackName,
   onBack,
-  backLabel = 'Back',
+  backLabel,
 }: Readonly<{
   accountId: number;
   personId: number;
@@ -24,12 +25,13 @@ export function PersonScreen({
   onBack: () => void;
   backLabel?: string;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   const person = useQuery({
     queryKey: [...friendsKey(accountId), 'person', personId],
     queryFn: ({ signal }) => friendsApi.person(personId, signal),
   });
-  const name = personName(person.data?.display_name ?? fallbackName ?? null);
+  const name = personName(person.data?.display_name ?? fallbackName ?? null, language);
   const missing = person.error instanceof ApiError && person.error.status === 404;
   return (
     <SafeAreaView
@@ -38,9 +40,13 @@ export function PersonScreen({
     >
       <ScrollView contentContainerStyle={ui.content}>
         <View style={ui.row}>
-          <IconButton icon="arrow-left" label={backLabel} onPress={onBack} />
+          <IconButton
+            icon="arrow-left"
+            label={backLabel ?? (language === 'es' ? 'Volver' : 'Back')}
+            onPress={onBack}
+          />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            Profile
+            {language === 'es' ? 'Perfil' : 'Profile'}
           </Text>
         </View>
         <View style={{ alignItems: 'center', gap: spacing['space-2'] }}>
@@ -54,7 +60,11 @@ export function PersonScreen({
           </Text>
           {person.data ? (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {person.data.friend_count === 1 ? '1 friend' : `${person.data.friend_count} friends`}
+              {person.data.friend_count === 1
+                ? language === 'es'
+                  ? '1 amigo'
+                  : '1 friend'
+                : `${person.data.friend_count} ${language === 'es' ? 'amigos' : 'friends'}`}
             </Text>
           ) : null}
         </View>
@@ -62,16 +72,26 @@ export function PersonScreen({
         {person.isError ? (
           <View style={ui.gap}>
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {missing ? 'This person is no longer available.' : 'Could not load this profile.'}
+              {missing
+                ? language === 'es'
+                  ? 'Esta persona ya no está disponible.'
+                  : 'This person is no longer available.'
+                : language === 'es'
+                  ? 'No se pudo cargar este perfil.'
+                  : 'Could not load this profile.'}
             </Text>
             {!missing ? (
-              <Button title="Retry" secondary onPress={() => void person.refetch()} />
+              <Button
+                title={language === 'es' ? 'Reintentar' : 'Retry'}
+                secondary
+                onPress={() => void person.refetch()}
+              />
             ) : null}
           </View>
         ) : null}
         {person.data?.relationship === 'self' ? (
           <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
-            This is you.
+            {language === 'es' ? 'Este eres tú.' : 'This is you.'}
           </Text>
         ) : null}
         {person.data && person.data.relationship !== 'self' ? (

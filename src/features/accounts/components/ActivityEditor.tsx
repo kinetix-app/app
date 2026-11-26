@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '@/i18n/Language';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { apiClient } from '@/services/apiClient';
@@ -25,6 +26,7 @@ export function ActivityEditor({
   active?: boolean;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const form = useForm<ProfileFormValues>({ defaultValues: profileDefaults(account) });
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState('');
@@ -47,7 +49,11 @@ export function ActivityEditor({
       const updated = await updateProfile(apiClient, { activity_level: activity });
       onSaved(updated);
     } catch {
-      setFailure('Could not save your activity. Please try again.');
+      setFailure(
+        es
+          ? 'No se pudo guardar tu actividad. Inténtalo de nuevo.'
+          : 'Could not save your activity. Please try again.',
+      );
     } finally {
       busy.current = false;
       setPending(false);
@@ -60,13 +66,13 @@ export function ActivityEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title="Usual activity"
+          title={es ? 'Actividad habitual' : 'Usual activity'}
           leading={
             <ProfileBack
               onPress={() => {
                 if (!pending) onCancel();
               }}
-              label="Back to profile"
+              label={es ? 'Volver al perfil' : 'Back to profile'}
             />
           }
         />
@@ -81,13 +87,20 @@ export function ActivityEditor({
           </Text>
         ) : null}
         <SetupButton
-          title={pending ? 'Saving…' : 'Save activity'}
+          title={
+            pending ? (es ? 'Guardando…' : 'Saving…') : es ? 'Guardar actividad' : 'Save activity'
+          }
           disabled={pending}
           onPress={() => {
             void save();
           }}
         />
-        <SetupButton title="Cancel" secondary disabled={pending} onPress={onCancel} />
+        <SetupButton
+          title={es ? 'Cancelar' : 'Cancel'}
+          secondary
+          disabled={pending}
+          onPress={onCancel}
+        />
       </ScrollView>
     </SafeAreaView>
   );

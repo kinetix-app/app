@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n/Language';
 import { cardioInput } from '../cardio';
 import React, {
   createContext,
@@ -49,6 +50,41 @@ export function useSession() {
   if (!value) throw new Error('Session provider missing.');
   return value;
 }
+const sessionErrorText = {
+  en: {
+    restore: 'Could not restore your workout. Check your connection and retry.',
+    storage: 'Could not save your workout on this device. Keep the app open and retry storage.',
+    sync: 'Could not save the workout. Your changes are retained. Retry the tick or Sync workout.',
+    setValues:
+      'Enter valid distance and time, or a positive weight and repetitions, before saving this set.',
+    previousSets: 'Could not load previous sets. Retry adding the exercise.',
+    discard: 'Could not discard the workout. It is retained; try again.',
+    incomplete: 'Complete every set before finishing.',
+    finish: 'Could not finish the workout. Your results are retained. Retry Finish safely.',
+    alreadyFinished: 'This workout may already be finished. Retry Finish to recover its result.',
+    review: 'Review and save each set before finishing.',
+    check: 'Could not check the workout. Retry when connected.',
+  },
+  es: {
+    restore: 'No se pudo restaurar el entrenamiento. Comprueba la conexión e inténtalo de nuevo.',
+    storage:
+      'No se pudo guardar el entrenamiento en este dispositivo. Mantén la aplicación abierta e inténtalo de nuevo.',
+    sync: 'No se pudo guardar el entrenamiento. Se han conservado tus cambios. Vuelve a marcar la serie o sincroniza el entrenamiento.',
+    setValues:
+      'Introduce una distancia y un tiempo válidos, o un peso y repeticiones positivos, antes de guardar la serie.',
+    previousSets:
+      'No se pudieron cargar las series anteriores. Intenta añadir el ejercicio de nuevo.',
+    discard: 'No se pudo descartar el entrenamiento. Se ha conservado. Inténtalo de nuevo.',
+    incomplete: 'Completa todas las series antes de finalizar.',
+    finish:
+      'No se pudo finalizar el entrenamiento. Se han conservado tus resultados. Intenta finalizarlo de nuevo.',
+    alreadyFinished:
+      'Es posible que el entrenamiento ya haya finalizado. Intenta finalizarlo de nuevo para recuperar el resultado.',
+    review: 'Revisa y guarda cada serie antes de finalizar.',
+    check: 'No se pudo comprobar el entrenamiento. Inténtalo cuando tengas conexión.',
+  },
+} as const;
+
 export function SessionProvider({
   accountId,
   onSignOut,
@@ -73,7 +109,9 @@ export function SessionProvider({
   const alive = useRef(true);
   const closing = useRef(false);
   const request = useRef<AbortController | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<keyof typeof sessionErrorText.en | ''>('');
+  const language = useLanguage();
+  const errorMessage = error ? sessionErrorText[language][error] : '';
   const [storageError, setStorageError] = useState(false);
   const install = useCallback((value: SessionDraft | null) => {
     current.current = value;
@@ -106,7 +144,7 @@ export function SessionProvider({
     void restore(controller.signal).catch(() => {
       if (alive.current && !controller.signal.aborted) {
         setStorageError(true);
-        setError('Could not restore your workout. Check your connection and retry.');
+        setError('restore');
       }
     });
     return () => {
@@ -121,7 +159,7 @@ export function SessionProvider({
   const showStorageError = useCallback(() => {
     if (alive.current) {
       setStorageError(true);
-      setError('Could not save your workout on this device. Keep the app open and retry storage.');
+      setError('storage');
     }
   }, []);
   const change = useCallback(
@@ -212,10 +250,7 @@ export function SessionProvider({
         await persist(value);
         return alive.current && !closing.current;
       } catch {
-        if (alive.current && !closing.current)
-          setError(
-            'Could not save the workout. Your changes are retained. Retry the tick or Sync workout.',
-          );
+        if (alive.current && !closing.current) setError('sync');
         return false;
       } finally {
         busy.current = false;
@@ -288,9 +323,7 @@ export function SessionProvider({
             Number(target.reps) < 1 ||
             Number(target.reps) > 2147483647)
       ) {
-        setError(
-          'Enter valid distance and time, or a positive weight and repetitions, before saving this set.',
-        );
+        setError('setValues');
         return false;
       }
       if (target.value !== original.value || target.reps !== original.reps) {
@@ -397,8 +430,7 @@ export function SessionProvider({
         }
         return id;
       } catch {
-        if (alive.current && !closing.current)
-          setError('Could not load previous sets. Retry adding the exercise.');
+        if (alive.current && !closing.current) setError('previousSets');
         return null;
       } finally {
         busy.current = false;
@@ -441,7 +473,7 @@ export function SessionProvider({
         setReady(true);
       }
     } catch {
-      if (alive.current) setError('Could not discard the workout. It is retained; try again.');
+      if (alive.current) setError('discard');
     } finally {
       busy.current = false;
       if (alive.current) setPending(false);
@@ -455,7 +487,7 @@ export function SessionProvider({
       try {
         frozen = freezeSession(value);
       } catch {
-        setError('Complete every set before finishing.');
+        setError('incomplete');
         return;
       }
       busy.current = true;
@@ -489,8 +521,7 @@ export function SessionProvider({
         ]);
         if (completed?.id) finishedListener.current?.(completed.id);
       } catch {
-        if (alive.current && !closing.current)
-          setError('Could not finish the workout. Your results are retained. Retry Finish safely.');
+        if (alive.current && !closing.current) setError('finish');
       } finally {
         busy.current = false;
         if (alive.current) setPending(false);
@@ -506,7 +537,7 @@ export function SessionProvider({
     try {
       const server = await trainingApi.draft();
       if (server?.client_session_id !== value.clientId) {
-        setError('This workout may already be finished. Retry Finish to recover its result.');
+        setError('alreadyFinished');
         return;
       }
       const unlocked = {
@@ -524,9 +555,9 @@ export function SessionProvider({
       };
       await sessionStorage.save(unlocked);
       install(unlocked);
-      setError('Review and save each set before finishing.');
+      setError('review');
     } catch {
-      setError('Could not check the workout. Retry when connected.');
+      setError('check');
     } finally {
       busy.current = false;
       if (alive.current) setPending(false);
@@ -556,7 +587,7 @@ export function SessionProvider({
       draft,
       ready,
       pending,
-      error,
+      error: errorMessage,
       storageError,
       start,
       startShared,
@@ -575,7 +606,7 @@ export function SessionProvider({
       draft,
       ready,
       pending,
-      error,
+      errorMessage,
       storageError,
       start,
       startShared,

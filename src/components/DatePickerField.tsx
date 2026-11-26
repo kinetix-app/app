@@ -2,15 +2,21 @@ import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage } from '@/i18n/Language';
 import { CalendarGrid, calendarDate, calendarLabel, shiftCalendarMonth } from './CalendarGrid';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
-const monthFormat = new Intl.DateTimeFormat('en-US', {
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-const shortMonth = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' });
+const monthFormat = (language: 'en' | 'es') =>
+  new Intl.DateTimeFormat(language === 'es' ? 'es-ES' : 'en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+const shortMonth = (language: 'en' | 'es') =>
+  new Intl.DateTimeFormat(language === 'es' ? 'es-ES' : 'en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
 
 export function DatePickerField({
   label,
@@ -30,14 +36,21 @@ export function DatePickerField({
   onClear: () => void;
 }>) {
   const p = usePalette();
-  const currentLabel = value ? calendarLabel(value) : 'Choose a date';
+  const language = useLanguage();
+  const currentLabel = value
+    ? calendarLabel(value, language)
+    : language === 'es'
+      ? 'Elige una fecha'
+      : 'Choose a date';
 
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
         <Text style={[textStyles.label, { color: p.ink }]}>{label}</Text>
         {optional && !value ? (
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>Optional</Text>
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+            {language === 'es' ? 'Opcional' : 'Optional'}
+          </Text>
         ) : null}
       </View>
       <View style={styles.labelRow}>
@@ -65,7 +78,7 @@ export function DatePickerField({
         {optional && value ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Clear ${label.toLowerCase()}`}
+            accessibilityLabel={`${language === 'es' ? 'Borrar' : 'Clear'} ${label.toLowerCase()}`}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={onClear}
@@ -91,6 +104,7 @@ export function DatePickerCalendar({
   onSelect: (date: string) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const [month, setMonth] = useState(() => shiftCalendarMonth(value || today, 0));
   const [isChoosingMonth, setIsChoosingMonth] = useState(false);
   const year = month.slice(0, 4);
@@ -105,7 +119,15 @@ export function DatePickerCalendar({
       <View style={styles.navigation}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isChoosingMonth ? 'Previous year' : 'Previous month'}
+          accessibilityLabel={
+            isChoosingMonth
+              ? language === 'es'
+                ? 'Año anterior'
+                : 'Previous year'
+              : language === 'es'
+                ? 'Mes anterior'
+                : 'Previous month'
+          }
           onPress={() => setMonth(shiftCalendarMonth(month, isChoosingMonth ? -12 : -1))}
           style={styles.arrow}
         >
@@ -113,12 +135,20 @@ export function DatePickerCalendar({
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isChoosingMonth ? 'Show days' : 'Choose month and year'}
+          accessibilityLabel={
+            isChoosingMonth
+              ? language === 'es'
+                ? 'Mostrar días'
+                : 'Show days'
+              : language === 'es'
+                ? 'Elegir mes y año'
+                : 'Choose month and year'
+          }
           onPress={() => setIsChoosingMonth(!isChoosingMonth)}
           style={styles.period}
         >
           <Text style={[textStyles.label, { color: p.ink }]}>
-            {isChoosingMonth ? year : monthFormat.format(calendarDate(month))}
+            {isChoosingMonth ? year : monthFormat(language).format(calendarDate(month))}
           </Text>
           <Feather
             name={isChoosingMonth ? 'chevron-up' : 'chevron-down'}
@@ -128,7 +158,15 @@ export function DatePickerCalendar({
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isChoosingMonth ? 'Next year' : 'Next month'}
+          accessibilityLabel={
+            isChoosingMonth
+              ? language === 'es'
+                ? 'Año siguiente'
+                : 'Next year'
+              : language === 'es'
+                ? 'Mes siguiente'
+                : 'Next month'
+          }
           accessibilityState={{ disabled: nextDisabled }}
           disabled={nextDisabled}
           onPress={() => setMonth(next)}
@@ -147,7 +185,7 @@ export function DatePickerCalendar({
               <Pressable
                 key={id}
                 accessibilityRole="button"
-                accessibilityLabel={monthFormat.format(calendarDate(id))}
+                accessibilityLabel={monthFormat(language).format(calendarDate(id))}
                 accessibilityState={{ disabled: disabledMonth, selected }}
                 disabled={disabledMonth}
                 onPress={() => {
@@ -165,7 +203,7 @@ export function DatePickerCalendar({
                     },
                   ]}
                 >
-                  {shortMonth.format(calendarDate(id))}
+                  {shortMonth(language).format(calendarDate(id))}
                 </Text>
               </Pressable>
             );

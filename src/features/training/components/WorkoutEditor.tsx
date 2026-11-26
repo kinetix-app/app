@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { Image, Platform, Pressable, Text, View, type PressableProps } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -21,6 +22,7 @@ export function WorkoutTimer({
   onOverlay?: boolean;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const foreground = onOverlay ? p['overlay-ink'] : p['brand-ink'];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -37,7 +39,7 @@ export function WorkoutTimer({
     <View style={ui.row}>
       <Feather name="clock" size={18} color={foreground} />
       <Text
-        accessibilityLabel={`Workout duration ${time}`}
+        accessibilityLabel={es ? `Duración del entrenamiento ${time}` : `Workout duration ${time}`}
         style={[
           compact ? textStyles.label : textStyles['title-md'],
           { color: foreground, fontVariant: ['tabular-nums'] },
@@ -67,6 +69,7 @@ export function WorkoutExerciseSummary({
   cardio?: boolean;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   function range(key: 'reps' | 'value') {
     const values = sets
       .map((set) => {
@@ -85,7 +88,9 @@ export function WorkoutExerciseSummary({
       <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
         {savedCount === undefined
           ? `${sets.length} ${setLabel}`
-          : `${savedCount} / ${sets.length} sets saved`}
+          : es
+            ? `${savedCount} / ${sets.length} series guardadas`
+            : `${savedCount} / ${sets.length} sets saved`}
       </Text>
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
         {cardio ? cardioSummary(sets) : `${range('reps')} reps · ${range('value')} kg`}
@@ -160,6 +165,7 @@ export function WorkoutExerciseCard({
   onMove?: (delta: number) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const [actions, setActions] = useState(false);
   return (
     <>
@@ -170,9 +176,15 @@ export function WorkoutExerciseCard({
         {...exerciseReorderKeys(onMove, disabled)}
         nativeID={dragId}
         accessible={false}
-        accessibilityLabel={dragId ? `Reorder ${exercise.name}` : undefined}
+        accessibilityLabel={
+          dragId ? (es ? `Reordenar ${exercise.name}` : `Reorder ${exercise.name}`) : undefined
+        }
         accessibilityHint={
-          dragId ? 'Hold and drag to reorder. Use arrow keys with a keyboard.' : undefined
+          dragId
+            ? es
+              ? 'Mantén pulsado y arrastra para reordenar. Con el teclado, usa las flechas.'
+              : 'Hold and drag to reorder. Use arrow keys with a keyboard.'
+            : undefined
         }
         disabled={disabled}
         onLongPress={onDrag}
@@ -189,7 +201,9 @@ export function WorkoutExerciseCard({
         <View style={[ui.row, { alignItems: 'flex-start' }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Details for ${exercise.name}`}
+            accessibilityLabel={
+              es ? `Detalles de ${exercise.name}` : `Details for ${exercise.name}`
+            }
             nativeID={dragId ? `${dragId}-drag-details` : undefined}
             onPress={onDetails}
             onLongPress={onDrag}
@@ -214,7 +228,7 @@ export function WorkoutExerciseCard({
               <View
                 style={{ minHeight: 100, justifyContent: 'center', padding: spacing['space-3'] }}
               >
-                <Text style={{ color: p['ink-muted'] }}>No image</Text>
+                <Text style={{ color: p['ink-muted'] }}>{es ? 'Sin imagen' : 'No image'}</Text>
               </View>
             )}
           </Pressable>
@@ -222,14 +236,28 @@ export function WorkoutExerciseCard({
             <View style={[ui.row, { alignItems: 'flex-start', gap: spacing['space-1'] }]}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Edit sets for ${exercise.name}`}
+                accessibilityLabel={
+                  es ? `Editar series de ${exercise.name}` : `Edit sets for ${exercise.name}`
+                }
                 nativeID={dragId ? `${dragId}-drag-title` : undefined}
-                accessibilityHint={dragId ? 'Hold and drag to reorder' : undefined}
+                accessibilityHint={
+                  dragId
+                    ? es
+                      ? 'Mantén pulsado y arrastra para reordenar'
+                      : 'Hold and drag to reorder'
+                    : undefined
+                }
                 accessibilityActions={
                   onMove
                     ? [
-                        { name: 'increment', label: 'Move exercise later' },
-                        { name: 'decrement', label: 'Move exercise earlier' },
+                        {
+                          name: 'increment',
+                          label: es ? 'Mover ejercicio hacia abajo' : 'Move exercise later',
+                        },
+                        {
+                          name: 'decrement',
+                          label: es ? 'Mover ejercicio hacia arriba' : 'Move exercise earlier',
+                        },
                       ]
                     : undefined
                 }
@@ -249,7 +277,7 @@ export function WorkoutExerciseCard({
               </Pressable>
               <IconButton
                 icon="more-horizontal"
-                label={`Actions for ${exercise.name}`}
+                label={es ? `Acciones de ${exercise.name}` : `Actions for ${exercise.name}`}
                 disabled={disabled}
                 onPress={() => setActions(true)}
               />
@@ -264,7 +292,7 @@ export function WorkoutExerciseCard({
             ) : null}
             {children}
             <Button
-              title="Add set"
+              title={es ? 'Añadir serie' : es ? 'Añadir serie' : 'Add set'}
               accessibilityLabel={addSetLabel}
               onPress={onAddSet}
               tone="positive"
@@ -275,9 +303,16 @@ export function WorkoutExerciseCard({
       </Pressable>
       {actions ? (
         <ActionMenu
-          title="Exercise actions"
+          title={es ? 'Acciones del ejercicio' : es ? 'Acciones del ejercicio' : 'Exercise actions'}
           onClose={() => setActions(false)}
-          actions={[{ title: 'Remove exercise', tone: 'danger', onPress: onRemove, disabled }]}
+          actions={[
+            {
+              title: es ? 'Eliminar ejercicio' : 'Remove exercise',
+              tone: 'danger',
+              onPress: onRemove,
+              disabled,
+            },
+          ]}
         />
       ) : null}
     </>

@@ -13,6 +13,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import { useSession } from './SessionProvider';
 import { RoutineActionsMenu } from './RoutineActionsMenu';
@@ -31,6 +32,8 @@ export function TrainingWorkspace({
   onEditingChange?: (editing: boolean) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const session = useSession();
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
@@ -96,7 +99,7 @@ export function TrainingWorkspace({
     try {
       let asset: ImagePickerAsset | undefined;
       if (mode === 'choose') {
-        const selected = await pickRoutinePicture();
+        const selected = await pickRoutinePicture(language);
         if (!alive.current || !selected) return;
         if ('error' in selected) {
           setCoverError(selected.error);
@@ -110,7 +113,12 @@ export function TrainingWorkspace({
       setFailedCover(asset ? { id: actions.item.id, asset } : null);
       await coverMutation.mutateAsync({ id: actions.item.id, asset });
     } catch {
-      if (alive.current) setCoverError('Could not update the cover. Try again.');
+      if (alive.current)
+        setCoverError(
+          es
+            ? 'No se pudo actualizar la portada. Inténtalo de nuevo.'
+            : 'Could not update the cover. Try again.',
+        );
     } finally {
       coverBusy.current = false;
       if (alive.current) setCoverWorking(false);
@@ -289,8 +297,12 @@ export function TrainingWorkspace({
           canStart={session.ready && !session.storageError && !session.draft && starting === null}
           startHint={
             session.draft
-              ? 'Finish or discard your ongoing workout to start another.'
-              : 'Workout starting is unavailable. Try again when synchronization finishes.'
+              ? es
+                ? 'Termina o descarta el entrenamiento en curso para empezar otro.'
+                : 'Finish or discard your ongoing workout to start another.'
+              : es
+                ? 'No se puede iniciar el entrenamiento. Inténtalo cuando termine la sincronización.'
+                : 'Workout starting is unavailable. Try again when synchronization finishes.'
           }
           canDelete={
             session.ready &&
@@ -357,23 +369,27 @@ function RoutineListHeader({
   onBackToRoutines,
 }: RoutineListHeaderProps) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const editingRoutine = typeof editing === 'number';
   return (
     <View style={ui.gap}>
-      <ScreenHeader title="Workouts">
+      <ScreenHeader title={es ? 'Entrenamientos' : 'Workouts'}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="New routine"
+          accessibilityLabel={es ? 'Nueva rutina' : 'New routine'}
           onPress={onNewRoutine}
           style={({ pressed }) => [styles.create, { opacity: pressed ? 0.55 : 1 }]}
         >
           <Feather name="plus" size={24} color={p['brand-ink']} />
-          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Routine</Text>
+          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+            {es ? 'Rutina' : 'Routine'}
+          </Text>
         </Pressable>
       </ScreenHeader>
       <TextField
-        accessibilityLabel="Search routines"
-        placeholder="Search by name"
+        accessibilityLabel={es ? 'Buscar rutinas' : 'Search routines'}
+        placeholder={es ? 'Buscar por nombre' : 'Search by name'}
         maxLength={150}
         value={search}
         onChangeText={onSearchChange}
@@ -381,7 +397,7 @@ function RoutineListHeader({
       />
       {saved ? (
         <Text accessibilityRole="alert" style={{ color: p.success }}>
-          Routine saved.
+          {es ? 'Rutina guardada.' : 'Routine saved.'}
         </Text>
       ) : null}
       {listPending || (editingRoutine && detailPending) ? <Loading /> : null}
@@ -389,7 +405,11 @@ function RoutineListHeader({
       {editingRoutine && detailError ? (
         <View style={ui.gap}>
           <Failure error={detailError} retry={onRetryDetail} />
-          <IconButton icon="arrow-left" label="Back to routines" onPress={onBackToRoutines} />
+          <IconButton
+            icon="arrow-left"
+            label={es ? 'Volver a rutinas' : 'Back to routines'}
+            onPress={onBackToRoutines}
+          />
         </View>
       ) : null}
     </View>
@@ -406,6 +426,8 @@ function EmptyRoutineState({
   onCreate: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   if (!visible) return null;
   return (
     <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
@@ -413,17 +435,27 @@ function EmptyRoutineState({
         <Feather name={name ? 'search' : 'layers'} size={28} color={p['brand-ink']} />
       </View>
       <Text style={[ui.heading, { color: p.ink, textAlign: 'center' }]}>
-        {name ? 'No routines found' : 'Build your first routine'}
+        {name
+          ? es
+            ? 'No se encontraron rutinas'
+            : 'No routines found'
+          : es
+            ? 'Crea tu primera rutina'
+            : 'Build your first routine'}
       </Text>
       <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
         {name
-          ? 'Try a different name to find your routine.'
-          : 'Choose your exercises, plan your sets and make your next workout easier to start.'}
+          ? es
+            ? 'Prueba con otro nombre para encontrar tu rutina.'
+            : 'Try a different name to find your routine.'
+          : es
+            ? 'Elige ejercicios y planifica las series para empezar tu próximo entrenamiento.'
+            : 'Choose your exercises, plan your sets and make your next workout easier to start.'}
       </Text>
       {!name ? (
         <Button
-          title="Create routine"
-          accessibilityLabel="Create routine"
+          title={es ? 'Crear rutina' : 'Create routine'}
+          accessibilityLabel={es ? 'Crear rutina' : 'Create routine'}
           icon="plus"
           tone="positive"
           onPress={onCreate}
@@ -457,13 +489,25 @@ function RoutineRow({
   onRetry: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const trigger = useRef<ViewInstance>(null);
   const performed = item.last_performed_at ? new Date(item.last_performed_at) : null;
   const date = performed
-    ? performed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Not trained yet';
-  const count = `${item.exercise_count} ${item.exercise_count === 1 ? 'exercise' : 'exercises'}`;
-  const dateLabel = performed ? `Last trained ${performed.toLocaleString()}` : date;
+    ? performed.toLocaleDateString(es ? 'es' : undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : es
+      ? 'Sin entrenar todavía'
+      : 'Not trained yet';
+  const count = `${item.exercise_count} ${item.exercise_count === 1 ? (es ? 'ejercicio' : 'exercise') : es ? 'ejercicios' : 'exercises'}`;
+  const dateLabel = performed
+    ? es
+      ? `Último entrenamiento: ${performed.toLocaleString(language)}`
+      : `Last trained ${performed.toLocaleString()}`
+    : date;
   return (
     <View style={[ui.card, styles.routineCard, { backgroundColor: p['surface-200'] }]}>
       <View style={styles.cardMain}>
@@ -475,8 +519,10 @@ function RoutineRow({
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Edit ${item.name}`}
-          accessibilityHint="Open routine details and edit"
+          accessibilityLabel={es ? `Editar ${item.name}` : `Edit ${item.name}`}
+          accessibilityHint={
+            es ? 'Abrir los detalles y editar la rutina' : 'Open routine details and edit'
+          }
           accessibilityState={{ disabled: false }}
           onPress={onEdit}
           style={({ pressed }) => [styles.routineDetails, { opacity: pressed ? 0.55 : 1 }]}
@@ -499,9 +545,15 @@ function RoutineRow({
         <Pressable
           ref={trigger}
           accessibilityRole="button"
-          accessibilityLabel={`Routine actions for ${item.name}`}
+          accessibilityLabel={
+            es ? `Acciones de la rutina ${item.name}` : `Routine actions for ${item.name}`
+          }
           accessibilityState={{ expanded: actionsOpen }}
-          accessibilityHint="Open train, edit, cover and delete options"
+          accessibilityHint={
+            es
+              ? 'Abrir las opciones de entrenar, editar, portada y eliminar'
+              : 'Open train, edit, cover and delete options'
+          }
           onPress={() => onActions(() => trigger.current?.focus())}
           style={({ pressed }) => [styles.actions, { opacity: pressed ? 0.55 : 1 }]}
         >
@@ -529,8 +581,8 @@ function RoutineRow({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Start ${item.name}`}
-          accessibilityHint="Train this routine"
+          accessibilityLabel={es ? `Empezar ${item.name}` : `Start ${item.name}`}
+          accessibilityHint={es ? 'Entrenar esta rutina' : 'Train this routine'}
           accessibilityState={{ disabled: !canStart || starting, busy: starting }}
           disabled={!canStart || starting}
           onPress={onStart}
@@ -596,8 +648,14 @@ function RoutineListFooter({
   loading,
   onMore,
 }: Readonly<{ visible: boolean; loading: boolean; onMore: () => void }>) {
+  const es = useLanguage() === 'es';
   if (!visible) return null;
   return (
-    <Button title={loading ? 'Loading…' : 'More'} disabled={loading} onPress={onMore} secondary />
+    <Button
+      title={loading ? (es ? 'Cargando…' : 'Loading…') : es ? 'Más' : 'More'}
+      disabled={loading}
+      onPress={onMore}
+      secondary
+    />
   );
 }

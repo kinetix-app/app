@@ -1,4 +1,5 @@
 import React from 'react';
+import { LanguageProvider } from '@/i18n/Language';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { calendarLabel, shiftCalendarMonth } from '@/components/CalendarGrid';
@@ -195,4 +196,23 @@ test('uses saved profile units for the chart and check-in without a unit selecto
 
   fireEvent.press(screen.getByRole('button', { name: 'Log measurements' }));
   expect(screen.getByLabelText('Weight (lb)').props.value).toBe('165.35');
+});
+
+test('Spanish progress and calendar keep metric codes while translating labels', async () => {
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { gcTime: 0 } },
+  });
+  render(
+    <QueryClientProvider client={cache}>
+      <LanguageProvider language="es">
+        <ProgressScreen account={completeAccount} onClose={() => {}} />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+  await screen.findByText('Aún no hay medidas de peso.');
+  fireEvent.press(screen.getByRole('button', { name: 'Registrar medidas' }));
+  expect(screen.getByLabelText('Peso (kg)')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Fecha de medición' }));
+  expect(screen.getByText('Lun')).toBeTruthy();
+  expect(screen.getByLabelText('Mes anterior')).toBeTruthy();
 });

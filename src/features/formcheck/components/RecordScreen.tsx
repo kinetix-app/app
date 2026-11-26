@@ -4,6 +4,7 @@ import { Platform, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { FormCheckProfile } from '../profiles';
@@ -33,6 +34,7 @@ export function RecordScreen({
   onFinish: (recording: Recording) => void;
 }>) {
   const p = usePalette();
+  const es = useLanguage() === 'es';
   const camera = useRef<CameraView>(null);
   const frame = useRef<ViewInstance>(null);
   const [webRecorder, setWebRecorder] = useState<CameraRecorder | null>(null);
@@ -129,44 +131,86 @@ export function RecordScreen({
   };
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · SET ${setNumber}`}
-      title="Record your set"
+      overline={`${exerciseName.toUpperCase()} · ${es ? 'SERIE' : 'SET'} ${setNumber}`}
+      title={es ? 'Graba tu serie' : 'Record your set'}
       backIcon="x"
-      backLabel="Cancel recording"
+      backLabel={es ? 'Cancelar grabación' : 'Cancel recording'}
       onBack={onCancel}
       scroll={false}
       footer={
         recording ? (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              Do your set as usual. Stop when you finish.
+              {es
+                ? 'Haz tu serie como siempre. Detén la grabación al terminar.'
+                : 'Do your set as usual. Stop when you finish.'}
             </Text>
-            <Button title="Stop and analyze" onPress={() => void stop()} />
+            <Button
+              title={es ? 'Detener y analizar' : 'Stop and analyze'}
+              onPress={() => void stop()}
+            />
           </>
         ) : (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {profile.camera.hint}
+              {es
+                ? ((
+                    {
+                      'back-squat':
+                        'Coloca el teléfono a la altura de la cadera, a 2–3 m de lado, con todo el cuerpo en el encuadre.',
+                      'push-up':
+                        'Coloca el teléfono en el suelo a 2 m de lado, con todo el cuerpo en el encuadre.',
+                      'hammer-curl':
+                        'Coloca el teléfono a 2 m de lado, con el brazo que trabaja hacia él y desde el hombro hasta la cadera en el encuadre.',
+                      'seated-shoulder-press':
+                        'Coloca el teléfono a 2 m de lado y a la altura del pecho, con los brazos extendidos dentro del encuadre.',
+                      'dumbbell-row':
+                        'Coloca el teléfono a 2 m de lado, con el brazo que trabaja hacia él y todo el cuerpo en el encuadre.',
+                    } as Record<string, string>
+                  )[profile.id] ?? profile.camera.hint)
+                : profile.camera.hint}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
               {profile.camera.checklist.map((item) => (
                 <View key={item} style={chip}>
-                  <Text style={[textStyles.caption, { color: p.ink }]}>{item}</Text>
+                  <Text style={[textStyles.caption, { color: p.ink }]}>
+                    {es
+                      ? ((
+                          {
+                            'Full body': 'Cuerpo entero',
+                            'Side view': 'Vista lateral',
+                            'Good light': 'Buena luz',
+                            'Working arm toward the phone': 'Brazo que trabaja hacia el teléfono',
+                            'Arms in the frame': 'Brazos en el encuadre',
+                          } as Record<string, string>
+                        )[item] ?? item)
+                      : item}
+                  </Text>
                 </View>
               ))}
             </View>
             {failed ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                The recording could not be saved. Try again.
+                {es
+                  ? 'No se pudo guardar la grabación. Inténtalo de nuevo.'
+                  : 'The recording could not be saved. Try again.'}
               </Text>
             ) : null}
-            <Button title="Start recording" icon="video" onPress={start} />
+            <Button
+              title={es ? 'Iniciar grabación' : 'Start recording'}
+              icon="video"
+              onPress={start}
+            />
             {__DEV__ ? (
               <Button
-                title="Use a video"
+                title={es ? 'Usar un vídeo' : 'Use a video'}
                 icon="upload"
                 secondary
-                accessibilityLabel="Analyze a video file (development only)"
+                accessibilityLabel={
+                  es
+                    ? 'Analizar un archivo de vídeo (solo desarrollo)'
+                    : 'Analyze a video file (development only)'
+                }
                 onPress={() => void pickVideo()}
               />
             ) : null}
@@ -189,7 +233,7 @@ export function RecordScreen({
           facing="back"
           mode="video"
           mute
-          accessibilityLabel="Camera preview"
+          accessibilityLabel={es ? 'Vista previa de la cámara' : 'Camera preview'}
         />
         <View
           pointerEvents="none"
@@ -224,7 +268,7 @@ export function RecordScreen({
           >
             <Feather name="circle" size={10} color={p.danger} />
             <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
-              Recording · {clock(seconds)}
+              {es ? 'Grabando' : 'Recording'} · {clock(seconds)}
             </Text>
           </View>
         ) : null}
