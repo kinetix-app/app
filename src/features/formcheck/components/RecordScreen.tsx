@@ -4,7 +4,7 @@ import { Platform, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { FormCheckProfile } from '../profiles';
@@ -131,22 +131,24 @@ export function RecordScreen({
   };
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${es ? 'SERIE' : 'SET'} ${setNumber}`}
-      title={es ? 'Graba tu serie' : 'Record your set'}
+      overline={`${exerciseName.toUpperCase()} · ${selectCopy(es, 'SERIE', 'SET')} ${setNumber}`}
+      title={selectCopy(es, 'Graba tu serie', 'Record your set')}
       backIcon="x"
-      backLabel={es ? 'Cancelar grabación' : 'Cancel recording'}
+      backLabel={selectCopy(es, 'Cancelar grabación', 'Cancel recording')}
       onBack={onCancel}
       scroll={false}
       footer={
         recording ? (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {es
-                ? 'Haz tu serie como siempre. Detén la grabación al terminar.'
-                : 'Do your set as usual. Stop when you finish.'}
+              {selectCopy(
+                es,
+                'Haz tu serie como siempre. Detén la grabación al terminar.',
+                'Do your set as usual. Stop when you finish.',
+              )}
             </Text>
             <Button
-              title={es ? 'Detener y analizar' : 'Stop and analyze'}
+              title={selectCopy(es, 'Detener y analizar', 'Stop and analyze')}
               onPress={() => void stop()}
             />
           </>
@@ -191,26 +193,28 @@ export function RecordScreen({
             </View>
             {failed ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                {es
-                  ? 'No se pudo guardar la grabación. Inténtalo de nuevo.'
-                  : 'The recording could not be saved. Try again.'}
+                {selectCopy(
+                  es,
+                  'No se pudo guardar la grabación. Inténtalo de nuevo.',
+                  'The recording could not be saved. Try again.',
+                )}
               </Text>
             ) : null}
             <Button
-              title={es ? 'Iniciar grabación' : 'Start recording'}
+              title={selectCopy(es, 'Iniciar grabación', 'Start recording')}
               icon="video"
               onPress={start}
             />
             {__DEV__ ? (
               <Button
-                title={es ? 'Usar un vídeo' : 'Use a video'}
+                title={selectCopy(es, 'Usar un vídeo', 'Use a video')}
                 icon="upload"
                 secondary
-                accessibilityLabel={
-                  es
-                    ? 'Analizar un archivo de vídeo (solo desarrollo)'
-                    : 'Analyze a video file (development only)'
-                }
+                accessibilityLabel={selectCopy(
+                  es,
+                  'Analizar un archivo de vídeo (solo desarrollo)',
+                  'Analyze a video file (development only)',
+                )}
                 onPress={() => void pickVideo()}
               />
             ) : null}
@@ -233,7 +237,7 @@ export function RecordScreen({
           facing="back"
           mode="video"
           mute
-          accessibilityLabel={es ? 'Vista previa de la cámara' : 'Camera preview'}
+          accessibilityLabel={selectCopy(es, 'Vista previa de la cámara', 'Camera preview')}
         />
         <View
           pointerEvents="none"
@@ -268,7 +272,7 @@ export function RecordScreen({
           >
             <Feather name="circle" size={10} color={p.danger} />
             <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
-              {es ? 'Grabando' : 'Recording'} · {clock(seconds)}
+              {selectCopy(es, 'Grabando', 'Recording')} · {clock(seconds)}
             </Text>
           </View>
         ) : null}

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
@@ -82,7 +82,7 @@ function savedGoalNote(
     return es
       ? `Guardado para ${objectivesEs[savedGoal.objective]}.`
       : `Saved for ${objectives[savedGoal.objective]}.`;
-  return es ? 'Guardado sin objetivo.' : 'Saved without an objective.';
+  return selectCopy(es, 'Guardado sin objetivo.', 'Saved without an objective.');
 }
 
 type NutritionGoalFormProps = Readonly<{
@@ -126,29 +126,24 @@ function NutritionGoalForm({
     (mode === 'percentages' && percentageTotal(values) !== 100);
   const energy = hundredths(calories);
   const invalidCalories = calories !== '' && (!energy || energy > 99999999);
+  const objectiveLabel = currentObjective
+    ? selectCopy(es, objectivesEs[currentObjective], objectives[currentObjective])
+    : selectCopy(es, 'Elige primero un objetivo', 'Choose an objective first');
   return (
     <>
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {currentObjective
-          ? es
-            ? objectivesEs[currentObjective]
-            : objectives[currentObjective]
-          : es
-            ? 'Elige primero un objetivo'
-            : 'Choose an objective first'}
-      </Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{objectiveLabel}</Text>
       {note ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {note} {es ? 'Revísalo antes de guardar.' : 'Review before saving.'}
+          {note} {selectCopy(es, 'Revísalo antes de guardar.', 'Review before saving.')}
         </Text>
       ) : null}
       <View style={[styles.calories, { backgroundColor: p['surface-200'] }]}>
         <View style={styles.calorieCopy}>
           <Text style={[textStyles.label, { color: p.ink }]}>
-            {es ? 'Calorías diarias' : 'Daily calories'}
+            {selectCopy(es, 'Calorías diarias', 'Daily calories')}
           </Text>
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            {es ? 'kcal / día' : 'kcal / day'}
+            {selectCopy(es, 'kcal / día', 'kcal / day')}
           </Text>
         </View>
         <Controller
@@ -156,7 +151,11 @@ function NutritionGoalForm({
           name="calories"
           render={({ field: input }) => (
             <TextField
-              accessibilityLabel={es ? 'Objetivo diario de calorías' : 'Daily calorie goal'}
+              accessibilityLabel={selectCopy(
+                es,
+                'Objetivo diario de calorías',
+                'Daily calorie goal',
+              )}
               keyboardType="decimal-pad"
               value={input.value}
               editable={!saving}
@@ -171,9 +170,11 @@ function NutritionGoalForm({
       </View>
       {invalidCalories ? (
         <Text style={[textStyles['body-sm'], { color: p.danger }]}>
-          {es
-            ? 'Introduce calorías diarias entre 0,01 y 999999,99, con hasta dos decimales.'
-            : 'Enter daily calories from 0.01 to 999999.99, with up to two decimals.'}
+          {selectCopy(
+            es,
+            'Introduce calorías diarias entre 0,01 y 999999,99, con hasta dos decimales.',
+            'Enter daily calories from 0.01 to 999999.99, with up to two decimals.',
+          )}
         </Text>
       ) : null}
       <MacroSplitFields
@@ -185,9 +186,11 @@ function NutritionGoalForm({
       />
       {mode === 'percentages' && budget && !budget.overBudget && percentageTotal(values) !== 100 ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {es
-            ? 'Los porcentajes deben sumar el 100 % para guardar.'
-            : 'Percentages must total 100% to save.'}
+          {selectCopy(
+            es,
+            'Los porcentajes deben sumar el 100 % para guardar.',
+            'Percentages must total 100% to save.',
+          )}
         </Text>
       ) : null}
       {errorMessage ? (
@@ -210,7 +213,9 @@ function NutritionGoalForm({
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {saving ? (es ? 'Guardando…' : 'Saving…') : es ? 'Guardar objetivo' : 'Save goal'}
+          {saving
+            ? selectCopy(es, 'Guardando…', 'Saving…')
+            : selectCopy(es, 'Guardar objetivo', 'Save goal')}
         </Text>
       </Pressable>
     </>
@@ -237,9 +242,11 @@ function NutritionGoalEditorView({
   const note = savedGoalNote(savedGoal, currentObjective, es);
   let errorMessage = validationError;
   if (!errorMessage && mutationFailed)
-    errorMessage = es
-      ? 'No se pudo guardar el objetivo. Inténtalo de nuevo.'
-      : 'Could not save your goal. Try again.';
+    errorMessage = selectCopy(
+      es,
+      'No se pudo guardar el objetivo. Inténtalo de nuevo.',
+      'Could not save your goal. Try again.',
+    );
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <KeyboardAvoidingView
@@ -250,34 +257,32 @@ function NutritionGoalEditorView({
           contentContainerStyle={[screenContentStyle, styles.content]}
           keyboardShouldPersistTaps="handled"
         >
-          <ScreenHeader title={es ? 'Objetivo nutricional' : 'Nutrition goal'}>
+          <ScreenHeader title={selectCopy(es, 'Objetivo nutricional', 'Nutrition goal')}>
             <Pressable accessibilityRole="button" onPress={onClose} style={styles.action}>
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
                 {savedGoal
-                  ? es
-                    ? 'Volver'
-                    : 'Back'
-                  : es
-                    ? 'Configurar más tarde'
-                    : 'Set up later'}
+                  ? selectCopy(es, 'Volver', 'Back')
+                  : selectCopy(es, 'Configurar más tarde', 'Set up later')}
               </Text>
             </Pressable>
           </ScreenHeader>
           {loading ? (
             <Text style={[textStyles.body, { color: p.ink }]}>
-              {es ? 'Cargando objetivo…' : 'Loading goal…'}
+              {selectCopy(es, 'Cargando objetivo…', 'Loading goal…')}
             </Text>
           ) : null}
           {failed ? (
             <View style={styles.card}>
               <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                {es
-                  ? 'No se pudo cargar tu objetivo nutricional.'
-                  : 'Could not load your nutrition goal.'}
+                {selectCopy(
+                  es,
+                  'No se pudo cargar tu objetivo nutricional.',
+                  'Could not load your nutrition goal.',
+                )}
               </Text>
               <Pressable accessibilityRole="button" onPress={onRetry} style={styles.action}>
                 <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                  {es ? 'Volver a cargar el objetivo' : 'Retry loading goal'}
+                  {selectCopy(es, 'Volver a cargar el objetivo', 'Retry loading goal')}
                 </Text>
               </Pressable>
             </View>
@@ -359,9 +364,11 @@ function AccountNutritionGoalEditor({
       (mode === 'percentages' && percentageTotal(values) !== 100)
     ) {
       setValidationError(
-        es
-          ? 'Introduce cantidades válidas dentro de tu límite de calorías.'
-          : 'Enter valid amounts within your calorie budget.',
+        selectCopy(
+          es,
+          'Introduce cantidades válidas dentro de tu límite de calorías.',
+          'Enter valid amounts within your calorie budget.',
+        ),
       );
       return;
     }

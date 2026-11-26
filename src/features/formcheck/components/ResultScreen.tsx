@@ -1,13 +1,61 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { AnalysisView } from '../view';
 import { FormCheckScreen } from './FormCheckScreen';
 
 type Assessed = Extract<AnalysisView, { kind: 'assessed' }>;
+
+function repSummary(repCount: number, es: boolean) {
+  if (es) return repCount === 1 ? 'repetición detectada' : 'repeticiones detectadas';
+  return repCount === 1 ? 'rep detected' : 'reps detected';
+}
+
+function repAccessibilityLabel(index: number, ok: boolean, label: string, es: boolean) {
+  if (es) return `Repetición ${index}: ${ok ? 'sin problemas' : label}`;
+  return `Rep ${index}: ${ok ? 'no issues' : label}`;
+}
+
+function RepResults({
+  view,
+  es,
+  p,
+}: Readonly<{ view: Assessed; es: boolean; p: ReturnType<typeof usePalette> }>) {
+  return (
+    <View style={ui.gap}>
+      <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
+        {selectCopy(es, 'REPETICIÓN A REPETICIÓN', 'REP BY REP')}
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
+        {view.reps.map((rep) => (
+          <View
+            key={rep.index}
+            accessibilityLabel={repAccessibilityLabel(rep.index, rep.ok, rep.label, es)}
+            style={{
+              minWidth: 52,
+              alignItems: 'center',
+              gap: spacing['space-1'],
+              paddingVertical: spacing['space-2'],
+              paddingHorizontal: spacing['space-2'],
+              borderRadius: radii['radius-md'],
+              backgroundColor: p['surface-200'],
+            }}
+          >
+            <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
+              {rep.index}
+            </Text>
+            <Text style={[textStyles.label, { color: rep.ok ? p.success : p.warning }]}>
+              {rep.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 /** Placeholder results must never read as a real assessment. */
 export function DemoNotice() {
@@ -20,9 +68,11 @@ export function DemoNotice() {
     >
       <Feather name="info" size={18} color={p.info} style={{ marginTop: 2 }} />
       <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-        {es
-          ? 'Análisis de demostración: este resultado es provisional y aún no evalúa tu técnica.'
-          : 'Demo analysis: this result is a placeholder, not a real check of your form yet.'}
+        {selectCopy(
+          es,
+          'Análisis de demostración: este resultado es provisional y aún no evalúa tu técnica.',
+          'Demo analysis: this result is a placeholder, not a real check of your form yet.',
+        )}
       </Text>
     </View>
   );
@@ -67,24 +117,24 @@ export function ResultScreen({
   const es = useLanguage() === 'es';
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · ${es ? 'SERIE' : 'SET'} ${setNumber}`}
-      title={es ? 'Serie analizada' : 'Set analyzed'}
+      overline={`${exerciseName.toUpperCase()} · ${selectCopy(es, 'SERIE', 'SET')} ${setNumber}`}
+      title={selectCopy(es, 'Serie analizada', 'Set analyzed')}
       backIcon="x"
-      backLabel={es ? 'Volver al entrenamiento' : 'Back to workout'}
+      backLabel={selectCopy(es, 'Volver al entrenamiento', 'Back to workout')}
       onBack={onDone}
       footer={
         <>
-          <Button title={es ? 'Listo' : 'Done'} onPress={onDone} />
+          <Button title={selectCopy(es, 'Listo', 'Done')} onPress={onDone} />
           {hasVideo ? (
             <Button
-              title={es ? 'Ver grabación' : 'Watch recording'}
+              title={selectCopy(es, 'Ver grabación', 'Watch recording')}
               icon="play"
               onPress={onWatchVideo}
               secondary
             />
           ) : null}
           <Button
-            title={es ? 'Grabar de nuevo' : 'Record again'}
+            title={selectCopy(es, 'Grabar de nuevo', 'Record again')}
             icon="video"
             onPress={onRecordAgain}
             secondary
@@ -98,63 +148,25 @@ export function ResultScreen({
           {view.repCount}
         </Text>
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {es
-            ? view.repCount === 1
-              ? 'repetición detectada'
-              : 'repeticiones detectadas'
-            : view.repCount === 1
-              ? 'rep detected'
-              : 'reps detected'}
+          {repSummary(view.repCount, es)}
         </Text>
       </View>
       {view.score !== null ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {es ? 'Puntuación técnica' : 'Technique score'}{' '}
+          {selectCopy(es, 'Puntuación técnica', 'Technique score')}{' '}
           <Text style={{ color: p.ink, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
             {Math.round(view.score)}
           </Text>{' '}
           / 100
         </Text>
       ) : null}
-      <View style={ui.gap}>
-        <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-          {es ? 'REPETICIÓN A REPETICIÓN' : 'REP BY REP'}
-        </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
-          {view.reps.map((rep) => (
-            <View
-              key={rep.index}
-              accessibilityLabel={
-                es
-                  ? `Repetición ${rep.index}: ${rep.ok ? 'sin problemas' : rep.label}`
-                  : `Rep ${rep.index}: ${rep.ok ? 'no issues' : rep.label}`
-              }
-              style={{
-                minWidth: 52,
-                alignItems: 'center',
-                gap: spacing['space-1'],
-                paddingVertical: spacing['space-2'],
-                paddingHorizontal: spacing['space-2'],
-                borderRadius: radii['radius-md'],
-                backgroundColor: p['surface-200'],
-              }}
-            >
-              <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
-                {rep.index}
-              </Text>
-              <Text style={[textStyles.label, { color: rep.ok ? p.success : p.warning }]}>
-                {rep.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
+      <RepResults view={view} es={es} p={p} />
       {view.issues.length ? (
         <>
           {view.praise.length ? (
             <View style={[ui.card, { backgroundColor: p['surface-200'] }]}>
               <Text style={[textStyles.overline, { color: p.success }]}>
-                {es ? 'QUÉ HA IDO BIEN' : 'WHAT WENT WELL'}
+                {selectCopy(es, 'QUÉ HA IDO BIEN', 'WHAT WENT WELL')}
               </Text>
               <PraiseList items={view.praise} />
             </View>
@@ -162,7 +174,7 @@ export function ResultScreen({
           {view.issues.map((issue) => (
             <View key={issue.id} style={[ui.card, { backgroundColor: p['surface-200'] }]}>
               <Text style={[textStyles.overline, { color: p.warning }]}>
-                {es ? 'PROBLEMA' : 'ISSUE'} · {issue.label.toUpperCase()}
+                {selectCopy(es, 'PROBLEMA', 'ISSUE')} · {issue.label.toUpperCase()}
               </Text>
               <Text style={[textStyles['title-md'], { color: p.ink }]}>{issue.title}</Text>
               {issue.explanation ? (
@@ -183,9 +195,11 @@ export function ResultScreen({
             <PraiseList items={view.praise} />
           ) : (
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {es
-                ? 'Todas las repeticiones se veían bien. Sigue así.'
-                : 'Every rep looked good. Keep it up.'}
+              {selectCopy(
+                es,
+                'Todas las repeticiones se veían bien. Sigue así.',
+                'Every rep looked good. Keep it up.',
+              )}
             </Text>
           )}
         </View>
@@ -193,15 +207,17 @@ export function ResultScreen({
       {view.tip ? (
         <View style={[ui.card, { backgroundColor: p['brand-soft'], gap: spacing['space-1'] }]}>
           <Text style={[textStyles.overline, { color: p['brand-ink'] }]}>
-            {es ? 'PRÓXIMA SERIE' : 'NEXT SET'}
+            {selectCopy(es, 'PRÓXIMA SERIE', 'NEXT SET')}
           </Text>
           <Text style={[textStyles.body, { color: p['brand-ink'] }]}>{view.tip}</Text>
         </View>
       ) : null}
       <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
-        {es
-          ? '¿El recuento es incorrecto? Puedes editar las repeticiones de la serie.'
-          : 'Wrong count? You can edit the reps in the set.'}
+        {selectCopy(
+          es,
+          '¿El recuento es incorrecto? Puedes editar las repeticiones de la serie.',
+          'Wrong count? You can edit the reps in the set.',
+        )}
       </Text>
     </FormCheckScreen>
   );

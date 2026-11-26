@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { Button } from '@/components/Button';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
@@ -27,24 +27,98 @@ const weeklyActivityLabels: Record<string, string> = {
 };
 
 const macroLabels = { protein: 'Protein', carbohydrates: 'Carbohydrates', fats: 'Fat' } as const;
+const objectiveLabelsEs = {
+  lose_fat: 'Perder grasa',
+  build_muscle: 'Ganar músculo',
+  gain_weight: 'Ganar peso',
+  maintain_weight: 'Mantener el peso',
+} as const;
+const activityLabelsEs: Record<string, string> = {
+  '1.2': 'Sedentaria',
+  '1.375': 'Ligera',
+  '1.55': 'Moderada',
+  '1.725': 'Alta',
+  '1.9': 'Muy alta',
+};
+const macroLabelsEs = {
+  protein: 'Proteínas',
+  carbohydrates: 'Carbohidratos',
+  fats: 'Grasas',
+} as const;
+const reasonLabelsEs: Record<string, string> = {
+  incomplete_profile: 'Completa tu perfil y selecciona un objetivo para obtener una sugerencia.',
+  underage: 'Las sugerencias automáticas están disponibles para mayores de 18 años.',
+  measurements_need_assessment:
+    'Tus medidas requieren una evaluación individual antes de establecer un objetivo.',
+  missing_sex_or_activity: 'Actualiza tu sexo y nivel de actividad en Perfil.',
+  estimate_needs_assessment:
+    'Esta estimación requiere una evaluación individual antes de establecer un objetivo.',
+};
+const reasonTextEs: Record<string, string> = {
+  'Complete your profile and select an objective to get a suggestion.':
+    reasonLabelsEs.incomplete_profile,
+  'Automatic suggestions are available for adults aged 18 or older.': reasonLabelsEs.underage,
+  'Your measurements need an individual assessment before setting a target.':
+    reasonLabelsEs.measurements_need_assessment,
+  'Update your sex and activity level in Profile.': reasonLabelsEs.missing_sex_or_activity,
+  'This estimate needs an individual assessment before setting a target.':
+    reasonLabelsEs.estimate_needs_assessment,
+};
+const missingLabelsEs: Record<string, string> = {
+  activity_level: 'nivel de actividad',
+  age: 'edad',
+  height_cm: 'altura',
+  weight_kg: 'peso',
+  objective: 'objetivo',
+  sex: 'sexo',
+  weight: 'peso',
+  height: 'altura',
+  birth_date: 'fecha de nacimiento',
+};
+
+function objectiveLabel(objective: RecommendationData['objective'], es: boolean) {
+  if (!objective) return selectCopy(es, 'Objetivo diario', 'Daily target');
+  return es ? objectiveLabelsEs[objective] : objectiveLabels[objective];
+}
+
+function translatedReason(data: RecommendationData, es: boolean) {
+  if (!es) return data.reason;
+  if (data.reason_code && reasonLabelsEs[data.reason_code]) return reasonLabelsEs[data.reason_code];
+  return data.reason ? (reasonTextEs[data.reason] ?? data.reason) : data.reason;
+}
+
+function translatedMissingField(field: string, es: boolean) {
+  if (!es) return field.replaceAll('_', ' ');
+  return missingLabelsEs[field] ?? field.replaceAll('_', ' ');
+}
 
 function targetComparison(suggestion: number, saved: number, es: boolean): string {
   if (saved === suggestion)
-    return es ? 'Coincide con tu objetivo guardado.' : 'Matches your saved target.';
+    return selectCopy(es, 'Coincide con tu objetivo guardado.', 'Matches your saved target.');
   const difference = Number(Math.abs(suggestion - saved).toFixed(2));
   const direction = suggestion > saved ? 'above' : 'below';
-  return es
-    ? `Sugerencia: ${difference} kcal/día ${suggestion > saved ? 'por encima' : 'por debajo'} de tu objetivo guardado.`
-    : `Suggestion: ${difference} kcal/day ${direction} your saved target.`;
+  const localizedDirection = selectCopy(
+    es,
+    suggestion > saved ? 'por encima' : 'por debajo',
+    direction,
+  );
+  return selectCopy(
+    es,
+    `Sugerencia: ${difference} kcal/día ${localizedDirection} de tu objetivo guardado.`,
+    `Suggestion: ${difference} kcal/day ${localizedDirection} your saved target.`,
+  );
 }
 
 function adjustmentText(percent: number | null, es: boolean): string {
   if (percent === 0)
-    return es ? 'Calorías para mantener tu peso.' : 'Calories to maintain your weight.';
+    return selectCopy(es, 'Calorías para mantener tu peso.', 'Calories to maintain your weight.');
   const direction = Number(percent) < 0 ? 'fewer' : 'more';
-  return es
-    ? `${Math.abs(percent ?? 0)} % ${Number(percent) < 0 ? 'menos' : 'más'} calorías para tu objetivo.`
-    : `${Math.abs(percent ?? 0)}% ${direction} calories for your goal.`;
+  const localizedDirection = selectCopy(es, Number(percent) < 0 ? 'menos' : 'más', direction);
+  return selectCopy(
+    es,
+    `${Math.abs(percent ?? 0)} % ${localizedDirection} calorías para tu objetivo.`,
+    `${Math.abs(percent ?? 0)}% ${localizedDirection} calories for your goal.`,
+  );
 }
 
 type RecommendationData = Awaited<ReturnType<typeof nutritionApi.recommendation>>;
@@ -74,36 +148,22 @@ function RecommendationContent({
         <>
           <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
             <Text style={[textStyles['title-md'], { color: p.ink }]}>
-              {data.objective
-                ? es
-                  ? {
-                      lose_fat: 'Perder grasa',
-                      build_muscle: 'Ganar músculo',
-                      gain_weight: 'Ganar peso',
-                      maintain_weight: 'Mantener el peso',
-                    }[data.objective]
-                  : objectiveLabels[data.objective]
-                : es
-                  ? 'Objetivo diario'
-                  : 'Daily target'}
+              {objectiveLabel(data.objective, es)}
             </Text>
             <Text style={[textStyles['metric-lg'], { color: p['brand-ink'] }]}>
-              {goal.calories} {es ? 'kcal/día' : 'kcal/day'}
+              {goal.calories} {selectCopy(es, 'kcal/día', 'kcal/day')}
             </Text>
             {(['protein', 'carbohydrates', 'fats'] as const).map((macro) => (
               <Text key={macro} style={[textStyles.body, { color: p.ink }]}>
-                {es
-                  ? { protein: 'Proteínas', carbohydrates: 'Carbohidratos', fats: 'Grasas' }[macro]
-                  : macroLabels[macro]}
-                : {Math.round(goal[macro])} g{' · '}
+                {es ? macroLabelsEs[macro] : macroLabels[macro]}: {Math.round(goal[macro])} g{' · '}
                 {Math.round(((goal[macro] * (macro === 'fats' ? 9 : 4)) / goal.calories) * 100)}%
               </Text>
             ))}
             {saved ? (
               <View style={{ gap: spacing['space-1'] }}>
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  {es ? 'Tu objetivo guardado:' : 'Your saved target:'} {saved.calories}{' '}
-                  {es ? 'kcal/día' : 'kcal/day'}
+                  {selectCopy(es, 'Tu objetivo guardado:', 'Your saved target:')} {saved.calories}{' '}
+                  {selectCopy(es, 'kcal/día', 'kcal/day')}
                 </Text>
                 <Text style={[textStyles['body-sm'], { color: p.ink }]}>
                   {targetComparison(goal.calories, saved.calories, es)}
@@ -113,58 +173,50 @@ function RecommendationContent({
           </View>
           <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
             <Text style={[textStyles.body, { color: p.ink }]}>
-              {es ? 'Actividad semanal:' : 'Weekly activity:'}{' '}
+              {selectCopy(es, 'Actividad semanal:', 'Weekly activity:')}{' '}
               {es
-                ? ((
-                    {
-                      '1.2': 'Sedentaria',
-                      '1.375': 'Ligera',
-                      '1.55': 'Moderada',
-                      '1.725': 'Alta',
-                      '1.9': 'Muy alta',
-                    } as Record<string, string>
-                  )[String(data.activity_factor)] ?? 'Sin definir')
+                ? (activityLabelsEs[String(data.activity_factor)] ?? 'Sin definir')
                 : (weeklyActivityLabels[String(data.activity_factor)] ?? 'Not set')}
             </Text>
             <Text style={[textStyles.body, { color: p.ink }]}>
-              {es ? 'Mantenimiento:' : 'Maintenance:'} {Math.round(data.maintenance_calories ?? 0)}{' '}
-              {es ? 'kcal/día' : 'kcal/day'}
+              {selectCopy(es, 'Mantenimiento:', 'Maintenance:')}{' '}
+              {Math.round(data.maintenance_calories ?? 0)} {selectCopy(es, 'kcal/día', 'kcal/day')}
             </Text>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
               {adjustmentText(data.adjustment_percent, es)}
             </Text>
           </View>
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            {es
-              ? 'Una estimación inicial. Revisa tu progreso en 2–4 semanas.'
-              : 'A starting estimate. Review your progress in 2–4 weeks.'}
+            {selectCopy(
+              es,
+              'Una estimación inicial. Revisa tu progreso en 2–4 semanas.',
+              'A starting estimate. Review your progress in 2–4 weeks.',
+            )}
           </Text>
           <View style={styles.confirm}>
             <Switch
-              accessibilityLabel={
-                es
-                  ? 'Esta estimación para adultos es adecuada para mí'
-                  : 'This adult estimate is appropriate for me'
-              }
+              accessibilityLabel={selectCopy(
+                es,
+                'Esta estimación para adultos es adecuada para mí',
+                'This adult estimate is appropriate for me',
+              )}
               value={eligible}
               onValueChange={setEligible}
               disabled={pending}
             />
             <Text style={[textStyles['body-sm'], { color: p.ink, flex: 1 }]}>
-              {es
-                ? 'No estoy embarazada ni en periodo de lactancia. No sigo una dieta prescrita.'
-                : 'Not pregnant or breastfeeding. No prescribed diet.'}
+              {selectCopy(
+                es,
+                'No estoy embarazada ni en periodo de lactancia. No sigo una dieta prescrita.',
+                'Not pregnant or breastfeeding. No prescribed diet.',
+              )}
             </Text>
           </View>
           <Button
             title={
               pending
-                ? es
-                  ? 'Guardando…'
-                  : 'Saving…'
-                : es
-                  ? 'Aceptar sugerencia'
-                  : 'Accept suggestion'
+                ? selectCopy(es, 'Guardando…', 'Saving…')
+                : selectCopy(es, 'Aceptar sugerencia', 'Accept suggestion')
             }
             disabled={!eligible || pending}
             onPress={() => {
@@ -173,81 +225,36 @@ function RecommendationContent({
           />
           {saved ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {es
-                ? 'Esto sustituye tus objetivos actuales.'
-                : 'This replaces your current targets.'}
+              {selectCopy(
+                es,
+                'Esto sustituye tus objetivos actuales.',
+                'This replaces your current targets.',
+              )}
             </Text>
           ) : null}
         </>
       ) : (
         <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
-          <Text style={[textStyles.body, { color: p.ink }]}>
-            {(es &&
-              data.reason_code &&
-              (
-                {
-                  incomplete_profile:
-                    'Completa tu perfil y selecciona un objetivo para obtener una sugerencia.',
-                  underage:
-                    'Las sugerencias automáticas están disponibles para mayores de 18 años.',
-                  measurements_need_assessment:
-                    'Tus medidas requieren una evaluación individual antes de establecer un objetivo.',
-                  missing_sex_or_activity: 'Actualiza tu sexo y nivel de actividad en Perfil.',
-                  estimate_needs_assessment:
-                    'Esta estimación requiere una evaluación individual antes de establecer un objetivo.',
-                } as Record<string, string>
-              )[data.reason_code]) ||
-              (es && data.reason
-                ? ((
-                    {
-                      'Complete your profile and select an objective to get a suggestion.':
-                        'Completa tu perfil y selecciona un objetivo para obtener una sugerencia.',
-                      'Automatic suggestions are available for adults aged 18 or older.':
-                        'Las sugerencias automáticas están disponibles para mayores de 18 años.',
-                      'Your measurements need an individual assessment before setting a target.':
-                        'Tus medidas requieren una evaluación individual antes de establecer un objetivo.',
-                      'Update your sex and activity level in Profile.':
-                        'Actualiza tu sexo y nivel de actividad en Perfil.',
-                      'This estimate needs an individual assessment before setting a target.':
-                        'Esta estimación requiere una evaluación individual antes de establecer un objetivo.',
-                    } as Record<string, string>
-                  )[data.reason] ?? data.reason)
-                : data.reason)}
-          </Text>
+          <Text style={[textStyles.body, { color: p.ink }]}>{translatedReason(data, es)}</Text>
           {data.missing_fields.length ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {es ? 'Faltan:' : 'Missing:'}{' '}
-              {data.missing_fields
-                .map((field) =>
-                  es
-                    ? ((
-                        {
-                          activity_level: 'nivel de actividad',
-                          age: 'edad',
-                          height_cm: 'altura',
-                          weight_kg: 'peso',
-                          objective: 'objetivo',
-                          sex: 'sexo',
-                          weight: 'peso',
-                          height: 'altura',
-                          birth_date: 'fecha de nacimiento',
-                        } as Record<string, string>
-                      )[field] ?? field.replaceAll('_', ' '))
-                    : field.replaceAll('_', ' '),
-                )
-                .join(', ')}
-              .{' '}
-              {es
-                ? 'Actualízalos en Perfil y vuelve aquí.'
-                : 'Update these in Profile, then return here.'}
+              {selectCopy(es, 'Faltan:', 'Missing:')}{' '}
+              {data.missing_fields.map((field) => translatedMissingField(field, es)).join(', ')}.{' '}
+              {selectCopy(
+                es,
+                'Actualízalos en Perfil y vuelve aquí.',
+                'Update these in Profile, then return here.',
+              )}
             </Text>
           ) : null}
         </View>
       )}
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {es
-          ? 'Para adultos sanos. Incluye las calorías del ejercicio.'
-          : 'For healthy adults. Includes exercise calories.'}
+        {selectCopy(
+          es,
+          'Para adultos sanos. Incluye las calorías del ejercicio.',
+          'For healthy adults. Includes exercise calories.',
+        )}
       </Text>
     </>
   );
@@ -318,11 +325,11 @@ function Recommendation({
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <ScrollView contentContainerStyle={[screenContentStyle, styles.content]}>
         <ScreenHeader
-          title={es ? 'Tu plan nutricional' : 'Your nutrition plan'}
+          title={selectCopy(es, 'Tu plan nutricional', 'Your nutrition plan')}
           leading={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={es ? 'Volver' : 'Back'}
+              accessibilityLabel={selectCopy(es, 'Volver', 'Back')}
               disabled={accept.isPending}
               onPress={onClose}
               style={styles.back}
@@ -332,22 +339,28 @@ function Recommendation({
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {es
-            ? 'Tus calorías y macronutrientes diarios sugeridos.'
-            : 'Your suggested daily calories and macros.'}
+          {selectCopy(
+            es,
+            'Tus calorías y macronutrientes diarios sugeridos.',
+            'Your suggested daily calories and macros.',
+          )}
         </Text>
         {loading ? (
           <Text style={{ color: p.ink }}>
-            {es ? 'Calculando tu sugerencia…' : 'Calculating your suggestion…'}
+            {selectCopy(es, 'Calculando tu sugerencia…', 'Calculating your suggestion…')}
           </Text>
         ) : null}
         {failed ? (
           <View style={styles.content}>
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {es ? 'No se pudo cargar tu sugerencia.' : 'Could not load your suggestion.'}
+              {selectCopy(
+                es,
+                'No se pudo cargar tu sugerencia.',
+                'Could not load your suggestion.',
+              )}
             </Text>
             <Button
-              title={es ? 'Reintentar' : 'Retry'}
+              title={selectCopy(es, 'Reintentar', 'Retry')}
               onPress={() => {
                 void recommendation.refetch();
                 void saved.refetch();
@@ -371,13 +384,15 @@ function Recommendation({
         ) : null}
         {accept.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {es
-              ? 'No se pudo guardar tu objetivo. Inténtalo de nuevo.'
-              : 'Could not save your goal. Try again.'}
+            {selectCopy(
+              es,
+              'No se pudo guardar tu objetivo. Inténtalo de nuevo.',
+              'Could not save your goal. Try again.',
+            )}
           </Text>
         ) : null}
         <Button
-          title={es ? 'Introducir manualmente' : 'Enter manually'}
+          title={selectCopy(es, 'Introducir manualmente', 'Enter manually')}
           secondary
           disabled={accept.isPending}
           onPress={() => setManual(true)}

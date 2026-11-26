@@ -1,5 +1,6 @@
-import type { Language } from '@/i18n/Language';
+import { selectCopy, type Language } from '@/i18n/Language';
 import { bundledSpecs } from './engine';
+import type { ExerciseSpec } from './engine';
 import type { FormCheckProfile } from './profiles';
 import {
   genericReasons,
@@ -38,10 +39,82 @@ export type AnalysisView =
 const MAX_PRAISE = 3;
 const GREAT_SCORE = 90;
 
+function reasonText(profile: FormCheckProfile, id: string, language: Language) {
+  if (language === 'es') return spanishReasons[id] ?? spanishUnknownReason;
+  return profile.reasonOverrides?.[id] ?? genericReasons[id] ?? unknownReason;
+}
+
+function repLabel(
+  id: string,
+  cues: ExerciseSpec['cues'],
+  checks: Map<string, FormCheckProfile['checks'][number]>,
+  language: Language,
+) {
+  if (language === 'es') return cues?.[id]?.live.es ?? 'Revisar';
+  return checks.get(id)?.repLabel ?? 'Check';
+}
+
+function repStatusLabel(ok: boolean, language: Language) {
+  if (ok) return selectCopy(language === 'es', 'Bien', 'Good');
+  return selectCopy(language === 'es', 'Revisar', 'Check');
+}
+
+function issueTitle(
+  id: string,
+  reps: number[],
+  cues: ExerciseSpec['cues'],
+  checks: Map<string, FormCheckProfile['checks'][number]>,
+  language: Language,
+) {
+  if (language === 'es') {
+    const plural = reps.length === 1 ? 'Repetición' : 'Repeticiones';
+    return `${plural} {reps}: ${cues[id]?.live.es ?? 'revisa la técnica'}`;
+  }
+  return checks.get(id)?.title[reps.length === 1 ? 'one' : 'other'] ?? 'Form issue on rep {reps}';
+}
+
+function issueLabel(
+  id: string,
+  cues: ExerciseSpec['cues'],
+  checks: Map<string, FormCheckProfile['checks'][number]>,
+  language: Language,
+) {
+  if (language === 'es') return cues[id]?.label.es ?? 'Técnica';
+  return checks.get(id)?.label ?? 'Form';
+}
+
+function praiseFor(
+  id: string,
+  cues: ExerciseSpec['cues'],
+  checks: Map<string, FormCheckProfile['checks'][number]>,
+  language: Language,
+) {
+  if (language === 'es') return cues[id]?.good.es;
+  return checks.get(id)?.praise ?? cues[id]?.good.en;
+}
+
+function firstTip(
+  issues: IssueView[],
+  cues: ExerciseSpec['cues'],
+  checks: Map<string, FormCheckProfile['checks'][number]>,
+  language: Language,
+) {
+  const firstIssue = issues[0];
+  if (!firstIssue) return null;
+  if (language === 'es') return cues[firstIssue.id]?.fix.es ?? null;
+  return checks.get(firstIssue.id)?.tip ?? null;
+}
+
+function verdict(score: number | null, language: Language) {
+  if (score !== null && score >= GREAT_SCORE)
+    return selectCopy(language === 'es', 'Gran serie', 'Great set');
+  return selectCopy(language === 'es', 'Buena serie', 'Solid set');
+}
+
 /** "4", "4 and 5", "1, 3 and 4". */
 export function listReps(reps: number[], language: Language = 'en'): string {
   if (reps.length <= 1) return reps.join('');
-  return `${reps.slice(0, -1).join(', ')} ${language === 'es' ? 'y' : 'and'} ${reps.at(-1)}`;
+  return `${reps.slice(0, -1).join(', ')} ${selectCopy(language === 'es', 'y', 'and')} ${reps.at(-1)}`;
 }
 
 /** Turns stored ids into display text. Unknown ids degrade to generic text instead of failing. */
@@ -55,9 +128,7 @@ export function buildAnalysisView(
       kind: 'not_assessable',
       reasons: analysis.reasons.map((id) => ({
         id,
-        ...(language === 'es'
-          ? (spanishReasons[id] ?? spanishUnknownReason)
-          : (profile.reasonOverrides?.[id] ?? genericReasons[id] ?? unknownReason)),
+        ...reasonText(profile, id, language),
       })),
     };
   }
@@ -68,54 +139,36 @@ export function buildAnalysisView(
     for (const id of rep.issues) affected.set(id, [...(affected.get(id) ?? []), rep.index]);
   const issues = [...affected.entries()]
     .map(([id, reps]) => {
-      const check = checks.get(id);
-      const text =
-        language === 'es'
-          ? `${reps.length === 1 ? 'Repetición' : 'Repeticiones'} {reps}: ${cues[id]?.live.es ?? 'revisa la técnica'}`
-          : (check?.title[reps.length === 1 ? 'one' : 'other'] ?? 'Form issue on rep {reps}');
+      const text = issueTitle(id, reps, cues, checks, language);
       return {
         id,
-        label: language === 'es' ? (cues[id]?.label.es ?? 'Técnica') : (check?.label ?? 'Form'),
+        label: issueLabel(id, cues, checks, language),
         title: text.replace('{reps}', listReps(reps, language)),
-        explanation: language === 'es' ? '' : (check?.explanation ?? ''),
+        explanation: language === 'es' ? '' : (checks.get(id)?.explanation ?? ''),
         reps,
       };
     })
     .sort((a, b) => b.reps.length - a.reps.length);
   const praise = (analysis.strengths ?? [])
-    .map((id) =>
-      language === 'es' ? cues[id]?.good.es : (checks.get(id)?.praise ?? cues[id]?.good.en),
-    )
+    .map((id) => praiseFor(id, cues, checks, language))
     .filter((text): text is string => Boolean(text))
     .slice(0, MAX_PRAISE);
   const score = analysis.score ?? null;
-  const first = (rep: { issues: string[] }) =>
-    language === 'es'
-      ? (cues[rep.issues[0]]?.live.es ?? 'Revisar')
-      : (checks.get(rep.issues[0])?.repLabel ?? 'Check');
   return {
     kind: 'assessed',
     repCount: analysis.reps.length,
     reps: analysis.reps.map((rep) => ({
       index: rep.index,
       ok: rep.issues.length === 0,
-      label: rep.issues.length === 0 ? (language === 'es' ? 'Bien' : 'Good') : first(rep),
+      label:
+        rep.issues.length === 0
+          ? repStatusLabel(true, language)
+          : repLabel(rep.issues[0], cues, checks, language),
     })),
     issues,
-    tip: issues.length
-      ? language === 'es'
-        ? (cues[issues[0].id]?.fix.es ?? null)
-        : (checks.get(issues[0].id)?.tip ?? null)
-      : null,
+    tip: firstTip(issues, cues, checks, language),
     score,
     praise,
-    verdict:
-      score !== null && score >= GREAT_SCORE
-        ? language === 'es'
-          ? 'Gran serie'
-          : 'Great set'
-        : language === 'es'
-          ? 'Buena serie'
-          : 'Solid set',
+    verdict: verdict(score, language),
   };
 }

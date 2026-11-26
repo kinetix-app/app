@@ -4,7 +4,7 @@ import React from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { CalendarGrid } from '@/components/CalendarGrid';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
@@ -26,6 +26,25 @@ const targetPurpose = {
   gain_weight: 'to gain weight',
   maintain_weight: 'to maintain weight',
 };
+
+function objectivePurpose(objective: keyof typeof targetPurpose, es: boolean) {
+  if (!es) return targetPurpose[objective];
+  const labels = {
+    lose_fat: 'para perder grasa',
+    build_muscle: 'para ganar músculo',
+    gain_weight: 'para ganar peso',
+    maintain_weight: 'para mantener el peso',
+  };
+  return labels[objective];
+}
+
+function mealEditLabel(meal: (typeof mealTypes)[number], editing: boolean, es: boolean) {
+  const mealEs = { Breakfast: 'desayuno', Lunch: 'comida', Dinner: 'cena', Snacks: 'tentempiés' };
+  const action = editing
+    ? selectCopy(es, 'Terminar edición de', 'Finish editing')
+    : selectCopy(es, 'Editar', 'Edit');
+  return `${action} ${es ? mealEs[meal] : meal}`;
+}
 
 // This is the single place the future diary endpoint will populate from meal items.
 
@@ -49,8 +68,12 @@ const weekFor = (monday: Date, es: boolean) => {
     const date = addDays(monday, index);
     return {
       id: localDateId(date),
-      weekday: new Intl.DateTimeFormat(es ? 'es-ES' : 'en-US', { weekday: 'short' }).format(date),
-      month: new Intl.DateTimeFormat(es ? 'es-ES' : 'en-US', { month: 'short' }).format(date),
+      weekday: new Intl.DateTimeFormat(selectCopy(es, 'es-ES', 'en-US'), {
+        weekday: 'short',
+      }).format(date),
+      month: new Intl.DateTimeFormat(selectCopy(es, 'es-ES', 'en-US'), { month: 'short' }).format(
+        date,
+      ),
       day: String(date.getDate()),
       isToday: localDateId(date) === localDateId(today),
     };
@@ -191,12 +214,12 @@ export function NutritionDiaryScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={[screenContentStyle, styles.content]}>
           <ScreenHeader
-            title={es ? 'Nutrición' : 'Nutrition'}
+            title={selectCopy(es, 'Nutrición', 'Nutrition')}
             leading={
               onBack ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={es ? 'Volver al inicio' : 'Back to feed'}
+                  accessibilityLabel={selectCopy(es, 'Volver al inicio', 'Back to feed')}
                   onPress={onBack}
                   style={({ pressed }) => [
                     styles.backButton,
@@ -210,15 +233,13 @@ export function NutritionDiaryScreen({
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={es ? 'Abrir calendario' : 'Open calendar'}
+              accessibilityLabel={selectCopy(es, 'Abrir calendario', 'Open calendar')}
               onPress={openCalendar}
               style={styles.dateButton}
             >
               <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                 {selected.isToday
-                  ? es
-                    ? 'Hoy'
-                    : 'Today'
+                  ? selectCopy(es, 'Hoy', 'Today')
                   : `${selected.weekday}, ${selected.month} ${selected.day}, ${dateFromId(selectedDay).getFullYear()}`}
               </Text>
               <Feather name="calendar" size={18} color={p['ink-muted']} />
@@ -227,12 +248,12 @@ export function NutritionDiaryScreen({
 
           <View
             accessibilityRole="tablist"
-            accessibilityLabel={es ? 'Semana de nutrición' : 'Nutrition week'}
+            accessibilityLabel={selectCopy(es, 'Semana de nutrición', 'Nutrition week')}
             style={styles.weekNavigation}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={es ? 'Semana anterior' : 'Previous week'}
+              accessibilityLabel={selectCopy(es, 'Semana anterior', 'Previous week')}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(-1)}
@@ -266,7 +287,7 @@ export function NutritionDiaryScreen({
                     <Pressable
                       key={day.id}
                       accessibilityRole="tab"
-                      accessibilityLabel={`${day.weekday} ${day.month} ${day.day}${day.isToday ? (es ? ', hoy' : ', today') : ''}`}
+                      accessibilityLabel={`${day.weekday} ${day.month} ${day.day}${day.isToday ? selectCopy(es, ', hoy', ', today') : ''}`}
                       accessibilityState={{ selected: isSelected }}
                       onPress={() => {
                         setSelectedDay(day.id);
@@ -299,7 +320,7 @@ export function NutritionDiaryScreen({
             </Animated.View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={es ? 'Semana siguiente' : 'Next week'}
+              accessibilityLabel={selectCopy(es, 'Semana siguiente', 'Next week')}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(1)}
@@ -316,20 +337,23 @@ export function NutritionDiaryScreen({
                   {formatNumber(consumed.calories)} kcal
                 </Text>
                 <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                  {es ? 'de' : 'of'} {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
-                  {goal.data?.objective
-                    ? ` ${es ? { lose_fat: 'para perder grasa', build_muscle: 'para ganar músculo', gain_weight: 'para ganar peso', maintain_weight: 'para mantener el peso' }[goal.data.objective] : targetPurpose[goal.data.objective]}`
-                    : ''}
+                  {selectCopy(es, 'de', 'of')} {goal.data ? formatNumber(goal.data.calories) : '—'}{' '}
+                  kcal
+                  {goal.data?.objective ? ` ${objectivePurpose(goal.data.objective, es)}` : ''}
                 </Text>
               </View>
               {onEditGoal ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={es ? 'Editar objetivo nutricional' : 'Edit nutrition goal'}
+                  accessibilityLabel={selectCopy(
+                    es,
+                    'Editar objetivo nutricional',
+                    'Edit nutrition goal',
+                  )}
                   onPress={onEditGoal}
                 >
                   <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                    {es ? 'Editar objetivo' : 'Edit goal'}
+                    {selectCopy(es, 'Editar objetivo', 'Edit goal')}
                   </Text>
                 </Pressable>
               ) : null}
@@ -375,9 +399,11 @@ export function NutritionDiaryScreen({
             ))}
             {goal.data === null ? (
               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                {es
-                  ? 'Todavía no tienes un objetivo nutricional. Puedes seguir registrando alimentos y definirlo más tarde.'
-                  : 'No nutrition target yet. You can keep recording food and set one later.'}
+                {selectCopy(
+                  es,
+                  'Todavía no tienes un objetivo nutricional. Puedes seguir registrando alimentos y definirlo más tarde.',
+                  'No nutrition target yet. You can keep recording food and set one later.',
+                )}
               </Text>
             ) : null}
             {goal.isError ? (
@@ -386,19 +412,23 @@ export function NutritionDiaryScreen({
                   accessibilityRole="alert"
                   style={[textStyles['body-sm'], { color: p.danger }]}
                 >
-                  {es
-                    ? 'No se pudo cargar tu objetivo nutricional.'
-                    : 'We could not load your nutrition goal.'}
+                  {selectCopy(
+                    es,
+                    'No se pudo cargar tu objetivo nutricional.',
+                    'We could not load your nutrition goal.',
+                  )}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    es ? 'Volver a cargar el objetivo nutricional' : 'Retry loading nutrition goal'
-                  }
+                  accessibilityLabel={selectCopy(
+                    es,
+                    'Volver a cargar el objetivo nutricional',
+                    'Retry loading nutrition goal',
+                  )}
                   onPress={() => void goal.refetch()}
                 >
                   <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                    {es ? 'Reintentar' : 'Retry'}
+                    {selectCopy(es, 'Reintentar', 'Retry')}
                   </Text>
                 </Pressable>
               </View>
@@ -437,15 +467,13 @@ export function NutritionDiaryScreen({
                   ) : null}
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={
-                      es
-                        ? `${editingMeal === meal ? 'Terminar edición de' : 'Editar'} ${{ Breakfast: 'desayuno', Lunch: 'comida', Dinner: 'cena', Snacks: 'tentempiés' }[meal]}`
-                        : `${editingMeal === meal ? 'Finish editing' : 'Edit'} ${meal}`
-                    }
+                    accessibilityLabel={mealEditLabel(meal, editingMeal === meal, es)}
                     onPress={() => toggleMealEditing(meal)}
                   >
                     <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                      {editingMeal === meal ? (es ? 'Listo' : 'Done') : es ? 'Editar' : 'Edit'}
+                      {editingMeal === meal
+                        ? selectCopy(es, 'Listo', 'Done')
+                        : selectCopy(es, 'Editar', 'Edit')}
                     </Text>
                   </Pressable>
                 </View>
@@ -461,11 +489,11 @@ export function NutritionDiaryScreen({
                             <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                             <View style={styles.itemLine}>
                               <TextField
-                                accessibilityLabel={
-                                  es
-                                    ? `Editar cantidad de ${item.name}`
-                                    : `Edit ${item.name} quantity`
-                                }
+                                accessibilityLabel={selectCopy(
+                                  es,
+                                  `Editar cantidad de ${item.name}`,
+                                  `Edit ${item.name} quantity`,
+                                )}
                                 keyboardType="decimal-pad"
                                 value={draftAmounts[item.id] ?? ''}
                                 onChangeText={(value) =>
@@ -475,7 +503,7 @@ export function NutritionDiaryScreen({
                                 inputStyle={styles.quantityInput}
                                 trailing={
                                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                                    {item.recipe_id ? (es ? 'raciones' : 'servings') : 'g'}
+                                    {item.recipe_id ? selectCopy(es, 'raciones', 'servings') : 'g'}
                                   </Text>
                                 }
                               />
@@ -492,11 +520,11 @@ export function NutritionDiaryScreen({
                               <View style={styles.itemEditActions}>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={
-                                    es
-                                      ? `Guardar cantidad de ${item.name}`
-                                      : `Save ${item.name} quantity`
-                                  }
+                                  accessibilityLabel={selectCopy(
+                                    es,
+                                    `Guardar cantidad de ${item.name}`,
+                                    `Save ${item.name} quantity`,
+                                  )}
                                   accessibilityState={{
                                     disabled:
                                       updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
@@ -517,9 +545,11 @@ export function NutritionDiaryScreen({
                                 </Pressable>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={
-                                    es ? `Eliminar ${item.name}` : `Delete ${item.name}`
-                                  }
+                                  accessibilityLabel={selectCopy(
+                                    es,
+                                    `Eliminar ${item.name}`,
+                                    `Delete ${item.name}`,
+                                  )}
                                   disabled={removeItem.isPending}
                                   onPress={() => removeItem.mutate(item.id)}
                                   style={styles.deleteItem}
@@ -553,14 +583,16 @@ export function NutritionDiaryScreen({
                       accessibilityRole="alert"
                       style={[textStyles['body-sm'], { color: p.danger }]}
                     >
-                      {es
-                        ? 'No se pudo actualizar este registro.'
-                        : 'We could not update this entry.'}
+                      {selectCopy(
+                        es,
+                        'No se pudo actualizar este registro.',
+                        'We could not update this entry.',
+                      )}
                     </Text>
                   ) : null}
                   {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
                     <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                      {es ? 'Aún no hay alimentos registrados' : 'No food logged yet'}
+                      {selectCopy(es, 'Aún no hay alimentos registrados', 'No food logged yet')}
                     </Text>
                   ) : null}
                 </View>
@@ -618,7 +650,7 @@ function CalendarModal({
 }>) {
   const p = usePalette();
   const es = useLanguage() === 'es';
-  const monthLabel = new Intl.DateTimeFormat(es ? 'es-ES' : 'en-US', {
+  const monthLabel = new Intl.DateTimeFormat(selectCopy(es, 'es-ES', 'en-US'), {
     month: 'long',
     year: 'numeric',
   }).format(month);
@@ -632,7 +664,7 @@ function CalendarModal({
           <View style={styles.calendarHeader}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={es ? 'Mes anterior' : 'Previous month'}
+              accessibilityLabel={selectCopy(es, 'Mes anterior', 'Previous month')}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
               style={styles.calendarArrow}
             >
@@ -641,7 +673,7 @@ function CalendarModal({
             <Text style={[textStyles['title-md'], { color: p.ink }]}>{monthLabel}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={es ? 'Mes siguiente' : 'Next month'}
+              accessibilityLabel={selectCopy(es, 'Mes siguiente', 'Next month')}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
               style={styles.calendarArrow}
             >
@@ -659,7 +691,9 @@ function CalendarModal({
             onPress={onClose}
             style={[styles.calendarClose, { backgroundColor: p['surface-300'] }]}
           >
-            <Text style={[textStyles.label, { color: p.ink }]}>{es ? 'Cancelar' : 'Cancel'}</Text>
+            <Text style={[textStyles.label, { color: p.ink }]}>
+              {selectCopy(es, 'Cancelar', 'Cancel')}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -668,13 +702,8 @@ function CalendarModal({
 }
 
 function servingLabel(servings: number | null | undefined, es: boolean) {
-  const unit = es
-    ? servings === 1
-      ? 'ración'
-      : 'raciones'
-    : servings === 1
-      ? 'serving'
-      : 'servings';
+  const unit =
+    servings === 1 ? selectCopy(es, 'ración', 'serving') : selectCopy(es, 'raciones', 'servings');
   return `${servings} ${unit}`;
 }
 
