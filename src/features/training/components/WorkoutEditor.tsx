@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { Image, Platform, Pressable, Text, View, type PressableProps } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -39,7 +39,11 @@ export function WorkoutTimer({
     <View style={ui.row}>
       <Feather name="clock" size={18} color={foreground} />
       <Text
-        accessibilityLabel={es ? `Duración del entrenamiento ${time}` : `Workout duration ${time}`}
+        accessibilityLabel={selectCopy(
+          es,
+          `Duración del entrenamiento ${time}`,
+          `Workout duration ${time}`,
+        )}
         style={[
           compact ? textStyles.label : textStyles['title-md'],
           { color: foreground, fontVariant: ['tabular-nums'] },
@@ -88,9 +92,11 @@ export function WorkoutExerciseSummary({
       <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
         {savedCount === undefined
           ? `${sets.length} ${setLabel}`
-          : es
-            ? `${savedCount} / ${sets.length} series guardadas`
-            : `${savedCount} / ${sets.length} sets saved`}
+          : selectCopy(
+              es,
+              `${savedCount} / ${sets.length} series guardadas`,
+              `${savedCount} / ${sets.length} sets saved`,
+            )}
       </Text>
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
         {cardio ? cardioSummary(sets) : `${range('reps')} reps · ${range('value')} kg`}
@@ -177,13 +183,17 @@ export function WorkoutExerciseCard({
         nativeID={dragId}
         accessible={false}
         accessibilityLabel={
-          dragId ? (es ? `Reordenar ${exercise.name}` : `Reorder ${exercise.name}`) : undefined
+          dragId
+            ? selectCopy(es, `Reordenar ${exercise.name}`, `Reorder ${exercise.name}`)
+            : undefined
         }
         accessibilityHint={
           dragId
-            ? es
-              ? 'Mantén pulsado y arrastra para reordenar. Con el teclado, usa las flechas.'
-              : 'Hold and drag to reorder. Use arrow keys with a keyboard.'
+            ? selectCopy(
+                es,
+                'Mantén pulsado y arrastra para reordenar. Con el teclado, usa las flechas.',
+                'Hold and drag to reorder. Use arrow keys with a keyboard.',
+              )
             : undefined
         }
         disabled={disabled}
@@ -201,9 +211,11 @@ export function WorkoutExerciseCard({
         <View style={[ui.row, { alignItems: 'flex-start' }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              es ? `Detalles de ${exercise.name}` : `Details for ${exercise.name}`
-            }
+            accessibilityLabel={selectCopy(
+              es,
+              `Detalles de ${exercise.name}`,
+              `Details for ${exercise.name}`,
+            )}
             nativeID={dragId ? `${dragId}-drag-details` : undefined}
             onPress={onDetails}
             onLongPress={onDrag}
@@ -228,7 +240,9 @@ export function WorkoutExerciseCard({
               <View
                 style={{ minHeight: 100, justifyContent: 'center', padding: spacing['space-3'] }}
               >
-                <Text style={{ color: p['ink-muted'] }}>{es ? 'Sin imagen' : 'No image'}</Text>
+                <Text style={{ color: p['ink-muted'] }}>
+                  {selectCopy(es, 'Sin imagen', 'No image')}
+                </Text>
               </View>
             )}
           </Pressable>
@@ -236,15 +250,19 @@ export function WorkoutExerciseCard({
             <View style={[ui.row, { alignItems: 'flex-start', gap: spacing['space-1'] }]}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={
-                  es ? `Editar series de ${exercise.name}` : `Edit sets for ${exercise.name}`
-                }
+                accessibilityLabel={selectCopy(
+                  es,
+                  `Editar series de ${exercise.name}`,
+                  `Edit sets for ${exercise.name}`,
+                )}
                 nativeID={dragId ? `${dragId}-drag-title` : undefined}
                 accessibilityHint={
                   dragId
-                    ? es
-                      ? 'Mantén pulsado y arrastra para reordenar'
-                      : 'Hold and drag to reorder'
+                    ? selectCopy(
+                        es,
+                        'Mantén pulsado y arrastra para reordenar',
+                        'Hold and drag to reorder',
+                      )
                     : undefined
                 }
                 accessibilityActions={
@@ -252,11 +270,19 @@ export function WorkoutExerciseCard({
                     ? [
                         {
                           name: 'increment',
-                          label: es ? 'Mover ejercicio hacia abajo' : 'Move exercise later',
+                          label: selectCopy(
+                            es,
+                            'Mover ejercicio hacia abajo',
+                            'Move exercise later',
+                          ),
                         },
                         {
                           name: 'decrement',
-                          label: es ? 'Mover ejercicio hacia arriba' : 'Move exercise earlier',
+                          label: selectCopy(
+                            es,
+                            'Mover ejercicio hacia arriba',
+                            'Move exercise earlier',
+                          ),
                         },
                       ]
                     : undefined
@@ -277,7 +303,11 @@ export function WorkoutExerciseCard({
               </Pressable>
               <IconButton
                 icon="more-horizontal"
-                label={es ? `Acciones de ${exercise.name}` : `Actions for ${exercise.name}`}
+                label={selectCopy(
+                  es,
+                  `Acciones de ${exercise.name}`,
+                  `Actions for ${exercise.name}`,
+                )}
                 disabled={disabled}
                 onPress={() => setActions(true)}
               />
@@ -292,7 +322,7 @@ export function WorkoutExerciseCard({
             ) : null}
             {children}
             <Button
-              title={es ? 'Añadir serie' : es ? 'Añadir serie' : 'Add set'}
+              title={selectCopy(es, 'Añadir serie', 'Add set')}
               accessibilityLabel={addSetLabel}
               onPress={onAddSet}
               tone="positive"
@@ -303,11 +333,11 @@ export function WorkoutExerciseCard({
       </Pressable>
       {actions ? (
         <ActionMenu
-          title={es ? 'Acciones del ejercicio' : es ? 'Acciones del ejercicio' : 'Exercise actions'}
+          title={selectCopy(es, 'Acciones del ejercicio', 'Exercise actions')}
           onClose={() => setActions(false)}
           actions={[
             {
-              title: es ? 'Eliminar ejercicio' : 'Remove exercise',
+              title: selectCopy(es, 'Eliminar ejercicio', 'Remove exercise'),
               tone: 'danger',
               onPress: onRemove,
               disabled,

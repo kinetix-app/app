@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -60,7 +60,7 @@ export function RoutineCover({
     (uri && failedUri === uri);
   let content = (
     <MaterialCommunityIcons
-      accessibilityLabel={es ? 'Rutina de gimnasio' : es ? 'Rutina de gimnasio' : 'Gym routine'}
+      accessibilityLabel={selectCopy(es, 'Rutina de gimnasio', 'Gym routine')}
       name="dumbbell"
       size={28}
       color={p['brand-ink']}
@@ -69,9 +69,7 @@ export function RoutineCover({
   if (uri && !failed)
     content = (
       <Image
-        accessibilityLabel={
-          es ? 'Portada de la rutina' : es ? 'Portada de la rutina' : 'Routine cover'
-        }
+        accessibilityLabel={selectCopy(es, 'Portada de la rutina', 'Routine cover')}
         source={{ uri }}
         onError={() => setFailedUri(uri)}
         style={{ width: '100%', height: '100%' }}
@@ -80,13 +78,11 @@ export function RoutineCover({
   else if (path && !preview && !failed)
     content = (
       <ActivityIndicator
-        accessibilityLabel={
-          es
-            ? 'Cargando portada de la rutina'
-            : es
-              ? 'Cargando portada de la rutina'
-              : 'Loading routine cover'
-        }
+        accessibilityLabel={selectCopy(
+          es,
+          'Cargando portada de la rutina',
+          'Loading routine cover',
+        )}
         color={p['brand-ink']}
       />
     );
@@ -109,13 +105,7 @@ export function RoutineCover({
       {retryVisible ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={
-            es
-              ? 'Reintentar carga de portada'
-              : es
-                ? 'Reintentar carga de portada'
-                : 'Retry routine cover'
-          }
+          accessibilityLabel={selectCopy(es, 'Reintentar carga de portada', 'Retry routine cover')}
           disabled={disabled}
           accessibilityState={{ disabled }}
           onPress={() => {

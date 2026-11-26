@@ -4,7 +4,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import { Failure, IconButton, Loading, ui } from './ui';
 import { SessionWorkoutDetailModal } from './SessionWorkoutDetail';
@@ -79,11 +79,11 @@ export function WorkoutHistory({
         <View style={[ui.row, styles.headerContent]}>
           <IconButton
             icon="arrow-left"
-            label={backLabel ?? (es ? 'Volver a rutinas' : 'Back to routines')}
+            label={backLabel ?? selectCopy(es, 'Volver a rutinas', 'Back to routines')}
             onPress={onClose}
           />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
-            {es ? 'Historial de entrenamientos' : 'Workout history'}
+            {selectCopy(es, 'Historial de entrenamientos', 'Workout history')}
           </Text>
         </View>
       </View>
@@ -98,7 +98,11 @@ export function WorkoutHistory({
         ListEmptyComponent={
           (!list.isPending && !list.isError ? (
             <Text style={{ color: p['ink-muted'] }}>
-              {es ? 'Aún no hay entrenamientos completados.' : 'No completed workouts yet.'}
+              {selectCopy(
+                es,
+                'Aún no hay entrenamientos completados.',
+                'No completed workouts yet.',
+              )}
             </Text>
           ) : null) ?? undefined
         }
@@ -110,7 +114,7 @@ export function WorkoutHistory({
             !previous || month !== monthFormat.format(new Date(previous.ended_at));
           const day = dayFormat.format(completed);
           const time = timeFormat.format(completed);
-          const when = es ? `${day} a las ${time}` : `${day} at ${time}`;
+          const when = selectCopy(es, `${day} a las ${time}`, `${day} at ${time}`);
           const seconds = Math.max(
             0,
             Math.floor((completed.getTime() - Date.parse(item.started_at)) / 1000),
@@ -133,7 +137,11 @@ export function WorkoutHistory({
                 volumeKg={item.total_volume_kg}
                 exerciseCount={item.exercises.length}
                 open={{
-                  label: es ? `Ver ${item.title} del ${when}` : `View ${item.title} from ${when}`,
+                  label: selectCopy(
+                    es,
+                    `Ver ${item.title} del ${when}`,
+                    `View ${item.title} from ${when}`,
+                  ),
                   onPress: () => setSelected(item.id),
                 }}
               />
@@ -151,7 +159,7 @@ export function WorkoutHistory({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={selected}
-          backLabel={es ? 'Volver al historial' : 'Back to history'}
+          backLabel={selectCopy(es, 'Volver al historial', 'Back to history')}
           onBack={() => setSelected(null)}
           showShare={Boolean(onShare)}
           onShare={shareSelected}

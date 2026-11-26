@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { Language } from '@/i18n/Language';
+import { selectCopy } from '@/i18n/Language';
 
 export async function pickRoutinePicture(
   language: Language = 'en',
@@ -10,10 +11,11 @@ export async function pickRoutinePicture(
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted)
         return {
-          error:
-            language === 'es'
-              ? 'Permite el acceso a las fotos en Ajustes para elegir una portada.'
-              : 'Allow photo access in Settings to choose a cover.',
+          error: selectCopy(
+            language === 'es',
+            'Permite el acceso a las fotos en Ajustes para elegir una portada.',
+            'Allow photo access in Settings to choose a cover.',
+          ),
         };
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -26,25 +28,28 @@ export async function pickRoutinePicture(
     if (!asset) return null;
     if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024)
       return {
-        error:
-          language === 'es'
-            ? 'Elige una portada de menos de 5 MB.'
-            : 'Choose a cover smaller than 5 MB.',
+        error: selectCopy(
+          language === 'es',
+          'Elige una portada de menos de 5 MB.',
+          'Choose a cover smaller than 5 MB.',
+        ),
       };
     if (asset.mimeType && !['image/jpeg', 'image/png', 'image/webp'].includes(asset.mimeType))
       return {
-        error:
-          language === 'es'
-            ? 'Elige una portada en JPEG, PNG o WebP.'
-            : 'Choose a JPEG, PNG or WebP cover.',
+        error: selectCopy(
+          language === 'es',
+          'Elige una portada en JPEG, PNG o WebP.',
+          'Choose a JPEG, PNG or WebP cover.',
+        ),
       };
     return { asset };
   } catch {
     return {
-      error:
-        language === 'es'
-          ? 'No se pudieron abrir tus fotos. Inténtalo de nuevo.'
-          : 'Could not open your photos. Try again.',
+      error: selectCopy(
+        language === 'es',
+        'No se pudieron abrir tus fotos. Inténtalo de nuevo.',
+        'Could not open your photos. Try again.',
+      ),
     };
   }
 }

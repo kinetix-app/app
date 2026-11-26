@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { catalogueLabel } from '../catalogueLabels';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
@@ -36,6 +36,9 @@ export function BodyPartFilter({
   const es = language === 'es';
   const [activity, setActivity] = useState(activityType);
   const [draft, setDraft] = useState(selected);
+  const selectionSummary = draft.length
+    ? selectCopy(es, `${draft.length} seleccionadas`, `${draft.length} selected`)
+    : selectCopy(es, 'Todas las zonas musculares', 'All body parts');
   const available = [...new Set([...selected, ...options])].sort((a, b) =>
     catalogueLabel(a, language).localeCompare(catalogueLabel(b, language), language),
   );
@@ -62,17 +65,21 @@ export function BodyPartFilter({
               accessibilityRole="header"
               style={[textStyles['title-md'], { color: p.ink, flex: 1 }]}
             >
-              {es ? 'Filtros' : 'Filters'}
+              {selectCopy(es, 'Filtros', 'Filters')}
             </Text>
             <IconButton
               icon="x"
-              label={es ? 'Cerrar filtros de zonas musculares' : 'Close body part filters'}
+              label={selectCopy(
+                es,
+                'Cerrar filtros de zonas musculares',
+                'Close body part filters',
+              )}
               onPress={onClose}
             />
           </View>
           <View style={{ gap: spacing['space-2'] }}>
             <Text style={[textStyles.label, { color: p.ink }]}>
-              {es ? 'Actividad' : 'Activity'}
+              {selectCopy(es, 'Actividad', 'Activity')}
             </Text>
             <View
               style={[
@@ -118,7 +125,7 @@ export function BodyPartFilter({
           {activity !== 'cardio' ? (
             <>
               <Text style={[textStyles.label, { color: p.ink }]}>
-                {es ? 'Zonas musculares' : 'Body parts'}
+                {selectCopy(es, 'Zonas musculares', 'Body parts')}
               </Text>
               <ScrollView
                 style={{ flexShrink: 1 }}
@@ -173,7 +180,11 @@ export function BodyPartFilter({
                 })}
                 {!pending && !error && available.length === 0 ? (
                   <Text style={{ color: p['ink-muted'] }}>
-                    {es ? 'No hay zonas musculares disponibles.' : 'No body parts available.'}
+                    {selectCopy(
+                      es,
+                      'No hay zonas musculares disponibles.',
+                      'No body parts available.',
+                    )}
                   </Text>
                 ) : null}
               </ScrollView>
@@ -182,19 +193,15 @@ export function BodyPartFilter({
                   accessibilityLiveRegion="polite"
                   style={[textStyles['body-sm'], { color: p['ink-muted'], flex: 1 }]}
                 >
-                  {draft.length
-                    ? es
-                      ? `${draft.length} seleccionadas`
-                      : `${draft.length} selected`
-                    : es
-                      ? 'Todas las zonas musculares'
-                      : 'All body parts'}
+                  {selectionSummary}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    es ? 'Limpiar selección de zonas musculares' : 'Clear draft body part filters'
-                  }
+                  accessibilityLabel={selectCopy(
+                    es,
+                    'Limpiar selección de zonas musculares',
+                    'Clear draft body part filters',
+                  )}
                   accessibilityState={{ disabled: draft.length === 0 }}
                   disabled={draft.length === 0}
                   onPress={() => setDraft([])}
@@ -206,7 +213,7 @@ export function BodyPartFilter({
                   })}
                 >
                   <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                    {es ? 'Limpiar' : 'Clear'}
+                    {selectCopy(es, 'Limpiar', 'Clear')}
                   </Text>
                 </Pressable>
               </View>
@@ -214,12 +221,12 @@ export function BodyPartFilter({
           ) : null}
           <View style={ui.row}>
             <View style={{ flex: 1 }}>
-              <Button title={es ? 'Cancelar' : 'Cancel'} onPress={onClose} secondary />
+              <Button title={selectCopy(es, 'Cancelar', 'Cancel')} onPress={onClose} secondary />
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                title={es ? 'Guardar' : 'Save'}
-                accessibilityLabel={es ? 'Guardar filtros' : 'Save filters'}
+                title={selectCopy(es, 'Guardar', 'Save')}
+                accessibilityLabel={selectCopy(es, 'Guardar filtros', 'Save filters')}
                 onPress={() =>
                   onApply(
                     activity === 'cardio' ? [] : [...draft].sort((a, b) => a.localeCompare(b)),

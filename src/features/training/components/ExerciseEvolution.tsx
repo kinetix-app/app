@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useQuery } from '@tanstack/react-query';
 import {
   AccessibilityInfo,
@@ -142,6 +142,20 @@ function metricUnitExplanation(
   if (metric === 'reps') return '';
   return `Load is shown in ${weight}.`;
 }
+function selectEvolutionDays(
+  days: EvolutionDay[],
+  metric: Metric,
+  range: Range,
+  selected: string | null,
+) {
+  const today = new Date().toISOString().slice(0, 10);
+  const start = range === 'All' ? '' : rangeStart(new Date(), range);
+  const history = days.filter((day) => day.date <= today);
+  const all = history.filter((day) => day[metric] !== null);
+  const visible = all.filter((day) => day.date >= start);
+  const current = visible.find((day) => day.date === selected) ?? visible.at(-1);
+  return { history, all, visible, current };
+}
 function MetricHeadline({
   current,
   metric,
@@ -208,18 +222,23 @@ export function ExerciseEvolution({
     queryFn: ({ signal }) => trainingApi.exerciseEvolution(exerciseId, weight, distance, signal),
     enabled: !!account.data,
   });
-  const today = new Date().toISOString().slice(0, 10);
-  const start = range === 'All' ? '' : rangeStart(new Date(), range);
-  const history = (query.data?.days ?? []).filter((d) => d.date <= today);
-  const all = history.filter((d) => d[metric] !== null);
-  const visible = all.filter((d) => d.date >= start);
-  const current = visible.find((d) => d.date === selected) ?? visible.at(-1);
+  const { history, all, visible, current } = selectEvolutionDays(
+    query.data?.days ?? [],
+    metric,
+    range,
+    selected,
+  );
+  const excludedSetsLabel = selectCopy(
+    es,
+    ' · Se excluyeron algunas series',
+    ' · Some sets excluded',
+  );
   return (
     <View style={{ gap: 12 }}>
       <ChartMetricSelector
         metrics={cardio ? cardioMetrics : gymMetrics}
         value={metric}
-        label={es ? 'Métrica del ejercicio' : 'Exercise metric'}
+        label={selectCopy(es, 'Métrica del ejercicio', 'Exercise metric')}
         labelFor={(key) => metricLabels[key]}
         reduceMotion={reduceMotion}
         onChange={(key) => {
@@ -259,11 +278,7 @@ export function ExerciseEvolution({
       {current ? (
         <Text style={{ color: p['ink-muted'] }}>
           {current.date}
-          {metric === 'volume' && current.volume_partial
-            ? es
-              ? ' · Se excluyeron algunas series'
-              : ' · Some sets excluded'
-            : ''}
+          {metric === 'volume' && current.volume_partial ? excludedSetsLabel : ''}
         </Text>
       ) : null}
       {query.data ? (
@@ -392,7 +407,7 @@ function MetricInfoSheet({
                 </Text>
                 <IconButton
                   icon="x"
-                  label={es ? 'Cerrar explicación' : 'Close explanation'}
+                  label={selectCopy(es, 'Cerrar explicación', 'Close explanation')}
                   onPress={() => onClose()}
                 />
               </View>

@@ -10,7 +10,7 @@ import { ExerciseEvolution } from './ExerciseEvolution';
 import { SessionWorkoutDetail } from './SessionWorkoutDetail';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import type { Exercise, ExerciseSummary } from '../schemas';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { catalogueLabel } from '../catalogueLabels';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
@@ -47,7 +47,11 @@ export function ExerciseDetails({
         <SessionWorkoutDetail
           accountId={accountId}
           sessionId={workoutId}
-          backLabel={es ? 'Volver al historial del ejercicio' : 'Back to exercise history'}
+          backLabel={selectCopy(
+            es,
+            'Volver al historial del ejercicio',
+            'Back to exercise history',
+          )}
           onBack={closeWorkout}
         />
       ) : null}
@@ -60,7 +64,11 @@ export function ExerciseDetails({
       >
         <ScrollView contentContainerStyle={ui.content}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <IconButton icon="arrow-left" label={es ? 'Volver' : 'Back'} onPress={onClose} />
+            <IconButton
+              icon="arrow-left"
+              label={selectCopy(es, 'Volver', 'Back')}
+              onPress={onClose}
+            />
             {detail.data ? (
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
                 {detail.data.name}
@@ -116,8 +124,12 @@ export function ExerciseDetails({
               {tab === 'Instructions' ? <ExerciseInstructions exercise={detail.data} /> : null}
               {onAdd ? (
                 <Button
-                  title={es ? 'Añadir' : 'Add'}
-                  accessibilityLabel={es ? `Añadir ${detail.data.name}` : `Add ${detail.data.name}`}
+                  title={selectCopy(es, 'Añadir', 'Add')}
+                  accessibilityLabel={selectCopy(
+                    es,
+                    `Añadir ${detail.data.name}`,
+                    `Add ${detail.data.name}`,
+                  )}
                   tone="positive"
                   onPress={() => {
                     if (detail.data) onAdd(detail.data);
@@ -147,12 +159,14 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
       <View style={ui.gap}>
         {exercise.equipments?.length ? (
           <Text style={{ color: p['ink-muted'] }}>
-            {es ? 'Material' : 'Equipment'}:{' '}
+            {selectCopy(es, 'Material', 'Equipment')}:{' '}
             {exercise.equipments.map((value) => catalogueLabel(value, language)).join(' · ')}
           </Text>
         ) : null}
       </View>
-      <Text style={[ui.heading, { color: p.ink }]}>{es ? 'Instrucciones' : 'Instructions'}</Text>
+      <Text style={[ui.heading, { color: p.ink }]}>
+        {selectCopy(es, 'Instrucciones', 'Instructions')}
+      </Text>
       {exercise.instructions?.length ? (
         exercise.instructions.map((text, i) => (
           <Text key={text} style={{ color: p.ink }}>
@@ -161,7 +175,7 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
         ))
       ) : (
         <Text style={{ color: p['ink-muted'] }}>
-          {es ? 'No hay instrucciones disponibles.' : 'No instructions available.'}
+          {selectCopy(es, 'No hay instrucciones disponibles.', 'No instructions available.')}
         </Text>
       )}
     </>

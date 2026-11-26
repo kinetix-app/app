@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { BackHandler, KeyboardAvoidingView, Modal, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, usePalette } from '@/theme/tokens';
@@ -105,16 +105,13 @@ export function OngoingSession() {
             {formCheck && profileForExercise(slot.exercise.name)
               ? (() => {
                   const recorded = formCheck.entryFor(set.id);
+                  const labels = es
+                    ? { recorded: 'Revisar', record: 'Grabar', set: 'serie' }
+                    : { recorded: 'Review', record: 'Record', set: 'set' };
                   if (!recorded && i !== slot.sets.findIndex((value) => !value.saved)) return null;
                   return (
                     <Button
-                      title={
-                        es
-                          ? `${recorded ? 'Revisar' : 'Grabar'} serie ${i + 1}`
-                          : recorded
-                            ? `Review set ${i + 1}`
-                            : `Record set ${i + 1}`
-                      }
+                      title={`${recorded ? labels.recorded : labels.record} ${labels.set} ${i + 1}`}
                       icon={recorded ? 'eye' : 'camera'}
                       onPress={() =>
                         setChecking({
@@ -143,11 +140,11 @@ export function OngoingSession() {
     <View style={ui.gap}>
       <View
         testID="workout-pull-handle"
-        accessibilityLabel={
-          es
-            ? 'Desliza hacia abajo para minimizar el entrenamiento'
-            : 'Pull down to minimize workout'
-        }
+        accessibilityLabel={selectCopy(
+          es,
+          'Desliza hacia abajo para minimizar el entrenamiento',
+          'Pull down to minimize workout',
+        )}
         accessibilityState={{ disabled: session.pending }}
         onStartShouldSetResponder={() => !session.pending}
         onResponderTerminationRequest={() => false}
@@ -192,14 +189,16 @@ export function OngoingSession() {
       </View>
       {draft.frozen ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          {es
-            ? 'Los resultados están bloqueados. Vuelve a finalizar para guardar el entrenamiento.'
-            : 'Results are locked. Retry Finish to save your workout.'}
+          {selectCopy(
+            es,
+            'Los resultados están bloqueados. Vuelve a finalizar para guardar el entrenamiento.',
+            'Results are locked. Retry Finish to save your workout.',
+          )}
         </Text>
       ) : null}
       {draft.frozen ? (
         <Button
-          title={es ? 'Revisar las series bloqueadas' : 'Review locked sets'}
+          title={selectCopy(es, 'Revisar las series bloqueadas', 'Review locked sets')}
           onPress={() => void session.recoverFrozen()}
           disabled={session.pending}
           secondary
@@ -212,7 +211,7 @@ export function OngoingSession() {
       ) : null}
       {session.storageError ? (
         <Button
-          title={es ? 'Reintentar guardado' : 'Retry storage'}
+          title={selectCopy(es, 'Reintentar guardado', 'Retry storage')}
           onPress={() => {
             void session.retryStorage();
           }}
@@ -315,19 +314,21 @@ export function OngoingSession() {
             <View style={ui.gap}>
               {!draft.exercises.length ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  {es
-                    ? 'Añade ejercicios para registrar tu entrenamiento.'
-                    : 'Add exercises to record your workout.'}
+                  {selectCopy(
+                    es,
+                    'Añade ejercicios para registrar tu entrenamiento.',
+                    'Add exercises to record your workout.',
+                  )}
                 </Text>
               ) : null}
               <Button
-                title={es ? 'Añadir ejercicio' : 'Add exercise'}
+                title={selectCopy(es, 'Añadir ejercicio', 'Add exercise')}
                 onPress={() => setPicker(true)}
                 tone="positive"
                 disabled={locked || dragging || draft.exercises.length >= 500}
               />
               <Button
-                title={es ? 'Más acciones' : 'More actions'}
+                title={selectCopy(es, 'Más acciones', 'More actions')}
                 icon="more-horizontal"
                 onPress={() => setActions(true)}
                 secondary
@@ -356,11 +357,11 @@ export function OngoingSession() {
       ) : null}
       {actions ? (
         <ActionMenu
-          title={es ? 'Acciones del entrenamiento' : 'Workout actions'}
+          title={selectCopy(es, 'Acciones del entrenamiento', 'Workout actions')}
           onClose={() => setActions(false)}
           actions={[
             {
-              title: es ? 'Sincronizar entrenamiento' : 'Sync workout',
+              title: selectCopy(es, 'Sincronizar entrenamiento', 'Sync workout'),
               onPress: () => void session.sync(),
               disabled: locked,
             },
@@ -370,7 +371,7 @@ export function OngoingSession() {
               disabled: session.storageError,
             },
             {
-              title: es ? 'Descartar entrenamiento' : 'Discard workout',
+              title: selectCopy(es, 'Descartar entrenamiento', 'Discard workout'),
               onPress: () => setDiscard(true),
               tone: 'danger',
               disabled: locked,
@@ -414,15 +415,17 @@ export function OngoingSession() {
             style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              {es ? '¿Actualizar la rutina?' : 'Update the routine?'}
+              {selectCopy(es, '¿Actualizar la rutina?', 'Update the routine?')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {es
-                ? 'Termina el entrenamiento. Puedes actualizar la rutina con los ejercicios y series guardados o conservar el plan actual. Se omitirán las series sin marcar.'
-                : 'Finish this workout. Update the original routine with these exercises and saved sets, or keep its current plan. Unticked sets will be left out.'}
+              {selectCopy(
+                es,
+                'Termina el entrenamiento. Puedes actualizar la rutina con los ejercicios y series guardados o conservar el plan actual. Se omitirán las series sin marcar.',
+                'Finish this workout. Update the original routine with these exercises and saved sets, or keep its current plan. Unticked sets will be left out.',
+              )}
             </Text>
             <Button
-              title={es ? 'Conservar rutina' : 'Keep routine'}
+              title={selectCopy(es, 'Conservar rutina', 'Keep routine')}
               onPress={() => {
                 setFinishPrompt(false);
                 void session.finish(false);
@@ -430,7 +433,7 @@ export function OngoingSession() {
               secondary
             />
             <Button
-              title={es ? 'Actualizar rutina' : 'Update routine'}
+              title={selectCopy(es, 'Actualizar rutina', 'Update routine')}
               disabled={!draft.exercises.length}
               onPress={() => {
                 setFinishPrompt(false);
@@ -438,7 +441,7 @@ export function OngoingSession() {
               }}
             />
             <Button
-              title={es ? 'Cancelar' : 'Cancel'}
+              title={selectCopy(es, 'Cancelar', 'Cancel')}
               onPress={() => setFinishPrompt(false)}
               secondary
             />
@@ -472,20 +475,22 @@ export function OngoingSession() {
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              {es ? '¿Descartar este entrenamiento?' : 'Discard this workout?'}
+              {selectCopy(es, '¿Descartar este entrenamiento?', 'Discard this workout?')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              {es
-                ? 'Se eliminarán el borrador y los resultados registrados.'
-                : 'The draft workout and its recorded results will be removed.'}
+              {selectCopy(
+                es,
+                'Se eliminarán el borrador y los resultados registrados.',
+                'The draft workout and its recorded results will be removed.',
+              )}
             </Text>
             <Button
-              title={es ? 'Seguir registrando' : 'Keep recording'}
+              title={selectCopy(es, 'Seguir registrando', 'Keep recording')}
               onPress={() => setDiscard(false)}
               secondary
             />
             <Button
-              title={es ? 'Descartar' : 'Discard'}
+              title={selectCopy(es, 'Descartar', 'Discard')}
               tone="danger"
               onPress={() => {
                 setDiscard(false);
@@ -500,7 +505,7 @@ export function OngoingSession() {
 }
 
 function finishButtonTitle(pending: boolean, frozen: boolean, es: boolean) {
-  if (pending) return es ? 'Procesando…' : 'Working…';
-  if (frozen) return es ? 'Volver a finalizar' : 'Retry Finish';
-  return es ? 'Finalizar' : 'Finish';
+  if (pending) return selectCopy(es, 'Procesando…', 'Working…');
+  if (frozen) return selectCopy(es, 'Volver a finalizar', 'Retry Finish');
+  return selectCopy(es, 'Finalizar', 'Finish');
 }

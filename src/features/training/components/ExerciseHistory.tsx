@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Pressable, Text, View } from 'react-native';
 import { spacing, usePalette } from '@/theme/tokens';
@@ -34,9 +34,11 @@ export function ExerciseHistory({
     <View style={ui.gap}>
       {items.length === 0 ? (
         <Text style={{ color: p['ink-muted'] }}>
-          {es
-            ? 'No hay sesiones anteriores para este ejercicio.'
-            : 'No previous sessions for this exercise.'}
+          {selectCopy(
+            es,
+            'No hay sesiones anteriores para este ejercicio.',
+            'No previous sessions for this exercise.',
+          )}
         </Text>
       ) : null}
       {items.map((item) => (
@@ -53,7 +55,7 @@ export function ExerciseHistory({
           style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
         >
           <Text style={{ color: p.brand }}>
-            {es ? 'Cargar más historial' : 'Load more history'}
+            {selectCopy(es, 'Cargar más historial', 'Load more history')}
           </Text>
         </Pressable>
       ) : null}
@@ -82,15 +84,17 @@ function HistoryCard({
         ))
       ) : (
         <Text style={{ color: p['ink-muted'] }}>
-          {es ? 'No hay series registradas.' : 'No sets recorded.'}
+          {selectCopy(es, 'No hay series registradas.', 'No sets recorded.')}
         </Text>
       )}
       <Button
-        title={es ? 'Ver entrenamiento' : es ? 'Ver entrenamiento' : 'View workout'}
+        title={selectCopy(es, 'Ver entrenamiento', 'View workout')}
         secondary
-        accessibilityLabel={
-          es ? `Ver entrenamiento ${item.session_id}` : `View workout ${item.session_id}`
-        }
+        accessibilityLabel={selectCopy(
+          es,
+          `Ver entrenamiento ${item.session_id}`,
+          `View workout ${item.session_id}`,
+        )}
         onPress={() => onOpenWorkout(item.session_id)}
       />
     </View>

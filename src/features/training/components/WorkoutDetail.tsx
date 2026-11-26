@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/services/apiClient';
@@ -50,7 +50,7 @@ export function WorkoutDetail({
         <View style={[styles.frame, ui.row, styles.headerContent]}>
           <IconButton icon="arrow-left" label={backLabel} onPress={onBack} />
           <Text accessibilityRole="header" style={[ui.heading, styles.fill, { color: p.ink }]}>
-            {es ? 'Detalles del entrenamiento' : 'Workout detail'}
+            {selectCopy(es, 'Detalles del entrenamiento', 'Workout detail')}
           </Text>
         </View>
       </View>
@@ -64,7 +64,7 @@ export function WorkoutDetail({
             <View style={styles.summarySection}>
               <WorkoutSummary workout={workout} author={author} />
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                {es ? 'Resultados de los ejercicios' : 'Exercise results'}
+                {selectCopy(es, 'Resultados de los ejercicios', 'Exercise results')}
               </Text>
             </View>
           ) : null) ?? undefined
@@ -72,16 +72,18 @@ export function WorkoutDetail({
         ListEmptyComponent={
           workout ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              {es ? 'No se registraron ejercicios.' : 'No exercises were recorded.'}
+              {selectCopy(es, 'No se registraron ejercicios.', 'No exercises were recorded.')}
             </Text>
           ) : (
             <View style={ui.gap}>
               {!error ? <Loading /> : null}
               {unavailable ? (
                 <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                  {es
-                    ? 'Este entrenamiento ya no está disponible.'
-                    : 'This workout is no longer available.'}
+                  {selectCopy(
+                    es,
+                    'Este entrenamiento ya no está disponible.',
+                    'This workout is no longer available.',
+                  )}
                 </Text>
               ) : null}
               {error && !unavailable ? <Failure error={error} retry={onRetry} /> : null}
@@ -98,7 +100,7 @@ export function WorkoutDetail({
         >
           <View style={[styles.frame, styles.footerContent]}>
             <Button
-              title={es ? 'Compartir en el muro' : es ? 'Compartir en el muro' : 'Share to feed'}
+              title={selectCopy(es, 'Compartir en el muro', 'Share to feed')}
               icon="share"
               onPress={onShare}
             />
@@ -157,10 +159,16 @@ function WorkoutSummary({
         <MetricRow
           testID="workout-detail-primary-metrics"
           metrics={[
-            { label: es ? 'Duración' : 'Duration', value: formatElapsedDuration(elapsedSeconds) },
-            { label: es ? 'Volumen' : 'Volume', value: formatWorkoutVolume(workout.volumeKg) },
             {
-              label: es ? 'Ejercicios' : 'Exercises',
+              label: selectCopy(es, 'Duración', 'Duration'),
+              value: formatElapsedDuration(elapsedSeconds),
+            },
+            {
+              label: selectCopy(es, 'Volumen', 'Volume'),
+              value: formatWorkoutVolume(workout.volumeKg),
+            },
+            {
+              label: selectCopy(es, 'Ejercicios', 'Exercises'),
               value: workout.exercises.length.toLocaleString(es ? 'es' : undefined),
             },
           ]}
@@ -169,8 +177,11 @@ function WorkoutSummary({
           testID="workout-detail-secondary-metrics"
           divided
           metrics={[
-            { label: es ? 'Series' : 'Sets', value: sets.toLocaleString() },
-            { label: es ? 'Repeticiones' : 'Reps', value: workout.reps?.toLocaleString() ?? '—' },
+            { label: selectCopy(es, 'Series', 'Sets'), value: sets.toLocaleString() },
+            {
+              label: selectCopy(es, 'Repeticiones', 'Reps'),
+              value: workout.reps?.toLocaleString() ?? '—',
+            },
           ]}
         />
       </View>
