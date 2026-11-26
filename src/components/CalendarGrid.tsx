@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useLanguage, type Language } from '@/i18n/Language';
+import { selectCopy, useLanguage, type Language } from '@/i18n/Language';
 import { radii, sizes, textStyles, usePalette } from '@/theme/tokens';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -73,7 +73,7 @@ export function CalendarGrid({
             <Pressable
               key={id}
               accessibilityRole="button"
-              accessibilityLabel={`${language === 'es' ? 'Seleccionar' : 'Select'} ${calendarLabel(id, language)}${isToday ? (language === 'es' ? ', hoy' : ', today') : ''}`}
+              accessibilityLabel={`${selectCopy(language === 'es', 'Seleccionar', 'Select')} ${calendarLabel(id, language)}${isToday ? selectCopy(language === 'es', ', hoy', ', today') : ''}`}
               accessibilityState={{ selected: isSelected, disabled }}
               disabled={disabled}
               onPress={() => onSelect(id)}

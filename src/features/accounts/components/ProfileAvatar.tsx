@@ -1,4 +1,4 @@
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -69,7 +69,7 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
   if (uri) {
     picture = (
       <Image
-        accessibilityLabel={es ? 'Foto de perfil' : 'Profile picture'}
+        accessibilityLabel={selectCopy(es, 'Foto de perfil', 'Profile picture')}
         source={{ uri }}
         style={{ width: '100%', height: '100%' }}
       />
@@ -77,14 +77,14 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
   } else if (privatePhoto && (photo.isPending || (!failed && !uri))) {
     picture = (
       <ActivityIndicator
-        accessibilityLabel={es ? 'Cargando foto de perfil' : 'Loading profile picture'}
+        accessibilityLabel={selectCopy(es, 'Cargando foto de perfil', 'Loading profile picture')}
         color={p['brand-ink']}
       />
     );
   } else {
     picture = (
       <Text
-        accessibilityLabel={es ? 'Sin foto de perfil' : 'No profile picture'}
+        accessibilityLabel={selectCopy(es, 'Sin foto de perfil', 'No profile picture')}
         style={[textStyles[size < 112 ? 'metric-md' : 'display-lg'], { color: p['brand-ink'] }]}
       >
         {account.profile.display_name?.slice(0, 1).toUpperCase() || '+'}
@@ -110,10 +110,10 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
       {privatePhoto && failed && !compact ? (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {es ? 'No se pudo cargar tu foto.' : 'Could not load your picture.'}
+            {selectCopy(es, 'No se pudo cargar tu foto.', 'Could not load your picture.')}
           </Text>
           <SetupButton
-            title={es ? 'Reintentar foto' : 'Retry picture'}
+            title={selectCopy(es, 'Reintentar foto', 'Retry picture')}
             secondary
             onPress={() => {
               void photo.refetch();

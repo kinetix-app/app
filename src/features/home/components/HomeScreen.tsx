@@ -1,4 +1,4 @@
-import { LanguageProvider, useLanguage } from '@/i18n/Language';
+import { selectCopy, LanguageProvider, useLanguage } from '@/i18n/Language';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
@@ -66,6 +66,15 @@ type HomeNavigationProps = Readonly<{
   onDismissFinished: () => void;
   initialInvitation?: string;
 }>;
+
+function friendRequestHint(count: number, es: boolean) {
+  if (!count) return undefined;
+  return countLabel(
+    count,
+    selectCopy(es, 'nueva solicitud de amistad', 'new friend request'),
+    selectCopy(es, 'nuevas solicitudes de amistad', 'new friend requests'),
+  );
+}
 
 function HomeNavigation({
   account,
@@ -138,15 +147,19 @@ function HomeNavigation({
       const success = await session.signOut();
       if (!success)
         setSignOutError(
-          es
-            ? 'No se pudo cerrar la sesión. Inténtalo de nuevo.'
-            : 'Could not sign out. Please try again.',
+          selectCopy(
+            es,
+            'No se pudo cerrar la sesión. Inténtalo de nuevo.',
+            'Could not sign out. Please try again.',
+          ),
         );
     } catch {
       setSignOutError(
-        es
-          ? 'No se pudo cerrar la sesión. Inténtalo de nuevo.'
-          : 'Could not sign out. Please try again.',
+        selectCopy(
+          es,
+          'No se pudo cerrar la sesión. Inténtalo de nuevo.',
+          'Could not sign out. Please try again.',
+        ),
       );
     } finally {
       loggingOut.current = false;
@@ -225,7 +238,7 @@ function HomeNavigation({
           <WorkoutHistory
             accountId={accountId}
             onClose={closeProfilePanel}
-            backLabel={es ? 'Volver al perfil' : 'Back to profile'}
+            backLabel={selectCopy(es, 'Volver al perfil', 'Back to profile')}
             active={panelActive}
             onShare={shareWorkout}
           />
@@ -289,18 +302,8 @@ function HomeNavigation({
           profileButton={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={es ? 'Abrir perfil' : 'Open profile'}
-              accessibilityHint={
-                incomingRequests
-                  ? es
-                    ? countLabel(
-                        incomingRequests,
-                        'nueva solicitud de amistad',
-                        'nuevas solicitudes de amistad',
-                      )
-                    : countLabel(incomingRequests, 'new friend request', 'new friend requests')
-                  : undefined
-              }
+              accessibilityLabel={selectCopy(es, 'Abrir perfil', 'Open profile')}
+              accessibilityHint={friendRequestHint(incomingRequests, es)}
               onPress={showProfile}
               hitSlop={spacing['space-1']}
               style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
@@ -389,7 +392,7 @@ function HomeNavigation({
           <SessionWorkoutDetail
             accountId={accountId}
             sessionId={finishedSessionId}
-            backLabel={es ? 'Volver a entrenamiento guardado' : 'Back to workout saved'}
+            backLabel={selectCopy(es, 'Volver a entrenamiento guardado', 'Back to workout saved')}
             onBack={() => setViewingFinished(false)}
             showShare
             onShare={shareFinishedWorkout}
@@ -410,13 +413,17 @@ function HomeNavigation({
               style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
             >
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                {es ? 'Entrenamiento guardado' : 'Workout saved'}
+                {selectCopy(es, 'Entrenamiento guardado', 'Workout saved')}
               </Text>
               <Button
-                title={es ? 'Ver entrenamiento' : 'View workout'}
+                title={selectCopy(es, 'Ver entrenamiento', 'View workout')}
                 onPress={() => setViewingFinished(true)}
               />
-              <Button title={es ? 'Ahora no' : 'Not now'} secondary onPress={onDismissFinished} />
+              <Button
+                title={selectCopy(es, 'Ahora no', 'Not now')}
+                secondary
+                onPress={onDismissFinished}
+              />
             </View>
           </View>
         ) : null}

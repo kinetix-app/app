@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { apiClient } from '@/services/apiClient';
@@ -50,9 +50,11 @@ export function ActivityEditor({
       onSaved(updated);
     } catch {
       setFailure(
-        es
-          ? 'No se pudo guardar tu actividad. Inténtalo de nuevo.'
-          : 'Could not save your activity. Please try again.',
+        selectCopy(
+          es,
+          'No se pudo guardar tu actividad. Inténtalo de nuevo.',
+          'Could not save your activity. Please try again.',
+        ),
       );
     } finally {
       busy.current = false;
@@ -66,13 +68,13 @@ export function ActivityEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title={es ? 'Actividad habitual' : 'Usual activity'}
+          title={selectCopy(es, 'Actividad habitual', 'Usual activity')}
           leading={
             <ProfileBack
               onPress={() => {
                 if (!pending) onCancel();
               }}
-              label={es ? 'Volver al perfil' : 'Back to profile'}
+              label={selectCopy(es, 'Volver al perfil', 'Back to profile')}
             />
           }
         />
@@ -88,7 +90,9 @@ export function ActivityEditor({
         ) : null}
         <SetupButton
           title={
-            pending ? (es ? 'Guardando…' : 'Saving…') : es ? 'Guardar actividad' : 'Save activity'
+            pending
+              ? selectCopy(es, 'Guardando…', 'Saving…')
+              : selectCopy(es, 'Guardar actividad', 'Save activity')
           }
           disabled={pending}
           onPress={() => {
@@ -96,7 +100,7 @@ export function ActivityEditor({
           }}
         />
         <SetupButton
-          title={es ? 'Cancelar' : 'Cancel'}
+          title={selectCopy(es, 'Cancelar', 'Cancel')}
           secondary
           disabled={pending}
           onPress={onCancel}

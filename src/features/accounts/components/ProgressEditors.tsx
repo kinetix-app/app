@@ -21,7 +21,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { Button } from '@/components/Button';
 import { DatePickerCalendar, DatePickerField } from '@/components/DatePickerField';
 import { TextField } from '@/components/TextField';
@@ -166,7 +166,7 @@ function ProgressDialog({
             <View style={styles.actionRow}>
               <View style={styles.grow}>
                 <Button
-                  title={es ? 'Cancelar' : 'Cancel'}
+                  title={selectCopy(es, 'Cancelar', 'Cancel')}
                   shape="rounded"
                   secondary
                   disabled={busy}
@@ -176,7 +176,7 @@ function ProgressDialog({
               <View style={styles.saveAction}>
                 <Button
                   shape="rounded"
-                  title={busy ? (es ? 'Guardando…' : 'Saving…') : saveLabel}
+                  title={busy ? selectCopy(es, 'Guardando…', 'Saving…') : saveLabel}
                   accessibilityLabel={saveLabel}
                   disabled={busy}
                   onPress={onSave}
@@ -209,7 +209,7 @@ function ProgressDialog({
             </ScrollView>
             <View style={[styles.actions, { borderTopColor: p.line }]}>
               <Button
-                title={es ? 'Cancelar' : 'Cancel'}
+                title={selectCopy(es, 'Cancelar', 'Cancel')}
                 shape="rounded"
                 secondary
                 onPress={closeCalendar}
@@ -403,10 +403,10 @@ export function MeasurementEditor({
 
   return (
     <ProgressDialog
-      title={es ? 'Registrar medidas' : 'Log measurements'}
+      title={selectCopy(es, 'Registrar medidas', 'Log measurements')}
       busy={mutation.isPending}
       error={formError}
-      saveLabel={es ? 'Guardar medidas' : 'Save measurements'}
+      saveLabel={selectCopy(es, 'Guardar medidas', 'Save measurements')}
       onClose={dismiss}
       onSave={() => void handleSubmit(save)()}
     >
@@ -416,18 +416,22 @@ export function MeasurementEditor({
             name="date"
             control={control}
             openCalendar={openCalendar}
-            label={es ? 'Fecha de medición' : 'Measurement date'}
+            label={selectCopy(es, 'Fecha de medición', 'Measurement date')}
             today={today}
             disabled={mutation.isPending}
           />
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {Object.keys(initial.previous).length
-              ? es
-                ? 'Se han rellenado los valores anteriores. Borra los que quieras omitir.'
-                : 'Previous values are filled in. Clear any you want to skip.'
-              : es
-                ? 'Añade las medidas que tomaste. Deja las demás vacías.'
-                : 'Add the measurements you took. Leave the others blank.'}
+              ? selectCopy(
+                  es,
+                  'Se han rellenado los valores anteriores. Borra los que quieras omitir.',
+                  'Previous values are filled in. Clear any you want to skip.',
+                )
+              : selectCopy(
+                  es,
+                  'Añade las medidas que tomaste. Deja las demás vacías.',
+                  'Add the measurements you took. Leave the others blank.',
+                )}
           </Text>
           <View style={styles.fieldGroup}>
             {field('weight_kg')}
@@ -438,7 +442,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_ft"
                   control={control}
-                  label={es ? 'Altura (pies)' : 'Height (ft)'}
+                  label={selectCopy(es, 'Altura (pies)', 'Height (ft)')}
                   compact
                   disabled={mutation.isPending}
                   mode="integer"
@@ -446,7 +450,7 @@ export function MeasurementEditor({
                 <ProgressField
                   name="height_in"
                   control={control}
-                  label={es ? 'Altura (pulgadas)' : 'Height (in)'}
+                  label={selectCopy(es, 'Altura (pulgadas)', 'Height (in)')}
                   compact
                   disabled={mutation.isPending}
                 />
@@ -457,7 +461,7 @@ export function MeasurementEditor({
           </View>
           <View style={[styles.section, { borderTopColor: p.line }]}>
             <Text accessibilityRole="header" style={[textStyles.label, { color: p.ink }]}>
-              {es ? 'Perímetro' : 'Circumference'}
+              {selectCopy(es, 'Perímetro', 'Circumference')}
             </Text>
             <View style={styles.fieldGroup}>{circumferenceMetrics.map(field)}</View>
           </View>
@@ -531,16 +535,16 @@ export function PhysicalTargetEditor({
     <ProgressDialog
       title={
         target
-          ? es
-            ? 'Editar peso objetivo'
-            : 'Edit weight target'
-          : es
-            ? 'Fijar peso objetivo'
-            : 'Set weight target'
+          ? selectCopy(es, 'Editar peso objetivo', 'Edit weight target')
+          : selectCopy(es, 'Fijar peso objetivo', 'Set weight target')
       }
       busy={mutation.isPending}
       error={formError}
-      saveLabel={staleObjective ? (es ? 'Listo' : 'Done') : es ? 'Guardar objetivo' : 'Save target'}
+      saveLabel={
+        staleObjective
+          ? selectCopy(es, 'Listo', 'Done')
+          : selectCopy(es, 'Guardar objetivo', 'Save target')
+      }
       onSave={staleObjective ? dismiss : () => void handleSubmit(save)()}
       onClose={dismiss}
     >
@@ -549,14 +553,14 @@ export function PhysicalTargetEditor({
           <ProgressField
             name="weight_kg"
             control={control}
-            label={`${es ? 'Peso objetivo' : 'Target weight'} (${measurementUnit('weight_kg', system)})`}
+            label={`${selectCopy(es, 'Peso objetivo', 'Target weight')} (${measurementUnit('weight_kg', system)})`}
             disabled={mutation.isPending || staleObjective}
           />
           <ProgressDate
             name="target_date"
             control={control}
             openCalendar={openCalendar}
-            label={es ? 'Fecha objetivo' : 'Target date'}
+            label={selectCopy(es, 'Fecha objetivo', 'Target date')}
             today={todayForProfile(timeZone)}
             disabled={mutation.isPending || staleObjective}
             optional

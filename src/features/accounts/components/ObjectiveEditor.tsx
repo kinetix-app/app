@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ProfileBack } from './ProfileBack';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -101,7 +101,7 @@ export function ObjectiveEditor({
     if (query.isPending)
       return (
         <ActivityIndicator
-          accessibilityLabel={es ? 'Cargando objetivo' : 'Loading objective'}
+          accessibilityLabel={selectCopy(es, 'Cargando objetivo', 'Loading objective')}
           color={p.brand}
         />
       );
@@ -109,10 +109,10 @@ export function ObjectiveEditor({
       return (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {es ? 'No se pudo cargar tu objetivo.' : 'Could not load your objective.'}
+            {selectCopy(es, 'No se pudo cargar tu objetivo.', 'Could not load your objective.')}
           </Text>
           <SetupButton
-            title={es ? 'Reintentar' : 'Retry'}
+            title={selectCopy(es, 'Reintentar', 'Retry')}
             secondary
             onPress={() => {
               void query.refetch();
@@ -123,7 +123,7 @@ export function ObjectiveEditor({
     return (
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel={es ? 'Objetivo' : 'Objective'}
+        accessibilityLabel={selectCopy(es, 'Objetivo', 'Objective')}
         style={{ gap: 12 }}
       >
         {objectiveOptions.map((option) => (
@@ -177,33 +177,33 @@ export function ObjectiveEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title={es ? '¿Cuál es tu objetivo?' : "What's your goal?"}
+          title={selectCopy(es, '¿Cuál es tu objetivo?', "What's your goal?")}
           leading={
             onCancel ? <ProfileBack onPress={onCancel} disabled={mutation.isPending} /> : undefined
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {es
-            ? 'Elige tu objetivo. Puedes cambiarlo cuando quieras. El objetivo nutricional numérico es opcional y puedes fijarlo más adelante.'
-            : 'Choose your objective. You can change it anytime. A numerical nutrition target is optional and can be set later.'}
+          {selectCopy(
+            es,
+            'Elige tu objetivo. Puedes cambiarlo cuando quieras. El objetivo nutricional numérico es opcional y puedes fijarlo más adelante.',
+            'Choose your objective. You can change it anytime. A numerical nutrition target is optional and can be set later.',
+          )}
         </Text>
         {renderObjectiveChoices()}
         {mutation.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {es
-              ? 'No se pudo guardar tu objetivo. Conservamos tu selección. Inténtalo de nuevo.'
-              : 'Could not finish saving your objective. Your selection is kept. Try again.'}
+            {selectCopy(
+              es,
+              'No se pudo guardar tu objetivo. Conservamos tu selección. Inténtalo de nuevo.',
+              'Could not finish saving your objective. Your selection is kept. Try again.',
+            )}
           </Text>
         ) : null}
         <SetupButton
           title={
             mutation.isPending
-              ? es
-                ? 'Guardando…'
-                : 'Saving…'
-              : es
-                ? 'Guardar objetivo'
-                : 'Save objective'
+              ? selectCopy(es, 'Guardando…', 'Saving…')
+              : selectCopy(es, 'Guardar objetivo', 'Save objective')
           }
           disabled={!choice || query.isPending || query.isError || mutation.isPending}
           onPress={() => {
@@ -212,7 +212,7 @@ export function ObjectiveEditor({
         />
         {onCancel ? (
           <SetupButton
-            title={es ? 'Cancelar' : 'Cancel'}
+            title={selectCopy(es, 'Cancelar', 'Cancel')}
             secondary
             disabled={mutation.isPending}
             onPress={onCancel}

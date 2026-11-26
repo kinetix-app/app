@@ -4,7 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { ChartMetricSelector } from '@/components/ChartMetricSelector';
 import { Button } from '@/components/Button';
 import { EvolutionGraph } from '@/components/EvolutionGraph';
@@ -81,7 +81,7 @@ export function ProgressScreen({
     if (measured && measurement[metric] === null) setMetric(measured);
     setSelected(null);
     setEditor(null);
-    setToast(es ? 'Medidas guardadas.' : 'Measurements saved.');
+    setToast(selectCopy(es, 'Medidas guardadas.', 'Measurements saved.'));
     const queryKey = measurementKey(accountId);
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData<typeof measurements.data>(queryKey, (previous) =>
@@ -96,7 +96,7 @@ export function ProgressScreen({
     void cache.cancelQueries({ queryKey, exact: true });
     cache.setQueryData(queryKey, result);
     setEditor(null);
-    setToast(es ? 'Peso objetivo guardado.' : 'Weight target saved.');
+    setToast(selectCopy(es, 'Peso objetivo guardado.', 'Weight target saved.'));
   }
 
   return (
@@ -118,11 +118,11 @@ export function ProgressScreen({
           ListHeaderComponent={
             <View style={styles.sections}>
               <ScreenHeader
-                title={es ? 'Progreso' : 'Progress'}
+                title={selectCopy(es, 'Progreso', 'Progress')}
                 leading={<ProfileBack onPress={onClose} />}
               />
               <Button
-                title={es ? 'Registrar medidas' : 'Log measurements'}
+                title={selectCopy(es, 'Registrar medidas', 'Log measurements')}
                 tone="positive"
                 shape="rounded"
                 icon="plus"
@@ -134,12 +134,12 @@ export function ProgressScreen({
               />
               <View style={[styles.card, { backgroundColor: p['surface-200'] }]}>
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  {es ? 'Evolución de medidas' : 'Measurement trends'}
+                  {selectCopy(es, 'Evolución de medidas', 'Measurement trends')}
                 </Text>
                 <ChartMetricSelector
                   metrics={measurementMetrics}
                   value={metric}
-                  label={es ? 'Medida' : 'Measurement metric'}
+                  label={selectCopy(es, 'Medida', 'Measurement metric')}
                   labelFor={(key) =>
                     es ? measurementDefinitions[key].labelEs : measurementDefinitions[key].label
                   }
@@ -150,15 +150,17 @@ export function ProgressScreen({
                 />
                 {measurements.isPending ? (
                   <ActivityIndicator
-                    accessibilityLabel={es ? 'Cargando medidas' : 'Loading measurements'}
+                    accessibilityLabel={selectCopy(es, 'Cargando medidas', 'Loading measurements')}
                     color={p.brand}
                   />
                 ) : null}
                 {measurements.isError ? (
                   <LoadProblem
-                    message={
-                      es ? 'No se pudieron cargar las medidas.' : 'Could not load measurements.'
-                    }
+                    message={selectCopy(
+                      es,
+                      'No se pudieron cargar las medidas.',
+                      'Could not load measurements.',
+                    )}
                     onRetry={() => void measurements.refetch()}
                   />
                 ) : null}
@@ -172,12 +174,16 @@ export function ProgressScreen({
                         measurements.isError
                           ? undefined
                           : {
-                              title: es
-                                ? `Aún no hay medidas de ${label.toLowerCase()}.`
-                                : `No ${label.toLowerCase()} measurements yet.`,
-                              hint: es
-                                ? 'Registra una medida para empezar.'
-                                : 'Log a measurement to start tracking.',
+                              title: selectCopy(
+                                es,
+                                `Aún no hay medidas de ${label.toLowerCase()}.`,
+                                `No ${label.toLowerCase()} measurements yet.`,
+                              ),
+                              hint: selectCopy(
+                                es,
+                                'Registra una medida para empezar.',
+                                'Log a measurement to start tracking.',
+                              ),
                             }
                       }
                       selected={selected}
@@ -198,22 +204,26 @@ export function ProgressScreen({
                     accessibilityRole="header"
                     style={[textStyles['title-md'], { color: p.ink }]}
                   >
-                    {es ? 'Peso objetivo' : 'Weight target'}
+                    {selectCopy(es, 'Peso objetivo', 'Weight target')}
                   </Text>
                 </View>
                 {target.isPending ? (
                   <ActivityIndicator
-                    accessibilityLabel={es ? 'Cargando peso objetivo' : 'Loading weight target'}
+                    accessibilityLabel={selectCopy(
+                      es,
+                      'Cargando peso objetivo',
+                      'Loading weight target',
+                    )}
                     color={p.brand}
                   />
                 ) : null}
                 {target.isError ? (
                   <LoadProblem
-                    message={
-                      es
-                        ? 'No se pudo cargar tu peso objetivo.'
-                        : 'Could not load your weight target.'
-                    }
+                    message={selectCopy(
+                      es,
+                      'No se pudo cargar tu peso objetivo.',
+                      'Could not load your weight target.',
+                    )}
                     onRetry={() => void target.refetch()}
                   />
                 ) : null}
@@ -230,13 +240,15 @@ export function ProgressScreen({
               </View>
               <View style={styles.historyHead}>
                 <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-                  {es ? 'Historial de medidas' : 'Measurement history'}
+                  {selectCopy(es, 'Historial de medidas', 'Measurement history')}
                 </Text>
                 {measurements.isSuccess && items.length === 0 ? (
                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                    {es
-                      ? 'Las medidas guardadas aparecerán aquí.'
-                      : 'Saved check-ins will appear here.'}
+                    {selectCopy(
+                      es,
+                      'Las medidas guardadas aparecerán aquí.',
+                      'Saved check-ins will appear here.',
+                    )}
                   </Text>
                 ) : null}
               </View>
@@ -329,9 +341,9 @@ function LoadProblem({ message, onRetry }: Readonly<{ message: string; onRetry: 
         {message}
       </Text>
       <Button
-        title={es ? 'Reintentar' : 'Retry'}
+        title={selectCopy(es, 'Reintentar', 'Retry')}
         shape="rounded"
-        accessibilityLabel={`${es ? 'Reintentar' : 'Retry'}. ${message}`}
+        accessibilityLabel={`${selectCopy(es, 'Reintentar', 'Retry')}. ${message}`}
         onPress={onRetry}
         secondary
       />
@@ -355,9 +367,11 @@ function TargetCardContent({
   if (!objective) {
     return (
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {es
-          ? 'Elige un objetivo en tu perfil para fijar un peso objetivo.'
-          : 'Choose an objective in Profile to set a weight target.'}
+        {selectCopy(
+          es,
+          'Elige un objetivo en tu perfil para fijar un peso objetivo.',
+          'Choose an objective in Profile to set a weight target.',
+        )}
       </Text>
     );
   }
@@ -367,7 +381,8 @@ function TargetCardContent({
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
           {(() => {
             const option = objectiveOptions.find((item) => item.value === objective);
-            return option ? (es ? option.labelEs : option.label) : '';
+            const label = es ? option?.labelEs : option?.label;
+            return label ?? '';
           })()}
         </Text>
         {target ? (
@@ -377,20 +392,22 @@ function TargetCardContent({
             </Text>
             {target.target_date ? (
               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                {es ? 'Fecha objetivo' : 'Target date'} ·{' '}
+                {selectCopy(es, 'Fecha objetivo', 'Target date')} ·{' '}
                 {displayProgressDate(target.target_date, language)}
               </Text>
             ) : null}
           </>
         ) : (
           <Text style={[textStyles.body, { color: p.ink }]}>
-            {es ? 'No hay peso objetivo.' : 'No weight target set.'}
+            {selectCopy(es, 'No hay peso objetivo.', 'No weight target set.')}
           </Text>
         )}
       </View>
       <Button
         title={
-          target ? (es ? 'Editar objetivo' : 'Edit target') : es ? 'Fijar objetivo' : 'Set target'
+          target
+            ? selectCopy(es, 'Editar objetivo', 'Edit target')
+            : selectCopy(es, 'Fijar objetivo', 'Set target')
         }
         shape="rounded"
         secondary

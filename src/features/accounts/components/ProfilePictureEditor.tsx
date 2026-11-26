@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useLanguage } from '@/i18n/Language';
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import type { Account } from '../schemas';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -26,19 +26,30 @@ function getPictureStatus(
 ) {
   if (compact) {
     if (draft.kind === 'select')
-      return es ? 'Nueva foto · Guarda para aplicar' : 'New picture · Save to apply';
+      return selectCopy(es, 'Nueva foto · Guarda para aplicar', 'New picture · Save to apply');
     if (draft.kind === 'remove')
-      return es ? 'Foto eliminada · Guarda para aplicar' : 'Picture removed · Save to apply';
-    return es ? 'Foto de perfil' : 'Profile picture';
+      return selectCopy(
+        es,
+        'Foto eliminada · Guarda para aplicar',
+        'Picture removed · Save to apply',
+      );
+    return selectCopy(es, 'Foto de perfil', 'Profile picture');
   }
   if (draft.kind === 'select')
-    return es ? 'Foto lista · se guardará al confirmar' : 'Picture ready · saved when you confirm';
+    return selectCopy(
+      es,
+      'Foto lista · se guardará al confirmar',
+      'Picture ready · saved when you confirm',
+    );
   if (draft.kind === 'remove')
-    return es
-      ? 'Sin foto · se eliminará al confirmar'
-      : 'No picture · removal saved when you confirm';
-  if (account.profile.picture_url) return es ? 'Foto de perfil actual' : 'Current profile picture';
-  return es ? 'Sin foto · opcional' : 'No picture · optional';
+    return selectCopy(
+      es,
+      'Sin foto · se eliminará al confirmar',
+      'No picture · removal saved when you confirm',
+    );
+  if (account.profile.picture_url)
+    return selectCopy(es, 'Foto de perfil actual', 'Current profile picture');
+  return selectCopy(es, 'Sin foto · opcional', 'No picture · optional');
 }
 
 export function ProfilePictureEditor({
@@ -75,9 +86,11 @@ export function ProfilePictureEditor({
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
           setError(
-            es
-              ? 'Para elegir una foto necesitas permitir el acceso en Ajustes. Inténtalo de nuevo.'
-              : 'Photo access is needed to choose a picture. Allow access in Settings, then try again.',
+            selectCopy(
+              es,
+              'Para elegir una foto necesitas permitir el acceso en Ajustes. Inténtalo de nuevo.',
+              'Photo access is needed to choose a picture. Allow access in Settings, then try again.',
+            ),
           );
           return;
         }
@@ -92,20 +105,30 @@ export function ProfilePictureEditor({
       if (result.canceled) return;
       const asset = result.assets[0];
       if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024) {
-        setError(es ? 'Elige una foto de menos de 5 MB.' : 'Choose a picture smaller than 5 MB.');
+        setError(
+          selectCopy(es, 'Elige una foto de menos de 5 MB.', 'Choose a picture smaller than 5 MB.'),
+        );
         return;
       }
       const type = asset.mimeType ?? asset.file?.type;
       if (type && !['image/jpeg', 'image/png', 'image/webp'].includes(type)) {
-        setError(es ? 'Elige una imagen JPEG, PNG o WebP.' : 'Choose a JPEG, PNG or WebP picture.');
+        setError(
+          selectCopy(
+            es,
+            'Elige una imagen JPEG, PNG o WebP.',
+            'Choose a JPEG, PNG or WebP picture.',
+          ),
+        );
         return;
       }
       onDraftChange({ kind: 'select', asset });
     } catch {
       setError(
-        es
-          ? 'No se pudieron abrir tus fotos. Inténtalo de nuevo.'
-          : 'Could not open your photos. Try again.',
+        selectCopy(
+          es,
+          'No se pudieron abrir tus fotos. Inténtalo de nuevo.',
+          'Could not open your photos. Try again.',
+        ),
       );
     } finally {
       setBusy(false);
@@ -129,12 +152,8 @@ export function ProfilePictureEditor({
           accessibilityRole="button"
           accessibilityLabel={
             hasPicture
-              ? es
-                ? 'Cambiar foto'
-                : 'Replace picture'
-              : es
-                ? 'Elegir foto'
-                : 'Choose picture'
+              ? selectCopy(es, 'Cambiar foto', 'Replace picture')
+              : selectCopy(es, 'Elegir foto', 'Choose picture')
           }
           accessibilityState={{ disabled: locked }}
           disabled={locked}
@@ -151,15 +170,19 @@ export function ProfilePictureEditor({
         {hasPicture ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={es ? 'Eliminar foto' : 'Remove picture'}
+            accessibilityLabel={selectCopy(es, 'Eliminar foto', 'Remove picture')}
             accessibilityHint={
               compact
-                ? es
-                  ? 'Elimina esta foto al guardar tu perfil.'
-                  : 'Remove this picture when you save your profile.'
-                : es
-                  ? 'Elimina esta foto al confirmar tu perfil.'
-                  : 'Remove this picture when you confirm your profile.'
+                ? selectCopy(
+                    es,
+                    'Elimina esta foto al guardar tu perfil.',
+                    'Remove this picture when you save your profile.',
+                  )
+                : selectCopy(
+                    es,
+                    'Elimina esta foto al confirmar tu perfil.',
+                    'Remove this picture when you confirm your profile.',
+                  )
             }
             accessibilityState={{ disabled: locked }}
             disabled={locked}
@@ -180,7 +203,7 @@ export function ProfilePictureEditor({
         <View style={{ flexDirection: 'row', gap: spacing['space-2'], alignItems: 'center' }}>
           <ActivityIndicator color={p.brand} />
           <Text accessibilityLiveRegion="polite" style={[textStyles.label, { color: p.ink }]}>
-            {es ? 'Abriendo fotos…' : 'Opening photos…'}
+            {selectCopy(es, 'Abriendo fotos…', 'Opening photos…')}
           </Text>
         </View>
       ) : (
@@ -193,7 +216,7 @@ export function ProfilePictureEditor({
       )}
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'], textAlign: 'center' }]}>
-          {es ? 'JPEG, PNG o WebP · hasta 5 MB' : 'JPEG, PNG or WebP · up to 5 MB'}
+          {selectCopy(es, 'JPEG, PNG o WebP · hasta 5 MB', 'JPEG, PNG or WebP · up to 5 MB')}
         </Text>
       ) : null}
       {error ? (

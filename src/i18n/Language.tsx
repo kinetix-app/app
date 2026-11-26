@@ -13,3 +13,7 @@ export function LanguageProvider({
 export function useLanguage() {
   return useContext(LanguageContext);
 }
+
+export function selectCopy(spanish: boolean, es: string, en: string): string {
+  return spanish ? es : en;
+}
