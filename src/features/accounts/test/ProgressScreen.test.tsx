@@ -215,4 +215,11 @@ test('Spanish progress and calendar keep metric codes while translating labels',
   fireEvent.press(screen.getByRole('button', { name: 'Fecha de medición' }));
   expect(screen.getByText('Lun')).toBeTruthy();
   expect(screen.getByLabelText('Mes anterior')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Elegir mes y año' }));
+  expect(
+    screen.getByRole('button', { name: 'Año siguiente' }).props.accessibilityState.disabled,
+  ).toBe(true);
+  fireEvent.press(screen.getByRole('button', { name: 'Año anterior' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Mostrar días' }));
+  expect(screen.getByRole('button', { name: 'Mes siguiente' })).toBeTruthy();
 });
