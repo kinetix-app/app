@@ -32,8 +32,16 @@ export function LeagueContributionRow({
   const own = member.user_id === accountId;
   const name = member.display_name ?? t('Member', 'Miembro');
   const calculation = own ? item.calculation : undefined;
-  const memberName = own ? (language === 'es' ? `${name} (tú)` : `${name} (you)`) : name;
+  let memberName = name;
+  if (own) memberName = language === 'es' ? `${name} (tú)` : `${name} (you)`;
   const title = showMember ? memberName : `${t('Workout', 'Entrenamiento')} #${item.session_id}`;
+  const completionDate = new Date(item.ended_at).toLocaleString(
+    language === 'es' ? 'es' : undefined,
+    { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone },
+  );
+  const detail = showMember
+    ? `${t('Workout', 'Entrenamiento')} #${item.session_id} · ${item.local_day}`
+    : `${t('Completed', 'Completado')} ${completionDate}`;
   const heading = (
     <>
       {showMember ? (
@@ -99,18 +107,7 @@ export function LeagueContributionRow({
       ) : (
         <View style={leagueStyles.row}>{heading}</View>
       )}
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {showMember
-          ? `${t('Workout', 'Entrenamiento')} #${item.session_id} · ${item.local_day}`
-          : `${t('Completed', 'Completado')} ${new Date(item.ended_at).toLocaleString(
-              language === 'es' ? 'es' : undefined,
-              {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-                timeZone: timezone,
-              },
-            )}`}
-      </Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{detail}</Text>
       {calculation ? (
         <Text style={[textStyles['body-sm'], { color: p.ink }]}>
           {t('Volume', 'Volumen')} {formatScoreMeasurement(calculation.volume_kg_reps)} kg{' '}

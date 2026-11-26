@@ -16,6 +16,22 @@ export type WorkoutActions = Readonly<{
   resume: () => void;
 }>;
 
+function workoutError(error: unknown, language: 'en' | 'es') {
+  if (error instanceof ApiError && error.status === 404)
+    return language === 'es'
+      ? 'Este entrenamiento compartido ya no está disponible.'
+      : 'This shared workout is no longer available.';
+  return language === 'es'
+    ? 'No se pudo cargar el entrenamiento. Inténtalo de nuevo.'
+    : 'Could not load this workout. Try again.';
+}
+
+function startError(language: 'en' | 'es') {
+  return language === 'es'
+    ? 'No se pudo iniciar el entrenamiento. Inténtalo de nuevo o reanuda tu entrenamiento activo.'
+    : 'Could not start this workout. Try again or resume your active workout.';
+}
+
 export function PostOptions({
   post,
   onClose,
@@ -44,22 +60,9 @@ export function PostOptions({
       setTemplate(workout);
       if (!workout.exercises.length || (!accepted && workout.skipped_exercises.length)) return;
       if (await workoutActions.start(workout)) onClose();
-      else
-        setError(
-          language === 'es'
-            ? 'No se pudo iniciar el entrenamiento. Inténtalo de nuevo o reanuda tu entrenamiento activo.'
-            : 'Could not start this workout. Try again or resume your active workout.',
-        );
+      else setError(startError(language));
     } catch (error_) {
-      setError(
-        error_ instanceof ApiError && error_.status === 404
-          ? language === 'es'
-            ? 'Este entrenamiento compartido ya no está disponible.'
-            : 'This shared workout is no longer available.'
-          : language === 'es'
-            ? 'No se pudo cargar el entrenamiento. Inténtalo de nuevo.'
-            : 'Could not load this workout. Try again.',
-      );
+      setError(workoutError(error_, language));
     } finally {
       busy.current = false;
       setPending(false);
@@ -200,20 +203,13 @@ function PerformAction({
     );
   }
   return (
-    <Button
-      title={
-        mine
-          ? language === 'es'
-            ? 'Volver a realizar'
-            : 'Perform again'
-          : language === 'es'
-            ? 'Realizar entrenamiento'
-            : 'Perform workout'
-      }
-      disabled={disabled}
-      onPress={() => onPerform()}
-    />
+    <Button title={performTitle(mine, language)} disabled={disabled} onPress={() => onPerform()} />
   );
+}
+
+function performTitle(mine: boolean, language: 'en' | 'es') {
+  if (mine) return language === 'es' ? 'Volver a realizar' : 'Perform again';
+  return language === 'es' ? 'Realizar entrenamiento' : 'Perform workout';
 }
 
 const styles = StyleSheet.create({

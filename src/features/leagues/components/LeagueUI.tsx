@@ -109,20 +109,19 @@ export function LeagueRankingRow({
   const language = useLanguage();
   const p = usePalette();
   const memberName = row.display_name ?? (language === 'es' ? 'Miembro' : 'Member');
+  let accessibilityHint: string | undefined;
+  if (onPress)
+    accessibilityHint =
+      language === 'es' ? 'Abre el historial de puntos del miembro' : 'Opens member score history';
+  const selfLabel = rankingSelfLabel(current, language);
   const Row = onPress ? Pressable : View;
   return (
     <Row
       onPress={onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityHint={
-        onPress
-          ? language === 'es'
-            ? 'Abre el historial de puntos del miembro'
-            : 'Opens member score history'
-          : undefined
-      }
+      accessibilityHint={accessibilityHint}
       accessible
-      accessibilityLabel={`#${row.position} ${memberName}: ${row.score} ${language === 'es' ? 'puntos' : 'points'}${current ? (language === 'es' ? ', tú' : ', you') : ''}`}
+      accessibilityLabel={`#${row.position} ${memberName}: ${row.score} ${language === 'es' ? 'puntos' : 'points'}${selfLabel}`}
       style={[
         leagueStyles.ranking,
         { backgroundColor: current ? p['brand-soft'] : p['surface-300'] },
@@ -164,6 +163,11 @@ export function LeagueRankingRow({
       {onPress ? <Ionicons name="chevron-forward" size={16} color={p['ink-muted']} /> : null}
     </Row>
   );
+}
+
+function rankingSelfLabel(current: boolean, language: 'en' | 'es') {
+  if (!current) return '';
+  return language === 'es' ? ', tú' : ', you';
 }
 
 export const leagueStyles = StyleSheet.create({

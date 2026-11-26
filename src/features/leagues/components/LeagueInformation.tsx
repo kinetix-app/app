@@ -12,6 +12,28 @@ import { LeagueRules } from './LeagueRules';
 
 type Member = LeagueDetail['members'][number];
 
+function memberCountLabel(count: number, language: 'en' | 'es') {
+  let noun: string;
+  if (language === 'es') noun = count === 1 ? 'miembro' : 'miembros';
+  else noun = count === 1 ? 'member' : 'members';
+  return `${count} ${noun}`;
+}
+
+function memberRoleControlLabel(
+  roleLocked: boolean,
+  name: string,
+  label: string,
+  language: 'en' | 'es',
+) {
+  if (roleLocked) return language === 'es' ? `Rol de ${name}: ${label}` : `${name} role: ${label}`;
+  return language === 'es' ? `Cambiar rol de ${name}` : `Change role for ${name}`;
+}
+
+function memberRoleHint(roleLocked: boolean, label: string, language: 'en' | 'es') {
+  if (roleLocked) return language === 'es' ? 'El rol está protegido' : 'Role is protected';
+  return language === 'es' ? `Rol actual: ${label}` : `Current role: ${label}`;
+}
+
 export function LeagueInformation({
   accountId,
   league,
@@ -93,7 +115,7 @@ export function LeagueInformation({
             {
               icon: 'people-outline' as const,
               label: t('Membership', 'Miembros'),
-              value: `${memberCount} ${language === 'es' ? (memberCount === 1 ? 'miembro' : 'miembros') : memberCount === 1 ? 'member' : 'members'}`,
+              value: memberCountLabel(memberCount, language),
             },
             { icon: 'calendar-outline' as const, label: t('Created', 'Creada'), value: created },
           ].map(({ icon, label, value }) => (
@@ -205,24 +227,10 @@ export function LeagueInformation({
                 {showRoleControl ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={
-                      roleLocked
-                        ? language === 'es'
-                          ? `Rol de ${name}: ${label}`
-                          : `${name} role: ${label}`
-                        : language === 'es'
-                          ? `Cambiar rol de ${name}`
-                          : `Change role for ${name}`
-                    }
+                    accessibilityLabel={memberRoleControlLabel(roleLocked, name, label, language)}
                     accessibilityState={{ disabled: roleLocked }}
                     disabled={roleLocked}
-                    accessibilityHint={
-                      roleLocked
-                        ? t('Role is protected', 'El rol está protegido')
-                        : language === 'es'
-                          ? `Rol actual: ${label}`
-                          : `Current role: ${label}`
-                    }
+                    accessibilityHint={memberRoleHint(roleLocked, label, language)}
                     onPress={() => setTarget(member)}
                     style={({ pressed }) => [
                       ...badge,

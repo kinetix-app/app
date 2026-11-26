@@ -32,19 +32,108 @@ import { LeagueResults } from './LeagueResults';
 import { LeagueScoreHistory } from './LeagueScoreHistory';
 import { LeagueStandings } from './LeagueStandings';
 
-function message(error: unknown, language: 'en' | 'es') {
-  if (error instanceof ApiError) {
-    if (error.status === 410)
-      return language === 'es' ? 'Esta invitación ha caducado.' : 'This invitation has expired.';
-    if (error.status === 404)
-      return language === 'es'
-        ? 'No se encontró la liga o invitación.'
-        : 'League or invitation not found.';
-    if (error.status === 403)
-      return language === 'es'
-        ? 'Solo un administrador de la liga puede hacer eso.'
-        : 'Only a league admin can do that.';
+type LeagueListItemData = Awaited<ReturnType<typeof leaguesApi.list>>[number];
+
+function leagueMemberNoun(count: number, language: 'en' | 'es') {
+  if (language === 'es') return count === 1 ? 'miembro' : 'miembros';
+  return count === 1 ? 'member' : 'members';
+}
+
+function LeagueListItem({
+  accountId,
+  league,
+  onPress,
+}: Readonly<{ accountId: number; league: LeagueListItemData; onPress: () => void }>) {
+  const language = useLanguage();
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
+  const p = usePalette();
+  const position = league.current_week_position;
+  let rankHint: string;
+  let rankText: string;
+  if (position === null) {
+    rankHint = t('Weekly rank unavailable', 'Clasificación semanal no disponible');
+    rankText = rankHint;
+  } else if (language === 'es') {
+    rankHint = `Tu posición esta semana es ${position}`;
+    rankText = `#${position} esta semana`;
+  } else {
+    rankHint = `Your position this week is ${position}`;
+    rankText = `#${position} this week`;
   }
+  const hintVerb =
+    language === 'es' ? 'Abre la clasificación de la liga.' : 'Opens league standings.';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={league.name}
+      accessibilityHint={`${rankHint}, ${league.member_count} ${leagueMemberNoun(league.member_count, language)}. ${hintVerb}`}
+      onPress={onPress}
+      style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+    >
+      <LeagueCard>
+        <View style={leagueStyles.row}>
+          <LeagueAvatar
+            accountId={accountId}
+            path={league.picture_url}
+            name={league.name}
+            size={52}
+          />
+          <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>{league.name}</Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                columnGap: spacing['space-3'],
+                rowGap: spacing['space-1'],
+              }}
+            >
+              <Text
+                style={[
+                  textStyles['body-sm'],
+                  {
+                    color: position === null ? p['ink-muted'] : p['brand-ink'],
+                    fontVariant: ['tabular-nums'],
+                  },
+                ]}
+              >
+                {rankText}
+              </Text>
+              <Text
+                style={[
+                  textStyles['body-sm'],
+                  { color: p['ink-muted'], fontVariant: ['tabular-nums'] },
+                ]}
+              >
+                {league.member_count} {leagueMemberNoun(league.member_count, language)}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={p['ink-muted']} />
+        </View>
+      </LeagueCard>
+    </Pressable>
+  );
+}
+
+function message(error: unknown, language: 'en' | 'es') {
+  if (error instanceof ApiError) return leagueErrorMessage(error.status, language);
+  return language === 'es'
+    ? 'Algo ha salido mal. Inténtalo de nuevo.'
+    : 'Something went wrong. Please try again.';
+}
+
+function leagueErrorMessage(status: number, language: 'en' | 'es') {
+  if (status === 410)
+    return language === 'es' ? 'Esta invitación ha caducado.' : 'This invitation has expired.';
+  if (status === 404)
+    return language === 'es'
+      ? 'No se encontró la liga o invitación.'
+      : 'League or invitation not found.';
+  if (status === 403)
+    return language === 'es'
+      ? 'Solo un administrador de la liga puede hacer eso.'
+      : 'Only a league admin can do that.';
   return language === 'es'
     ? 'Algo ha salido mal. Inténtalo de nuevo.'
     : 'Something went wrong. Please try again.';
@@ -348,94 +437,18 @@ export function LeaguesScreen({
     if (list.data?.length)
       return (
         <View style={leagueStyles.section}>
-          {list.data.map((league) => {
-            const position = league.current_week_position;
-            const rankHint =
-              position === null
-                ? t('Weekly rank unavailable', 'Clasificación semanal no disponible')
-                : language === 'es'
-                  ? `Tu posición esta semana es ${position}`
-                  : `Your position this week is ${position}`;
-            const memberLabel =
-              language === 'es'
-                ? league.member_count === 1
-                  ? 'miembro'
-                  : 'miembros'
-                : league.member_count === 1
-                  ? 'member'
-                  : 'members';
-            return (
-              <Pressable
-                key={league.id}
-                accessibilityRole="button"
-                accessibilityLabel={league.name}
-                accessibilityHint={`${rankHint}, ${league.member_count} ${memberLabel}. ${language === 'es' ? 'Abre la clasificación de la liga.' : 'Opens league standings.'}`}
-                onPress={() => {
-                  setInformation(false);
-                  setSelected(league.id);
-                  setError('');
-                }}
-                style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
-              >
-                <LeagueCard>
-                  <View style={leagueStyles.row}>
-                    <LeagueAvatar
-                      accountId={accountId}
-                      path={league.picture_url}
-                      name={league.name}
-                      size={52}
-                    />
-                    <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
-                      <Text style={[textStyles['title-md'], { color: p.ink }]}>{league.name}</Text>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          flexWrap: 'wrap',
-                          columnGap: spacing['space-3'],
-                          rowGap: spacing['space-1'],
-                        }}
-                      >
-                        <Text
-                          style={[
-                            textStyles['body-sm'],
-                            {
-                              color:
-                                league.current_week_position === null
-                                  ? p['ink-muted']
-                                  : p['brand-ink'],
-                              fontVariant: ['tabular-nums'],
-                            },
-                          ]}
-                        >
-                          {league.current_week_position === null
-                            ? t('Weekly rank unavailable', 'Clasificación semanal no disponible')
-                            : language === 'es'
-                              ? `#${league.current_week_position} esta semana`
-                              : `#${league.current_week_position} this week`}
-                        </Text>
-                        <Text
-                          style={[
-                            textStyles['body-sm'],
-                            { color: p['ink-muted'], fontVariant: ['tabular-nums'] },
-                          ]}
-                        >
-                          {league.member_count}{' '}
-                          {language === 'es'
-                            ? league.member_count === 1
-                              ? 'miembro'
-                              : 'miembros'
-                            : league.member_count === 1
-                              ? 'member'
-                              : 'members'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={p['ink-muted']} />
-                  </View>
-                </LeagueCard>
-              </Pressable>
-            );
-          })}
+          {list.data.map((league) => (
+            <LeagueListItem
+              key={league.id}
+              accountId={accountId}
+              league={league}
+              onPress={() => {
+                setInformation(false);
+                setSelected(league.id);
+                setError('');
+              }}
+            />
+          ))}
         </View>
       );
     return (

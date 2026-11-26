@@ -80,6 +80,13 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
   const language = useLanguage();
   const p = usePalette();
   const [tip, setTip] = useState<(typeof rules)[number] | null>(null);
+  let timezoneSuffix = '';
+  if (tip?.title === 'Weekly rounds' && timezone) {
+    timezoneSuffix =
+      language === 'es'
+        ? ` Zona horaria de la liga: ${timezone}.`
+        : ` League timezone: ${timezone}.`;
+  }
   const dismiss = () => setTip(null);
   useEffect(() => {
     if (!tip) return;
@@ -174,11 +181,7 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
                   style={[textStyles.body, { color: p.ink }]}
                 >
                   {language === 'es' ? spanishRules[tip.title].detail : tip.detail}
-                  {tip.title === 'Weekly rounds' && timezone
-                    ? language === 'es'
-                      ? ` Zona horaria de la liga: ${timezone}.`
-                      : ` League timezone: ${timezone}.`
-                    : ''}
+                  {timezoneSuffix}
                 </Text>
               </ScrollView>
             </View>

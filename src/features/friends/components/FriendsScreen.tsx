@@ -47,16 +47,11 @@ export function FriendsScreen({
       />
     );
   const incoming = requests.data?.incoming.length ?? 0;
+  let requestLabel = language === 'es' ? 'Solicitudes' : 'Requests';
+  if (incoming > 0) requestLabel = `${requestLabel} (${incoming})`;
   const tabs: { id: Tab; label: string }[] = [
     { id: 'friends', label: language === 'es' ? 'Amigos' : 'Friends' },
-    {
-      id: 'requests',
-      label: incoming
-        ? `${language === 'es' ? 'Solicitudes' : 'Requests'} (${incoming})`
-        : language === 'es'
-          ? 'Solicitudes'
-          : 'Requests',
-    },
+    { id: 'requests', label: requestLabel },
     { id: 'find', label: language === 'es' ? 'Buscar' : 'Find' },
   ];
   return (
@@ -274,15 +269,7 @@ function RequestList({
         <PersonRow
           accountId={accountId}
           person={item.user}
-          detail={
-            item.kind === 'incoming'
-              ? language === 'es'
-                ? 'Quiere ser tu amigo'
-                : 'Wants to be your friend'
-              : language === 'es'
-                ? 'Solicitud enviada'
-                : 'Request sent'
-          }
+          detail={requestDetail(item.kind, language)}
           onOpen={onOpen}
         >
           <FriendActions
@@ -295,6 +282,12 @@ function RequestList({
       )}
     />
   );
+}
+
+function requestDetail(kind: 'incoming' | 'outgoing', language: 'en' | 'es') {
+  if (kind === 'incoming')
+    return language === 'es' ? 'Quiere ser tu amigo' : 'Wants to be your friend';
+  return language === 'es' ? 'Solicitud enviada' : 'Request sent';
 }
 
 function FindPeople({

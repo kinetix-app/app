@@ -32,6 +32,17 @@ export function LeagueScoreHistory({
   const t = (en: string, es: string) => (language === 'es' ? es : en);
   const p = usePalette();
   const name = member.display_name ?? t('Member', 'Miembro');
+  let backTitle: string = backTo;
+  let backAction: string = `Back to ${backTo.toLowerCase()}`;
+  if (language === 'es') {
+    if (backTo === 'Standings') {
+      backTitle = 'Clasificación';
+      backAction = 'Volver a clasificación';
+    } else {
+      backTitle = 'Información de la liga';
+      backAction = 'Volver a información de la liga';
+    }
+  }
   const [workoutId, setWorkoutId] = useState<number | null>(null);
   const ownHistory = member.user_id === accountId;
   const history = useInfiniteQuery({
@@ -84,20 +95,8 @@ export function LeagueScoreHistory({
               title={name}
               picture={member.picture_url}
               member
-              navigationLabel={
-                language === 'es'
-                  ? backTo === 'Standings'
-                    ? 'Clasificación'
-                    : 'Información de la liga'
-                  : backTo
-              }
-              backLabel={
-                language === 'es'
-                  ? backTo === 'Standings'
-                    ? 'Volver a clasificación'
-                    : 'Volver a información de la liga'
-                  : `Back to ${backTo.toLowerCase()}`
-              }
+              navigationLabel={backTitle}
+              backLabel={backAction}
               onBack={onBack}
             />
             <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>

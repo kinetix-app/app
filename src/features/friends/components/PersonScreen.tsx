@@ -11,6 +11,37 @@ import { friendsApi, friendsKey } from '../api';
 import { FriendActions } from './FriendActions';
 import { PersonAvatar } from './PersonAvatar';
 
+function friendCountLabel(count: number, language: 'en' | 'es') {
+  if (count === 1) return language === 'es' ? '1 amigo' : '1 friend';
+  return `${count} ${language === 'es' ? 'amigos' : 'friends'}`;
+}
+
+function profileError(missing: boolean, language: 'en' | 'es') {
+  if (missing)
+    return language === 'es'
+      ? 'Esta persona ya no está disponible.'
+      : 'This person is no longer available.';
+  return language === 'es' ? 'No se pudo cargar este perfil.' : 'Could not load this profile.';
+}
+
+function PersonLoadError({
+  missing,
+  language,
+  onRetry,
+}: Readonly<{ missing: boolean; language: 'en' | 'es'; onRetry: () => void }>) {
+  const p = usePalette();
+  return (
+    <View style={ui.gap}>
+      <Text accessibilityRole="alert" style={{ color: p.danger }}>
+        {profileError(missing, language)}
+      </Text>
+      {!missing ? (
+        <Button title={language === 'es' ? 'Reintentar' : 'Retry'} secondary onPress={onRetry} />
+      ) : null}
+    </View>
+  );
+}
+
 /** Another person's card, opened from the feed or a friend list. */
 export function PersonScreen({
   accountId,
@@ -33,6 +64,7 @@ export function PersonScreen({
   });
   const name = personName(person.data?.display_name ?? fallbackName ?? null, language);
   const missing = person.error instanceof ApiError && person.error.status === 404;
+  const friendCount = person.data ? friendCountLabel(person.data.friend_count, language) : null;
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -59,35 +91,16 @@ export function PersonScreen({
             {name}
           </Text>
           {person.data ? (
-            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {person.data.friend_count === 1
-                ? language === 'es'
-                  ? '1 amigo'
-                  : '1 friend'
-                : `${person.data.friend_count} ${language === 'es' ? 'amigos' : 'friends'}`}
-            </Text>
+            <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{friendCount}</Text>
           ) : null}
         </View>
         {person.isPending ? <Loading /> : null}
         {person.isError ? (
-          <View style={ui.gap}>
-            <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {missing
-                ? language === 'es'
-                  ? 'Esta persona ya no está disponible.'
-                  : 'This person is no longer available.'
-                : language === 'es'
-                  ? 'No se pudo cargar este perfil.'
-                  : 'Could not load this profile.'}
-            </Text>
-            {!missing ? (
-              <Button
-                title={language === 'es' ? 'Reintentar' : 'Retry'}
-                secondary
-                onPress={() => void person.refetch()}
-              />
-            ) : null}
-          </View>
+          <PersonLoadError
+            missing={missing}
+            language={language}
+            onRetry={() => void person.refetch()}
+          />
         ) : null}
         {person.data?.relationship === 'self' ? (
           <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>

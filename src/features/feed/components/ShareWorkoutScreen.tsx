@@ -123,7 +123,7 @@ export function ShareWorkoutScreen({
       if (rejected)
         setPhotoError(
           language === 'es'
-            ? `${rejected} ${rejected === 1 ? 'foto omitida' : 'fotos omitidas'}. Usa JPEG, PNG o WebP de hasta 5 MB cada una.`
+            ? `${countLabel(rejected, 'foto omitida', 'fotos omitidas')}. Usa JPEG, PNG o WebP de hasta 5 MB cada una.`
             : `${countLabel(rejected, 'photo')} skipped. Use JPEG, PNG or WebP up to 5 MB each.`,
         );
     } catch {

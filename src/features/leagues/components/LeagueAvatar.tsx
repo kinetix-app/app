@@ -78,17 +78,77 @@ export function LeagueAvatar({
     preview,
     invitationToken,
   );
-  const label =
-    language === 'es'
-      ? `Imagen ${member ? 'de perfil' : 'de liga'} de ${name}`
-      : `${name} ${member ? 'profile' : 'league'} picture`;
+  let label: string;
+  if (member) label = language === 'es' ? `Imagen de perfil de ${name}` : `${name} profile picture`;
+  else label = language === 'es' ? `Imagen de liga de ${name}` : `${name} league picture`;
+  return (
+    <View style={{ alignItems: 'center', gap: spacing['space-2'], flexShrink: 0 }}>
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radii['radius-pill'],
+          backgroundColor: p['brand-soft'],
+          overflow: 'hidden',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <LeagueAvatarVisual
+          uri={uri}
+          failed={Boolean(failed)}
+          loading={loading}
+          member={member}
+          name={name}
+          label={label}
+          size={size}
+          onImageError={() => uri && setFailedUri(uri)}
+        />
+      </View>
+      {failed && retryable && path ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={language === 'es' ? `Reintentar ${label}` : `Retry ${label}`}
+          onPress={retry}
+          style={{ minHeight: 44, justifyContent: 'center' }}
+        >
+          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+            {language === 'es' ? 'Reintentar imagen' : 'Retry picture'}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function LeagueAvatarVisual({
+  uri,
+  failed,
+  loading,
+  member,
+  name,
+  label,
+  size,
+  onImageError,
+}: Readonly<{
+  uri?: string;
+  failed: boolean;
+  loading: boolean;
+  member: boolean;
+  name: string;
+  label: string;
+  size: number;
+  onImageError: () => void;
+}>) {
+  const language = useLanguage();
+  const p = usePalette();
   let picture;
   if (uri && !failed) {
     picture = (
       <Image
         accessibilityLabel={label}
         source={{ uri }}
-        onError={() => setFailedUri(uri)}
+        onError={onImageError}
         style={{ width: '100%', height: '100%' }}
       />
     );
@@ -124,33 +184,5 @@ export function LeagueAvatar({
       />
     );
   }
-  return (
-    <View style={{ alignItems: 'center', gap: spacing['space-2'], flexShrink: 0 }}>
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: radii['radius-pill'],
-          backgroundColor: p['brand-soft'],
-          overflow: 'hidden',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {picture}
-      </View>
-      {failed && retryable && path ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={language === 'es' ? `Reintentar ${label}` : `Retry ${label}`}
-          onPress={retry}
-          style={{ minHeight: 44, justifyContent: 'center' }}
-        >
-          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-            {language === 'es' ? 'Reintentar imagen' : 'Retry picture'}
-          </Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
+  return picture;
 }

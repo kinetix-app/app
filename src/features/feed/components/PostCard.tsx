@@ -53,6 +53,30 @@ export function PostCard({
         ) : null}
       </View>
       <MediaCarousel accountId={accountId} post={post} name={name} />
+      <PostBody post={post} name={name} onWorkout={onWorkout} />
+      {onLike && onComments ? (
+        <PostReactions
+          post={post}
+          name={name}
+          likePending={likePending}
+          onLike={() => onLike(post)}
+          onComments={() => onComments(post)}
+        />
+      ) : null}
+      <PostLikeError visible={Boolean(likeError)} language={language} />
+    </View>
+  );
+}
+
+function PostBody({
+  post,
+  name,
+  onWorkout,
+}: Readonly<{ post: Post; name: string; onWorkout?: (post: Post) => void }>) {
+  const language = useLanguage();
+  const p = usePalette();
+  return (
+    <>
       {post.caption || post.description ? (
         <View style={styles.copy}>
           {post.caption ? (
@@ -72,24 +96,28 @@ export function PostCard({
           onPress={onWorkout ? () => onWorkout(post) : undefined}
         />
       ) : null}
-      {onLike && onComments ? (
-        <PostReactions
-          post={post}
-          name={name}
-          likePending={likePending}
-          onLike={() => onLike(post)}
-          onComments={() => onComments(post)}
-        />
-      ) : null}
-      {likeError ? (
-        <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-          {language === 'es'
-            ? 'No se pudo actualizar tu me gusta. Inténtalo de nuevo.'
-            : 'Could not update your like. Try again.'}
-        </Text>
-      ) : null}
-    </View>
+    </>
   );
+}
+
+function PostLikeError({
+  visible,
+  language,
+}: Readonly<{ visible: boolean; language: 'en' | 'es' }>) {
+  const p = usePalette();
+  if (!visible) return null;
+  return (
+    <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
+      {language === 'es'
+        ? 'No se pudo actualizar tu me gusta. Inténtalo de nuevo.'
+        : 'Could not update your like. Try again.'}
+    </Text>
+  );
+}
+
+function likeActionLabel(liked: boolean, language: 'en' | 'es') {
+  if (liked) return language === 'es' ? 'Ya no me gusta' : 'Unlike';
+  return language === 'es' ? 'Me gusta' : 'Like';
 }
 
 function PostReactions({
@@ -107,14 +135,22 @@ function PostReactions({
 }>) {
   const language = useLanguage();
   const p = usePalette();
+  const likeAction = likeActionLabel(post.liked_by_me, language);
+  const commentsLabel =
+    language === 'es' ? `Comentarios de la publicación de ${name}` : `Comments on post by ${name}`;
+  const commentCountLabel = countLabel(
+    post.comment_count,
+    language === 'es' ? 'comentario' : 'comment',
+    language === 'es' ? 'comentarios' : 'comments',
+  );
   return (
     <View style={styles.actions}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={
           language === 'es'
-            ? `${post.liked_by_me ? 'Ya no me gusta' : 'Me gusta'} la publicación de ${name}`
-            : `${post.liked_by_me ? 'Unlike' : 'Like'} post by ${name}`
+            ? `${likeAction} la publicación de ${name}`
+            : `${likeAction} post by ${name}`
         }
         accessibilityState={{
           selected: post.liked_by_me,
@@ -140,7 +176,7 @@ function PostReactions({
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${language === 'es' ? `Comentarios de la publicación de ${name}` : `Comments on post by ${name}`}, ${countLabel(post.comment_count, language === 'es' ? 'comentario' : 'comment', language === 'es' ? 'comentarios' : 'comments')}`}
+        accessibilityLabel={`${commentsLabel}, ${commentCountLabel}`}
         onPress={onComments}
         style={({ pressed }) => [styles.action, { opacity: pressed ? 0.55 : 1 }]}
       >
@@ -165,6 +201,9 @@ function PostByline({
 }: Readonly<{ accountId: number; post: Post; name: string; onAuthor?: (post: Post) => void }>) {
   const language = useLanguage();
   const p = usePalette();
+  let visibilityLabel = '';
+  if (post.visibility === 'PRIVATE')
+    visibilityLabel = language === 'es' ? ' · Solo tú' : ' · Only you';
   const byline = (
     <>
       <PersonAvatar accountId={accountId} person={post.author} />
@@ -174,7 +213,7 @@ function PostByline({
         </Text>
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
           {relativeTime(post.created_at, undefined, language)}
-          {post.visibility === 'PRIVATE' ? (language === 'es' ? ' · Solo tú' : ' · Only you') : ''}
+          {visibilityLabel}
         </Text>
       </View>
     </>

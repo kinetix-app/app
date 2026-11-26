@@ -10,6 +10,55 @@ import type { Person, Relationship } from '../schemas';
 
 type Action = 'request' | 'accept' | 'remove';
 
+function actionTitle(action: Action, pending: Action | null, language: 'en' | 'es') {
+  if (pending !== action) {
+    const labels = {
+      request: language === 'es' ? 'Añadir amigo' : 'Add friend',
+      accept: language === 'es' ? 'Aceptar' : 'Accept',
+      remove: language === 'es' ? 'Eliminar' : 'Remove',
+    };
+    return labels[action];
+  }
+  const pendingLabels = {
+    request: language === 'es' ? 'Enviando…' : 'Sending…',
+    accept: language === 'es' ? 'Aceptando…' : 'Accepting…',
+    remove: language === 'es' ? 'Eliminando…' : 'Removing…',
+  };
+  return pendingLabels[action];
+}
+
+function requestCancelTitle(pending: Action | null, language: 'en' | 'es') {
+  if (pending !== 'remove') return language === 'es' ? 'Cancelar solicitud' : 'Cancel request';
+  return language === 'es' ? 'Cancelando…' : 'Cancelling…';
+}
+
+function declineTitle(pending: Action | null, language: 'en' | 'es') {
+  if (pending !== 'remove') return language === 'es' ? 'Rechazar' : 'Decline';
+  return language === 'es' ? 'Rechazando…' : 'Declining…';
+}
+
+function accessibilityLabel(
+  action: 'add' | 'cancel' | 'accept' | 'decline' | 'remove',
+  name: string,
+  language: 'en' | 'es',
+) {
+  if (action === 'add')
+    return language === 'es' ? `Añadir a ${name} como amigo` : `Add ${name} as a friend`;
+  if (action === 'cancel')
+    return language === 'es'
+      ? `Cancelar solicitud de amistad a ${name}`
+      : `Cancel friend request to ${name}`;
+  if (action === 'accept')
+    return language === 'es'
+      ? `Aceptar solicitud de amistad de ${name}`
+      : `Accept friend request from ${name}`;
+  if (action === 'decline')
+    return language === 'es'
+      ? `Rechazar solicitud de amistad de ${name}`
+      : `Decline friend request from ${name}`;
+  return language === 'es' ? `Eliminar a ${name} de amigos` : `Remove ${name} from friends`;
+}
+
 /** Relationship-aware controls; the shown state always comes from the server. */
 export function FriendActions({
   accountId,
@@ -121,15 +170,7 @@ export function FriendActions({
               onPress={() => setConfirmRemove(false)}
             />
             <Button
-              title={
-                pending === 'remove'
-                  ? language === 'es'
-                    ? 'Eliminando…'
-                    : 'Removing…'
-                  : language === 'es'
-                    ? 'Eliminar'
-                    : 'Remove'
-              }
+              title={actionTitle('remove', pending, language)}
               tone="danger"
               disabled={busy}
               onPress={() => void run('remove')}
@@ -162,18 +203,8 @@ function Controls({
   if (relationship === 'none')
     return (
       <Button
-        title={
-          pending === 'request'
-            ? language === 'es'
-              ? 'Enviando…'
-              : 'Sending…'
-            : language === 'es'
-              ? 'Añadir amigo'
-              : 'Add friend'
-        }
-        accessibilityLabel={
-          language === 'es' ? `Añadir a ${name} como amigo` : `Add ${name} as a friend`
-        }
+        title={actionTitle('request', pending, language)}
+        accessibilityLabel={accessibilityLabel('add', name, language)}
         tone="positive"
         icon="user-plus"
         disabled={busy}
@@ -191,20 +222,8 @@ function Controls({
           </Text>
         ) : null}
         <Button
-          title={
-            pending === 'remove'
-              ? language === 'es'
-                ? 'Cancelando…'
-                : 'Cancelling…'
-              : language === 'es'
-                ? 'Cancelar solicitud'
-                : 'Cancel request'
-          }
-          accessibilityLabel={
-            language === 'es'
-              ? `Cancelar solicitud de amistad a ${name}`
-              : `Cancel friend request to ${name}`
-          }
+          title={requestCancelTitle(pending, language)}
+          accessibilityLabel={accessibilityLabel('cancel', name, language)}
           secondary
           disabled={busy}
           onPress={() => onRun('remove')}
@@ -215,38 +234,14 @@ function Controls({
     return (
       <>
         <Button
-          title={
-            pending === 'accept'
-              ? language === 'es'
-                ? 'Aceptando…'
-                : 'Accepting…'
-              : language === 'es'
-                ? 'Aceptar'
-                : 'Accept'
-          }
-          accessibilityLabel={
-            language === 'es'
-              ? `Aceptar solicitud de amistad de ${name}`
-              : `Accept friend request from ${name}`
-          }
+          title={actionTitle('accept', pending, language)}
+          accessibilityLabel={accessibilityLabel('accept', name, language)}
           disabled={busy}
           onPress={() => onRun('accept')}
         />
         <Button
-          title={
-            pending === 'remove'
-              ? language === 'es'
-                ? 'Rechazando…'
-                : 'Declining…'
-              : language === 'es'
-                ? 'Rechazar'
-                : 'Decline'
-          }
-          accessibilityLabel={
-            language === 'es'
-              ? `Rechazar solicitud de amistad de ${name}`
-              : `Decline friend request from ${name}`
-          }
+          title={declineTitle(pending, language)}
+          accessibilityLabel={accessibilityLabel('decline', name, language)}
           secondary
           disabled={busy}
           onPress={() => onRun('remove')}
@@ -262,9 +257,7 @@ function Controls({
       ) : null}
       <Button
         title={language === 'es' ? 'Eliminar amigo' : 'Remove friend'}
-        accessibilityLabel={
-          language === 'es' ? `Eliminar a ${name} de amigos` : `Remove ${name} from friends`
-        }
+        accessibilityLabel={accessibilityLabel('remove', name, language)}
         tone="danger"
         disabled={busy}
         onPress={onRemove}

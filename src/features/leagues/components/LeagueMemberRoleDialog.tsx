@@ -6,6 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, shadows, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { LeagueAction, leagueStyles } from './LeagueUI';
 
+function roleDescription(name: string, promoting: boolean, language: 'en' | 'es') {
+  if (promoting)
+    return language === 'es'
+      ? `${name} podrá editar la liga, invitar a personas y gestionar los roles.`
+      : `${name} will be able to edit the league, invite people and manage member roles.`;
+  return language === 'es'
+    ? `${name} conservará su membresía y puntuaciones. Se eliminarán los controles de administrador.`
+    : `${name} will keep their membership and scores. Admin controls will be removed.`;
+}
+
 export function LeagueMemberRoleDialog({
   name,
   nextRole,
@@ -86,13 +96,7 @@ export function LeagueMemberRoleDialog({
               </Text>
             </View>
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              {promoting
-                ? language === 'es'
-                  ? `${name} podrá editar la liga, invitar a personas y gestionar los roles.`
-                  : `${name} will be able to edit the league, invite people and manage member roles.`
-                : language === 'es'
-                  ? `${name} conservará su membresía y puntuaciones. Se eliminarán los controles de administrador.`
-                  : `${name} will keep their membership and scores. Admin controls will be removed.`}
+              {roleDescription(name, promoting, language)}
             </Text>
             {error ? (
               <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
