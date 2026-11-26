@@ -3,10 +3,11 @@ import { AccessibilityInfo } from 'react-native';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ExerciseDetails } from '../components/ExerciseDetails';
-import { rangeStart, duration } from '../components/ExerciseEvolution';
+import { ExerciseEvolution, rangeStart, duration } from '../components/ExerciseEvolution';
 import { trainingApi } from '../api';
 import { getAccount } from '@/features/accounts/api';
 import { exampleExercise } from './fixtures';
+import { LanguageProvider } from '@/i18n/Language';
 
 jest.mock('@expo/vector-icons', () => ({ Feather: 'Icon' }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -25,6 +26,18 @@ function open() {
     >
       <ExerciseDetails accountId={7} exerciseId={1} onClose={jest.fn()} />
     </QueryClientProvider>,
+  );
+}
+
+function openEvolutionInSpanish() {
+  return render(
+    <LanguageProvider language="es">
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })}
+      >
+        <ExerciseEvolution accountId={7} exerciseId={1} activityType="gym" />
+      </QueryClientProvider>
+    </LanguageProvider>,
   );
 }
 beforeEach(() => {
@@ -155,6 +168,52 @@ test('selects observations, resets on metric change and explains estimates', asy
   expect(
     screen.getByRole('button', { name: `${date}, 60.0 kg` }).props.accessibilityState.selected,
   ).toBe(false);
+});
+
+test('Spanish evolution translates metrics and explanation and supports metric and range changes', async () => {
+  const date = new Date().toISOString().slice(0, 10);
+  jest.mocked(trainingApi.exerciseEvolution).mockResolvedValue({
+    exercise_id: 1,
+    activity_type: 'gym',
+    weight_unit: 'kg',
+    distance_unit: 'km',
+    days: [
+      {
+        date,
+        estimated_1rm: '70.0',
+        weight: '60.0',
+        volume: '300.0',
+        reps: 5,
+        distance: null,
+        duration_seconds: null,
+        volume_partial: false,
+      },
+    ],
+  });
+  const view = openEvolutionInSpanish();
+
+  const metrics = screen.getByLabelText('Métrica del ejercicio');
+  const strength = within(metrics).getByRole('tab', { name: 'Fuerza estimada (1RM)' });
+  expect(strength.props.accessibilityState.selected).toBe(true);
+  fireEvent.press(await screen.findByRole('button', { name: `${date}, 70.0 kg` }));
+  fireEvent.press(screen.getByRole('button', { name: 'Acerca de Fuerza estimada (1RM)' }));
+  expect(
+    screen.getByText(/no sabemos cuánto se acercó cada serie al esfuerzo máximo/i),
+  ).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Cerrar explicación' }));
+
+  const weight = within(metrics).getByRole('tab', { name: 'Peso' });
+  fireEvent.press(weight);
+  expect(weight.props.accessibilityState.selected).toBe(true);
+  expect(
+    screen.getByRole('button', { name: `${date}, 60.0 kg` }).props.accessibilityState.selected,
+  ).toBe(false);
+
+  const oneMonth = screen.getByRole('button', { name: '1 mes' });
+  fireEvent.press(oneMonth);
+  expect(oneMonth.props.accessibilityState.selected).toBe(true);
+  expect(screen.getByRole('tab', { name: 'Repeticiones' })).toBeTruthy();
+  await act(async () => view.unmount());
 });
 
 test('clamps UTC month boundaries and formats durations', () => {

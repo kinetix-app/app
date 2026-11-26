@@ -1009,7 +1009,6 @@ function EntryQueueReview({
     { calories: 0, protein: 0, carbohydrates: 0, fats: 0 },
   );
   const confirmDisabled = pending || editingKey !== null || !entries.length;
-  const entryLabel = entries.length === 1 ? 'entry' : 'entries';
 
   return (
     <View style={styles.reviewSections}>

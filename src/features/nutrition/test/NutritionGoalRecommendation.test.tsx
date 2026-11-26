@@ -139,3 +139,19 @@ test('uses stable reason codes for Spanish unavailable recommendations', async (
     ),
   ).toBeTruthy();
 });
+
+test('shows a Spanish load failure and recovers through retry', async () => {
+  jest
+    .mocked(nutritionApi.recommendation)
+    .mockRejectedValueOnce(new Error('Offline'))
+    .mockResolvedValueOnce(suggestion);
+
+  open('es');
+  expect(await screen.findByText('No se pudo cargar tu sugerencia.')).toBeTruthy();
+
+  fireEvent.press(screen.getByText('Reintentar'));
+
+  expect(await screen.findByText('2400 kcal/día')).toBeTruthy();
+  expect(screen.getByText('Aceptar sugerencia')).toBeTruthy();
+  expect(nutritionApi.recommendation).toHaveBeenCalledTimes(2);
+});
