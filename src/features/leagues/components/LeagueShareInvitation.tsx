@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import React, { useEffect, useState } from 'react';
@@ -10,6 +12,8 @@ export function LeagueShareInvitation({
   link,
   onClose,
 }: Readonly<{ link: string; onClose: () => void }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   const [copiedAt, setCopiedAt] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -27,7 +31,7 @@ export function LeagueShareInvitation({
       setCopiedAt(Date.now());
     } catch {
       setCopiedAt(null);
-      setError('Could not copy the link. Try again or use Share.');
+      setError(getTranslation(language)('socialAdditional.couldNotCopyTheLinkTry_804f28'));
     }
   }
 
@@ -39,7 +43,7 @@ export function LeagueShareInvitation({
       else await copy();
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
-      setError('Could not share the link. Tap it to copy.');
+      setError(getTranslation(language)('socialAdditional.couldNotShareTheLinkTap_1eae22'));
     }
   }
 
@@ -76,16 +80,22 @@ export function LeagueShareInvitation({
                 accessibilityRole="header"
                 style={[textStyles['title-lg'], { flex: 1, color: p.ink }]}
               >
-                Invitation link
+                {getTranslation(language)('socialAdditional.invitationLink_4ad248')}
               </Text>
-              <LeagueIconButton label="Close invitation link" icon="close" onPress={onClose} />
+              <LeagueIconButton
+                label={getTranslation(language)('socialAdditional.closeInvitationLink_b76ea1')}
+                icon="close"
+                onPress={onClose}
+              />
             </View>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              Anyone with the link can join for the next 48 hours.
+              {getTranslation(language)('socialAdditional.anyoneWithTheLinkCanJoin_5f47f2')}
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Copy invitation link"
+              accessibilityLabel={getTranslation(language)(
+                'socialAdditional.copyInvitationLink_940c8f',
+              )}
               onPress={() => {
                 void copy();
               }}
@@ -116,7 +126,7 @@ export function LeagueShareInvitation({
               </Text>
             ) : null}
             <LeagueAction
-              label="Share invitation"
+              label={getTranslation(language)('socialAdditional.shareInvitation_ab3aa7')}
               icon="share-outline"
               variant="primary"
               onPress={() => {
@@ -145,7 +155,9 @@ export function LeagueShareInvitation({
             }}
           >
             <Ionicons name="checkmark-circle-outline" size={20} color={p['brand-ink']} />
-            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Link copied</Text>
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+              {getTranslation(language)('socialAdditional.linkCopied_a5198a')}
+            </Text>
           </View>
         ) : null}
       </SafeAreaView>

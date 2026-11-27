@@ -1,4 +1,6 @@
 import React from 'react';
+import { LanguageProvider, useTranslation } from '@/i18n/Language';
+import { Text } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ProfileEditor } from '../components/ProfileEditor';
@@ -298,3 +300,170 @@ test('editing presents all fields together and saves directly without onboarding
     weight_kg: '70.000000',
   });
 });
+
+test.each(['onboarding', 'edit'] as const)(
+  'selects and persists a language in %s',
+  async (mode) => {
+    jest.mocked(updateProfile).mockResolvedValueOnce({
+      ...completeAccount,
+      profile: { ...completeAccount.profile, language: 'es' },
+    });
+    const onSaved = show(completeAccount, jest.fn(), jest.fn(), mode);
+    expect(screen.getByRole('radio', { name: 'English' }).props.accessibilityState.checked).toBe(
+      true,
+    );
+    fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+    if (mode === 'onboarding') {
+      review();
+      fireEvent.press(screen.getByText('Save profile'));
+    } else {
+      fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
+    }
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(updateProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ language: 'es' }),
+    );
+  },
+);
+
+test('renders profile editing labels in the saved Spanish language', () => {
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { gcTime: 0 }, mutations: { gcTime: 0 } } })
+      }
+    >
+      <LanguageProvider language="es">
+        <ProfileEditor account={completeAccount} onSaved={jest.fn()} mode="edit" />
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText('Editar perfil')).toBeTruthy();
+  expect(
+    screen.queryByText(
+      'No se pudo guardar tu perfil. Conservamos tus datos y la foto elegida. Inténtalo de nuevo.',
+    ),
+  ).toBeNull();
+  expect(screen.getByRole('radio', { name: 'English' }).props.accessibilityState.checked).toBe(
+    true,
+  );
+  expect(screen.getByLabelText('Nombre')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Guardar perfil' })).toBeTruthy();
+});
+
+test('failed language save retains the draft and retries explicitly', async () => {
+  jest
+    .mocked(updateProfile)
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce({
+      ...completeAccount,
+      profile: { ...completeAccount.profile, language: 'es' },
+    });
+  const onSaved = show(completeAccount, jest.fn(), jest.fn(), 'edit');
+  fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
+  await screen.findByText(
+    'Could not save your profile. Your details and picture choice are kept. Try again.',
+  );
+  expect(onSaved).not.toHaveBeenCalled();
+  expect(screen.getByRole('radio', { name: 'Español' }).props.accessibilityState.checked).toBe(
+    true,
+  );
+  fireEvent.press(screen.getByRole('button', { name: 'Save profile' }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(updateProfile).toHaveBeenLastCalledWith(
+    expect.anything(),
+    expect.objectContaining({ language: 'es' }),
+  );
+});
+
+test('previews language immediately, keeps it after a failed save, and restores it on cancel', async () => {
+  jest.mocked(updateProfile).mockRejectedValueOnce(new Error('offline'));
+  function Preview() {
+    const [editing, setEditing] = React.useState(true);
+    return (
+      <LanguageProvider language="en">
+        <PreviewLabel />
+        {editing ? (
+          <ProfileEditor
+            account={completeAccount}
+            onSaved={jest.fn()}
+            onCancel={() => setEditing(false)}
+            mode="edit"
+          />
+        ) : null}
+      </LanguageProvider>
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <Preview />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText('Main navigation')).toBeTruthy();
+  fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+  expect(screen.getByText('Navegación principal')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Guardar perfil' })).toBeTruthy();
+  expect(updateProfile).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar perfil' }));
+  await screen.findByText(
+    'No se pudo guardar tu perfil. Conservamos tus datos y la foto elegida. Inténtalo de nuevo.',
+  );
+  expect(screen.getByText('Navegación principal')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Volver al perfil' }));
+  expect(screen.getByText('Main navigation')).toBeTruthy();
+});
+
+function PreviewLabel() {
+  const t = useTranslation();
+  return <Text>{t('navigation.main')}</Text>;
+}
+
+test('keeps the previewed language after a successful save', async () => {
+  jest.mocked(updateProfile).mockReset();
+  const saved = {
+    ...completeAccount,
+    profile: { ...completeAccount.profile, language: 'es' as const },
+  };
+  jest.mocked(updateProfile).mockResolvedValueOnce(saved);
+  function Preview() {
+    const [account, setAccount] = React.useState(completeAccount);
+    const [editing, setEditing] = React.useState(true);
+    return (
+      <LanguageProvider language={account.profile.language ?? 'en'}>
+        <PreviewLabel />
+        {editing ? (
+          <ProfileEditor
+            account={account}
+            onSaved={(next) => {
+              setAccount(next);
+              setEditing(false);
+            }}
+            mode="edit"
+          />
+        ) : null}
+      </LanguageProvider>
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <Preview />
+    </QueryClientProvider>,
+  );
+  fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar perfil' }));
+  await waitFor(() => expect(updateProfile).toHaveBeenCalled(), { timeout: 10000 });
+  await waitFor(() => expect(screen.queryByRole('radio', { name: 'Español' })).toBeNull(), {
+    timeout: 10000,
+  });
+  expect(screen.getByText('Navegación principal')).toBeTruthy();
+  expect(updateProfile).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ language: 'es' }),
+  );
+}, 20000);

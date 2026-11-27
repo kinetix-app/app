@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import React from 'react';
 import { AnchoredPicker, type PickerOption } from '@/components/AnchoredPicker';
 
@@ -12,14 +14,15 @@ export function LeagueRoundPicker({
   options: PickerOption<RoundSelection>[];
   onSelect: (selection: RoundSelection) => void;
 }>) {
+  const language = useLanguage();
   return (
     <AnchoredPicker
       selection={selection}
       options={options}
       onSelect={onSelect}
-      labelPrefix="Select round"
-      fallbackLabel="Choose a round"
-      closeLabel="Close round menu"
+      labelPrefix={getTranslation(language)('leagues.selectRound')}
+      fallbackLabel={getTranslation(language)('leagues.chooseARound')}
+      closeLabel={getTranslation(language)('leagues.closeRoundMenu')}
       menuTestId="league-round-menu"
       icon="calendar-outline"
     />

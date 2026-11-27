@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { Modal, Text, View } from 'react-native';
@@ -8,6 +10,48 @@ import { friendsApi, friendsKey } from '../api';
 import type { Person, Relationship } from '../schemas';
 
 type Action = 'request' | 'accept' | 'remove';
+
+function actionTitle(action: Action, pending: Action | null, language: 'en' | 'es') {
+  if (pending !== action) {
+    const labels = {
+      request: getTranslation(language)('friends.addFriend'),
+      accept: getTranslation(language)('friends.accept'),
+      remove: getTranslation(language)('friends.remove'),
+    };
+    return labels[action];
+  }
+  const pendingLabels = {
+    request: getTranslation(language)('friends.sending'),
+    accept: getTranslation(language)('friends.accepting'),
+    remove: getTranslation(language)('friends.removing'),
+  };
+  return pendingLabels[action];
+}
+
+function requestCancelTitle(pending: Action | null, language: 'en' | 'es') {
+  if (pending !== 'remove') return getTranslation(language)('friends.cancelRequest');
+  return getTranslation(language)('friends.cancelling');
+}
+
+function declineTitle(pending: Action | null, language: 'en' | 'es') {
+  if (pending !== 'remove') return getTranslation(language)('friends.decline');
+  return getTranslation(language)('friends.declining');
+}
+
+function accessibilityLabel(
+  action: 'add' | 'cancel' | 'accept' | 'decline' | 'remove',
+  name: string,
+  language: 'en' | 'es',
+) {
+  if (action === 'add') return getTranslation(language)('friends.addAsAFriend', { name });
+  if (action === 'cancel')
+    return getTranslation(language)('friends.cancelFriendRequestTo', { name });
+  if (action === 'accept')
+    return getTranslation(language)('friends.acceptFriendRequestFrom', { name });
+  if (action === 'decline')
+    return getTranslation(language)('friends.declineFriendRequestFrom', { name });
+  return getTranslation(language)('friends.removeFromFriends', { name });
+}
 
 /** Relationship-aware controls; the shown state always comes from the server. */
 export function FriendActions({
@@ -21,12 +65,13 @@ export function FriendActions({
   relationship: Relationship;
   compact?: boolean;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   const cache = useQueryClient();
   const [pending, setPending] = useState<Action | null>(null);
   const [error, setError] = useState('');
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const name = personName(person.display_name);
+  const name = personName(person.display_name, language);
 
   async function run(action: Action) {
     if (pending) return;
@@ -43,7 +88,7 @@ export function FriendActions({
         cache.invalidateQueries({ queryKey: ['feed', accountId, 'posts'] }),
       ]);
     } catch {
-      setError('Could not update this friendship. Try again.');
+      setError(getTranslation(language)('friends.couldNotUpdateThisFriendshipTryAgain'));
     } finally {
       setPending(null);
     }
@@ -96,11 +141,10 @@ export function FriendActions({
             style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              Remove {name}?
+              {getTranslation(language)('friends.remove_602068', { name })}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              You will stop seeing each other’s friends-only posts. You can add each other again
-              later.
+              {getTranslation(language)('friends.youWillStopSeeingEachOtherS')}
             </Text>
             {error ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
@@ -108,13 +152,13 @@ export function FriendActions({
               </Text>
             ) : null}
             <Button
-              title="Cancel"
+              title={getTranslation(language)('friends.cancel')}
               secondary
               disabled={busy}
               onPress={() => setConfirmRemove(false)}
             />
             <Button
-              title={pending === 'remove' ? 'Removing…' : 'Remove'}
+              title={actionTitle('remove', pending, language)}
               tone="danger"
               disabled={busy}
               onPress={() => void run('remove')}
@@ -141,13 +185,14 @@ function Controls({
   onRun: (action: Action) => void;
   onRemove: () => void;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   const busy = pending !== null;
   if (relationship === 'none')
     return (
       <Button
-        title={pending === 'request' ? 'Sending…' : 'Add friend'}
-        accessibilityLabel={`Add ${name} as a friend`}
+        title={actionTitle('request', pending, language)}
+        accessibilityLabel={accessibilityLabel('add', name, language)}
         tone="positive"
         icon="user-plus"
         disabled={busy}
@@ -159,12 +204,12 @@ function Controls({
       <>
         {!compact ? (
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            Request sent · waiting for {name}
+            {getTranslation(language)('friends.requestSentWaitingFor', { name })}
           </Text>
         ) : null}
         <Button
-          title={pending === 'remove' ? 'Cancelling…' : 'Cancel request'}
-          accessibilityLabel={`Cancel friend request to ${name}`}
+          title={requestCancelTitle(pending, language)}
+          accessibilityLabel={accessibilityLabel('cancel', name, language)}
           secondary
           disabled={busy}
           onPress={() => onRun('remove')}
@@ -175,14 +220,14 @@ function Controls({
     return (
       <>
         <Button
-          title={pending === 'accept' ? 'Accepting…' : 'Accept'}
-          accessibilityLabel={`Accept friend request from ${name}`}
+          title={actionTitle('accept', pending, language)}
+          accessibilityLabel={accessibilityLabel('accept', name, language)}
           disabled={busy}
           onPress={() => onRun('accept')}
         />
         <Button
-          title={pending === 'remove' ? 'Declining…' : 'Decline'}
-          accessibilityLabel={`Decline friend request from ${name}`}
+          title={declineTitle(pending, language)}
+          accessibilityLabel={accessibilityLabel('decline', name, language)}
           secondary
           disabled={busy}
           onPress={() => onRun('remove')}
@@ -192,11 +237,13 @@ function Controls({
   return (
     <>
       {!compact ? (
-        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>You are friends</Text>
+        <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+          {getTranslation(language)('friends.youAreFriends')}
+        </Text>
       ) : null}
       <Button
-        title="Remove friend"
-        accessibilityLabel={`Remove ${name} from friends`}
+        title={getTranslation(language)('friends.removeFriend')}
+        accessibilityLabel={accessibilityLabel('remove', name, language)}
         tone="danger"
         disabled={busy}
         onPress={onRemove}

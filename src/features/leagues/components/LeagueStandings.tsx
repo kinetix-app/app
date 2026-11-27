@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
@@ -14,23 +16,28 @@ import { roundRange } from '../scoreDisplay';
 import { LeagueScoreHistory } from './LeagueScoreHistory';
 import { LeagueAction, LeagueRankingRow, leagueStyles } from './LeagueUI';
 
-function roundOptions(catalog: Awaited<ReturnType<typeof leaguesApi.rounds>> | undefined) {
+function roundOptions(
+  catalog: Awaited<ReturnType<typeof leaguesApi.rounds>> | undefined,
+  language: 'en' | 'es',
+) {
   const options: { value: RoundSelection; label: string; detail?: string }[] = [
-    { value: null, label: 'All rounds' },
+    { value: null, label: getTranslation(language)('socialAdditional.allRounds_0fa840') },
   ];
   if (catalog) {
     const { timezone, current_round_id } = catalog;
     const current = catalog.rounds.find((round) => round.id === current_round_id);
     options.push({
       value: 'current',
-      label: 'Current round',
-      detail: current ? roundRange(current.start_at, current.end_at, timezone) : undefined,
+      label: getTranslation(language)('socialAdditional.currentRound_2b8f19'),
+      detail: current
+        ? roundRange(current.start_at, current.end_at, timezone, language)
+        : undefined,
     });
     for (const round of catalog.rounds) {
       if (round.id !== current_round_id)
         options.push({
           value: round.id,
-          label: roundRange(round.start_at, round.end_at, timezone),
+          label: roundRange(round.start_at, round.end_at, timezone, language),
         });
     }
   }
@@ -50,6 +57,8 @@ export function LeagueStandings({
   active?: boolean;
   onBack?: () => void;
 }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   const [view, setView] = useState<'rankings' | 'breakdown'>('rankings');
   const [roundSelection, setRoundSelection] = useState<RoundSelection>('current');
@@ -100,7 +109,7 @@ export function LeagueStandings({
       />
     );
   }
-  const options = roundOptions(rounds.data);
+  const options = roundOptions(rounds.data, language);
   const showingRankings = view === 'rankings';
   const page = showingRankings ? rankings : contributions;
   const next = () => {
@@ -128,14 +137,20 @@ export function LeagueStandings({
         <ActivityIndicator
           color={p.brand}
           accessibilityLabel={
-            showingRankings ? 'Loading more standings' : 'Loading more contributions'
+            showingRankings
+              ? getTranslation(language)('socialAdditional.loadingMoreStandings_072495')
+              : getTranslation(language)('socialAdditional.loadingMoreContributions_d662e1')
           }
         />
       );
     if (page.isFetchNextPageError)
       return (
         <LeagueAction
-          label={showingRankings ? 'Retry more standings' : 'Retry more contributions'}
+          label={
+            showingRankings
+              ? getTranslation(language)('socialAdditional.retryMoreStandings_4e5863')
+              : getTranslation(language)('socialAdditional.retryMoreContributions_7020d8')
+          }
           onPress={next}
         />
       );
@@ -144,18 +159,24 @@ export function LeagueStandings({
 
   function renderStatus() {
     const loadError = showingRankings
-      ? 'Could not load standings.'
-      : 'Could not load the points breakdown.';
+      ? getTranslation(language)('socialAdditional.couldNotLoadStandings_a6d463')
+      : getTranslation(language)('socialAdditional.couldNotLoadThePointsBreakdown_b85c60');
     if (initialError)
       return (
         <>
           <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
             {initialError instanceof ApiError && initialError.status === 409
-              ? 'Standings are unavailable because this older league has no calendar.'
+              ? getTranslation(language)(
+                  'socialAdditional.standingsAreUnavailableBecauseThisOlder_36df2d',
+                )
               : loadError}
           </Text>
           <LeagueAction
-            label={showingRankings ? 'Retry standings' : 'Retry points breakdown'}
+            label={
+              showingRankings
+                ? getTranslation(language)('socialAdditional.retryStandings_097aa3')
+                : getTranslation(language)('socialAdditional.retryPointsBreakdown_32441c')
+            }
             onPress={() => (rounds.isError ? rounds.refetch() : page.refetch())}
           />
         </>
@@ -164,7 +185,11 @@ export function LeagueStandings({
       return (
         <ActivityIndicator
           color={p.brand}
-          accessibilityLabel={showingRankings ? 'Loading standings' : 'Loading points breakdown'}
+          accessibilityLabel={
+            showingRankings
+              ? getTranslation(language)('socialAdditional.loadingStandings_46cb74')
+              : getTranslation(language)('socialAdditional.loadingPointsBreakdown_d6377f')
+          }
         />
       );
     return null;
@@ -189,7 +214,7 @@ export function LeagueStandings({
         <View style={leagueStyles.section}>
           {header}
           <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-            Standings
+            {getTranslation(language)('socialAdditional.standings_1527d5')}
           </Text>
           {rounds.data ? (
             <>
@@ -200,12 +225,14 @@ export function LeagueStandings({
               />
               <View
                 accessibilityRole="tablist"
-                accessibilityLabel="Standings views"
+                accessibilityLabel={getTranslation(language)(
+                  'socialAdditional.standingsViews_cb4a0a',
+                )}
                 style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: p.line }}
               >
                 <AnimatedTextSelector
                   role="tab"
-                  label="Rankings"
+                  label={getTranslation(language)('socialAdditional.rankings_b17744')}
                   selected={showingRankings}
                   reduceMotion
                   equalWidth
@@ -213,7 +240,7 @@ export function LeagueStandings({
                 />
                 <AnimatedTextSelector
                   role="tab"
-                  label="Points breakdown"
+                  label={getTranslation(language)('socialAdditional.pointsBreakdown_253f29')}
                   selected={!showingRankings}
                   reduceMotion
                   equalWidth
@@ -228,7 +255,9 @@ export function LeagueStandings({
       ListEmptyComponent={
         (page.isSuccess ? (
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-            {showingRankings ? 'No standings yet.' : 'No credited workouts in this period.'}
+            {showingRankings
+              ? getTranslation(language)('socialAdditional.noStandingsYet_eeae24')
+              : getTranslation(language)('socialAdditional.noCreditedWorkoutsInThisPeriod_1df832')}
           </Text>
         ) : null) ?? undefined
       }

@@ -1,4 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import type { ViewInstance } from 'react-native';
+import { useLanguage } from '@/i18n/Language';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -36,14 +38,15 @@ type RoutineActionsMenuProps = Readonly<{
 export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
   const { name, onClose, onDelete, deleting, deleteError, coverPending } = props;
   const p = usePalette();
+  const language = useLanguage();
   const busy = deleting || coverPending;
   const insets = useSafeAreaInsets();
   const first = useRef<ViewInstance>(null);
   const [confirming, setConfirming] = useState(false);
   const error =
     deleteError instanceof ApiError && deleteError.status === 409
-      ? 'This routine has an ongoing workout. Finish or discard it before deleting.'
-      : 'Could not delete the routine. Try again.';
+      ? getTranslation(language)('training.thisRoutineHasAnOngoingWorkoutFinish_9a6722')
+      : getTranslation(language)('training.couldNotDeleteTheRoutineTryAgain_a57a1b');
   function close() {
     if (!busy) onClose();
   }
@@ -65,7 +68,13 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
         />
         <View
           accessibilityViewIsModal
-          accessibilityLabel={confirming ? `Delete ${name}` : `Actions for ${name}`}
+          accessibilityLabel={
+            confirming
+              ? getTranslation(language)('dynamicMessages.delete_602940', { value1: name })
+              : getTranslation(language)('dynamicMessages.actionsFor_f7a9e1', {
+                  value1: name,
+                })
+          }
           style={{
             width: '100%',
             maxWidth: 640,
@@ -98,12 +107,11 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
           >
             <View style={{ gap: spacing['space-1'] }}>
               <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-                {confirming ? 'Delete routine?' : name}
+                {confirming ? getTranslation(language)('training.deleteRoutine_36c655') : name}
               </Text>
               {confirming ? (
                 <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                  This routine will be removed from your library. Completed workouts and training
-                  history will be kept.
+                  {getTranslation(language)('training.thisRoutineWillBeRemovedFromYour_58f5f1')}
                 </Text>
               ) : null}
             </View>
@@ -126,7 +134,11 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
             )}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={confirming ? 'Keep routine' : 'Close routine actions'}
+              accessibilityLabel={
+                confirming
+                  ? getTranslation(language)('training.keepRoutine_c9f850')
+                  : getTranslation(language)('training.closeRoutineActions_0aa88e')
+              }
               accessibilityState={{ disabled: busy }}
               disabled={busy}
               onPress={() => (confirming ? setConfirming(false) : close())}
@@ -138,7 +150,9 @@ export function RoutineActionsMenu(props: RoutineActionsMenuProps) {
               })}
             >
               <Text style={[textStyles.label, { color: p.ink }]}>
-                {confirming ? 'Keep routine' : 'Cancel'}
+                {confirming
+                  ? getTranslation(language)('training.keepRoutine_c9f850')
+                  : getTranslation(language)('training.cancel_a25d0b')}
               </Text>
             </Pressable>
           </ScrollView>
@@ -164,6 +178,7 @@ function DeleteRoutineConfirmation({
   onDelete: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <>
       {deleteError ? (
@@ -173,7 +188,9 @@ function DeleteRoutineConfirmation({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Confirm delete ${name}`}
+        accessibilityLabel={getTranslation(language)('dynamicMessages.confirmDelete_9870e6', {
+          value1: name,
+        })}
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         onPress={onDelete}
@@ -197,7 +214,9 @@ function DeleteRoutineConfirmation({
           <Feather name="trash-2" size={20} color={p.danger} />
         )}
         <Text style={[textStyles.label, { color: p.danger }]}>
-          {deleting ? 'Deleting…' : 'Delete routine'}
+          {deleting
+            ? getTranslation(language)('training.deleting_467f44')
+            : getTranslation(language)('training.deleteRoutine_ce5d0f')}
         </Text>
       </Pressable>
     </>
@@ -227,6 +246,7 @@ function RoutineActionOptions({
     onConfirmDelete: () => void;
   }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <>
       <View
@@ -239,7 +259,9 @@ function RoutineActionOptions({
         <Pressable
           ref={canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={`Train ${name}`}
+          accessibilityLabel={getTranslation(language)('dynamicMessages.train_8edf48', {
+            value1: name,
+          })}
           accessibilityState={{ disabled: !canStart || busy }}
           disabled={!canStart || busy}
           onPress={onStart}
@@ -254,7 +276,9 @@ function RoutineActionOptions({
           })}
         >
           <MaterialIcons name="play-arrow" size={26} color={p['brand-ink']} />
-          <Text style={[textStyles.body, { color: p['brand-ink'] }]}>Train</Text>
+          <Text style={[textStyles.body, { color: p['brand-ink'] }]}>
+            {getTranslation(language)('training.train_73ad48')}
+          </Text>
         </Pressable>
         <View
           style={{
@@ -266,7 +290,9 @@ function RoutineActionOptions({
         <Pressable
           ref={!canStart ? first : undefined}
           accessibilityRole="button"
-          accessibilityLabel={`Edit ${name}`}
+          accessibilityLabel={getTranslation(language)('dynamicMessages.edit_a899b6', {
+            value1: name,
+          })}
           accessibilityState={{ disabled: busy }}
           disabled={busy}
           onPress={onEdit}
@@ -280,7 +306,9 @@ function RoutineActionOptions({
           })}
         >
           <Feather name="edit-2" size={22} color={p.ink} />
-          <Text style={[textStyles.body, { color: p.ink }]}>Edit</Text>
+          <Text style={[textStyles.body, { color: p.ink }]}>
+            {getTranslation(language)('training.edit_dac3da')}
+          </Text>
         </Pressable>
       </View>
       <RoutineCoverActions
@@ -298,7 +326,9 @@ function RoutineActionOptions({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Delete ${name}`}
+        accessibilityLabel={getTranslation(language)('dynamicMessages.delete_602940', {
+          value1: name,
+        })}
         accessibilityState={{ disabled: !canDelete || busy }}
         disabled={!canDelete || busy}
         onPress={onConfirmDelete}
@@ -314,11 +344,13 @@ function RoutineActionOptions({
         })}
       >
         <Feather name="trash-2" size={22} color={p.danger} />
-        <Text style={[textStyles.body, { color: p.danger }]}>Delete</Text>
+        <Text style={[textStyles.body, { color: p.danger }]}>
+          {getTranslation(language)('training.delete_1eddfa')}
+        </Text>
       </Pressable>
       {!canDelete ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Finish or discard this routine’s ongoing workout before deleting.
+          {getTranslation(language)('training.finishOrDiscardThisRoutineSOngoing_f99ca0')}
         </Text>
       ) : null}
     </>
@@ -346,9 +378,9 @@ function RoutineCoverActions({
 > &
   Readonly<{ busy: boolean }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <>
-      {' '}
       <View
         style={{
           backgroundColor: p['surface-300'],
@@ -358,7 +390,10 @@ function RoutineCoverActions({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${hasCover ? 'Change' : 'Add'} cover for ${name}`}
+          accessibilityLabel={getTranslation(language)(
+            hasCover ? 'dynamicMessages.changeCoverFor' : 'dynamicMessages.addCoverFor',
+            { value1: name },
+          )}
           accessibilityState={{ disabled: busy, busy: coverPending }}
           disabled={busy}
           onPress={onChooseCover}
@@ -373,16 +408,23 @@ function RoutineCoverActions({
         >
           <Feather name="image" size={22} color={p.ink} />
           <Text style={[textStyles.body, { color: p.ink }]}>
-            {hasCover ? 'Change cover' : 'Add cover'}
+            {hasCover
+              ? getTranslation(language)('training.changeCover_defe3e')
+              : getTranslation(language)('training.addCover_4bffa4')}
           </Text>
           {coverPending ? (
-            <ActivityIndicator accessibilityLabel="Updating cover" color={p.brand} />
+            <ActivityIndicator
+              accessibilityLabel={getTranslation(language)('training.updatingCover_dd98d7')}
+              color={p.brand}
+            />
           ) : null}
         </Pressable>
         {hasCover ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Remove cover for ${name}`}
+            accessibilityLabel={getTranslation(language)('dynamicMessages.removeCoverFor_e79cf7', {
+              value1: name,
+            })}
             accessibilityState={{ disabled: busy }}
             disabled={busy}
             onPress={onRemoveCover}
@@ -396,7 +438,9 @@ function RoutineCoverActions({
             })}
           >
             <Feather name="trash-2" size={22} color={p.danger} />
-            <Text style={[textStyles.body, { color: p.danger }]}>Remove cover</Text>
+            <Text style={[textStyles.body, { color: p.danger }]}>
+              {getTranslation(language)('training.removeCover_bba977')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -408,12 +452,14 @@ function RoutineCoverActions({
           {onRetryCover ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Retry cover upload"
+              accessibilityLabel={getTranslation(language)('training.retryCoverUpload_8775b7')}
               disabled={busy}
               onPress={onRetryCover}
               style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
             >
-              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry</Text>
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                {getTranslation(language)('training.retry_95b6f5')}
+              </Text>
             </Pressable>
           ) : null}
         </View>

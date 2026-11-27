@@ -3,15 +3,32 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useEvent } from 'expo';
 import { useVideoPlayer } from 'expo-video';
 import { ExerciseMedia } from '../components/ExerciseMedia';
+import { LanguageProvider } from '@/i18n/Language';
+
+const mockEnterFullscreen = jest.fn();
 
 jest.mock('expo', () => ({ useEvent: jest.fn() }));
-jest.mock('expo-video', () => ({
-  useVideoPlayer: jest.fn(),
-  VideoView: jest.requireActual('react-native').View,
-}));
+jest.mock('@expo/vector-icons', () => ({ Feather: 'Icon' }));
+jest.mock('expo-video', () => {
+  const ReactModule = jest.requireActual('react') as typeof React;
+  const NativeView = jest.requireActual('react-native').View;
+  return {
+    useVideoPlayer: jest.fn(),
+    VideoView: ReactModule.forwardRef(
+      (
+        props: React.ComponentProps<typeof NativeView>,
+        ref: React.Ref<{ enterFullscreen: () => Promise<void> }>,
+      ) => {
+        ReactModule.useImperativeHandle(ref, () => ({ enterFullscreen: mockEnterFullscreen }));
+        return ReactModule.createElement(NativeView, props);
+      },
+    ),
+  };
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockEnterFullscreen.mockResolvedValue(undefined);
   jest.mocked(useVideoPlayer).mockImplementation((source, setup) => {
     const player = {
       status: 'readyToPlay',
@@ -77,6 +94,21 @@ test('styled controls pause, replay and unmute the player', () => {
   fireEvent.press(screen.getByLabelText('Unmute video'));
   expect(player.muted).toBe(false);
   expect(screen.getByLabelText('Mute video')).toBeTruthy();
+});
+
+test('Spanish video controls expose translated sound and fullscreen actions', () => {
+  render(
+    <LanguageProvider language="es">
+      <ExerciseMedia {...props} />
+    </LanguageProvider>,
+  );
+  const player = jest.mocked(useVideoPlayer).mock.results[0].value;
+  expect(screen.getByLabelText('Activar sonido')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Activar sonido'));
+  expect(player.muted).toBe(false);
+  expect(screen.getByLabelText('Silenciar vídeo')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Vídeo a pantalla completa'));
+  expect(mockEnterFullscreen).toHaveBeenCalledTimes(1);
 });
 
 test('autoplay waits for readiness and does not restart after a later pause or buffer', () => {

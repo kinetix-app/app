@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AccessibilityInfo, Modal, ScrollView, Text, View } from 'react-native';
@@ -10,6 +11,8 @@ import { ExerciseEvolution } from './ExerciseEvolution';
 import { SessionWorkoutDetail } from './SessionWorkoutDetail';
 import { AnimatedTextSelector } from '@/components/AnimatedTextSelector';
 import type { Exercise, ExerciseSummary } from '../schemas';
+import { useLanguage } from '@/i18n/Language';
+import { catalogueLabel } from '../catalogueLabels';
 import { Button, Failure, IconButton, Loading, ui } from './ui';
 
 export function ExerciseDetails({
@@ -24,6 +27,8 @@ export function ExerciseDetails({
   onAdd?: (exercise: ExerciseSummary) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const [tab, setTab] = useState<'Instructions' | 'History' | 'Evolution'>('Instructions');
   const [workoutId, setWorkoutId] = useState<number | null>(null);
   const [reduceMotion, setReduceMotion] = useState(true);
@@ -43,7 +48,7 @@ export function ExerciseDetails({
         <SessionWorkoutDetail
           accountId={accountId}
           sessionId={workoutId}
-          backLabel="Back to exercise history"
+          backLabel={getTranslation(language)('training.backToExerciseHistory_169d17')}
           onBack={closeWorkout}
         />
       ) : null}
@@ -56,7 +61,11 @@ export function ExerciseDetails({
       >
         <ScrollView contentContainerStyle={ui.content}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <IconButton icon="arrow-left" label="Back" onPress={onClose} />
+            <IconButton
+              icon="arrow-left"
+              label={getTranslation(language)('training.back_c16499')}
+              onPress={onClose}
+            />
             {detail.data ? (
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink, flex: 1 }]}>
                 {detail.data.name}
@@ -78,7 +87,15 @@ export function ExerciseDetails({
                 {(['Instructions', 'History', 'Evolution'] as const).map((value) => (
                   <AnimatedTextSelector
                     key={value}
-                    label={value}
+                    label={
+                      es
+                        ? {
+                            Instructions: 'Instrucciones',
+                            History: 'Historial',
+                            Evolution: 'Evolución',
+                          }[value]
+                        : value
+                    }
                     selected={tab === value}
                     role="tab"
                     reduceMotion={reduceMotion}
@@ -104,8 +121,10 @@ export function ExerciseDetails({
               {tab === 'Instructions' ? <ExerciseInstructions exercise={detail.data} /> : null}
               {onAdd ? (
                 <Button
-                  title="Add"
-                  accessibilityLabel={`Add ${detail.data.name}`}
+                  title={getTranslation(language)('training.add_8d5f06')}
+                  accessibilityLabel={getTranslation(language)('dynamicMessages.add_345e7a', {
+                    value1: detail.data.name,
+                  })}
                   tone="positive"
                   onPress={() => {
                     if (detail.data) onAdd(detail.data);
@@ -122,6 +141,7 @@ export function ExerciseDetails({
 
 function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <>
       <ExerciseMedia
@@ -133,11 +153,14 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
       <View style={ui.gap}>
         {exercise.equipments?.length ? (
           <Text style={{ color: p['ink-muted'] }}>
-            Equipment: {exercise.equipments.join(' · ')}
+            {getTranslation(language)('training.equipment_0cd9d5')}:{' '}
+            {exercise.equipments.map((value) => catalogueLabel(value, language)).join(' · ')}
           </Text>
         ) : null}
       </View>
-      <Text style={[ui.heading, { color: p.ink }]}>Instructions</Text>
+      <Text style={[ui.heading, { color: p.ink }]}>
+        {getTranslation(language)('training.instructions_37a236')}
+      </Text>
       {exercise.instructions?.length ? (
         exercise.instructions.map((text, i) => (
           <Text key={text} style={{ color: p.ink }}>
@@ -145,7 +168,9 @@ function ExerciseInstructions({ exercise }: Readonly<{ exercise: Exercise }>) {
           </Text>
         ))
       ) : (
-        <Text style={{ color: p['ink-muted'] }}>No instructions available.</Text>
+        <Text style={{ color: p['ink-muted'] }}>
+          {getTranslation(language)('training.noInstructionsAvailable_bfe88c')}
+        </Text>
       )}
     </>
   );

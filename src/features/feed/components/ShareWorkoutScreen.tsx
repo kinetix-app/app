@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import { Feather } from '@expo/vector-icons';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,7 +23,6 @@ import { SessionWorkoutDetailModal } from '@/features/training/components/Sessio
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { feedApi, type PostPhoto } from '../api';
-import { countLabel } from '../format';
 import { workoutOptionsKey } from '../cache';
 import {
   MAX_POST_CAPTION,
@@ -48,6 +49,8 @@ export function ShareWorkoutScreen({
   onClose,
   onShared,
 }: ShareWorkoutScreenProps) {
+  const language = useLanguage();
+
   const p = usePalette();
   const requestedSessionId = initialSessionId ?? null;
   const workouts = useQuery({
@@ -99,7 +102,9 @@ export function ShareWorkoutScreen({
       if (Platform.OS !== 'web') {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-          setPhotoError('Photo access is needed. Allow access in Settings, then try again.');
+          setPhotoError(
+            getTranslation(language)('socialAdditional.photoAccessIsNeededAllowAccess_ad01e6'),
+          );
           return;
         }
       }
@@ -114,10 +119,10 @@ export function ShareWorkoutScreen({
       setPhotos((current) => [...current, ...accepted].slice(0, MAX_POST_IMAGES));
       if (rejected)
         setPhotoError(
-          `${countLabel(rejected, 'photo')} skipped. Use JPEG, PNG or WebP up to 5 MB each.`,
+          getTranslation(language)('socialAdditional.rejectedPhotos', { count: rejected }),
         );
     } catch {
-      setPhotoError('Could not open your photos. Try again.');
+      setPhotoError(getTranslation(language)('socialAdditional.couldNotOpenYourPhotosTry_1be001'));
     }
   }
 
@@ -138,7 +143,7 @@ export function ShareWorkoutScreen({
       });
     } catch (error_) {
       // Keep every entered value so the person can correct and retry.
-      setError(shareErrorMessage(error_));
+      setError(shareErrorMessage(error_, language));
       if (error_ instanceof ApiError && error_.status === 409) void workouts.refetch();
       busy.current = false;
       setPending(false);
@@ -164,20 +169,25 @@ export function ShareWorkoutScreen({
         keyboardShouldPersistTaps="handled"
       >
         <View style={ui.row}>
-          <IconButton icon="arrow-left" label="Back to feed" disabled={pending} onPress={back} />
+          <IconButton
+            icon="arrow-left"
+            label={getTranslation(language)('socialAdditional.backToFeed_d3d2e0')}
+            disabled={pending}
+            onPress={back}
+          />
           <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-            New post
+            {getTranslation(language)('socialAdditional.newPost_6d3cf1')}
           </Text>
         </View>
 
         <View style={ui.gap}>
           <Text nativeID="caption-label" style={[textStyles['title-md'], { color: p.ink }]}>
-            Caption
+            {getTranslation(language)('socialAdditional.caption_30b86d')}
           </Text>
           <TextField
-            accessibilityLabel="Caption"
+            accessibilityLabel={getTranslation(language)('socialAdditional.caption_30b86d')}
             accessibilityLabelledBy="caption-label"
-            placeholder="Add a short caption"
+            placeholder={getTranslation(language)('socialAdditional.addAShortCaption_e144e0')}
             value={caption}
             onChangeText={setCaption}
             maxLength={MAX_POST_CAPTION}
@@ -187,12 +197,12 @@ export function ShareWorkoutScreen({
 
         <View style={ui.gap}>
           <Text nativeID="description-label" style={[textStyles['title-md'], { color: p.ink }]}>
-            Description
+            {getTranslation(language)('socialAdditional.description_1a7d6f')}
           </Text>
           <TextField
-            accessibilityLabel="Description"
+            accessibilityLabel={getTranslation(language)('socialAdditional.description_1a7d6f')}
             accessibilityLabelledBy="description-label"
-            placeholder="How did it go?"
+            placeholder={getTranslation(language)('socialAdditional.howDidItGo_3f223b')}
             value={description}
             onChangeText={setDescription}
             maxLength={MAX_POST_DESCRIPTION}
@@ -225,7 +235,7 @@ export function ShareWorkoutScreen({
         />
 
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Your friends will see this post in their feed.
+          {getTranslation(language)('socialAdditional.yourFriendsWillSeeThisPost_41a739')}
         </Text>
 
         {error ? (
@@ -234,7 +244,11 @@ export function ShareWorkoutScreen({
           </Text>
         ) : null}
         <Button
-          title={pending ? 'Sharing…' : 'Share'}
+          title={
+            pending
+              ? getTranslation(language)('socialAdditional.sharing_f88745')
+              : getTranslation(language)('socialAdditional.share_50b8b4')
+          }
           disabled={pending || !canShare}
           onPress={() => {
             void share();
@@ -253,10 +267,18 @@ export function ShareWorkoutScreen({
             style={[ui.card, styles.dialog, { backgroundColor: p['surface-200'] }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              Discard this post?
+              {getTranslation(language)('socialAdditional.discardThisPost_8aae79')}
             </Text>
-            <Button title="Keep editing" secondary onPress={() => setDiscardOpen(false)} />
-            <Button title="Discard" tone="danger" onPress={onClose} />
+            <Button
+              title={getTranslation(language)('socialAdditional.keepEditing_ba7ea4')}
+              secondary
+              onPress={() => setDiscardOpen(false)}
+            />
+            <Button
+              title={getTranslation(language)('socialAdditional.discard_671592')}
+              tone="danger"
+              onPress={onClose}
+            />
           </View>
         </View>
       </Modal>
@@ -264,7 +286,7 @@ export function ShareWorkoutScreen({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={detailSessionId}
-          backLabel="Back to new post"
+          backLabel={getTranslation(language)('socialAdditional.backToNewPost_36b7ab')}
           onBack={() => setDetailSessionId(null)}
           showShare={false}
         />
@@ -313,30 +335,38 @@ function WorkoutPicker({
   onPreview: (sessionId: number) => void;
   onSelect: (workout: WorkoutSummary | null) => void;
 }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   const recent = workouts.data?.items ?? [];
   return (
     <View style={ui.gap}>
-      <Text style={[textStyles['title-md'], { color: p.ink }]}>Workout · optional</Text>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>
+        {getTranslation(language)('socialAdditional.workoutOptional_8aef2f')}
+      </Text>
       <AnchoredPicker
         selection={selected?.session_id ?? null}
         options={[
-          { value: null, label: 'No workout' },
+          { value: null, label: getTranslation(language)('socialAdditional.noWorkout_13744e') },
           ...recent.map((workout) => ({
             value: workout.session_id,
             label: workout.title,
-            detail: new Date(workout.ended_at).toLocaleString(),
+            detail: new Date(workout.ended_at).toLocaleString(language),
             action: {
-              label: `Preview ${workout.title}`,
+              label: getTranslation(language)('socialAdditional.preview_bc3f4c', {
+                value1: workout.title,
+              }),
               icon: 'eye-outline' as const,
               onPress: () => onPreview(workout.session_id),
             },
           })),
         ]}
         onSelect={(id) => onSelect(recent.find((workout) => workout.session_id === id) ?? null)}
-        labelPrefix="Workout to share"
-        fallbackLabel={selected?.title ?? 'No workout'}
-        closeLabel="Close workout menu"
+        labelPrefix={getTranslation(language)('socialAdditional.workoutToShare_c75504')}
+        fallbackLabel={
+          selected?.title ?? getTranslation(language)('socialAdditional.noWorkout_13744e')
+        }
+        closeLabel={getTranslation(language)('socialAdditional.closeWorkoutMenu_14a2e5')}
         menuTestId="post-workout-menu"
         icon="barbell-outline"
         disabled={pending}
@@ -344,7 +374,7 @@ function WorkoutPicker({
         triggerAction={
           selected
             ? {
-                label: 'Preview workout',
+                label: getTranslation(language)('socialAdditional.previewWorkout_fca315'),
                 icon: 'eye-outline',
                 onPress: () => onPreview(selected.session_id),
               }
@@ -360,16 +390,19 @@ function WorkoutPicker({
       {unresolvedSelection && workouts.isPending ? <Loading /> : null}
       {unavailableSelection ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          The workout you opened is unavailable to share. Choose another workout or post without
-          one.
+          {getTranslation(language)('socialAdditional.theWorkoutYouOpenedIsUnavailable_a589d1')}
         </Text>
       ) : null}
       {workouts.isError ? (
         <View style={ui.gap}>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not load your workouts.
+            {getTranslation(language)('socialAdditional.couldNotLoadYourWorkouts_58731b')}
           </Text>
-          <Button title="Retry" secondary onPress={() => void workouts.refetch()} />
+          <Button
+            title={getTranslation(language)('socialAdditional.retry_95b6f5')}
+            secondary
+            onPress={() => void workouts.refetch()}
+          />
         </View>
       ) : null}
     </View>
@@ -389,17 +422,20 @@ function PostPhotos({
   onPick: () => void;
   onRemove: (position: number) => void;
 }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   const [photoInfoOpen, setPhotoInfoOpen] = useState(false);
   return (
     <View style={ui.gap}>
       <View style={ui.row}>
         <Text style={[textStyles['title-md'], { color: p.ink }]}>
-          Photos · {photos.length}/{MAX_POST_IMAGES}
+          {getTranslation(language)('socialAdditional.photos_e1cdfd')} · {photos.length}/
+          {MAX_POST_IMAGES}
         </Text>
         <IconButton
           icon="info"
-          label="Photo requirements"
+          label={getTranslation(language)('socialAdditional.photoRequirements_da972c')}
           bare
           expanded={photoInfoOpen}
           onPress={() => setPhotoInfoOpen(!photoInfoOpen)}
@@ -410,20 +446,25 @@ function PostPhotos({
           accessibilityLiveRegion="polite"
           style={[textStyles['body-sm'], { color: p['ink-muted'] }]}
         >
-          Use JPEG, PNG or WebP up to 5 MB each. Location and other photo details are removed.
+          {getTranslation(language)('socialAdditional.useJpegPngOrWebpUp_41952e')}
         </Text>
       ) : null}
       <View style={styles.photos}>
         {photos.map((photo, position) => (
           <View key={`${photo.uri}-${position}`} style={styles.thumbnail}>
             <Image
-              accessibilityLabel={`Selected photo ${position + 1}`}
+              accessibilityLabel={getTranslation(language)(
+                'socialAdditional.selectedPhoto_079da1',
+                { value1: position + 1 },
+              )}
               source={{ uri: photo.uri }}
               style={[StyleSheet.absoluteFill, { borderRadius: radii['radius-md'] }]}
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Remove photo ${position + 1}`}
+              accessibilityLabel={getTranslation(language)('socialAdditional.removePhoto_03a3f5', {
+                value1: position + 1,
+              })}
               disabled={pending}
               onPress={() => onRemove(position)}
               style={[styles.remove, { backgroundColor: p['surface-300'] }]}
@@ -435,7 +476,7 @@ function PostPhotos({
         {photos.length < MAX_POST_IMAGES ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add photos"
+            accessibilityLabel={getTranslation(language)('socialAdditional.addPhotos_ddc69d')}
             disabled={pending}
             onPress={onPick}
             style={[
@@ -445,7 +486,9 @@ function PostPhotos({
             ]}
           >
             <Feather name="plus" size={26} color={p['brand-ink']} />
-            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Add</Text>
+            <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+              {getTranslation(language)('socialAdditional.add_8d5f06')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -459,29 +502,34 @@ function PostPhotos({
 }
 
 function WorkoutMenuStatus({ loading, empty }: Readonly<{ loading: boolean; empty: boolean }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   if (loading) return <Loading />;
   if (!empty) return null;
   return (
     <Text style={[textStyles['body-sm'], { color: p['ink-muted'], padding: spacing['space-2'] }]}>
-      No finished workouts available to share.
+      {getTranslation(language)('socialAdditional.noFinishedWorkoutsAvailableToShare_78a601')}
     </Text>
   );
 }
 
-export function shareErrorMessage(error: unknown) {
+export function shareErrorMessage(error: unknown, language: 'en' | 'es' = 'en') {
   if (error instanceof ApiError) {
-    if (error.status === 409) return 'You already shared this workout. Choose another one.';
-    if (error.status === 413) return 'Photos are too large. Use up to 5 photos of 5 MB each.';
-    if (error.status === 415) return 'Use JPEG, PNG or WebP photos.';
+    if (error.status === 409)
+      return getTranslation(language)('socialAdditional.youAlreadySharedThisWorkoutChoose_f81769');
+    if (error.status === 413)
+      return getTranslation(language)('socialAdditional.photosAreTooLargeUseUp_10a1cb');
+    if (error.status === 415)
+      return getTranslation(language)('socialAdditional.useJpegPngOrWebpPhotos_92cbfa');
     if (error.status === 422)
-      return 'Add a caption, description, photo or workout. Check any attachments and try again.';
+      return getTranslation(language)('socialAdditional.addACaptionDescriptionPhotoOr_4f9c6c');
     if (error.status === 503)
-      return 'Photo upload is unavailable right now. Remove the photos or try again later.';
+      return getTranslation(language)('socialAdditional.photoUploadIsUnavailableRightNow_285c89');
     if ([401, 403].includes(error.status))
-      return 'Your account cannot share right now. Sign out and sign in again.';
+      return getTranslation(language)('socialAdditional.yourAccountCannotShareRightNow_6b9e4c');
   }
-  return 'Could not share your post. Your caption, description and photos are kept. Try again.';
+  return getTranslation(language)('socialAdditional.couldNotShareYourPostYour_9b1fb4');
 }
 
 const styles = StyleSheet.create({

@@ -27,6 +27,7 @@ export const nutritionRecommendationSchema = z.object({
   version: z.string(),
   available: z.boolean(),
   reason: z.string().nullable(),
+  reason_code: z.string().nullable().optional(),
   missing_fields: z.array(z.string()),
   objective: objectiveSchema.nullable(),
   bmr: z.coerce.number().nullable(),

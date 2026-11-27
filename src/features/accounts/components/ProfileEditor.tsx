@@ -1,4 +1,6 @@
-import React, { useRef, useState } from 'react';
+import { useLanguage, useLanguagePreview, useTranslation, type Language } from '@/i18n/Language';
+import { getTranslation } from '@/i18n/catalog';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Controller,
   useForm,
@@ -37,6 +39,29 @@ import {
 import { SetupButton, setupStyles as s } from './SetupUI';
 import { ProfilePictureEditor, type ProfilePictureDraft } from './ProfilePictureEditor';
 import { ProfileAvatar } from './ProfileAvatar';
+
+const profileErrors: Record<string, string> = {
+  'Enter your name.': 'Introduce tu nombre.',
+  'Enter your age in years.': 'Introduce tu edad en años.',
+  'Enter an age from 1 to 120.': 'Introduce una edad entre 1 y 120 años.',
+  'Enter a positive weight with at most two decimals.':
+    'Introduce un peso positivo con dos decimales como máximo.',
+  'Weight must be greater than 0 and at most 1000 kg.':
+    'El peso debe ser mayor que 0 y no superar 1000 kg.',
+  'Enter a height greater than 0 and at most 300 cm, with at most two decimals.':
+    'Introduce una altura mayor que 0 y no superior a 300 cm, con dos decimales como máximo.',
+  'Enter whole feet from 0 to 9.': 'Introduce pies enteros entre 0 y 9.',
+  'Enter inches from 0 to less than 12, with at most two decimals.':
+    'Introduce pulgadas desde 0 hasta menos de 12, con dos decimales como máximo.',
+  'Total height must be greater than 0 and at most 300 cm.':
+    'La altura total debe ser mayor que 0 y no superar 300 cm.',
+  'Choose Male or Female.': 'Elige hombre o mujer.',
+  'Choose your usual activity level.': 'Elige tu nivel de actividad habitual.',
+  'Choose Metric or Imperial.': 'Elige métrico o imperial.',
+};
+function localError(message: string | undefined, es: boolean) {
+  return message && es ? (profileErrors[message] ?? message) : message;
+}
 
 const fields = [
   ['display_name', 'Name'],
@@ -121,10 +146,11 @@ function displayFieldLabel(
   return unit === 'metric' ? 'Weight (kg)' : 'Weight (lb)';
 }
 
-function saveButtonTitle(pending: boolean, step: number) {
-  if (pending) return 'Saving…';
-  if (step === 3) return 'Save profile';
-  return 'Continue';
+function saveButtonTitle(pending: boolean, step: number, language: Language) {
+  const t = getTranslation(language);
+  if (pending) return t('profile.saving');
+  if (step === 3) return t('profile.save');
+  return t('profile.continue');
 }
 
 function updateMeasurementsForUnit(
@@ -157,6 +183,62 @@ function updateMeasurementsForUnit(
   form.setValue('height_in', height.height_in);
 }
 
+function LanguageFields({ form, disabled }: Readonly<{ form: ProfileFormApi; disabled: boolean }>) {
+  const p = usePalette();
+  const t = useTranslation();
+  const setPreview = useLanguagePreview();
+  return (
+    <Controller
+      control={form.control}
+      name="language"
+      render={({ field: { value, onChange } }) => (
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel={t('profile.label')}
+          style={{ gap: spacing['space-2'] }}
+        >
+          <Text style={[textStyles.label, { color: p.ink }]}>Language / Idioma</Text>
+          <View style={{ flexDirection: 'row', gap: spacing['space-3'] }}>
+            {(
+              [
+                ['en', 'English'],
+                ['es', 'Español'],
+              ] as const
+            ).map(([code, label]) => (
+              <Pressable
+                key={code}
+                accessibilityRole="radio"
+                accessibilityLabel={label}
+                accessibilityState={{ checked: value === code, disabled }}
+                aria-checked={value === code}
+                disabled={disabled}
+                onPress={() => {
+                  onChange(code);
+                  setPreview(code);
+                }}
+                style={{
+                  minHeight: sizes['tap-min'],
+                  padding: spacing['space-3'],
+                  borderRadius: radii['radius-md'],
+                  borderWidth: 2,
+                  borderColor: value === code ? p.brand : p['line-strong'],
+                  backgroundColor: value === code ? p['brand-soft'] : p['surface-200'],
+                }}
+              >
+                <Text
+                  style={[textStyles.label, { color: value === code ? p['brand-ink'] : p.ink }]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+    />
+  );
+}
+
 type MeasurementSystemFieldsProps = Readonly<{
   account: Account;
   disabled: boolean;
@@ -173,9 +255,13 @@ function MeasurementSystemFields({
   compact = false,
 }: MeasurementSystemFieldsProps) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   return (
     <>
-      <Text style={[textStyles.label, { color: p.ink }]}>Measurement system</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>
+        {getTranslation(language)('accountsUi.measurement_system')}
+      </Text>
       <Controller
         control={form.control}
         name="measurement_system"
@@ -192,13 +278,14 @@ function MeasurementSystemFields({
       />
       {error ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {error}
+          {localError(error, es)}
         </Text>
       ) : null}
       {!compact ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Metric uses kg and cm. Imperial uses lb, feet and inches. Switching converts your
-          measurements.
+          {getTranslation(language)(
+            'accountsUi.metric_uses_kg_and_cm_imperial_uses_lb_feet_and_inches_switc',
+          )}
         </Text>
       ) : null}
     </>
@@ -225,6 +312,8 @@ function ProfileFields({
   group,
 }: ProfileFieldsProps) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   return fields
     .filter(([name]) => shouldShowField(name, step, unit))
     .filter(
@@ -241,14 +330,38 @@ function ProfileFields({
         ]}
       >
         <Text style={[textStyles.label, { color: p.ink }]}>
-          {displayFieldLabel(name, label, unit)}
+          {es
+            ? (
+                {
+                  display_name: 'Nombre',
+                  age: 'Edad (años)',
+                  height_cm: 'Altura (cm)',
+                  height_ft: 'Altura (pies)',
+                  height_in: 'Altura (pulgadas)',
+                  weight: unit === 'imperial' ? 'Peso (lb)' : 'Peso (kg)',
+                } as const
+              )[name]
+            : displayFieldLabel(name, label, unit)}
         </Text>
         <Controller
           control={form.control}
           name={name}
           render={({ field: { value, onChange, onBlur } }) => (
             <TextField
-              accessibilityLabel={label}
+              accessibilityLabel={
+                es
+                  ? (
+                      {
+                        display_name: 'Nombre',
+                        age: 'Edad (años)',
+                        height_cm: 'Altura (cm)',
+                        height_ft: 'Altura (pies)',
+                        height_in: 'Altura (pulgadas)',
+                        weight: 'Peso',
+                      } as const
+                    )[name]
+                  : label
+              }
               value={value}
               onChangeText={onChange}
               onBlur={() => {
@@ -273,7 +386,7 @@ function ProfileFields({
         />
         {errors[name] ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {errors[name]?.message}
+            {localError(errors[name]?.message, es)}
           </Text>
         ) : null}
       </View>
@@ -300,24 +413,33 @@ function SexFields({
   error?: string;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   return (
     <View style={{ gap: spacing['space-3'], marginTop: spacing['space-2'] }}>
-      <Text style={[textStyles.label, { color: p.ink }]}>Sex</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>
+        {getTranslation(language)('accountsUi.sex')}
+      </Text>
       <Controller
         control={form.control}
         name="sex"
         render={({ field: { value, onChange } }) => (
           <View
             accessibilityRole="radiogroup"
-            accessibilityLabel="Sex"
+            accessibilityLabel={getTranslation(language)('accountsUi.sex')}
             style={{ flexDirection: 'row', gap: 12 }}
           >
             {(['male', 'female'] as const).map((sex) => (
               <Pressable
                 key={sex}
                 accessibilityRole="radio"
-                accessibilityLabel={sex === 'male' ? 'Male' : 'Female'}
+                accessibilityLabel={
+                  sex === 'male'
+                    ? getTranslation(language)('accountsUi.male')
+                    : getTranslation(language)('accountsUi.female')
+                }
                 accessibilityState={{ checked: value === sex, disabled }}
+                aria-checked={value === sex}
                 disabled={disabled}
                 onPress={() => onChange(sex)}
                 style={({ pressed }) => [
@@ -341,7 +463,9 @@ function SexFields({
                     { color: value === sex ? p['on-brand'] : p.ink, textAlign: 'center' },
                   ]}
                 >
-                  {sex === 'male' ? 'Male' : 'Female'}
+                  {sex === 'male'
+                    ? getTranslation(language)('accountsUi.male')
+                    : getTranslation(language)('accountsUi.female')}
                 </Text>
               </Pressable>
             ))}
@@ -350,7 +474,7 @@ function SexFields({
       />
       {error ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          {error}
+          {localError(error, es)}
         </Text>
       ) : null}
     </View>
@@ -361,28 +485,42 @@ export const activityOptions = [
   {
     value: 'sedentary',
     label: 'Sedentary',
+    labelEs: 'Sedentario',
+    descriptionEs:
+      'Poco movimiento o trabajo de oficina, sin entrenamiento de fuerza ni cardio semanal.',
     description: 'Little movement or office work, no strength training and no weekly cardio.',
   },
   {
     value: 'light',
     label: 'Light',
+    labelEs: 'Ligero',
+    descriptionEs: '1–3 sesiones de fuerza por semana, trabajo de oficina y sin cardio.',
     description: '1–3 strength sessions per week, office work and no cardio.',
   },
   {
     value: 'moderate',
     label: 'Moderate',
+    labelEs: 'Moderado',
+    descriptionEs:
+      '3–5 sesiones de fuerza por semana, trabajo de oficina y una sesión de cardio o caminatas diarias.',
     description:
       '3–5 strength sessions per week, office work, plus one cardio session or daily walking.',
   },
   {
     value: 'high',
     label: 'High',
+    labelEs: 'Alto',
+    descriptionEs:
+      '5 o más sesiones de fuerza por semana, trabajo de pie o más de 2 sesiones de cardio.',
     description:
       '5+ strength sessions per week, plus standing work or more than 2 cardio sessions per week.',
   },
   {
     value: 'very_high',
     label: 'Very high',
+    labelEs: 'Muy alto',
+    descriptionEs:
+      '5 o más sesiones de fuerza por semana, actividad física intensa, trabajo físico y más de 3 sesiones de cardio.',
     description:
       '5+ strength sessions per week, intense physical activity and physical work, plus more than 3 cardio sessions per week.',
   },
@@ -398,6 +536,8 @@ export function ActivityFields({
   error?: string;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   return (
     <Controller
       control={form.control}
@@ -405,15 +545,16 @@ export function ActivityFields({
       render={({ field: { value, onChange } }) => (
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel="Usual activity"
+          accessibilityLabel={getTranslation(language)('accountsUi.usual_activity')}
           style={{ gap: spacing['space-3'] }}
         >
           {activityOptions.map((option) => (
             <Pressable
               key={option.value}
               accessibilityRole="radio"
-              accessibilityLabel={`${option.label}. ${option.description}`}
+              accessibilityLabel={`${es ? option.labelEs : option.label}. ${es ? option.descriptionEs : option.description}`}
               accessibilityState={{ checked: value === option.value, disabled }}
+              aria-checked={value === option.value}
               disabled={disabled}
               onPress={() => onChange(option.value)}
               style={({ pressed }) => ({
@@ -432,7 +573,7 @@ export function ActivityFields({
                   { color: value === option.value ? p['brand-ink'] : p.ink },
                 ]}
               >
-                {option.label}
+                {es ? option.labelEs : option.label}
               </Text>
               <Text
                 style={[
@@ -440,13 +581,13 @@ export function ActivityFields({
                   { color: value === option.value ? p['brand-ink'] : p['ink-muted'] },
                 ]}
               >
-                {option.description}
+                {es ? option.descriptionEs : option.description}
               </Text>
             </Pressable>
           ))}
           {error ? (
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {error}
+              {localError(error, es)}
             </Text>
           ) : null}
         </View>
@@ -455,26 +596,40 @@ export function ActivityFields({
   );
 }
 
-function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial') {
+function profileReviewRows(form: ProfileFormApi, unit: 'metric' | 'imperial', language: Language) {
+  const es = language === 'es';
   const values = form.getValues();
   const height =
     unit === 'imperial'
       ? `${values.height_ft} ft ${Number(values.height_in).toFixed(2)} in`
       : `${Number(values.height_cm).toFixed(2)} cm`;
   const weightUnit = unit === 'imperial' ? 'lb' : 'kg';
-  const sexLabels = { male: 'Male', female: 'Female' } as const;
+  const sexLabels = es ? { male: 'Hombre', female: 'Mujer' } : { male: 'Male', female: 'Female' };
   const sex = values.sex ? (sexLabels[values.sex] ?? '—') : '—';
   return [
-    ['Name', values.display_name],
-    ['Age', `${values.age} years`],
+    [getTranslation(language)('accountsUi.name'), values.display_name],
     [
-      'Activity',
-      activityOptions.find((option) => option.value === values.activity_level)?.label ?? '—',
+      getTranslation(language)('accountsUi.age'),
+      `${values.age} ${getTranslation(language)('accountsUi.years')}`,
     ],
-    ['Sex', sex],
-    ['System', unit === 'metric' ? 'Metric' : 'Imperial'],
-    ['Height', height],
-    ['Weight', `${Number(values.weight).toFixed(2)} ${weightUnit}`],
+    [
+      getTranslation(language)('accountsUi.activity'),
+      (() => {
+        const option = activityOptions.find((item) => item.value === values.activity_level);
+        const label = es ? option?.labelEs : option?.label;
+        return label ?? '—';
+      })(),
+    ],
+    [getTranslation(language)('accountsUi.sex'), sex],
+    [
+      getTranslation(language)('accountsUi.system'),
+      unit === 'metric' ? getTranslation(language)('accountsUi.metric') : 'Imperial',
+    ],
+    [getTranslation(language)('accountsUi.height'), height],
+    [
+      getTranslation(language)('accountsUi.weight'),
+      `${Number(values.weight).toFixed(2)} ${weightUnit}`,
+    ],
   ];
 }
 
@@ -487,11 +642,12 @@ type ProfileReviewProps = Readonly<{
 
 function ProfileReview({ account, draft, form, unit }: ProfileReviewProps) {
   const p = usePalette();
+  const language = useLanguage();
   const preview = draft.kind === 'select' ? draft.asset.uri : undefined;
   return (
     <>
       <ProfileAvatar account={accountForPictureDraft(account, draft)} preview={preview} />
-      {profileReviewRows(form, unit).map(([label, value]) => (
+      {profileReviewRows(form, unit, language).map(([label, value]) => (
         <View key={label} style={wizard.reviewRow}>
           <Text style={[textStyles.body, { color: p['ink-muted'] }]}>{label}</Text>
           <Text style={[textStyles.label, { color: p.ink, flexShrink: 1 }]}>{value}</Text>
@@ -515,6 +671,10 @@ export function ProfileEditor({
   mode = 'onboarding',
 }: ProfileEditorProps) {
   const p = usePalette();
+  const language = useLanguage();
+  const setPreview = useLanguagePreview();
+  useEffect(() => () => setPreview(null), [setPreview]);
+  const es = language === 'es';
   const defaults = profileDefaults(account);
   const form = useForm<ProfileFormValues>({ defaultValues: defaults });
   const {
@@ -531,7 +691,9 @@ export function ProfileEditor({
   const appliedPhoto = useRef<ProfilePictureDraft | undefined>(undefined);
   const [photoAccount, setPhotoAccount] = useState(account);
   const [step, setStep] = useState(0);
-  const steps = ['About you', 'Personal information', 'Usual activity', 'Confirmation'];
+  const steps = es
+    ? ['Sobre ti', 'Información personal', 'Actividad habitual', 'Confirmación']
+    : ['About you', 'Personal information', 'Usual activity', 'Confirmation'];
   const disabled = pending || photoBusy;
   function back() {
     if (disabled) return;
@@ -553,7 +715,7 @@ export function ProfileEditor({
     );
     if (!issues.length) setStep((value) => value + 1);
   }
-  const [failure, setFailure] = useState('');
+  const [failure, setFailure] = useState(false);
   const busy = useRef(false);
   async function save() {
     await handleSubmit(async (raw) => {
@@ -563,10 +725,11 @@ export function ProfileEditor({
       if (!value?.measurement_system) return;
       busy.current = true;
       setPending(true);
-      setFailure('');
+      setFailure(false);
       try {
         await applyPictureDraft(photoDraft, appliedPhoto, setPhotoAccount);
         const result = await updateProfile(apiClient, {
+          language: value.language,
           display_name: value.display_name,
           age: Number(value.age),
           height_cm: savedHeight(value, value.measurement_system, account.profile.height_cm),
@@ -577,9 +740,7 @@ export function ProfileEditor({
         });
         onSaved(result);
       } catch {
-        setFailure(
-          'Could not save your profile. Your details and picture choice are kept. Try again.',
-        );
+        setFailure(true);
       } finally {
         busy.current = false;
         setPending(false);
@@ -620,11 +781,12 @@ export function ProfileEditor({
               accessibilityLiveRegion="polite"
               style={[textStyles.label, { color: p['ink-muted'] }]}
             >
-              Step {step + 1} of 4 · {steps[step]}
+              {getTranslation(language)('accountsUi.step')} {step + 1}{' '}
+              {getTranslation(language)('accountsUi.of')} 4 · {steps[step]}
             </Text>
             <View
               accessibilityRole="progressbar"
-              accessibilityLabel="Profile setup progress"
+              accessibilityLabel={getTranslation(language)('accountsUi.profile_setup_progress')}
               accessibilityValue={{ min: 1, max: 4, now: step + 1 }}
               style={wizard.progress}
             >
@@ -645,12 +807,19 @@ export function ProfileEditor({
             </Text>
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
               {
-                [
-                  'Start with your name and an optional profile picture.',
-                  'Add your age, choose your measurement system and enter your measurements.',
-                  'Choose the option that best describes your usual week. We’ll use it to estimate your daily calorie needs.',
-                  'Take a moment to check your details before saving.',
-                ][step]
+                (es
+                  ? [
+                      'Empieza con tu nombre y una foto de perfil opcional.',
+                      'Añade tu edad, elige el sistema de medidas e introduce tus medidas.',
+                      'Elige la opción que mejor describa tu semana habitual. La usaremos para estimar tus calorías diarias.',
+                      'Revisa tus datos antes de guardar.',
+                    ]
+                  : [
+                      'Start with your name and an optional profile picture.',
+                      'Add your age, choose your measurement system and enter your measurements.',
+                      'Choose the option that best describes your usual week. We’ll use it to estimate your daily calorie needs.',
+                      'Take a moment to check your details before saving.',
+                    ])[step]
               }
             </Text>
           </View>
@@ -664,47 +833,24 @@ export function ProfileEditor({
                 onBusy={setPhotoBusy}
               />
             </View>
-            {step === 1 ? (
-              <MeasurementSystemFields
-                account={account}
-                disabled={disabled}
-                error={errors.measurement_system?.message}
-                form={form}
-              />
-            ) : null}
-            <ProfileFields
+            <ProfileWizardFields
+              account={account}
+              photoAccount={photoAccount}
+              photoDraft={photoDraft}
               disabled={disabled}
               errors={errors}
               form={form}
               step={step}
               unit={unit}
             />
-            {step === 2 ? (
-              <ActivityFields
-                form={form}
-                disabled={disabled}
-                error={errors.activity_level?.message}
-              />
-            ) : null}
-            {step === 3 ? (
-              <ProfileReview
-                account={photoAccount}
-                draft={photoDraft}
-                form={form}
-                unit={unit ?? 'metric'}
-              />
-            ) : null}
-            {step === 1 ? (
-              <SexFields form={form} disabled={disabled} error={errors.sex?.message} />
-            ) : null}
           </View>
           {failure ? (
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {failure}
+              {getTranslation(language)('accountsUi.could_not_save_your_profile')}
             </Text>
           ) : null}
           <SetupButton
-            title={saveButtonTitle(pending, step)}
+            title={saveButtonTitle(pending, step, language)}
             disabled={disabled}
             onPress={() => {
               if (step === 3) void save();
@@ -713,7 +859,7 @@ export function ProfileEditor({
           />
           {onCancel ? (
             <SetupButton
-              title="Cancel"
+              title={getTranslation(language)('accountsUi.cancel')}
               secondary
               disabled={disabled}
               onPress={() => {
@@ -724,6 +870,55 @@ export function ProfileEditor({
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function ProfileWizardFields({
+  account,
+  photoAccount,
+  photoDraft,
+  disabled,
+  errors,
+  form,
+  step,
+  unit,
+}: Readonly<{
+  account: Account;
+  photoAccount: Account;
+  photoDraft: ProfilePictureDraft;
+  disabled: boolean;
+  errors: FieldErrors<ProfileFormValues>;
+  form: ProfileFormApi;
+  step: number;
+  unit: ProfileFormValues['measurement_system'];
+}>) {
+  return (
+    <>
+      {step === 0 ? <LanguageFields form={form} disabled={disabled} /> : null}
+      {step === 1 ? (
+        <MeasurementSystemFields
+          account={account}
+          disabled={disabled}
+          error={errors.measurement_system?.message}
+          form={form}
+        />
+      ) : null}
+      <ProfileFields disabled={disabled} errors={errors} form={form} step={step} unit={unit} />
+      {step === 2 ? (
+        <ActivityFields form={form} disabled={disabled} error={errors.activity_level?.message} />
+      ) : null}
+      {step === 3 ? (
+        <ProfileReview
+          account={photoAccount}
+          draft={photoDraft}
+          form={form}
+          unit={unit ?? 'metric'}
+        />
+      ) : null}
+      {step === 1 ? (
+        <SexFields form={form} disabled={disabled} error={errors.sex?.message} />
+      ) : null}
+    </>
   );
 }
 
@@ -763,11 +958,12 @@ function ProfileEditForm({
   errors: FieldErrors<ProfileFormValues>;
   form: ProfileFormApi;
   unit: ProfileFormValues['measurement_system'];
-  failure: string;
+  failure: boolean;
   onBack?: () => void;
   onSave: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -782,12 +978,12 @@ function ProfileEditForm({
           contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}
         >
           <ScreenHeader
-            title="Edit profile"
+            title={getTranslation(language)('accountsUi.edit_profile')}
             leading={onBack ? <ProfileBack disabled={disabled} onPress={onBack} /> : undefined}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Save profile"
+              accessibilityLabel={getTranslation(language)('accountsUi.save_profile')}
               accessibilityState={{ disabled }}
               disabled={disabled}
               onPress={onSave}
@@ -802,7 +998,9 @@ function ProfileEditForm({
               }}
             >
               <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-                {pending ? 'Saving…' : 'Save'}
+                {pending
+                  ? getTranslation(language)('accountsUi.saving')
+                  : getTranslation(language)('accountsUi.save')}
               </Text>
             </Pressable>
           </ScreenHeader>
@@ -814,6 +1012,7 @@ function ProfileEditForm({
             disabled={pending}
             onBusy={setPhotoBusy}
           />
+          <LanguageFields form={form} disabled={disabled} />
           <ProfileFields disabled={disabled} errors={errors} form={form} step={0} unit={unit} />
           <MeasurementSystemFields
             compact
@@ -842,7 +1041,7 @@ function ProfileEditForm({
           <ActivityFields form={form} disabled={disabled} error={errors.activity_level?.message} />
           {failure ? (
             <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-              {failure}
+              {getTranslation(language)('accountsUi.could_not_save_your_profile')}
             </Text>
           ) : null}
         </ScrollView>
@@ -862,18 +1061,23 @@ function ProfileWizardHeader({
   onCancel?: () => void;
   onBack: () => void;
 }>) {
+  const language = useLanguage();
+  const backLabel =
+    step > 0
+      ? getTranslation(language)('accountsUi.back')
+      : getTranslation(language)('accountsUi.back_to_profile');
   return (
     <ScreenHeader
       leading={
         step > 0 || onCancel ? (
-          <ProfileBack
-            label={step > 0 ? 'Back' : 'Back to profile'}
-            disabled={disabled}
-            onPress={onBack}
-          />
+          <ProfileBack label={backLabel} disabled={disabled} onPress={onBack} />
         ) : undefined
       }
-      title={onCancel ? 'Edit profile' : 'Your profile'}
+      title={
+        onCancel
+          ? getTranslation(language)('accountsUi.edit_profile')
+          : getTranslation(language)('accountsUi.your_profile')
+      }
     />
   );
 }

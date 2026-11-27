@@ -1,4 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useState } from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { TextField } from '@/components/TextField';
@@ -43,6 +45,7 @@ export function SetFields({
   onRemove: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const weightValid = isValidWeight(set, decimals);
   const validReps = isValidReps(set.reps);
   return (
@@ -88,7 +91,9 @@ export function SetFields({
             </View>
             <View style={{ flex: 1 }}>
               <TextField
-                accessibilityLabel={`${label} reps`}
+                accessibilityLabel={getTranslation(language)('dynamicMessages.reps_072a21', {
+                  value1: label,
+                })}
                 keyboardType="number-pad"
                 editable={!disabled}
                 value={set.reps}
@@ -105,12 +110,14 @@ export function SetFields({
       {cardio ? <CardioGuidance set={set} guidance={guidance} /> : null}
       {!cardio && !weightValid ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Enter positive weight up to 999999.99 kg with at most {decimals} decimals.
+          {getTranslation(language)('dynamicMessages.enterPositiveWeightUpTo999999_5cd598', {
+            value1: decimals,
+          })}
         </Text>
       ) : null}
       {!cardio && !validReps ? (
         <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Enter positive whole repetitions.
+          {getTranslation(language)('training.enterPositiveWholeRepetitions_7fdb51')}
         </Text>
       ) : null}
     </View>
@@ -126,6 +133,7 @@ type CardioFieldProps = Readonly<{
 }>;
 function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldProps) {
   const p = usePalette();
+  const language = useLanguage();
   const hasTime = [set.hours, set.minutes, set.seconds].some(
     (part) => part !== undefined && part !== '',
   );
@@ -137,7 +145,9 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
     <>
       <View style={{ flex: 1 }}>
         <TextField
-          accessibilityLabel={`${label} distance`}
+          accessibilityLabel={getTranslation(language)('dynamicMessages.distance_d009d7', {
+            value1: label,
+          })}
           keyboardType="decimal-pad"
           editable={!disabled}
           value={set.distance ?? ''}
@@ -148,8 +158,12 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
       </View>
       <View style={{ flex: 1.5, minWidth: 104 }}>
         <TextField
-          accessibilityLabel={`${label} time`}
-          accessibilityHint="Enter digits for hours, minutes and seconds. For example, 1230 is 12:30; 10000 is 01:00:00."
+          accessibilityLabel={getTranslation(language)('dynamicMessages.time_f77570', {
+            value1: label,
+          })}
+          accessibilityHint={getTranslation(language)(
+            'training.enterDigitsForHoursMinutesAndSeconds_e74bb4',
+          )}
           keyboardType="number-pad"
           editable={!disabled}
           value={time}
@@ -180,7 +194,7 @@ function CardioInputs({ set, label, disabled, onChange, guidance }: CardioFieldP
         />
         {invalidTime ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Minutes and seconds must be between 00 and 59.
+            {getTranslation(language)('training.minutesAndSecondsMustBeBetween00_613237')}
           </Text>
         ) : null}
       </View>
@@ -200,16 +214,21 @@ function CardioGuidance({
   };
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   let previous = null;
   if (guidance && (guidance.reps !== null || guidance.weightKg !== null))
-    previous = `Previous result: ${guidance.weightKg ?? '—'} kg · ${guidance.reps ?? '—'} reps`;
+    previous = es
+      ? `Resultado anterior: ${guidance.weightKg ?? '—'} kg · ${guidance.reps ?? '—'} rep.`
+      : `Previous result: ${guidance.weightKg ?? '—'} kg · ${guidance.reps ?? '—'} reps`;
 
   return (
     <>
       {set.reps || set.value ? (
         <Text style={{ color: p['ink-muted'] }}>
-          Previous entry: {set.value || '—'} {set.unit} · {set.reps || '—'} reps. Enter distance and
-          time to replace it.
+          {es
+            ? `Registro anterior: ${set.value || '—'} ${set.unit} · ${set.reps || '—'} rep. Introduce la distancia y el tiempo para sustituirlo.`
+            : `Previous entry: ${set.value || '—'} ${set.unit} · ${set.reps || '—'} reps. Enter distance and time to replace it.`}
         </Text>
       ) : null}
       {previous ? <Text style={{ color: p['ink-muted'] }}>{previous}</Text> : null}
@@ -237,14 +256,18 @@ function SetPosition({
   onRemove: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const [open, setOpen] = useState(false);
   if (!number) return null;
   return (
     <>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Actions for ${label.toLowerCase()}`}
-        accessibilityHint="Open set actions"
+        accessibilityLabel={
+          es ? `Acciones para ${label.toLowerCase()}` : `Actions for ${label.toLowerCase()}`
+        }
+        accessibilityHint={getTranslation(language)('training.openSetActions_03e8df')}
         disabled={disabled}
         onPress={() => setOpen(true)}
         style={{
@@ -260,9 +283,14 @@ function SetPosition({
       </Pressable>
       {open ? (
         <ActionMenu
-          title={`Set ${number}`}
+          title={getTranslation(language)('dynamicMessages.set_1c9335', { value1: number })}
           onClose={() => setOpen(false)}
-          actions={[{ title: 'Remove set', onPress: onRemove }]}
+          actions={[
+            {
+              title: getTranslation(language)('training.removeSet_00ca32'),
+              onPress: onRemove,
+            },
+          ]}
         />
       ) : null}
     </>
@@ -271,11 +299,16 @@ function SetPosition({
 
 export function SetColumnHeaders({ confirmation = false }: Readonly<{ confirmation?: boolean }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <View style={[ui.row, { paddingHorizontal: spacing['space-3'] }]}>
-      <Text style={{ width: 44, textAlign: 'center', color: p['ink-muted'] }}>Set</Text>
+      <Text style={{ width: 44, textAlign: 'center', color: p['ink-muted'] }}>
+        {getTranslation(language)('training.set_367fa4')}
+      </Text>
       <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>kg</Text>
-      <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>Reps</Text>
+      <Text style={{ flex: 1, textAlign: 'center', color: p['ink-muted'] }}>
+        {getTranslation(language)('training.reps_523160')}
+      </Text>
       {confirmation ? <View style={{ width: sizes['tap-min'] }} /> : null}
     </View>
   );
@@ -293,11 +326,12 @@ function SetAction({
   label: string;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   if (!onConfirm) return null;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${saved ? 'Unsave' : 'Save'} ${label.toLowerCase()}`}
+      accessibilityLabel={`${saved ? getTranslation(language)('training.unsave_842e92') : getTranslation(language)('training.save_5bd05a')} ${label.toLowerCase()}`}
       accessibilityState={{ disabled, selected: saved }}
       disabled={disabled}
       onPress={onConfirm}

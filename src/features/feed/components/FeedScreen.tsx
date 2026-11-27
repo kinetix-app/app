@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -49,7 +51,7 @@ export function FeedScreen({
   onFindFriends,
   workoutActions,
 }: FeedScreenProps) {
-  const p = usePalette();
+  const language = useLanguage();
   const cache = useQueryClient();
   const [panel, setPanel] = useState<Panel>({ kind: 'feed' });
   const [liking, setLiking] = useState<ReadonlySet<number>>(new Set());
@@ -99,130 +101,44 @@ export function FeedScreen({
     }
   }
 
-  const items = feed.data?.pages.flatMap((page) => page.items) ?? [];
-  let footer: React.ReactNode = null;
-  if (feed.isFetchingNextPage) footer = <Loading />;
-  else if (feed.isFetchNextPageError)
-    footer = (
-      <View style={ui.gap}>
-        <Text accessibilityRole="alert" style={{ color: p.danger }}>
-          Could not load more posts. Your feed is kept.
-        </Text>
-        <Button
-          title="Retry"
-          secondary
-          onPress={() => void feed.fetchNextPage({ cancelRefetch: false })}
-        />
-      </View>
-    );
-
-  const header = (
-    <View style={ui.gap}>
-      <ScreenHeader title="Feed">
-        <View style={ui.row}>
-          <IconButton
-            icon={<Ionicons name="create-outline" size={24} color={p.ink} />}
-            label="New post"
-            bare
-            onPress={() => setPanel({ kind: 'share' })}
-          />
-          {profileButton}
-        </View>
-      </ScreenHeader>
-      {feed.isPending ? <Loading /> : null}
-      {feed.isError && !feed.data ? (
-        <View style={ui.gap}>
-          <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            {feedErrorMessage(feed.error)}
-          </Text>
-          <Button title="Retry" secondary onPress={() => void feed.refetch()} />
-        </View>
-      ) : null}
-    </View>
-  );
-
   return (
     <View style={ui.screen}>
-      <SafeAreaView
-        edges={['top', 'left', 'right']}
-        style={[
-          ui.screen,
-          { backgroundColor: p['surface-100'], display: view.kind === 'feed' ? 'flex' : 'none' },
-        ]}
-        aria-hidden={view.kind !== 'feed' || Boolean(options || deleting)}
-        accessibilityElementsHidden={view.kind !== 'feed' || Boolean(options || deleting)}
-        importantForAccessibility={
-          view.kind !== 'feed' || options || deleting ? 'no-hide-descendants' : 'auto'
+      <FeedList
+        accountId={accountId}
+        profileButton={profileButton}
+        posts={feed.data?.pages.flatMap((page) => page.items) ?? []}
+        hasData={Boolean(feed.data)}
+        pending={feed.isPending}
+        error={feed.isError && !feed.data ? feed.error : null}
+        refetching={feed.isRefetching && !feed.isFetchingNextPage}
+        fetchingNextPage={feed.isFetchingNextPage}
+        nextPageError={feed.isFetchNextPageError}
+        hasNextPage={feed.hasNextPage}
+        fetching={feed.isFetching}
+        liking={liking}
+        likeErrors={likeErrors}
+        optionsOrDeleting={Boolean(options || deleting)}
+        visible={view.kind === 'feed'}
+        onCreate={() => setPanel({ kind: 'share' })}
+        onFindFriends={onFindFriends}
+        onLike={(post) => void toggleLike(post)}
+        onComments={(post) => setPanel({ kind: 'comments', post })}
+        onWorkout={(post) => setPanel({ kind: 'workout', post })}
+        onOptions={setOptions}
+        onAuthor={(post) =>
+          setPanel({ kind: 'person', id: post.author.id, name: post.author.display_name })
         }
-      >
-        <FlatList
-          contentContainerStyle={[ui.content, { paddingTop: spacing['space-8'] }]}
-          data={items}
-          keyExtractor={(item) => String(item.id)}
-          ListHeaderComponent={header}
-          ListEmptyComponent={
-            (feed.data ? (
-              <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
-                <Text style={[textStyles['title-md'], { color: p.ink }]}>No posts yet</Text>
-                <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
-                  Your feed shows posts from you and your friends. Add friends or share something to
-                  get started.
-                </Text>
-                <Button
-                  title="Find friends"
-                  tone="positive"
-                  icon="user-plus"
-                  onPress={() => onFindFriends?.()}
-                />
-                <Button
-                  title="Create a post"
-                  secondary
-                  icon="plus"
-                  onPress={() => setPanel({ kind: 'share' })}
-                />
-              </View>
-            ) : null) ?? undefined
-          }
-          renderItem={({ item }) => (
-            <PostCard
-              accountId={accountId}
-              post={item}
-              likePending={liking.has(item.id)}
-              likeError={likeErrors.has(item.id)}
-              onLike={(post) => {
-                void toggleLike(post);
-              }}
-              onComments={(post) => setPanel({ kind: 'comments', post })}
-              onWorkout={(post) => setPanel({ kind: 'workout', post })}
-              onOptions={setOptions}
-              onAuthor={(post) =>
-                setPanel({ kind: 'person', id: post.author.id, name: post.author.display_name })
-              }
-            />
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={feed.isRefetching && !feed.isFetchingNextPage}
-              onRefresh={() => void feed.refetch()}
-              tintColor={p.brand}
-              colors={[p.brand]}
-            />
-          }
-          onEndReachedThreshold={0.6}
-          onEndReached={() => {
-            if (feed.hasNextPage && !feed.isFetching && !feed.isFetchNextPageError)
-              void feed.fetchNextPage({ cancelRefetch: false });
-          }}
-          ListFooterComponent={footer ?? undefined}
-        />
-      </SafeAreaView>
+        onRefresh={() => void feed.refetch()}
+        onRetry={() => void feed.refetch()}
+        onNextPage={() => void feed.fetchNextPage({ cancelRefetch: false })}
+      />
       {view.kind === 'person' ? (
         <PersonScreen
           accountId={accountId}
           personId={view.id}
           fallbackName={view.name}
           onBack={closePanel}
-          backLabel="Back to feed"
+          backLabel={getTranslation(language)('feed.backToFeed')}
         />
       ) : null}
       {view.kind === 'comments' ? (
@@ -273,11 +189,213 @@ export function FeedScreen({
   );
 }
 
+function FeedList({
+  accountId,
+  profileButton,
+  posts,
+  hasData,
+  pending,
+  error,
+  refetching,
+  fetchingNextPage,
+  nextPageError,
+  hasNextPage,
+  fetching,
+  liking,
+  likeErrors,
+  optionsOrDeleting,
+  visible,
+  onCreate,
+  onFindFriends,
+  onLike,
+  onComments,
+  onWorkout,
+  onOptions,
+  onAuthor,
+  onRefresh,
+  onRetry,
+  onNextPage,
+}: Readonly<{
+  accountId: number;
+  profileButton?: React.ReactNode;
+  posts: Post[];
+  hasData: boolean;
+  pending: boolean;
+  error: Error | null;
+  refetching: boolean;
+  fetchingNextPage: boolean;
+  nextPageError: boolean;
+  hasNextPage: boolean;
+  fetching: boolean;
+  liking: ReadonlySet<number>;
+  likeErrors: ReadonlySet<number>;
+  optionsOrDeleting: boolean;
+  visible: boolean;
+  onCreate: () => void;
+  onFindFriends?: () => void;
+  onLike: (post: Post) => void;
+  onComments: (post: Post) => void;
+  onWorkout: (post: Post) => void;
+  onOptions: (post: Post) => void;
+  onAuthor: (post: Post) => void;
+  onRefresh: () => void;
+  onRetry: () => void;
+  onNextPage: () => void;
+}>) {
+  const language = useLanguage();
+  const p = usePalette();
+  let footer: React.ReactElement | null = null;
+  if (fetchingNextPage) footer = <Loading />;
+  else if (nextPageError) footer = <FeedPageError language={language} onRetry={onNextPage} />;
+  return (
+    <SafeAreaView
+      edges={['top', 'left', 'right']}
+      style={[ui.screen, { backgroundColor: p['surface-100'], display: visible ? 'flex' : 'none' }]}
+      aria-hidden={!visible || optionsOrDeleting}
+      accessibilityElementsHidden={!visible || optionsOrDeleting}
+      importantForAccessibility={!visible || optionsOrDeleting ? 'no-hide-descendants' : 'auto'}
+    >
+      <FlatList
+        contentContainerStyle={[ui.content, { paddingTop: spacing['space-8'] }]}
+        data={posts}
+        keyExtractor={(item) => String(item.id)}
+        ListHeaderComponent={
+          <FeedHeader
+            language={language}
+            profileButton={profileButton}
+            pending={pending}
+            error={error}
+            onCreate={onCreate}
+            onRetry={onRetry}
+          />
+        }
+        ListEmptyComponent={
+          hasData ? <FeedEmpty onFindFriends={onFindFriends} onCreate={onCreate} /> : undefined
+        }
+        renderItem={({ item }) => (
+          <PostCard
+            accountId={accountId}
+            post={item}
+            likePending={liking.has(item.id)}
+            likeError={likeErrors.has(item.id)}
+            onLike={() => onLike(item)}
+            onComments={() => onComments(item)}
+            onWorkout={() => onWorkout(item)}
+            onOptions={() => onOptions(item)}
+            onAuthor={() => onAuthor(item)}
+          />
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refetching}
+            onRefresh={onRefresh}
+            tintColor={p.brand}
+            colors={[p.brand]}
+          />
+        }
+        onEndReachedThreshold={0.6}
+        onEndReached={() => {
+          if (hasNextPage && !fetching && !nextPageError) onNextPage();
+        }}
+        ListFooterComponent={footer ?? undefined}
+      />
+    </SafeAreaView>
+  );
+}
+
+function FeedHeader({
+  language,
+  profileButton,
+  pending,
+  error,
+  onCreate,
+  onRetry,
+}: Readonly<{
+  language: 'en' | 'es';
+  profileButton?: React.ReactNode;
+  pending: boolean;
+  error: Error | null;
+  onCreate: () => void;
+  onRetry: () => void;
+}>) {
+  const p = usePalette();
+  return (
+    <View style={ui.gap}>
+      <ScreenHeader title={getTranslation(language)('navigation.home')}>
+        <View style={ui.row}>
+          <IconButton
+            icon={<Ionicons name="create-outline" size={24} color={p.ink} />}
+            label={getTranslation(language)('feed.newPost')}
+            bare
+            onPress={onCreate}
+          />
+          {profileButton}
+        </View>
+      </ScreenHeader>
+      {pending ? <Loading /> : null}
+      {error ? (
+        <View style={ui.gap}>
+          <Text accessibilityRole="alert" style={{ color: p.danger }}>
+            {feedErrorMessage(error, language)}
+          </Text>
+          <Button title={getTranslation(language)('feed.retry')} secondary onPress={onRetry} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function FeedPageError({
+  language,
+  onRetry,
+}: Readonly<{ language: 'en' | 'es'; onRetry: () => void }>) {
+  const p = usePalette();
+  return (
+    <View style={ui.gap}>
+      <Text accessibilityRole="alert" style={{ color: p.danger }}>
+        {getTranslation(language)('feed.couldNotLoadMorePostsYourFeed')}
+      </Text>
+      <Button title={getTranslation(language)('feed.retry')} secondary onPress={onRetry} />
+    </View>
+  );
+}
+
+function FeedEmpty({
+  onFindFriends,
+  onCreate,
+}: Readonly<{ onFindFriends?: () => void; onCreate: () => void }>) {
+  const language = useLanguage();
+  const p = usePalette();
+  return (
+    <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
+      <Text style={[textStyles['title-md'], { color: p.ink }]}>
+        {getTranslation(language)('feed.noPostsYet')}
+      </Text>
+      <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
+        {getTranslation(language)('feed.yourFeedShowsPostsFromYouAnd')}
+      </Text>
+      <Button
+        title={getTranslation(language)('feed.findFriends')}
+        tone="positive"
+        icon="user-plus"
+        onPress={() => onFindFriends?.()}
+      />
+      <Button
+        title={getTranslation(language)('feed.createAPost')}
+        secondary
+        icon="plus"
+        onPress={onCreate}
+      />
+    </View>
+  );
+}
+
 function DeleteConfirmation({
   post,
   onCancel,
   onDeleted,
 }: Readonly<{ post: Post | null; onCancel: () => void; onDeleted: (post: Post) => void }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -295,11 +413,14 @@ function DeleteConfirmation({
       onDeleted(post);
     } catch (error_) {
       if (error_ instanceof ApiError && error_.status === 404) onDeleted(post);
-      else setError('Could not delete the post. Try again.');
+      else setError(getTranslation(language)('feed.couldNotDeleteThePostTryAgain'));
     } finally {
       setPending(false);
     }
   }
+  let confirmTitle: string;
+  if (pending) confirmTitle = getTranslation(language)('feed.deleting');
+  else confirmTitle = getTranslation(language)('feed.delete');
   return (
     <Modal visible={post !== null} transparent animationType="fade" onRequestClose={cancel}>
       <View style={[styles.scrim, { backgroundColor: p.scrim }]}>
@@ -308,19 +429,24 @@ function DeleteConfirmation({
           style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
         >
           <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-            Delete this post?
+            {getTranslation(language)('feed.deleteThisPost')}
           </Text>
           <Text style={{ color: p['ink-muted'] }}>
-            Its photos, likes and comments are removed. The workout stays in your history.
+            {getTranslation(language)('feed.itsPhotosLikesAndCommentsAreRemoved')}
           </Text>
           {error ? (
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
               {error}
             </Text>
           ) : null}
-          <Button title="Cancel" secondary disabled={pending} onPress={cancel} />
           <Button
-            title={pending ? 'Deleting…' : 'Delete'}
+            title={getTranslation(language)('feed.cancel')}
+            secondary
+            disabled={pending}
+            onPress={cancel}
+          />
+          <Button
+            title={confirmTitle}
             tone="danger"
             disabled={pending}
             onPress={() => {
@@ -339,10 +465,10 @@ function without(values: ReadonlySet<number>, value: number) {
   return next;
 }
 
-function feedErrorMessage(error: unknown) {
+function feedErrorMessage(error: unknown, language: 'en' | 'es') {
   if (error instanceof ApiError && [401, 403].includes(error.status))
-    return 'Your account cannot load the feed. Sign out and sign in again.';
-  return 'Could not load your feed. Check your connection and try again.';
+    return getTranslation(language)('feed.yourAccountCannotLoadTheFeedSign');
+  return getTranslation(language)('feed.couldNotLoadYourFeedCheckYour');
 }
 
 const styles = StyleSheet.create({

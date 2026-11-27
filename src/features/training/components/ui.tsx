@@ -1,7 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { Feather } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
+import { useLanguage, type Language } from '@/i18n/Language';
 import { ApiError } from '@/services/apiClient';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
@@ -58,30 +60,47 @@ export function IconButton({
 
 export function Failure({ error, retry }: Readonly<{ error: unknown; retry?: () => void }>) {
   const p = usePalette();
-  const text = getFailureMessage(error);
+  const language = useLanguage();
+  const text = getFailureMessage(error, language);
   return (
     <View style={ui.gap}>
       <Text accessibilityRole="alert" style={{ color: p.danger }}>
         {text}
       </Text>
-      {retry ? <Button title="Retry" onPress={retry} secondary /> : null}
+      {retry ? (
+        <Button
+          title={getTranslation(language)('training.retry_95b6f5')}
+          onPress={retry}
+          secondary
+        />
+      ) : null}
     </View>
   );
 }
 
-function getFailureMessage(error: unknown) {
-  if (!(error instanceof ApiError))
-    return 'Could not connect or read the response. Your changes are still here. Try again.';
+function getFailureMessage(error: unknown, language: Language) {
+  const connectionError = getTranslation(language)(
+    'training.couldNotConnectOrReadTheResponse_9c6b90',
+  );
+  if (!(error instanceof ApiError)) return connectionError;
   if ([401, 403].includes(error.status))
-    return 'Your account cannot access this data. Sign out and sign in again.';
-  if (error.status === 404) return 'This routine or exercise is no longer available.';
+    return getTranslation(language)('training.yourAccountCannotAccessThisDataSign_9b133b');
+  if (error.status === 404)
+    return getTranslation(language)('training.thisRoutineOrExerciseIsNoLonger_871e69');
   if (error.status === 422)
-    return 'Some fields or exercises are unavailable. Check your selection and try again.';
-  return 'Could not connect or read the response. Your changes are still here. Try again.';
+    return getTranslation(language)('training.someFieldsOrExercisesAreUnavailableCheck_4fe74a');
+  return connectionError;
 }
+
 export function Loading() {
   const p = usePalette();
-  return <ActivityIndicator color={p.brand} accessibilityLabel="Loading training" />;
+  const language = useLanguage();
+  return (
+    <ActivityIndicator
+      color={p.brand}
+      accessibilityLabel={getTranslation(language)('training.loadingTraining_a32005')}
+    />
+  );
 }
 export const ui = StyleSheet.create({
   screen: { flex: 1 },

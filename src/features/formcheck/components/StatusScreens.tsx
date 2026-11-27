@@ -1,28 +1,39 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { useLanguage } from '@/i18n/Language';
 import { spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import { FormCheckScreen } from './FormCheckScreen';
 
 export function AnalyzingScreen({ onCancel }: Readonly<{ onCancel: () => void }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <FormCheckScreen
       backIcon="x"
-      backLabel="Cancel analysis"
+      backLabel={getTranslation(language)('formcheck.StatusScreens.cancelAnalysis')}
       onBack={onCancel}
       scroll={false}
-      footer={<Button title="Cancel" onPress={onCancel} secondary />}
+      footer={
+        <Button
+          title={getTranslation(language)('formcheck.StatusScreens.cancel')}
+          onPress={onCancel}
+          secondary
+        />
+      }
     >
       <View
         accessibilityRole="progressbar"
-        accessibilityLabel="Analyzing your set"
+        accessibilityLabel={getTranslation(language)('formcheck.StatusScreens.analyzingYourSet')}
         style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing['space-4'] }}
       >
         <ActivityIndicator size="large" color={p.brand} />
-        <Text style={[textStyles['title-md'], { color: p.ink }]}>Analyzing your set…</Text>
+        <Text style={[textStyles['title-md'], { color: p.ink }]}>
+          {getTranslation(language)('formcheck.StatusScreens.analyzingYourSet2')}
+        </Text>
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          This stays on your phone.
+          {getTranslation(language)('formcheck.StatusScreens.thisStaysOnYourPhone')}
         </Text>
       </View>
     </FormCheckScreen>
@@ -40,26 +51,39 @@ export function AnalysisFailedScreen({
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <FormCheckScreen
       backIcon="x"
-      backLabel="Back to workout"
+      backLabel={getTranslation(language)('formcheck.StatusScreens.backToWorkout')}
       onBack={onClose}
       footer={
         <>
-          <Button title="Try again" onPress={onRetry} />
-          <Button title="Record again" onPress={onRecordAgain} secondary />
-          <Button title="Log set by hand" onPress={onClose} secondary />
+          <Button
+            title={getTranslation(language)('formcheck.StatusScreens.tryAgain')}
+            onPress={onRetry}
+          />
+          <Button
+            title={getTranslation(language)('formcheck.StatusScreens.recordAgain')}
+            onPress={onRecordAgain}
+            secondary
+          />
+          <Button
+            title={getTranslation(language)('formcheck.StatusScreens.logSetByHand')}
+            onPress={onClose}
+            secondary
+          />
         </>
       }
     >
       <View style={ui.gap}>
         <Text accessibilityRole="header" style={[textStyles['display-lg'], { color: p.ink }]}>
-          Something went wrong
+          {getTranslation(language)('formcheck.StatusScreens.somethingWentWrong')}
         </Text>
         <Text accessibilityRole="alert" style={[textStyles.body, { color: p['ink-muted'] }]}>
-          We could not analyze this recording. Your video is still on your phone, so you can try
-          again.
+          {getTranslation(language)(
+            'formcheck.StatusScreens.weCouldNotAnalyzeThisRecordingYourVideoIsStillOnYourPhoneSoYouCan',
+          )}
         </Text>
       </View>
     </FormCheckScreen>

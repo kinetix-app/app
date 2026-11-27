@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LanguageProvider, type Language } from '@/i18n/Language';
 import { ProfilePictureEditor, type ProfilePictureDraft } from '../components/ProfilePictureEditor';
 import { removeProfilePicture, uploadProfilePicture } from '../api';
 import { completeAccount } from './fixtures';
@@ -20,12 +21,13 @@ const asset = {
   mimeType: 'image/jpeg',
   fileSize: 2000,
 };
-function show() {
+function show(language: Language = 'en', compact = false) {
   function Wrapper() {
     const [draft, setDraft] = useState<ProfilePictureDraft>({ kind: 'keep' });
     return (
       <ProfilePictureEditor
         account={completeAccount}
+        compact={compact}
         draft={draft}
         onDraftChange={(value) => {
           onDraftChange(value);
@@ -37,7 +39,9 @@ function show() {
   }
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <Wrapper />
+      <LanguageProvider language={language}>
+        <Wrapper />
+      </LanguageProvider>
     </QueryClientProvider>,
   );
 }
@@ -49,6 +53,23 @@ beforeEach(() => {
   jest
     .mocked(ImagePicker.launchImageLibraryAsync)
     .mockResolvedValue({ canceled: false, assets: [asset] });
+});
+
+test('Spanish compact editor rejects unsupported photos and stages a valid replacement', async () => {
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValueOnce({
+    canceled: false,
+    assets: [{ ...asset, mimeType: 'image/gif' }],
+  });
+  show('es', true);
+  fireEvent.press(screen.getByLabelText('Elegir foto'));
+  expect(await screen.findByText('Elige una imagen JPEG, PNG o WebP.')).toBeTruthy();
+  expect(onDraftChange).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByLabelText('Elegir foto'));
+  expect(await screen.findByText('Nueva foto · Guarda para aplicar')).toBeTruthy();
+  expect(screen.getByLabelText('Cambiar foto')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Eliminar foto'));
+  expect(screen.getByText('Foto eliminada · Guarda para aplicar')).toBeTruthy();
+  expect(uploadProfilePicture).not.toHaveBeenCalled();
 });
 
 test('selection previews and removal stay local without any upload controls or writes', async () => {

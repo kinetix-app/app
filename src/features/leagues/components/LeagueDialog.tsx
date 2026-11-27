@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +14,7 @@ export function LeagueDialog({
   title: string;
   onClose: () => void;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -47,7 +50,9 @@ export function LeagueDialog({
               {title}
             </Text>
             <LeagueIconButton
-              label={`Close ${title.toLowerCase()}`}
+              label={getTranslation(language)('socialAdditional.close_a70f59', {
+                value1: title.toLowerCase(),
+              })}
               icon="close"
               onPress={onClose}
             />

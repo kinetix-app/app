@@ -1,15 +1,18 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { usePalette } from '@/theme/tokens';
 import type { DragHandleProps } from './ExerciseDragHandle';
 
 export function ExerciseDragHandle({ id, label, disabled, onMove }: Readonly<DragHandleProps>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <button
       type="button"
       id={id}
       aria-label={label}
-      title="Drag to reorder; use arrow keys to move"
+      title={getTranslation(language)('training.dragToReorderUseArrowKeysTo_835b9f')}
       disabled={disabled}
       onDragStart={(event) => event.preventDefault()}
       onKeyDown={(event) => {

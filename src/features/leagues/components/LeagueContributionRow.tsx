@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -25,12 +27,25 @@ export function LeagueContributionRow({
   onOpen?: () => void;
   onOpenWorkout?: () => void;
 }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   const own = member.user_id === accountId;
-  const name = member.display_name ?? 'Member';
+  const name = member.display_name ?? getTranslation(language)('socialAdditional.member_10100e');
   const calculation = own ? item.calculation : undefined;
-  const memberName = own ? `${name} (you)` : name;
-  const title = showMember ? memberName : `Workout #${item.session_id}`;
+  let memberName = name;
+  if (own) memberName = getTranslation(language)('leagues.you', { name });
+  const title = showMember
+    ? memberName
+    : `${getTranslation(language)('socialAdditional.workout_c81493')} #${item.session_id}`;
+  const completionDate = new Date(item.ended_at).toLocaleString(language, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: timezone,
+  });
+  const detail = showMember
+    ? `${getTranslation(language)('socialAdditional.workout_c81493')} #${item.session_id} · ${item.local_day}`
+    : `${getTranslation(language)('socialAdditional.completed_185818')} ${completionDate}`;
   const heading = (
     <>
       {showMember ? (
@@ -58,7 +73,7 @@ export function LeagueContributionRow({
       <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
         <Text style={[textStyles.label, { color: p.ink }]}>{title}</Text>
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          {roundRange(item.start_at, item.end_at, timezone)}
+          {roundRange(item.start_at, item.end_at, timezone, language)}
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end', maxWidth: '45%' }}>
@@ -70,7 +85,9 @@ export function LeagueContributionRow({
         >
           {item.score}
         </Text>
-        <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>points</Text>
+        <Text style={[textStyles.caption, { color: p['ink-muted'] }]}>
+          {getTranslation(language)('socialAdditional.points_9e8145')}
+        </Text>
       </View>
     </>
   );
@@ -79,7 +96,7 @@ export function LeagueContributionRow({
       {onOpen ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`View score history for ${name}`}
+          accessibilityLabel={getTranslation(language)('leagues.viewScoreHistoryFor', { name })}
           onPress={onOpen}
           style={({ pressed }) => [
             leagueStyles.row,
@@ -92,27 +109,23 @@ export function LeagueContributionRow({
       ) : (
         <View style={leagueStyles.row}>{heading}</View>
       )}
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {showMember
-          ? `Workout #${item.session_id} · ${item.local_day}`
-          : `Completed ${new Date(item.ended_at).toLocaleString(undefined, {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-              timeZone: timezone,
-            })}`}
-      </Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{detail}</Text>
       {calculation ? (
         <Text style={[textStyles['body-sm'], { color: p.ink }]}>
-          Volume {formatScoreMeasurement(calculation.volume_kg_reps)} kg reps · Duration{' '}
-          {durationHours(calculation.duration_us)} h · Body weight{' '}
+          {getTranslation(language)('socialAdditional.volume_bbc801')}{' '}
+          {formatScoreMeasurement(calculation.volume_kg_reps)} kg{' '}
+          {getTranslation(language)('socialAdditional.reps_488acf')} ·{' '}
+          {getTranslation(language)('socialAdditional.duration_c00c5f')}{' '}
+          {durationHours(calculation.duration_us)} h ·{' '}
+          {getTranslation(language)('socialAdditional.bodyWeight_dc5637')}{' '}
           {formatScoreMeasurement(calculation.body_weight_kg)} kg
         </Text>
       ) : null}
       {own && onOpenWorkout ? (
         <Button
-          title="View workout"
+          title={getTranslation(language)('socialAdditional.viewWorkout_79f257')}
           secondary
-          accessibilityLabel={`View workout ${item.session_id}`}
+          accessibilityLabel={`${getTranslation(language)('socialAdditional.viewWorkout_79f257')} ${item.session_id}`}
           onPress={onOpenWorkout}
         />
       ) : null}

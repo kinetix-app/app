@@ -5,14 +5,21 @@ const kg = { unit: 'kg', min: 0, max: 1000, places: 6 };
 const cm = { unit: 'cm', min: 0, max: 999.99, places: 2 };
 
 export const measurementDefinitions = {
-  weight_kg: { label: 'Weight', ...kg },
-  height_cm: { label: 'Height', ...cm, max: 300 },
-  body_fat_percentage: { label: 'Body fat', unit: '%', min: 0, max: 100, places: 2 },
-  muscle_mass_kg: { label: 'Muscle mass', ...kg },
-  waist_cm: { label: 'Waist', ...cm },
-  chest_cm: { label: 'Chest', ...cm },
-  arm_cm: { label: 'Arm', ...cm },
-  thigh_cm: { label: 'Thigh', ...cm },
+  weight_kg: { label: 'Weight', labelEs: 'Peso', ...kg },
+  height_cm: { label: 'Height', labelEs: 'Altura', ...cm, max: 300 },
+  body_fat_percentage: {
+    label: 'Body fat',
+    labelEs: 'Grasa corporal',
+    unit: '%',
+    min: 0,
+    max: 100,
+    places: 2,
+  },
+  muscle_mass_kg: { label: 'Muscle mass', labelEs: 'Masa muscular', ...kg },
+  waist_cm: { label: 'Waist', labelEs: 'Cintura', ...cm },
+  chest_cm: { label: 'Chest', labelEs: 'Pecho', ...cm },
+  arm_cm: { label: 'Arm', labelEs: 'Brazo', ...cm },
+  thigh_cm: { label: 'Thigh', labelEs: 'Muslo', ...cm },
 } as const;
 
 export type MeasurementMetric = keyof typeof measurementDefinitions;

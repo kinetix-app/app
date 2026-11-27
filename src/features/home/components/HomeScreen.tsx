@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { LanguageProvider, useLanguage, type Language } from '@/i18n/Language';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
@@ -66,6 +68,15 @@ type HomeNavigationProps = Readonly<{
   initialInvitation?: string;
 }>;
 
+function friendRequestHint(count: number, language: Language) {
+  if (!count) return undefined;
+  return countLabel(
+    count,
+    getTranslation(language)('accountsUi.new_friend_request'),
+    getTranslation(language)('accountsUi.new_friend_requests'),
+  );
+}
+
 function HomeNavigation({
   account,
   initialTab,
@@ -74,6 +85,8 @@ function HomeNavigation({
   onDismissFinished,
   initialInvitation,
 }: HomeNavigationProps) {
+  const language = useLanguage();
+  const es = language === 'es';
   const accountId = account.id;
   const cache = useQueryClient();
   const [profilePanel, setProfilePanel] = useState<ProfilePanel>('overview');
@@ -134,9 +147,10 @@ function HomeNavigation({
     setSignOutError('');
     try {
       const success = await session.signOut();
-      if (!success) setSignOutError('Could not sign out. Please try again.');
+      if (!success)
+        setSignOutError(getTranslation(language)('accountsUi.could_not_sign_out_please_try_again'));
     } catch {
-      setSignOutError('Could not sign out. Please try again.');
+      setSignOutError(getTranslation(language)('accountsUi.could_not_sign_out_please_try_again'));
     } finally {
       loggingOut.current = false;
       setSigningOut(false);
@@ -214,7 +228,7 @@ function HomeNavigation({
           <WorkoutHistory
             accountId={accountId}
             onClose={closeProfilePanel}
-            backLabel="Back to profile"
+            backLabel={getTranslation(language)('accountsUi.back_to_profile')}
             active={panelActive}
             onShare={shareWorkout}
           />
@@ -236,7 +250,18 @@ function HomeNavigation({
             account={account}
             onOpen={openProfile}
             onBack={() => select(profileOrigin)}
-            backLabel={profileBackLabels[profileOrigin]}
+            backLabel={
+              es
+                ? (
+                    {
+                      home: 'Volver a inicio',
+                      workout: 'Volver al entrenamiento',
+                      nutrition: 'Volver a nutrición',
+                      league: 'Volver a ligas',
+                    } as const
+                  )[profileOrigin]
+                : profileBackLabels[profileOrigin]
+            }
             onSignOut={() => {
               void signOut();
             }}
@@ -267,12 +292,8 @@ function HomeNavigation({
           profileButton={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open profile"
-              accessibilityHint={
-                incomingRequests
-                  ? countLabel(incomingRequests, 'new friend request', 'new friend requests')
-                  : undefined
-              }
+              accessibilityLabel={getTranslation(language)('accountsUi.open_profile')}
+              accessibilityHint={friendRequestHint(incomingRequests, language)}
               onPress={showProfile}
               hitSlop={spacing['space-1']}
               style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
@@ -361,7 +382,7 @@ function HomeNavigation({
           <SessionWorkoutDetail
             accountId={accountId}
             sessionId={finishedSessionId}
-            backLabel="Back to workout saved"
+            backLabel={getTranslation(language)('accountsUi.back_to_workout_saved')}
             onBack={() => setViewingFinished(false)}
             showShare
             onShare={shareFinishedWorkout}
@@ -382,10 +403,17 @@ function HomeNavigation({
               style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
             >
               <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-                Workout saved
+                {getTranslation(language)('accountsUi.workout_saved')}
               </Text>
-              <Button title="View workout" onPress={() => setViewingFinished(true)} />
-              <Button title="Not now" secondary onPress={onDismissFinished} />
+              <Button
+                title={getTranslation(language)('accountsUi.view_workout')}
+                onPress={() => setViewingFinished(true)}
+              />
+              <Button
+                title={getTranslation(language)('accountsUi.not_now')}
+                secondary
+                onPress={onDismissFinished}
+              />
             </View>
           </View>
         ) : null}
@@ -460,23 +488,33 @@ function AccountGate({
   const account = query.data;
   if (account.onboarding.required)
     return !account.onboarding.profile_complete ? (
-      <ProfileEditor account={account} onSaved={saved} />
+      <LanguageProvider language={account.profile.language ?? 'en'}>
+        <ProfileEditor account={account} onSaved={saved} />
+      </LanguageProvider>
     ) : (
-      <ObjectiveEditor accountId={accountId} onSaved={saved} />
+      <LanguageProvider language={account.profile.language ?? 'en'}>
+        <ObjectiveEditor accountId={accountId} onSaved={saved} />
+      </LanguageProvider>
     );
   return (
-    <SessionProvider accountId={accountId} onSignOut={onSignOut} onFinished={setFinishedSessionId}>
-      <FormCheckHost accountId={accountId}>
-        <HomeNavigation
-          account={account}
-          initialTab={initialTab}
-          initialInvitation={initialInvitation}
-          onAccount={saved}
-          finishedSessionId={finishedSessionId}
-          onDismissFinished={() => setFinishedSessionId(null)}
-        />
-      </FormCheckHost>
-    </SessionProvider>
+    <LanguageProvider language={account.profile.language ?? 'en'}>
+      <SessionProvider
+        accountId={accountId}
+        onSignOut={onSignOut}
+        onFinished={setFinishedSessionId}
+      >
+        <FormCheckHost accountId={accountId}>
+          <HomeNavigation
+            account={account}
+            initialTab={initialTab}
+            initialInvitation={initialInvitation}
+            onAccount={saved}
+            finishedSessionId={finishedSessionId}
+            onDismissFinished={() => setFinishedSessionId(null)}
+          />
+        </FormCheckHost>
+      </SessionProvider>
+    </LanguageProvider>
   );
 }
 type PrivateHomeProps = Readonly<{

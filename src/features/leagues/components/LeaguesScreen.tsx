@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
@@ -31,13 +33,95 @@ import { LeagueResults } from './LeagueResults';
 import { LeagueScoreHistory } from './LeagueScoreHistory';
 import { LeagueStandings } from './LeagueStandings';
 
-function message(error: unknown) {
-  if (error instanceof ApiError) {
-    if (error.status === 410) return 'This invitation has expired.';
-    if (error.status === 404) return 'League or invitation not found.';
-    if (error.status === 403) return 'Only a league admin can do that.';
+type LeagueListItemData = Awaited<ReturnType<typeof leaguesApi.list>>[number];
+
+function leagueMemberNoun(count: number, language: 'en' | 'es') {
+  return getTranslation(language)('socialAdditional.memberNoun', { count });
+}
+
+function LeagueListItem({
+  accountId,
+  league,
+  onPress,
+}: Readonly<{ accountId: number; league: LeagueListItemData; onPress: () => void }>) {
+  const language = useLanguage();
+
+  const p = usePalette();
+  const position = league.current_week_position;
+  let rankHint: string;
+  let rankText: string;
+  if (position === null) {
+    rankHint = getTranslation(language)('socialAdditional.weeklyRankUnavailable_5528ba');
+    rankText = rankHint;
+  } else {
+    rankHint = getTranslation(language)('socialAdditional.weeklyRankHint', { position });
+    rankText = getTranslation(language)('socialAdditional.weeklyRankText', { position });
   }
-  return 'Something went wrong. Please try again.';
+  const hintVerb = getTranslation(language)('leagues.opensLeagueStandings');
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={league.name}
+      accessibilityHint={`${rankHint}, ${league.member_count} ${leagueMemberNoun(league.member_count, language)}. ${hintVerb}`}
+      onPress={onPress}
+      style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+    >
+      <LeagueCard>
+        <View style={leagueStyles.row}>
+          <LeagueAvatar
+            accountId={accountId}
+            path={league.picture_url}
+            name={league.name}
+            size={52}
+          />
+          <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
+            <Text style={[textStyles['title-md'], { color: p.ink }]}>{league.name}</Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                columnGap: spacing['space-3'],
+                rowGap: spacing['space-1'],
+              }}
+            >
+              <Text
+                style={[
+                  textStyles['body-sm'],
+                  {
+                    color: position === null ? p['ink-muted'] : p['brand-ink'],
+                    fontVariant: ['tabular-nums'],
+                  },
+                ]}
+              >
+                {rankText}
+              </Text>
+              <Text
+                style={[
+                  textStyles['body-sm'],
+                  { color: p['ink-muted'], fontVariant: ['tabular-nums'] },
+                ]}
+              >
+                {league.member_count} {leagueMemberNoun(league.member_count, language)}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={p['ink-muted']} />
+        </View>
+      </LeagueCard>
+    </Pressable>
+  );
+}
+
+function message(error: unknown, language: 'en' | 'es') {
+  if (error instanceof ApiError) return leagueErrorMessage(error.status, language);
+  return getTranslation(language)('leagues.somethingWentWrongPleaseTryAgain');
+}
+
+function leagueErrorMessage(status: number, language: 'en' | 'es') {
+  if (status === 410) return getTranslation(language)('leagues.thisInvitationHasExpired');
+  if (status === 404) return getTranslation(language)('leagues.leagueOrInvitationNotFound');
+  if (status === 403) return getTranslation(language)('leagues.onlyALeagueAdminCanDoThat');
+  return getTranslation(language)('leagues.somethingWentWrongPleaseTryAgain');
 }
 
 function handlesLeagueBack(
@@ -61,6 +145,8 @@ export function LeaguesScreen({
   active?: boolean;
   onDetailOpenChange?: (open: boolean) => void;
 }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   const cache = useQueryClient();
   const key = ['leagues', accountId];
@@ -120,7 +206,7 @@ export function LeaguesScreen({
       setPicture(undefined);
       setError('');
     },
-    onError: (e) => setError(message(e)),
+    onError: (e) => setError(message(e, language)),
   });
   const save = useMutation({
     mutationFn: (leagueId: number) =>
@@ -142,7 +228,7 @@ export function LeaguesScreen({
       setPicture(undefined);
       setError('');
     },
-    onError: (e) => setError(message(e)),
+    onError: (e) => setError(message(e, language)),
   });
   const generate = useMutation({
     mutationFn: () => leaguesApi.invite(selected!),
@@ -150,7 +236,7 @@ export function LeaguesScreen({
       setInvite(Linking.createURL(`league-invitation/${encodeURIComponent(result.token)}`));
       setError('');
     },
-    onError: (e) => setError(message(e)),
+    onError: (e) => setError(message(e, language)),
   });
   const preview = useQuery({
     queryKey: [...key, 'invitation', token],
@@ -171,7 +257,7 @@ export function LeaguesScreen({
   const accept = useMutation({
     mutationFn: () => leaguesApi.accept(token),
     onSuccess: (league) => openInvitedLeague(league.id),
-    onError: (e) => setError(message(e)),
+    onError: (e) => setError(message(e, language)),
   });
   const pending =
     create.isPending || save.isPending || generate.isPending || accept.isPending || pictureBusy;
@@ -196,15 +282,17 @@ export function LeaguesScreen({
   );
   const descriptionField = (value: string) => (
     <View style={{ gap: spacing['space-2'] }}>
-      <Text style={[textStyles.label, { color: p.ink }]}>League description</Text>
+      <Text style={[textStyles.label, { color: p.ink }]}>
+        {getTranslation(language)('socialAdditional.leagueDescription_c87668')}
+      </Text>
       <TextField
-        accessibilityLabel="League description"
+        accessibilityLabel={getTranslation(language)('socialAdditional.leagueDescription_c87668')}
         value={value}
         onChangeText={setDescription}
         multiline
         maxLength={descriptionLimit}
         editable={!pending}
-        placeholder="What is your league about?"
+        placeholder={getTranslation(language)('socialAdditional.whatIsYourLeagueAbout_584276')}
         inputStyle={{ minHeight: 88, textAlignVertical: 'top' }}
       />
     </View>
@@ -245,7 +333,9 @@ export function LeaguesScreen({
     handlesLeagueBack(active, detailOpen, information, Boolean(detail.data), detail.isError),
   );
   const leagueTitle =
-    detail.data?.name ?? list.data?.find((item) => item.id === selected)?.name ?? 'League';
+    detail.data?.name ??
+    list.data?.find((item) => item.id === selected)?.name ??
+    getTranslation(language)('socialAdditional.league_5e61e1');
   const beginEdit = () => {
     if (detail.data?.role !== 'admin') return;
     setName(detail.data.name);
@@ -260,18 +350,32 @@ export function LeaguesScreen({
   }
 
   function renderHeader() {
-    const informationSubtitle = information ? 'League information' : undefined;
-    const informationBackLabel = information ? 'Back to league' : 'Back to leagues';
-    let navigationLabel = information ? 'Standings' : 'Leagues';
-    if (editing) navigationLabel = 'Cancel';
+    const informationSubtitle = information
+      ? getTranslation(language)('socialAdditional.leagueInformation_368170')
+      : undefined;
+    const informationBackLabel = information
+      ? getTranslation(language)('socialAdditional.backToLeague_945a6d')
+      : getTranslation(language)('socialAdditional.backToLeagues_6a66d5');
+    let navigationLabel = information
+      ? getTranslation(language)('socialAdditional.standings_1527d5')
+      : getTranslation(language)('socialAdditional.leagues_cb2765');
+    if (editing) navigationLabel = getTranslation(language)('socialAdditional.cancel_a25d0b');
     if (selected !== null)
       return (
         <LeaguePageHeader
           accountId={accountId}
           title={leagueTitle}
           picture={detail.data?.picture_url}
-          subtitle={editing ? 'Edit league' : informationSubtitle}
-          backLabel={editing ? 'Cancel editing' : informationBackLabel}
+          subtitle={
+            editing
+              ? getTranslation(language)('socialAdditional.editLeague_6fa700')
+              : informationSubtitle
+          }
+          backLabel={
+            editing
+              ? getTranslation(language)('socialAdditional.cancelEditing_be2d32')
+              : informationBackLabel
+          }
           onBack={back}
           disabled={pending}
           onOpen={!information && detail.data ? openInformation : undefined}
@@ -285,12 +389,16 @@ export function LeaguesScreen({
   function renderListHeader() {
     return (
       <ScreenHeader
-        title={mode === 'create' ? 'Create league' : 'FriendsLeague'}
+        title={
+          mode === 'create'
+            ? getTranslation(language)('socialAdditional.createLeague_213b52')
+            : 'FriendsLeague'
+        }
         leading={
           mode !== 'list' ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Back to leagues"
+              accessibilityLabel={getTranslation(language)('socialAdditional.backToLeagues_6a66d5')}
               onPress={back}
               disabled={pending}
               accessibilityState={{ disabled: pending }}
@@ -312,101 +420,48 @@ export function LeaguesScreen({
   }
 
   function renderLeagueList() {
-    if (list.isPending) return <ActivityIndicator accessibilityLabel="Loading leagues" />;
+    if (list.isPending)
+      return (
+        <ActivityIndicator
+          accessibilityLabel={getTranslation(language)('socialAdditional.loadingLeagues_f65649')}
+        />
+      );
     if (list.isError)
       return (
         <>
-          {button('Retry', () => {
+          {button(getTranslation(language)('socialAdditional.retry_95b6f5'), () => {
             void list.refetch();
           })}
           <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-            Could not load leagues.
+            {getTranslation(language)('socialAdditional.couldNotLoadLeagues_fb5ce8')}
           </Text>
         </>
       );
     if (list.data?.length)
       return (
         <View style={leagueStyles.section}>
-          {list.data.map((league) => {
-            const position = league.current_week_position;
-            const rankHint =
-              position === null
-                ? 'Weekly rank unavailable'
-                : `Your position this week is ${position}`;
-            const memberLabel = league.member_count === 1 ? 'member' : 'members';
-            return (
-              <Pressable
-                key={league.id}
-                accessibilityRole="button"
-                accessibilityLabel={league.name}
-                accessibilityHint={`${rankHint}, ${league.member_count} ${memberLabel}. Opens league standings.`}
-                onPress={() => {
-                  setInformation(false);
-                  setSelected(league.id);
-                  setError('');
-                }}
-                style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
-              >
-                <LeagueCard>
-                  <View style={leagueStyles.row}>
-                    <LeagueAvatar
-                      accountId={accountId}
-                      path={league.picture_url}
-                      name={league.name}
-                      size={52}
-                    />
-                    <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
-                      <Text style={[textStyles['title-md'], { color: p.ink }]}>{league.name}</Text>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          flexWrap: 'wrap',
-                          columnGap: spacing['space-3'],
-                          rowGap: spacing['space-1'],
-                        }}
-                      >
-                        <Text
-                          style={[
-                            textStyles['body-sm'],
-                            {
-                              color:
-                                league.current_week_position === null
-                                  ? p['ink-muted']
-                                  : p['brand-ink'],
-                              fontVariant: ['tabular-nums'],
-                            },
-                          ]}
-                        >
-                          {league.current_week_position === null
-                            ? 'Weekly rank unavailable'
-                            : `#${league.current_week_position} this week`}
-                        </Text>
-                        <Text
-                          style={[
-                            textStyles['body-sm'],
-                            { color: p['ink-muted'], fontVariant: ['tabular-nums'] },
-                          ]}
-                        >
-                          {league.member_count} {league.member_count === 1 ? 'member' : 'members'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={p['ink-muted']} />
-                  </View>
-                </LeagueCard>
-              </Pressable>
-            );
-          })}
+          {list.data.map((league) => (
+            <LeagueListItem
+              key={league.id}
+              accountId={accountId}
+              league={league}
+              onPress={() => {
+                setInformation(false);
+                setSelected(league.id);
+                setError('');
+              }}
+            />
+          ))}
         </View>
       );
     return (
       <LeagueCard>
         <Ionicons name="people-outline" size={40} color={p['brand-ink']} />
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          You have no leagues yet.
+          {getTranslation(language)('socialAdditional.youHaveNoLeaguesYet_aafc83')}
         </Text>
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          Create a league for your friends or join one with an invitation link.
+          {getTranslation(language)('socialAdditional.createALeagueForYourFriends_332ee0')}
         </Text>
       </LeagueCard>
     );
@@ -422,15 +477,20 @@ export function LeaguesScreen({
   }
 
   function renderLeagueDetails() {
-    if (detail.isPending) return <ActivityIndicator accessibilityLabel="Loading league" />;
+    if (detail.isPending)
+      return (
+        <ActivityIndicator
+          accessibilityLabel={getTranslation(language)('socialAdditional.loadingLeague_54f84c')}
+        />
+      );
     if (detail.isError || !detail.data)
       return (
         <>
-          {button('Retry', () => {
+          {button(getTranslation(language)('socialAdditional.retry_95b6f5'), () => {
             void detail.refetch();
           })}
           <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-            Could not load league.
+            {getTranslation(language)('socialAdditional.couldNotLoadLeague_21541a')}
           </Text>
         </>
       );
@@ -450,15 +510,21 @@ export function LeaguesScreen({
               onBusy={setPictureBusy}
               disabled={pending}
             />
-            {field('League name', name, setName)}
+            {field(getTranslation(language)('socialAdditional.leagueName_e3b560'), name, setName)}
             {descriptionField(description ?? '')}
             {renderDetailError()}
             {button(
-              save.isPending ? 'Saving…' : 'Save',
+              save.isPending
+                ? getTranslation(language)('socialAdditional.saving_444c23')
+                : getTranslation(language)('socialAdditional.save_5bd05a'),
               () => {
                 const result = nameSchema.safeParse(name);
                 if (!result.success) {
-                  setError(result.error.issues[0].message);
+                  setError(
+                    language === 'es' && result.error.issues[0].message === 'Enter a league name.'
+                      ? 'Introduce un nombre para la liga.'
+                      : result.error.issues[0].message,
+                  );
                   return;
                 }
                 if (selected !== null) save.mutate(selected);
@@ -484,7 +550,7 @@ export function LeaguesScreen({
             inviteAction={
               isAdmin ? (
                 <LeagueIconButton
-                  label="Generate invitation"
+                  label={getTranslation(language)('socialAdditional.generateInvitation_3e4586')}
                   icon="link-outline"
                   disabled={pending}
                   onPress={() => generate.mutate()}
@@ -512,7 +578,7 @@ export function LeaguesScreen({
             onBusy={setPictureBusy}
             disabled={pending}
           />
-          {field('League name', name, setName)}
+          {field(getTranslation(language)('socialAdditional.leagueName_e3b560'), name, setName)}
           {descriptionField(description ?? '')}
           <LeagueTimezonePicker value={timezone} onChange={setTimezone} disabled={pending} />
           {error ? (
@@ -521,10 +587,12 @@ export function LeaguesScreen({
             </Text>
           ) : null}
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-            The timezone cannot be changed after creation.
+            {getTranslation(language)('socialAdditional.theTimezoneCannotBeChangedAfter_9dcae3')}
           </Text>
           {button(
-            create.isPending ? 'Creating…' : 'Create league',
+            create.isPending
+              ? getTranslation(language)('socialAdditional.creating_34c633')
+              : getTranslation(language)('socialAdditional.createLeague_213b52'),
             () => {
               const result = createSchema.safeParse({
                 name,
@@ -532,7 +600,11 @@ export function LeaguesScreen({
                 description: description?.trim() || null,
               });
               if (!result.success) {
-                setError(result.error.issues[0].message);
+                setError(
+                  language === 'es' && result.error.issues[0].message === 'Enter a league name.'
+                    ? 'Introduce un nombre para la liga.'
+                    : result.error.issues[0].message,
+                );
                 return;
               }
               create.mutate();
@@ -547,7 +619,7 @@ export function LeaguesScreen({
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-3'] }}>
           <View style={{ flexGrow: 1, flexBasis: 148 }}>
             <LeagueAction
-              label="Create league"
+              label={getTranslation(language)('socialAdditional.createLeague_213b52')}
               icon="add"
               variant="primary"
               onPress={() => {
@@ -558,7 +630,7 @@ export function LeaguesScreen({
           </View>
           <View style={{ flexGrow: 1, flexBasis: 148 }}>
             <LeagueAction
-              label="Join a league"
+              label={getTranslation(language)('socialAdditional.joinALeague_e38a3c')}
               icon="link-outline"
               onPress={() => {
                 setJoinOpen(true);
@@ -568,7 +640,7 @@ export function LeaguesScreen({
           </View>
         </View>
         <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-          Your leagues
+          {getTranslation(language)('socialAdditional.yourLeagues_e4999e')}
         </Text>
         {renderLeagueList()}
       </>
@@ -580,28 +652,36 @@ export function LeaguesScreen({
       <>
         {active && joinOpen && !token ? (
           <LeagueDialog
-            title="Join a league"
+            title={getTranslation(language)('socialAdditional.joinALeague_e38a3c')}
             onClose={() => {
               setJoinOpen(false);
               setError('');
             }}
           >
-            {field('Invitation link or token', input, (value) => {
-              setInput(value);
-              setError('');
-            })}
+            {field(
+              getTranslation(language)('socialAdditional.invitationLinkOrToken_536aef'),
+              input,
+              (value) => {
+                setInput(value);
+                setError('');
+              },
+            )}
             {error ? (
               <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
                 {error}
               </Text>
             ) : null}
             <LeagueAction
-              label="Preview invitation"
+              label={getTranslation(language)('socialAdditional.previewInvitation_e7f45c')}
               variant="primary"
               onPress={() => {
                 const value = invitationToken(input);
                 if (!value) {
-                  setError('Enter an invitation link or token.');
+                  setError(
+                    getTranslation(language)(
+                      'socialAdditional.enterAnInvitationLinkOrToken_235509',
+                    ),
+                  );
                   return;
                 }
                 setError('');
@@ -621,7 +701,7 @@ export function LeaguesScreen({
             invitation={preview.data}
             loading={preview.isFetching && !preview.data}
             joining={accept.isPending}
-            error={preview.isError ? message(preview.error) : error || undefined}
+            error={preview.isError ? message(preview.error, language) : error || undefined}
             retry={
               preview.isError &&
               (!(preview.error instanceof ApiError) || ![404, 410].includes(preview.error.status))

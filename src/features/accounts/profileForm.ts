@@ -1,5 +1,10 @@
 import { z } from 'zod/v4';
-import { activityLevelSchema, measurementSystemSchema, type Account } from './schemas';
+import {
+  activityLevelSchema,
+  languageSchema,
+  measurementSystemSchema,
+  type Account,
+} from './schemas';
 
 export type MeasurementSystem = 'metric' | 'imperial';
 const decimalInput = /^\d+(?:\.\d{1,2})?$/;
@@ -59,6 +64,7 @@ export function displayHeight(cm: string) {
 }
 
 const profileFormShape = z.object({
+  language: languageSchema,
   display_name: z.string().trim().min(1, 'Enter your name.').max(100),
   age: z
     .string()
@@ -137,6 +143,7 @@ export const profileFormSchema = profileFormShape.check(z.superRefine(validatePr
 export function profileDefaults(account: Account): ProfileFormValues {
   const p = account.profile;
   return {
+    language: p.language ?? 'en',
     display_name: p.display_name ?? '',
     age: p.age === null ? '' : String(p.age),
     ...(p.height_cm === null

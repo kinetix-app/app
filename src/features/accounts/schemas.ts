@@ -5,6 +5,7 @@ const decimal = (max: number, places: number) =>
     .string()
     .regex(new RegExp(String.raw`^\d+(?:\.\d{1,${places}})?$`))
     .refine((value) => Number(value) > 0 && Number(value) <= max);
+export const languageSchema = z.enum(['en', 'es']);
 export const measurementSystemSchema = z.enum(['metric', 'imperial']);
 export const activityLevelSchema = z.enum(['sedentary', 'light', 'moderate', 'high', 'very_high']);
 export const profilePicturePath = '/api/v1/me/profile/picture';
@@ -31,6 +32,7 @@ export const accountSchema = z.object({
     required: z.boolean(),
   }),
   profile: z.object({
+    language: languageSchema.optional(),
     display_name: z.string().nullable(),
     timezone: z.string().nullable(),
     age: z.number().int().min(1).max(120).nullable(),
@@ -46,6 +48,7 @@ export const accountSchema = z.object({
 
 export const profilePatchSchema = z
   .object({
+    language: languageSchema.optional(),
     display_name: z.string().trim().min(1).max(100).nullable().optional(),
     timezone: z.string().nullable().optional(),
     age: z.number().int().min(1).max(120).nullable().optional(),

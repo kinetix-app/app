@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -30,6 +32,7 @@ export function LeaguePageHeader({
   onEdit?: () => void;
   disabled?: boolean;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   const identity = (
     <>
@@ -71,7 +74,9 @@ export function LeaguePageHeader({
       {onOpen ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`View league information for ${title}`}
+          accessibilityLabel={getTranslation(language)('leagues.viewLeagueInformationFor', {
+            title,
+          })}
           disabled={disabled}
           onPress={onOpen}
           style={({ pressed }) => [leagueStyles.row, { opacity: pressed || disabled ? 0.55 : 1 }]}
@@ -88,7 +93,7 @@ export function LeaguePageHeader({
           {onEdit ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Edit league"
+              accessibilityLabel={getTranslation(language)('leagues.editLeague')}
               disabled={disabled}
               onPress={onEdit}
               style={({ pressed }) => [
@@ -97,7 +102,9 @@ export function LeaguePageHeader({
               ]}
             >
               <Ionicons name="pencil-outline" size={16} color={p['brand-ink']} />
-              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Edit</Text>
+              <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                {getTranslation(language)('leagues.edit')}
+              </Text>
             </Pressable>
           ) : null}
         </View>

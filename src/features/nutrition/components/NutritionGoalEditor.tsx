@@ -1,3 +1,5 @@
+import type { Language } from '@/i18n/Language';
+import { getTranslation } from '@/i18n/catalog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { Controller, useForm, useWatch, type UseFormReturn } from 'react-hook-form';
@@ -12,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
@@ -64,10 +67,24 @@ type NutritionGoalEditorViewProps = Readonly<{
   onSave: () => void;
 }>;
 
-function savedGoalNote(savedGoal: NutritionGoal | null | undefined, current: Objective | null) {
+const objectivesEs: Record<Objective, string> = {
+  build_muscle: 'Ganar músculo',
+  lose_fat: 'Perder grasa',
+  gain_weight: 'Ganar peso',
+  maintain_weight: 'Mantener el peso',
+};
+
+function savedGoalNote(
+  savedGoal: NutritionGoal | null | undefined,
+  current: Objective | null,
+  language: Language,
+) {
   if (!savedGoal || savedGoal.objective === current) return undefined;
-  if (savedGoal.objective) return `Saved for ${objectives[savedGoal.objective]}.`;
-  return 'Saved without an objective.';
+  if (savedGoal.objective)
+    return language === 'es'
+      ? `Guardado para ${objectivesEs[savedGoal.objective]}.`
+      : `Saved for ${objectives[savedGoal.objective]}.`;
+  return getTranslation(language)('nutrition.NutritionGoalEditor.savedWithoutAnObjective');
 }
 
 type NutritionGoalFormProps = Readonly<{
@@ -92,6 +109,7 @@ function NutritionGoalForm({
   onSave,
 }: NutritionGoalFormProps) {
   const p = usePalette();
+  const language = useLanguage();
   const calories = useWatch({ control: form.control, name: 'calories' });
   const percentages = useWatch({ control: form.control });
   const values: Values = {
@@ -110,27 +128,34 @@ function NutritionGoalForm({
     (mode === 'percentages' && percentageTotal(values) !== 100);
   const energy = hundredths(calories);
   const invalidCalories = calories !== '' && (!energy || energy > 99999999);
+  const objectiveLabel = currentObjective
+    ? selectCopy(language === 'es', objectivesEs[currentObjective], objectives[currentObjective])
+    : getTranslation(language)('nutrition.NutritionGoalEditor.chooseAnObjectiveFirst');
   return (
     <>
-      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-        {currentObjective ? objectives[currentObjective] : 'Choose an objective first'}
-      </Text>
+      <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{objectiveLabel}</Text>
       {note ? (
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          {note} Review before saving.
+          {note} {getTranslation(language)('nutrition.NutritionGoalEditor.reviewBeforeSaving')}
         </Text>
       ) : null}
       <View style={[styles.calories, { backgroundColor: p['surface-200'] }]}>
         <View style={styles.calorieCopy}>
-          <Text style={[textStyles.label, { color: p.ink }]}>Daily calories</Text>
-          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>kcal / day</Text>
+          <Text style={[textStyles.label, { color: p.ink }]}>
+            {getTranslation(language)('nutrition.NutritionGoalEditor.dailyCalories')}
+          </Text>
+          <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+            {getTranslation(language)('nutrition.NutritionGoalEditor.kcalDay')}
+          </Text>
         </View>
         <Controller
           control={form.control}
           name="calories"
           render={({ field: input }) => (
             <TextField
-              accessibilityLabel="Daily calorie goal"
+              accessibilityLabel={getTranslation(language)(
+                'nutrition.NutritionGoalEditor.dailyCalorieGoal',
+              )}
               keyboardType="decimal-pad"
               value={input.value}
               editable={!saving}
@@ -145,7 +170,9 @@ function NutritionGoalForm({
       </View>
       {invalidCalories ? (
         <Text style={[textStyles['body-sm'], { color: p.danger }]}>
-          Enter daily calories from 0.01 to 999999.99, with up to two decimals.
+          {getTranslation(language)(
+            'nutrition.NutritionGoalEditor.enterDailyCaloriesFrom001To99999999WithUpToTwoDecimals',
+          )}
         </Text>
       ) : null}
       <MacroSplitFields
@@ -157,7 +184,7 @@ function NutritionGoalForm({
       />
       {mode === 'percentages' && budget && !budget.overBudget && percentageTotal(values) !== 100 ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Percentages must total 100% to save.
+          {getTranslation(language)('nutrition.NutritionGoalEditor.percentagesMustTotal100ToSave')}
         </Text>
       ) : null}
       {errorMessage ? (
@@ -180,7 +207,9 @@ function NutritionGoalForm({
         ]}
       >
         <Text style={[textStyles.label, { color: p['on-brand'] }]}>
-          {saving ? 'Saving…' : 'Save goal'}
+          {saving
+            ? getTranslation(language)('nutrition.NutritionGoalEditor.saving')
+            : getTranslation(language)('nutrition.NutritionGoalEditor.saveGoal')}
         </Text>
       </Pressable>
     </>
@@ -203,9 +232,13 @@ function NutritionGoalEditorView({
   onSave,
 }: NutritionGoalEditorViewProps) {
   const p = usePalette();
-  const note = savedGoalNote(savedGoal, currentObjective);
+  const language = useLanguage();
+  const note = savedGoalNote(savedGoal, currentObjective, language);
   let errorMessage = validationError;
-  if (!errorMessage && mutationFailed) errorMessage = 'Could not save your goal. Try again.';
+  if (!errorMessage && mutationFailed)
+    errorMessage = getTranslation(language)(
+      'nutrition.NutritionGoalEditor.couldNotSaveYourGoalTryAgain',
+    );
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p['surface-100'] }]}>
       <KeyboardAvoidingView
@@ -216,22 +249,32 @@ function NutritionGoalEditorView({
           contentContainerStyle={[screenContentStyle, styles.content]}
           keyboardShouldPersistTaps="handled"
         >
-          <ScreenHeader title="Nutrition goal">
+          <ScreenHeader
+            title={getTranslation(language)('nutrition.NutritionGoalEditor.nutritionGoal')}
+          >
             <Pressable accessibilityRole="button" onPress={onClose} style={styles.action}>
               <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                {savedGoal ? 'Back' : 'Set up later'}
+                {savedGoal
+                  ? getTranslation(language)('nutrition.NutritionGoalEditor.back')
+                  : getTranslation(language)('nutrition.NutritionGoalEditor.setUpLater')}
               </Text>
             </Pressable>
           </ScreenHeader>
-          {loading ? <Text style={[textStyles.body, { color: p.ink }]}>Loading goal…</Text> : null}
+          {loading ? (
+            <Text style={[textStyles.body, { color: p.ink }]}>
+              {getTranslation(language)('nutrition.NutritionGoalEditor.loadingGoal')}
+            </Text>
+          ) : null}
           {failed ? (
             <View style={styles.card}>
               <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                Could not load your nutrition goal.
+                {getTranslation(language)(
+                  'nutrition.NutritionGoalEditor.couldNotLoadYourNutritionGoal',
+                )}
               </Text>
               <Pressable accessibilityRole="button" onPress={onRetry} style={styles.action}>
                 <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                  Retry loading goal
+                  {getTranslation(language)('nutrition.NutritionGoalEditor.retryLoadingGoal')}
                 </Text>
               </Pressable>
             </View>
@@ -263,6 +306,7 @@ function AccountNutritionGoalEditor({
   onClose,
   active = true,
 }: NutritionGoalEditorProps) {
+  const language = useLanguage();
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ['nutrition', accountId, 'goal'],
@@ -311,7 +355,11 @@ function AccountNutritionGoalEditor({
       budget?.overBudget ||
       (mode === 'percentages' && percentageTotal(values) !== 100)
     ) {
-      setValidationError('Enter valid amounts within your calorie budget.');
+      setValidationError(
+        getTranslation(language)(
+          'nutrition.NutritionGoalEditor.enterValidAmountsWithinYourCalorieBudget',
+        ),
+      );
       return;
     }
     setValidationError('');

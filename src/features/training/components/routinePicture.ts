@@ -1,14 +1,18 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import type { Language } from '@/i18n/Language';
 
-export async function pickRoutinePicture(): Promise<
-  { asset: ImagePicker.ImagePickerAsset } | { error: string } | null
-> {
+export async function pickRoutinePicture(
+  language: Language = 'en',
+): Promise<{ asset: ImagePicker.ImagePickerAsset } | { error: string } | null> {
   try {
     if (Platform.OS !== 'web') {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted)
-        return { error: 'Allow photo access in Settings to choose a cover.' };
+        return {
+          error: getTranslation(language)('training.allowPhotoAccessInSettingsToChoose_e96f35'),
+        };
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -19,12 +23,18 @@ export async function pickRoutinePicture(): Promise<
     const asset = result.assets[0];
     if (!asset) return null;
     if ((asset.fileSize ?? asset.file?.size ?? 0) > 5 * 1024 * 1024)
-      return { error: 'Choose a cover smaller than 5 MB.' };
+      return {
+        error: getTranslation(language)('training.chooseACoverSmallerThan5Mb_e3f9e7'),
+      };
     if (asset.mimeType && !['image/jpeg', 'image/png', 'image/webp'].includes(asset.mimeType))
-      return { error: 'Choose a JPEG, PNG or WebP cover.' };
+      return {
+        error: getTranslation(language)('training.chooseAJpegPngOrWebpCover_6b72e2'),
+      };
     return { asset };
   } catch {
-    return { error: 'Could not open your photos. Try again.' };
+    return {
+      error: getTranslation(language)('training.couldNotOpenYourPhotosTryAgain_1be001'),
+    };
   }
 }
 

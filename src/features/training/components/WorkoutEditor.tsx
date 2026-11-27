@@ -1,4 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useState } from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { Image, Platform, Pressable, Text, View, type PressableProps } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
@@ -21,6 +23,7 @@ export function WorkoutTimer({
   onOverlay?: boolean;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const foreground = onOverlay ? p['overlay-ink'] : p['brand-ink'];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -37,7 +40,9 @@ export function WorkoutTimer({
     <View style={ui.row}>
       <Feather name="clock" size={18} color={foreground} />
       <Text
-        accessibilityLabel={`Workout duration ${time}`}
+        accessibilityLabel={getTranslation(language)('dynamicMessages.workoutDuration_6549ff', {
+          value1: time,
+        })}
         style={[
           compact ? textStyles.label : textStyles['title-md'],
           { color: foreground, fontVariant: ['tabular-nums'] },
@@ -67,6 +72,7 @@ export function WorkoutExerciseSummary({
   cardio?: boolean;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   function range(key: 'reps' | 'value') {
     const values = sets
       .map((set) => {
@@ -85,7 +91,10 @@ export function WorkoutExerciseSummary({
       <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
         {savedCount === undefined
           ? `${sets.length} ${setLabel}`
-          : `${savedCount} / ${sets.length} sets saved`}
+          : getTranslation(language)('dynamicMessages.setsSaved_d4a1f9', {
+              value1: savedCount,
+              value2: sets.length,
+            })}
       </Text>
       <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
         {cardio ? cardioSummary(sets) : `${range('reps')} reps · ${range('value')} kg`}
@@ -160,6 +169,7 @@ export function WorkoutExerciseCard({
   onMove?: (delta: number) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const [actions, setActions] = useState(false);
   return (
     <>
@@ -170,9 +180,17 @@ export function WorkoutExerciseCard({
         {...exerciseReorderKeys(onMove, disabled)}
         nativeID={dragId}
         accessible={false}
-        accessibilityLabel={dragId ? `Reorder ${exercise.name}` : undefined}
+        accessibilityLabel={
+          dragId
+            ? getTranslation(language)('dynamicMessages.reorder_b6370c', {
+                value1: exercise.name,
+              })
+            : undefined
+        }
         accessibilityHint={
-          dragId ? 'Hold and drag to reorder. Use arrow keys with a keyboard.' : undefined
+          dragId
+            ? getTranslation(language)('training.holdAndDragToReorderUseArrow_80e0a3')
+            : undefined
         }
         disabled={disabled}
         onLongPress={onDrag}
@@ -189,7 +207,9 @@ export function WorkoutExerciseCard({
         <View style={[ui.row, { alignItems: 'flex-start' }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Details for ${exercise.name}`}
+            accessibilityLabel={getTranslation(language)('dynamicMessages.detailsFor_43fa13', {
+              value1: exercise.name,
+            })}
             nativeID={dragId ? `${dragId}-drag-details` : undefined}
             onPress={onDetails}
             onLongPress={onDrag}
@@ -214,7 +234,9 @@ export function WorkoutExerciseCard({
               <View
                 style={{ minHeight: 100, justifyContent: 'center', padding: spacing['space-3'] }}
               >
-                <Text style={{ color: p['ink-muted'] }}>No image</Text>
+                <Text style={{ color: p['ink-muted'] }}>
+                  {getTranslation(language)('training.noImage_127894')}
+                </Text>
               </View>
             )}
           </Pressable>
@@ -222,14 +244,26 @@ export function WorkoutExerciseCard({
             <View style={[ui.row, { alignItems: 'flex-start', gap: spacing['space-1'] }]}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Edit sets for ${exercise.name}`}
+                accessibilityLabel={getTranslation(language)('dynamicMessages.editSetsFor_d7f038', {
+                  value1: exercise.name,
+                })}
                 nativeID={dragId ? `${dragId}-drag-title` : undefined}
-                accessibilityHint={dragId ? 'Hold and drag to reorder' : undefined}
+                accessibilityHint={
+                  dragId
+                    ? getTranslation(language)('training.holdAndDragToReorder_e73459')
+                    : undefined
+                }
                 accessibilityActions={
                   onMove
                     ? [
-                        { name: 'increment', label: 'Move exercise later' },
-                        { name: 'decrement', label: 'Move exercise earlier' },
+                        {
+                          name: 'increment',
+                          label: getTranslation(language)('training.moveExerciseLater_cd3821'),
+                        },
+                        {
+                          name: 'decrement',
+                          label: getTranslation(language)('training.moveExerciseEarlier_7f74db'),
+                        },
                       ]
                     : undefined
                 }
@@ -249,7 +283,9 @@ export function WorkoutExerciseCard({
               </Pressable>
               <IconButton
                 icon="more-horizontal"
-                label={`Actions for ${exercise.name}`}
+                label={getTranslation(language)('dynamicMessages.actionsFor_0dece7', {
+                  value1: exercise.name,
+                })}
                 disabled={disabled}
                 onPress={() => setActions(true)}
               />
@@ -264,7 +300,7 @@ export function WorkoutExerciseCard({
             ) : null}
             {children}
             <Button
-              title="Add set"
+              title={getTranslation(language)('training.addSet_11e7f7')}
               accessibilityLabel={addSetLabel}
               onPress={onAddSet}
               tone="positive"
@@ -275,9 +311,16 @@ export function WorkoutExerciseCard({
       </Pressable>
       {actions ? (
         <ActionMenu
-          title="Exercise actions"
+          title={getTranslation(language)('training.exerciseActions_0fee7f')}
           onClose={() => setActions(false)}
-          actions={[{ title: 'Remove exercise', tone: 'danger', onPress: onRemove, disabled }]}
+          actions={[
+            {
+              title: getTranslation(language)('training.removeExercise_6427a5'),
+              tone: 'danger',
+              onPress: onRemove,
+              disabled,
+            },
+          ]}
         />
       ) : null}
     </>

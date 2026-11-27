@@ -1,7 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '@/i18n/Language';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { ProfileBack } from './ProfileBack';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -10,15 +12,41 @@ import { getAccount, getObjective, setObjective } from '../api';
 import type { Account, Objective } from '../schemas';
 import { SetupButton, setupStyles as s } from './SetupUI';
 
-export const objectiveOptions: { value: Objective; label: string; description: string }[] = [
+export const objectiveOptions: {
+  value: Objective;
+  label: string;
+  description: string;
+  labelEs: string;
+  descriptionEs: string;
+}[] = [
   {
     value: 'build_muscle',
     label: 'Build muscle',
+    labelEs: 'Ganar músculo',
+    descriptionEs: 'Favorece el crecimiento muscular y la fuerza.',
     description: 'Support muscle growth and strength.',
   },
-  { value: 'lose_fat', label: 'Lose fat', description: 'Focus on reducing body fat.' },
-  { value: 'gain_weight', label: 'Gain weight', description: 'Work towards gaining body weight.' },
-  { value: 'maintain_weight', label: 'Maintain weight', description: 'Keep your weight steady.' },
+  {
+    value: 'lose_fat',
+    label: 'Lose fat',
+    labelEs: 'Perder grasa',
+    descriptionEs: 'Céntrate en reducir la grasa corporal.',
+    description: 'Focus on reducing body fat.',
+  },
+  {
+    value: 'gain_weight',
+    label: 'Gain weight',
+    labelEs: 'Ganar peso',
+    descriptionEs: 'Trabaja para aumentar tu peso corporal.',
+    description: 'Work towards gaining body weight.',
+  },
+  {
+    value: 'maintain_weight',
+    label: 'Maintain weight',
+    labelEs: 'Mantener peso',
+    descriptionEs: 'Mantén tu peso estable.',
+    description: 'Keep your weight steady.',
+  },
 ];
 type ObjectiveEditorProps = Readonly<{
   accountId: number;
@@ -34,6 +62,8 @@ export function ObjectiveEditor({
   active = true,
 }: ObjectiveEditorProps) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const cache = useQueryClient();
   const [selected, setSelected] = useState<Objective | null>(null);
   const busy = useRef(false);
@@ -71,15 +101,20 @@ export function ObjectiveEditor({
   }
   function renderObjectiveChoices() {
     if (query.isPending)
-      return <ActivityIndicator accessibilityLabel="Loading objective" color={p.brand} />;
+      return (
+        <ActivityIndicator
+          accessibilityLabel={getTranslation(language)('accountsUi.loading_objective')}
+          color={p.brand}
+        />
+      );
     if (query.isError)
       return (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not load your objective.
+            {getTranslation(language)('accountsUi.could_not_load_your_objective')}
           </Text>
           <SetupButton
-            title="Retry"
+            title={getTranslation(language)('accountsUi.retry')}
             secondary
             onPress={() => {
               void query.refetch();
@@ -88,12 +123,17 @@ export function ObjectiveEditor({
         </>
       );
     return (
-      <View accessibilityRole="radiogroup" accessibilityLabel="Objective" style={{ gap: 12 }}>
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={getTranslation(language)('accountsUi.objective')}
+        style={{ gap: 12 }}
+      >
         {objectiveOptions.map((option) => (
           <Pressable
             key={option.value}
             accessibilityRole="radio"
-            accessibilityLabel={option.label}
+            accessibilityLabel={es ? option.labelEs : option.label}
+            aria-checked={choice === option.value}
             accessibilityState={{
               checked: choice === option.value,
               selected: choice === option.value,
@@ -116,7 +156,7 @@ export function ObjectiveEditor({
                 { color: choice === option.value ? p['brand-ink'] : p.ink },
               ]}
             >
-              {option.label}
+              {es ? option.labelEs : option.label}
               {choice === option.value ? ' ✓' : ''}
             </Text>
             <Text
@@ -125,7 +165,7 @@ export function ObjectiveEditor({
                 { color: choice === option.value ? p['brand-ink'] : p['ink-muted'] },
               ]}
             >
-              {option.description}
+              {es ? option.descriptionEs : option.description}
             </Text>
           </Pressable>
         ))}
@@ -139,30 +179,42 @@ export function ObjectiveEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title="What's your goal?"
+          title={getTranslation(language)('accountsUi.what_s_your_goal')}
           leading={
             onCancel ? <ProfileBack onPress={onCancel} disabled={mutation.isPending} /> : undefined
           }
         />
         <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-          Choose your objective. You can change it anytime. A numerical nutrition target is optional
-          and can be set later.
+          {getTranslation(language)(
+            'accountsUi.choose_your_objective_you_can_change_it_anytime_a_numerical_',
+          )}
         </Text>
         {renderObjectiveChoices()}
         {mutation.isError ? (
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not finish saving your objective. Your selection is kept. Try again.
+            {getTranslation(language)(
+              'accountsUi.could_not_finish_saving_your_objective_your_selection_is_kep',
+            )}
           </Text>
         ) : null}
         <SetupButton
-          title={mutation.isPending ? 'Saving…' : 'Save objective'}
+          title={
+            mutation.isPending
+              ? getTranslation(language)('accountsUi.saving')
+              : getTranslation(language)('accountsUi.save_objective')
+          }
           disabled={!choice || query.isPending || query.isError || mutation.isPending}
           onPress={() => {
             void save();
           }}
         />
         {onCancel ? (
-          <SetupButton title="Cancel" secondary disabled={mutation.isPending} onPress={onCancel} />
+          <SetupButton
+            title={getTranslation(language)('accountsUi.cancel')}
+            secondary
+            disabled={mutation.isPending}
+            onPress={onCancel}
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>

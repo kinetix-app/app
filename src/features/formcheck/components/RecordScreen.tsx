@@ -1,9 +1,11 @@
+import { getTranslation } from '@/i18n/catalog';
 import type { ViewInstance } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button, ui } from '@/features/training/components/ui';
 import type { FormCheckProfile } from '../profiles';
@@ -33,6 +35,7 @@ export function RecordScreen({
   onFinish: (recording: Recording) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const camera = useRef<CameraView>(null);
   const frame = useRef<ViewInstance>(null);
   const [webRecorder, setWebRecorder] = useState<CameraRecorder | null>(null);
@@ -129,44 +132,82 @@ export function RecordScreen({
   };
   return (
     <FormCheckScreen
-      overline={`${exerciseName.toUpperCase()} · SET ${setNumber}`}
-      title="Record your set"
+      overline={`${exerciseName.toUpperCase()} · ${getTranslation(language)('formcheck.RecordScreen.sET')} ${setNumber}`}
+      title={getTranslation(language)('formcheck.RecordScreen.recordYourSet')}
       backIcon="x"
-      backLabel="Cancel recording"
+      backLabel={getTranslation(language)('formcheck.RecordScreen.cancelRecording')}
       onBack={onCancel}
       scroll={false}
       footer={
         recording ? (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              Do your set as usual. Stop when you finish.
+              {getTranslation(language)('formcheck.RecordScreen.doYourSetAsUsualStopWhenYouFinish')}
             </Text>
-            <Button title="Stop and analyze" onPress={() => void stop()} />
+            <Button
+              title={getTranslation(language)('formcheck.RecordScreen.stopAndAnalyze')}
+              onPress={() => void stop()}
+            />
           </>
         ) : (
           <>
             <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-              {profile.camera.hint}
+              {language === 'es'
+                ? ((
+                    {
+                      'back-squat':
+                        'Coloca el teléfono a la altura de la cadera, a 2–3 m de lado, con todo el cuerpo en el encuadre.',
+                      'push-up':
+                        'Coloca el teléfono en el suelo a 2 m de lado, con todo el cuerpo en el encuadre.',
+                      'hammer-curl':
+                        'Coloca el teléfono a 2 m de lado, con el brazo que trabaja hacia él y desde el hombro hasta la cadera en el encuadre.',
+                      'seated-shoulder-press':
+                        'Coloca el teléfono a 2 m de lado y a la altura del pecho, con los brazos extendidos dentro del encuadre.',
+                      'dumbbell-row':
+                        'Coloca el teléfono a 2 m de lado, con el brazo que trabaja hacia él y todo el cuerpo en el encuadre.',
+                    } as Record<string, string>
+                  )[profile.id] ?? profile.camera.hint)
+                : profile.camera.hint}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing['space-2'] }}>
               {profile.camera.checklist.map((item) => (
                 <View key={item} style={chip}>
-                  <Text style={[textStyles.caption, { color: p.ink }]}>{item}</Text>
+                  <Text style={[textStyles.caption, { color: p.ink }]}>
+                    {language === 'es'
+                      ? ((
+                          {
+                            'Full body': 'Cuerpo entero',
+                            'Side view': 'Vista lateral',
+                            'Good light': 'Buena luz',
+                            'Working arm toward the phone': 'Brazo que trabaja hacia el teléfono',
+                            'Arms in the frame': 'Brazos en el encuadre',
+                          } as Record<string, string>
+                        )[item] ?? item)
+                      : item}
+                  </Text>
                 </View>
               ))}
             </View>
             {failed ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
-                The recording could not be saved. Try again.
+                {getTranslation(language)(
+                  'formcheck.RecordScreen.theRecordingCouldNotBeSavedTryAgain',
+                )}
               </Text>
             ) : null}
-            <Button title="Start recording" icon="video" onPress={start} />
+            <Button
+              title={getTranslation(language)('formcheck.RecordScreen.startRecording')}
+              icon="video"
+              onPress={start}
+            />
             {__DEV__ ? (
               <Button
-                title="Use a video"
+                title={getTranslation(language)('formcheck.RecordScreen.useAVideo')}
                 icon="upload"
                 secondary
-                accessibilityLabel="Analyze a video file (development only)"
+                accessibilityLabel={getTranslation(language)(
+                  'formcheck.RecordScreen.analyzeAVideoFileDevelopmentOnly',
+                )}
                 onPress={() => void pickVideo()}
               />
             ) : null}
@@ -189,7 +230,7 @@ export function RecordScreen({
           facing="back"
           mode="video"
           mute
-          accessibilityLabel="Camera preview"
+          accessibilityLabel={getTranslation(language)('formcheck.RecordScreen.cameraPreview')}
         />
         <View
           pointerEvents="none"
@@ -224,7 +265,7 @@ export function RecordScreen({
           >
             <Feather name="circle" size={10} color={p.danger} />
             <Text style={[textStyles.label, { color: p.ink, fontVariant: ['tabular-nums'] }]}>
-              Recording · {clock(seconds)}
+              {getTranslation(language)('formcheck.RecordScreen.recording')} · {clock(seconds)}
             </Text>
           </View>
         ) : null}

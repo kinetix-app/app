@@ -1,7 +1,10 @@
+import type { Language } from '@/i18n/Language';
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useState } from 'react';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Text, View } from 'react-native';
+import { useLanguage } from '@/i18n/Language';
 import { radii, spacing, textStyles, usePalette } from '@/theme/tokens';
 import { Button } from '@/features/training/components/ui';
 import { containRect } from '../poseTrack';
@@ -19,21 +22,35 @@ function RecordingFooter({
   onToggle: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const toggleTitle = jointToggleTitle(showJoints, language);
   return (
     <>
       {showJoints && hasFaults ? (
         <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-          Joints turn red during a rep with a fault there.
+          {getTranslation(language)(
+            'formcheck.RecordingPlayer.jointsTurnRedDuringARepWithAFaultThere',
+          )}
         </Text>
       ) : null}
       <Button
-        title={showJoints ? 'Hide joints' : 'Show joints'}
+        title={toggleTitle}
         icon={showJoints ? 'eye-off' : 'eye'}
         secondary
         onPress={onToggle}
       />
     </>
   );
+}
+
+function jointToggleTitle(showJoints: boolean, language: Language) {
+  if (showJoints) return getTranslation(language)('formcheck.RecordingPlayer.hideJoints');
+  return getTranslation(language)('formcheck.RecordingPlayer.showJoints');
+}
+
+function unavailableMessage(language: Language) {
+  if (language === 'es') return 'Esta grabación ya no está disponible.';
+  return 'This recording is no longer available.';
 }
 
 /**
@@ -52,6 +69,7 @@ export function RecordingPlayer({
   onBack: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const player = useVideoPlayer(uri, (value) => {
     value.loop = false;
   });
@@ -73,14 +91,16 @@ export function RecordingPlayer({
     frameId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frameId);
   }, [player, tracking]);
-  const frame = pose && box.width && box.height ? containRect(box, pose.width, pose.height) : null;
+  const frame = getRecordingFrame(pose, box);
   const hasFaults = pose?.reps.some((rep) => rep.faultJoints.length > 0) ?? false;
+
+  const videoMessage = status === 'error' ? unavailableMessage(language) : null;
 
   return (
     <FormCheckScreen
       overline={title.toUpperCase()}
-      title="Your recording"
-      backLabel="Back to analysis"
+      title={getTranslation(language)('formcheck.RecordingPlayer.yourRecording')}
+      backLabel={getTranslation(language)('formcheck.RecordingPlayer.backToAnalysis')}
       onBack={onBack}
       scroll={false}
       footer={
@@ -93,9 +113,9 @@ export function RecordingPlayer({
         ) : undefined
       }
     >
-      {status === 'error' ? (
+      {videoMessage ? (
         <Text accessibilityRole="alert" style={[textStyles.body, { color: p['ink-muted'] }]}>
-          This recording is no longer available.
+          {videoMessage}
         </Text>
       ) : (
         <View
@@ -127,7 +147,7 @@ export function RecordingPlayer({
               style={{ width: '100%', height: '100%' }}
               contentFit="contain"
               nativeControls
-              accessibilityLabel="Recorded set"
+              accessibilityLabel={getTranslation(language)('formcheck.RecordingPlayer.recordedSet')}
             />
             {pose && frame && showJoints ? (
               <PoseOverlay track={pose} time={currentTime} box={frame} />
@@ -137,4 +157,9 @@ export function RecordingPlayer({
       )}
     </FormCheckScreen>
   );
+}
+
+function getRecordingFrame(pose: PoseTrack | undefined, box: { width: number; height: number }) {
+  if (!pose || !box.width || !box.height) return null;
+  return containRect(box, pose.width, pose.height);
 }

@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
@@ -28,6 +30,8 @@ export function LeagueInvitationCard({
   onJoin: () => void;
   onClose: () => void;
 }>) {
+  const language = useLanguage();
+
   const p = usePalette();
   const muted = p['ink-muted'];
   const close = () => {
@@ -37,13 +41,13 @@ export function LeagueInvitationCard({
     ? [
         {
           icon: 'people-outline' as const,
-          label: 'Members',
+          label: getTranslation(language)('socialAdditional.members_6fc6dd'),
           value: String(invitation.member_count),
         },
         {
           icon: 'calendar-outline' as const,
-          label: 'Created',
-          value: new Date(invitation.created_at).toLocaleDateString(undefined, {
+          label: getTranslation(language)('socialAdditional.created_915309'),
+          value: new Date(invitation.created_at).toLocaleDateString(language, {
             dateStyle: 'medium',
             timeZone: invitation.timezone ?? 'UTC',
           }),
@@ -51,7 +55,9 @@ export function LeagueInvitationCard({
       ]
     : [];
 
-  const joinLabel = joining ? 'Joining…' : 'Join league';
+  const joinLabel = joining
+    ? getTranslation(language)('socialAdditional.joining_bda079')
+    : getTranslation(language)('socialAdditional.joinLeague_790f40');
   return (
     <Modal visible transparent animationType="fade" onRequestClose={close}>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing['space-4'] }}>
@@ -85,7 +91,7 @@ export function LeagueInvitationCard({
             }}
           >
             <LeagueIconButton
-              label="Close invitation"
+              label={getTranslation(language)('socialAdditional.closeInvitation_01bd3b')}
               icon="close"
               onPress={close}
               disabled={joining}
@@ -107,22 +113,28 @@ export function LeagueInvitationCard({
                 <LeagueAvatar
                   accountId={accountId}
                   invitationToken={invitation?.has_picture ? token : undefined}
-                  name={invitation?.name ?? 'League'}
+                  name={
+                    invitation?.name ?? getTranslation(language)('socialAdditional.league_5e61e1')
+                  }
                   size={84}
                 />
               </View>
               <Text style={[textStyles.overline, { color: p['brand-ink'] }]}>
-                LEAGUE INVITATION
+                {getTranslation(language)('socialAdditional.leagueInvitation_4b6e14')}
               </Text>
               <Text
                 accessibilityRole="header"
                 style={[textStyles['display-lg'], { color: p.ink, textAlign: 'center' }]}
               >
-                {invitation?.name ?? (loading ? 'Opening invitation…' : 'Invitation unavailable')}
+                {invitation?.name ??
+                  (loading
+                    ? getTranslation(language)('socialAdditional.openingInvitation_25a5f4')
+                    : getTranslation(language)('socialAdditional.invitationUnavailable_948182'))}
               </Text>
               {invitation ? (
                 <Text style={[textStyles.body, { color: muted, textAlign: 'center' }]}>
-                  {invitation.description ?? 'No description provided.'}
+                  {invitation.description ??
+                    getTranslation(language)('socialAdditional.noDescriptionProvided_b82342')}
                 </Text>
               ) : null}
             </View>
@@ -165,12 +177,17 @@ export function LeagueInvitationCard({
               >
                 <Ionicons name="checkmark-circle-outline" size={22} color={p['brand-ink']} />
                 <Text style={[textStyles.label, { flex: 1, color: p['brand-ink'] }]}>
-                  You’re already a member of this league.
+                  {getTranslation(language)('socialAdditional.youReAlreadyAMemberOf_64d4a5')}
                 </Text>
               </View>
             ) : null}
             {loading ? (
-              <ActivityIndicator color={p.brand} accessibilityLabel="Loading invitation" />
+              <ActivityIndicator
+                color={p.brand}
+                accessibilityLabel={getTranslation(language)(
+                  'socialAdditional.loadingInvitation_a631a7',
+                )}
+              />
             ) : null}
             {error ? (
               <Text
@@ -183,14 +200,22 @@ export function LeagueInvitationCard({
             <View style={{ gap: spacing['space-2'] }}>
               {invitation ? (
                 <LeagueAction
-                  label={invitation.already_member ? 'Open league' : joinLabel}
+                  label={
+                    invitation.already_member
+                      ? getTranslation(language)('socialAdditional.openLeague_6e0a88')
+                      : joinLabel
+                  }
                   variant="primary"
                   disabled={joining}
                   onPress={onJoin}
                 />
               ) : null}
               {retry ? (
-                <LeagueAction label="Retry invitation" variant="primary" onPress={retry} />
+                <LeagueAction
+                  label={getTranslation(language)('socialAdditional.retryInvitation_4bd02a')}
+                  variant="primary"
+                  onPress={retry}
+                />
               ) : null}
             </View>
           </ScrollView>

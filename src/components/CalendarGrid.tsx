@@ -1,10 +1,15 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage, type Language } from '@/i18n/Language';
 import { radii, sizes, textStyles, usePalette } from '@/theme/tokens';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const longDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' });
+const longDates = {
+  en: new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }),
+  es: new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeZone: 'UTC' }),
+};
 
 export function calendarDate(id: string): Date {
   return new Date(`${id}T00:00:00Z`);
@@ -20,8 +25,8 @@ export function shiftCalendarMonth(month: string, offset: number): string {
   return calendarId(date);
 }
 
-export function calendarLabel(id: string) {
-  return longDate.format(calendarDate(id));
+export function calendarLabel(id: string, language: Language = 'en') {
+  return longDates[language].format(calendarDate(id));
 }
 
 export function CalendarGrid({
@@ -38,6 +43,8 @@ export function CalendarGrid({
   onSelect: (date: string) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const days = language === 'es' ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] : weekdays;
   const start = calendarDate(month);
   const offset = (start.getUTCDay() + 6) % 7;
   start.setUTCDate(1 - offset);
@@ -49,7 +56,7 @@ export function CalendarGrid({
   return (
     <>
       <View style={styles.grid}>
-        {weekdays.map((day) => (
+        {days.map((day) => (
           <Text key={day} style={[textStyles.caption, styles.weekday, { color: p['ink-muted'] }]}>
             {day}
           </Text>
@@ -67,7 +74,7 @@ export function CalendarGrid({
             <Pressable
               key={id}
               accessibilityRole="button"
-              accessibilityLabel={`Select ${calendarLabel(id)}${isToday ? ', today' : ''}`}
+              accessibilityLabel={`${getTranslation(language)('accountsUi.select')} ${calendarLabel(id, language)}${isToday ? getTranslation(language)('accountsUi.today') : ''}`}
               accessibilityState={{ selected: isSelected, disabled }}
               disabled={disabled}
               onPress={() => onSelect(id)}

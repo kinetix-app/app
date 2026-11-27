@@ -1,9 +1,12 @@
+import type { Language } from '@/i18n/Language';
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { selectCopy, useLanguage } from '@/i18n/Language';
 import { CalendarGrid } from '@/components/CalendarGrid';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
@@ -26,6 +29,25 @@ const targetPurpose = {
   maintain_weight: 'to maintain weight',
 };
 
+function objectivePurpose(objective: keyof typeof targetPurpose, language: Language) {
+  if (language !== 'es') return targetPurpose[objective];
+  const labels = {
+    lose_fat: 'para perder grasa',
+    build_muscle: 'para ganar músculo',
+    gain_weight: 'para ganar peso',
+    maintain_weight: 'para mantener el peso',
+  };
+  return labels[objective];
+}
+
+function mealEditLabel(meal: (typeof mealTypes)[number], editing: boolean, language: Language) {
+  const mealEs = { Breakfast: 'desayuno', Lunch: 'comida', Dinner: 'cena', Snacks: 'tentempiés' };
+  const action = editing
+    ? getTranslation(language)('nutrition.NutritionDiaryScreen.finishEditing')
+    : getTranslation(language)('nutrition.NutritionDiaryScreen.edit');
+  return `${action} ${language === 'es' ? mealEs[meal] : meal}`;
+}
+
 // This is the single place the future diary endpoint will populate from meal items.
 
 const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const;
@@ -42,14 +64,18 @@ const dateFromId = (id: string) => {
 const addDays = (date: Date, days: number) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 const mondayFor = (date: Date) => addDays(date, -((date.getDay() + 6) % 7));
-const weekFor = (monday: Date) => {
+const weekFor = (monday: Date, language: Language) => {
   const today = new Date();
   return Array.from({ length: 7 }, (_, index) => {
     const date = addDays(monday, index);
     return {
       id: localDateId(date),
-      weekday: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date),
-      month: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date),
+      weekday: new Intl.DateTimeFormat(selectCopy(language === 'es', 'es-ES', 'en-US'), {
+        weekday: 'short',
+      }).format(date),
+      month: new Intl.DateTimeFormat(selectCopy(language === 'es', 'es-ES', 'en-US'), {
+        month: 'short',
+      }).format(date),
       day: String(date.getDate()),
       isToday: localDateId(date) === localDateId(today),
     };
@@ -68,8 +94,9 @@ export function NutritionDiaryScreen({
   onAddFoodOpenChange?: (isOpen: boolean) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const [weekStart, setWeekStart] = React.useState(() => mondayFor(new Date()));
-  const week = React.useMemo(() => weekFor(weekStart), [weekStart]);
+  const week = React.useMemo(() => weekFor(weekStart, language), [weekStart, language]);
   const [selectedDay, setSelectedDay] = React.useState(() => localDateId(new Date()));
   const [selectedMeal, setSelectedMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
   const [editingMeal, setEditingMeal] = React.useState<(typeof mealTypes)[number] | null>(null);
@@ -157,6 +184,10 @@ export function NutritionDiaryScreen({
     const goalValue = goal.data?.[macro.field];
     return {
       ...macro,
+      label:
+        language === 'es'
+          ? { protein: 'Proteínas', carbohydrates: 'Carbohidratos', fats: 'Grasas' }[macro.field]
+          : macro.label,
       value: consumed[macro.field],
       goalValue,
       progress:
@@ -186,12 +217,14 @@ export function NutritionDiaryScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={[screenContentStyle, styles.content]}>
           <ScreenHeader
-            title="Nutrition"
+            title={getTranslation(language)('nutrition.NutritionDiaryScreen.nutrition')}
             leading={
               onBack ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Back to feed"
+                  accessibilityLabel={getTranslation(language)(
+                    'nutrition.NutritionDiaryScreen.backToFeed',
+                  )}
                   onPress={onBack}
                   style={({ pressed }) => [
                     styles.backButton,
@@ -205,13 +238,15 @@ export function NutritionDiaryScreen({
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open calendar"
+              accessibilityLabel={getTranslation(language)(
+                'nutrition.NutritionDiaryScreen.openCalendar',
+              )}
               onPress={openCalendar}
               style={styles.dateButton}
             >
               <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
                 {selected.isToday
-                  ? 'Today'
+                  ? getTranslation(language)('nutrition.NutritionDiaryScreen.today')
                   : `${selected.weekday}, ${selected.month} ${selected.day}, ${dateFromId(selectedDay).getFullYear()}`}
               </Text>
               <Feather name="calendar" size={18} color={p['ink-muted']} />
@@ -220,12 +255,16 @@ export function NutritionDiaryScreen({
 
           <View
             accessibilityRole="tablist"
-            accessibilityLabel="Nutrition week"
+            accessibilityLabel={getTranslation(language)(
+              'nutrition.NutritionDiaryScreen.nutritionWeek',
+            )}
             style={styles.weekNavigation}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Previous week"
+              accessibilityLabel={getTranslation(language)(
+                'nutrition.NutritionDiaryScreen.previousWeek',
+              )}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(-1)}
@@ -259,7 +298,7 @@ export function NutritionDiaryScreen({
                     <Pressable
                       key={day.id}
                       accessibilityRole="tab"
-                      accessibilityLabel={`${day.weekday} October ${day.day}${day.isToday ? ', today' : ''}`}
+                      accessibilityLabel={`${day.weekday} ${day.month} ${day.day}${day.isToday ? getTranslation(language)('nutrition.NutritionDiaryScreen.today2') : ''}`}
                       accessibilityState={{ selected: isSelected }}
                       onPress={() => {
                         setSelectedDay(day.id);
@@ -292,7 +331,9 @@ export function NutritionDiaryScreen({
             </Animated.View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Next week"
+              accessibilityLabel={getTranslation(language)(
+                'nutrition.NutritionDiaryScreen.nextWeek',
+              )}
               accessibilityState={{ disabled: isWeekAnimating }}
               disabled={isWeekAnimating}
               onPress={() => changeWeek(1)}
@@ -309,17 +350,24 @@ export function NutritionDiaryScreen({
                   {formatNumber(consumed.calories)} kcal
                 </Text>
                 <Text style={[textStyles.body, styles.tabular, { color: p['ink-muted'] }]}>
-                  of {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
-                  {goal.data?.objective ? ` ${targetPurpose[goal.data.objective]}` : ''}
+                  {getTranslation(language)('nutrition.NutritionDiaryScreen.of')}{' '}
+                  {goal.data ? formatNumber(goal.data.calories) : '—'} kcal
+                  {goal.data?.objective
+                    ? ` ${objectivePurpose(goal.data.objective, language)}`
+                    : ''}
                 </Text>
               </View>
               {onEditGoal ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Edit nutrition goal"
+                  accessibilityLabel={getTranslation(language)(
+                    'nutrition.NutritionDiaryScreen.editNutritionGoal',
+                  )}
                   onPress={onEditGoal}
                 >
-                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Edit goal</Text>
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                    {getTranslation(language)('nutrition.NutritionDiaryScreen.editGoal')}
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
@@ -333,7 +381,11 @@ export function NutritionDiaryScreen({
                   </Text>
                 </View>
                 <View
-                  accessibilityLabel={`${macro.label}: ${macro.value} of ${macro.goalValue ?? 'unknown'} grams`}
+                  accessibilityLabel={
+                    language === 'es'
+                      ? `${macro.label}: ${macro.value} de ${macro.goalValue ?? 'desconocido'} gramos`
+                      : `${macro.label}: ${macro.value} of ${macro.goalValue ?? 'unknown'} grams`
+                  }
                   accessibilityRole="progressbar"
                   accessibilityValue={
                     macro.goalValue === undefined || macro.goalValue === 0
@@ -360,7 +412,9 @@ export function NutritionDiaryScreen({
             ))}
             {goal.data === null ? (
               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                No nutrition target yet. You can keep recording food and set one later.
+                {getTranslation(language)(
+                  'nutrition.NutritionDiaryScreen.noNutritionTargetYetYouCanKeepRecordingFoodAndSetOneLater',
+                )}
               </Text>
             ) : null}
             {goal.isError ? (
@@ -369,14 +423,20 @@ export function NutritionDiaryScreen({
                   accessibilityRole="alert"
                   style={[textStyles['body-sm'], { color: p.danger }]}
                 >
-                  We could not load your nutrition goal.
+                  {getTranslation(language)(
+                    'nutrition.NutritionDiaryScreen.weCouldNotLoadYourNutritionGoal',
+                  )}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Retry loading nutrition goal"
+                  accessibilityLabel={getTranslation(language)(
+                    'nutrition.NutritionDiaryScreen.retryLoadingNutritionGoal',
+                  )}
                   onPress={() => void goal.refetch()}
                 >
-                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Retry</Text>
+                  <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+                    {getTranslation(language)('nutrition.NutritionDiaryScreen.retry')}
+                  </Text>
                 </Pressable>
               </View>
             ) : null}
@@ -386,7 +446,15 @@ export function NutritionDiaryScreen({
             <View key={meal} style={styles.mealGroup}>
               <View style={styles.mealHeading}>
                 <Text style={[textStyles.overline, { color: p['ink-muted'] }]}>
-                  {meal.toUpperCase()}
+                  {(language === 'es'
+                    ? {
+                        Breakfast: 'Desayuno',
+                        Lunch: 'Comida',
+                        Dinner: 'Cena',
+                        Snacks: 'Tentempiés',
+                      }[meal]
+                    : meal
+                  ).toUpperCase()}
                 </Text>
                 <View style={styles.mealHeaderActions}>
                   {consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
@@ -406,11 +474,13 @@ export function NutritionDiaryScreen({
                   ) : null}
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`${editingMeal === meal ? 'Finish editing' : 'Edit'} ${meal}`}
+                    accessibilityLabel={mealEditLabel(meal, editingMeal === meal, language)}
                     onPress={() => toggleMealEditing(meal)}
                   >
                     <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-                      {editingMeal === meal ? 'Done' : 'Edit'}
+                      {editingMeal === meal
+                        ? getTranslation(language)('nutrition.NutritionDiaryScreen.done')
+                        : getTranslation(language)('nutrition.NutritionDiaryScreen.edit')}
                     </Text>
                   </Pressable>
                 </View>
@@ -426,7 +496,10 @@ export function NutritionDiaryScreen({
                             <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                             <View style={styles.itemLine}>
                               <TextField
-                                accessibilityLabel={`Edit ${item.name} quantity`}
+                                accessibilityLabel={getTranslation(language)(
+                                  'dynamicMessages.editQuantity_a400d2',
+                                  { value1: item.name },
+                                )}
                                 keyboardType="decimal-pad"
                                 value={draftAmounts[item.id] ?? ''}
                                 onChangeText={(value) =>
@@ -436,7 +509,11 @@ export function NutritionDiaryScreen({
                                 inputStyle={styles.quantityInput}
                                 trailing={
                                   <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
-                                    {item.recipe_id ? 'servings' : 'g'}
+                                    {item.recipe_id
+                                      ? getTranslation(language)(
+                                          'nutrition.NutritionDiaryScreen.servings',
+                                        )
+                                      : 'g'}
                                   </Text>
                                 }
                               />
@@ -453,7 +530,10 @@ export function NutritionDiaryScreen({
                               <View style={styles.itemEditActions}>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={`Save ${item.name} quantity`}
+                                  accessibilityLabel={getTranslation(language)(
+                                    'dynamicMessages.saveQuantity_7bdad5',
+                                    { value1: item.name },
+                                  )}
                                   accessibilityState={{
                                     disabled:
                                       updateItem.isPending || Number(draftAmounts[item.id]) <= 0,
@@ -474,7 +554,10 @@ export function NutritionDiaryScreen({
                                 </Pressable>
                                 <Pressable
                                   accessibilityRole="button"
-                                  accessibilityLabel={`Delete ${item.name}`}
+                                  accessibilityLabel={getTranslation(language)(
+                                    'dynamicMessages.delete_602940',
+                                    { value1: item.name },
+                                  )}
                                   disabled={removeItem.isPending}
                                   onPress={() => removeItem.mutate(item.id)}
                                   style={styles.deleteItem}
@@ -490,7 +573,7 @@ export function NutritionDiaryScreen({
                               <Text style={[textStyles.body, { color: p.ink }]}>{item.name}</Text>
                               <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
                                 {item.recipe_id
-                                  ? servingLabel(item.servings)
+                                  ? servingLabel(item.servings, language)
                                   : `${item.quantity_grams} g`}
                               </Text>
                             </View>
@@ -508,19 +591,25 @@ export function NutritionDiaryScreen({
                       accessibilityRole="alert"
                       style={[textStyles['body-sm'], { color: p.danger }]}
                     >
-                      We could not update this entry.
+                      {getTranslation(language)(
+                        'nutrition.NutritionDiaryScreen.weCouldNotUpdateThisEntry',
+                      )}
                     </Text>
                   ) : null}
                   {!consumed.items.some((item) => item.meal_type === mealTypeId(meal)) ? (
                     <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-                      No food logged yet
+                      {getTranslation(language)('nutrition.NutritionDiaryScreen.noFoodLoggedYet')}
                     </Text>
                   ) : null}
                 </View>
                 {editingMeal !== meal ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Add food to ${meal}`}
+                    accessibilityLabel={
+                      language === 'es'
+                        ? `Añadir alimentos a ${{ Breakfast: 'desayuno', Lunch: 'comida', Dinner: 'cena', Snacks: 'tentempiés' }[meal]}`
+                        : `Add food to ${meal}`
+                    }
                     onPress={() => {
                       setSelectedMeal(meal);
                       onAddFoodOpenChange?.(true);
@@ -566,7 +655,8 @@ function CalendarModal({
   onClose: () => void;
 }>) {
   const p = usePalette();
-  const monthLabel = new Intl.DateTimeFormat('en-US', {
+  const language = useLanguage();
+  const monthLabel = new Intl.DateTimeFormat(selectCopy(language === 'es', 'es-ES', 'en-US'), {
     month: 'long',
     year: 'numeric',
   }).format(month);
@@ -580,7 +670,9 @@ function CalendarModal({
           <View style={styles.calendarHeader}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Previous month"
+              accessibilityLabel={getTranslation(language)(
+                'nutrition.NutritionDiaryScreen.previousMonth',
+              )}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
               style={styles.calendarArrow}
             >
@@ -589,7 +681,9 @@ function CalendarModal({
             <Text style={[textStyles['title-md'], { color: p.ink }]}>{monthLabel}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Next month"
+              accessibilityLabel={getTranslation(language)(
+                'nutrition.NutritionDiaryScreen.nextMonth',
+              )}
               onPress={() => onChangeMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
               style={styles.calendarArrow}
             >
@@ -607,7 +701,9 @@ function CalendarModal({
             onPress={onClose}
             style={[styles.calendarClose, { backgroundColor: p['surface-300'] }]}
           >
-            <Text style={[textStyles.label, { color: p.ink }]}>Cancel</Text>
+            <Text style={[textStyles.label, { color: p.ink }]}>
+              {getTranslation(language)('nutrition.NutritionDiaryScreen.cancel')}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -615,8 +711,11 @@ function CalendarModal({
   );
 }
 
-function servingLabel(servings: number | null | undefined) {
-  const unit = servings === 1 ? 'serving' : 'servings';
+function servingLabel(servings: number | null | undefined, language: Language) {
+  const unit =
+    servings === 1
+      ? getTranslation(language)('nutrition.NutritionDiaryScreen.serving')
+      : getTranslation(language)('nutrition.NutritionDiaryScreen.servings');
   return `${servings} ${unit}`;
 }
 

@@ -1,7 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage, type Language } from '@/i18n/Language';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { countLabel } from '@/features/feed/format';
 import { textStyles, spacing, usePalette } from '@/theme/tokens';
@@ -45,26 +47,24 @@ export function ProfileScreen({
   friendRequests?: number;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const objective = useQuery({
     queryKey: ['accounts', account.id, 'objective'],
     queryFn: ({ signal }) => getObjective(signal),
   });
-  const goal = objectiveOptions.find((item) => item.value === objective.data?.objective)?.label;
-  const values = profileDefaults(account);
-  const imperial = values.measurement_system === 'imperial';
-  const heightLabel = imperial
-    ? `${values.height_ft} ft ${values.height_in} in`
-    : `${values.height_cm} cm`;
-  const height = account.profile.height_cm === null ? null : heightLabel;
-  const weightUnit = imperial ? 'lb' : 'kg';
-  const weight = account.profile.weight_kg === null ? null : `${values.weight} ${weightUnit}`;
-  const details = [
-    account.profile.age === null ? null : `${account.profile.age} years`,
-    height,
-    weight,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const goalOption = objectiveOptions.find((item) => item.value === objective.data?.objective);
+  const goal = es ? goalOption?.labelEs : goalOption?.label;
+  const activity = activityOptions.find((item) => item.value === account.profile.activity_level);
+  const { imperial, details } = profileSummary(account, language);
+  const activityLabel = es ? activity?.labelEs : activity?.label;
+  const friendDetail = friendRequests
+    ? countLabel(
+        friendRequests,
+        getTranslation(language)('accountsUi.new_request'),
+        getTranslation(language)('accountsUi.new_requests'),
+      )
+    : getTranslation(language)('accountsUi.your_friends_requests_and_people_search');
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -72,7 +72,7 @@ export function ProfileScreen({
     >
       <ScrollView contentContainerStyle={[s.content, { gap: spacing['space-4'] }]}>
         <ScreenHeader
-          title="Profile"
+          title={getTranslation(language)('accountsUi.profile')}
           leading={<ProfileBack onPress={onBack} label={backLabel} />}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing['space-4'] }}>
@@ -89,33 +89,40 @@ export function ProfileScreen({
             ) : null}
           </View>
         </View>
-        <ProfileGroup title="Account">
+        <ProfileGroup title={getTranslation(language)('accountsUi.account')}>
           <ProfileRow
-            title="Edit profile"
-            detail={imperial ? 'Imperial · lb, ft and in' : 'Metric · kg and cm'}
+            title={getTranslation(language)('accountsUi.edit_profile')}
+            detail={
+              imperial
+                ? getTranslation(language)('accountsUi.imperial_lb_ft_and_in')
+                : getTranslation(language)('accountsUi.metric_kg_and_cm')
+            }
             icon="user"
             onPress={() => onOpen('profile')}
           />
         </ProfileGroup>
-        <ProfileGroup title="Your plan">
+        <ProfileGroup title={getTranslation(language)('accountsUi.your_plan')}>
           <ProfileRow
-            title="Weekly activity"
+            title={getTranslation(language)('accountsUi.weekly_activity')}
             detail={
-              activityOptions.find((item) => item.value === account.profile.activity_level)
-                ?.label ?? 'Choose your activity level'
+              activityLabel ?? getTranslation(language)('accountsUi.choose_your_activity_level')
             }
             icon="activity"
             onPress={() => onOpen('activity')}
           />
           <ProfileRow
-            title="Change objective"
-            detail={objective.isPending ? 'Loading…' : (goal ?? 'Objective unavailable')}
+            title={getTranslation(language)('accountsUi.change_objective')}
+            detail={
+              objective.isPending
+                ? getTranslation(language)('accountsUi.loading')
+                : (goal ?? getTranslation(language)('accountsUi.objective_unavailable'))
+            }
             icon="target"
             onPress={() => onOpen('objective')}
           />
           {objective.isError ? (
             <ProfileRow
-              title="Retry objective"
+              title={getTranslation(language)('accountsUi.retry_objective')}
               icon="refresh-cw"
               onPress={() => {
                 void objective.refetch();
@@ -123,29 +130,37 @@ export function ProfileScreen({
             />
           ) : null}
           <ProfileRow
-            title="Edit nutrition goal"
+            title={getTranslation(language)('accountsUi.edit_nutrition_goal')}
             icon="pie-chart"
             onPress={() => onOpen('nutrition')}
           />
         </ProfileGroup>
-        <ProfileGroup title="Social">
+        <ProfileGroup title={'Social'}>
           <ProfileRow
-            title="Friends"
-            detail={
-              friendRequests
-                ? countLabel(friendRequests, 'new request', 'new requests')
-                : 'Your friends, requests and people search'
-            }
+            title={getTranslation(language)('accountsUi.friends')}
+            detail={friendDetail}
             icon="users"
             onPress={() => onOpen('friends')}
           />
         </ProfileGroup>
-        <ProfileGroup title="Activity">
-          <ProfileRow title="Progress" icon="bar-chart-2" onPress={() => onOpen('progress')} />
-          <ProfileRow title="Training history" icon="clock" onPress={() => onOpen('history')} />
+        <ProfileGroup title={getTranslation(language)('accountsUi.activity')}>
+          <ProfileRow
+            title={getTranslation(language)('accountsUi.progress')}
+            icon="bar-chart-2"
+            onPress={() => onOpen('progress')}
+          />
+          <ProfileRow
+            title={getTranslation(language)('accountsUi.training_history')}
+            icon="clock"
+            onPress={() => onOpen('history')}
+          />
         </ProfileGroup>
         <ProfileRow
-          title={signingOut ? 'Signing out…' : 'Sign out'}
+          title={
+            signingOut
+              ? getTranslation(language)('accountsUi.signing_out')
+              : getTranslation(language)('accountsUi.sign_out')
+          }
           icon="log-out"
           onPress={onSignOut}
           disabled={signingOut}
@@ -159,4 +174,25 @@ export function ProfileScreen({
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function profileSummary(account: Account, language: Language) {
+  const values = profileDefaults(account);
+  const imperial = values.measurement_system === 'imperial';
+  const heightLabel = imperial
+    ? `${values.height_ft} ft ${values.height_in} in`
+    : `${values.height_cm} cm`;
+  const height = account.profile.height_cm === null ? null : heightLabel;
+  const weightUnit = imperial ? 'lb' : 'kg';
+  const weight = account.profile.weight_kg === null ? null : `${values.weight} ${weightUnit}`;
+  const details = [
+    account.profile.age === null
+      ? null
+      : `${account.profile.age} ${getTranslation(language)('accountsUi.years')}`,
+    height,
+    weight,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return { imperial, details };
 }

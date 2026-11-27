@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import React, { useRef, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, ui } from '@/features/training/components/ui';
@@ -15,6 +17,16 @@ export type WorkoutActions = Readonly<{
   resume: () => void;
 }>;
 
+function workoutError(error: unknown, language: 'en' | 'es') {
+  if (error instanceof ApiError && error.status === 404)
+    return getTranslation(language)('feed.thisSharedWorkoutIsNoLongerAvailable');
+  return getTranslation(language)('feed.couldNotLoadThisWorkoutTryAgain');
+}
+
+function startError(language: 'en' | 'es') {
+  return getTranslation(language)('feed.couldNotStartThisWorkoutTryAgain');
+}
+
 export function PostOptions({
   post,
   onClose,
@@ -26,6 +38,7 @@ export function PostOptions({
   onDelete: (post: Post) => void;
   workoutActions?: WorkoutActions;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [error, setError] = useState('');
@@ -42,13 +55,9 @@ export function PostOptions({
       setTemplate(workout);
       if (!workout.exercises.length || (!accepted && workout.skipped_exercises.length)) return;
       if (await workoutActions.start(workout)) onClose();
-      else setError('Could not start this workout. Try again or resume your active workout.');
+      else setError(startError(language));
     } catch (error_) {
-      setError(
-        error_ instanceof ApiError && error_.status === 404
-          ? 'This shared workout is no longer available.'
-          : 'Could not load this workout. Try again.',
-      );
+      setError(workoutError(error_, language));
     } finally {
       busy.current = false;
       setPending(false);
@@ -73,10 +82,15 @@ export function PostOptions({
         >
           <ScrollView contentContainerStyle={ui.card}>
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              Post options
+              {getTranslation(language)('feed.postOptions')}
             </Text>
             {post.is_mine ? (
-              <Button title="Edit post · Coming soon" secondary disabled onPress={() => {}} />
+              <Button
+                title={getTranslation(language)('feed.editPostComingSoon')}
+                secondary
+                disabled
+                onPress={() => {}}
+              />
             ) : null}
             {post.workout && workoutActions ? (
               <PerformAction
@@ -91,7 +105,11 @@ export function PostOptions({
                 }}
               />
             ) : null}
-            {pending ? <Text accessibilityRole="progressbar">Starting workout…</Text> : null}
+            {pending ? (
+              <Text accessibilityRole="progressbar">
+                {getTranslation(language)('feed.startingWorkout')}
+              </Text>
+            ) : null}
             {error ? (
               <Text accessibilityRole="alert" style={{ color: p.danger }}>
                 {error}
@@ -99,13 +117,18 @@ export function PostOptions({
             ) : null}
             {post.is_mine ? (
               <Button
-                title="Delete post"
+                title={getTranslation(language)('feed.deletePost')}
                 tone="danger"
                 disabled={pending}
                 onPress={() => onDelete(post)}
               />
             ) : null}
-            <Button title="Close" secondary disabled={pending} onPress={close} />
+            <Button
+              title={getTranslation(language)('feed.close')}
+              secondary
+              disabled={pending}
+              onPress={close}
+            />
           </ScrollView>
         </View>
       </View>
@@ -128,19 +151,26 @@ function PerformAction({
   onPerform: (accepted?: WorkoutTemplate) => void;
   onResume: () => void;
 }>) {
+  const language = useLanguage();
   const p = usePalette();
   if (activeDraft) {
     return (
       <>
-        <Text style={{ color: p.ink }}>You already have an active workout.</Text>
-        <Button title="Resume active workout" disabled={disabled} onPress={onResume} />
+        <Text style={{ color: p.ink }}>
+          {getTranslation(language)('feed.youAlreadyHaveAnActiveWorkout')}
+        </Text>
+        <Button
+          title={getTranslation(language)('feed.resumeActiveWorkout')}
+          disabled={disabled}
+          onPress={onResume}
+        />
       </>
     );
   }
   if (template && !template.exercises.length) {
     return (
       <Text accessibilityRole="alert" style={{ color: p.ink }}>
-        None of the exercises in this workout are available to you.
+        {getTranslation(language)('feed.noneOfTheExercisesInThisWorkout')}
       </Text>
     );
   }
@@ -148,10 +178,11 @@ function PerformAction({
     return (
       <>
         <Text style={{ color: p.ink }}>
-          These exercises will be skipped: {template.skipped_exercises.join(', ')}.
+          {getTranslation(language)('feed.theseExercisesWillBeSkipped')}:{' '}
+          {template.skipped_exercises.join(', ')}.
         </Text>
         <Button
-          title="Start available exercises"
+          title={getTranslation(language)('feed.startAvailableExercises')}
           disabled={disabled}
           onPress={() => onPerform(template)}
         />
@@ -159,12 +190,13 @@ function PerformAction({
     );
   }
   return (
-    <Button
-      title={mine ? 'Perform again' : 'Perform workout'}
-      disabled={disabled}
-      onPress={() => onPerform()}
-    />
+    <Button title={performTitle(mine, language)} disabled={disabled} onPress={() => onPerform()} />
   );
+}
+
+function performTitle(mine: boolean, language: 'en' | 'es') {
+  if (mine) return getTranslation(language)('feed.performAgain');
+  return getTranslation(language)('feed.performWorkout');
 }
 
 const styles = StyleSheet.create({

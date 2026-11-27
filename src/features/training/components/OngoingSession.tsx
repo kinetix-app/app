@@ -1,4 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useRef, useState } from 'react';
+import { useLanguage, type Language } from '@/i18n/Language';
 import { BackHandler, KeyboardAvoidingView, Modal, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, usePalette } from '@/theme/tokens';
@@ -17,6 +19,8 @@ export function OngoingSession() {
   const session = useSession();
   const { draft, change } = session;
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [finishPrompt, setFinishPrompt] = useState(false);
@@ -86,7 +90,9 @@ export function OngoingSession() {
         {slot.sets.map((set, i) => (
           <React.Fragment key={set.id}>
             <SetFields
-              label={`Exercise ${index + 1} set ${i + 1}`}
+              label={
+                es ? `Ejercicio ${index + 1}, serie ${i + 1}` : `Exercise ${index + 1} set ${i + 1}`
+              }
               set={set}
               cardio={slot.exercise.activity_type === 'cardio'}
               number={i + 1}
@@ -101,10 +107,13 @@ export function OngoingSession() {
             {formCheck && profileForExercise(slot.exercise.name)
               ? (() => {
                   const recorded = formCheck.entryFor(set.id);
+                  const labels = es
+                    ? { recorded: 'Revisar', record: 'Grabar', set: 'serie' }
+                    : { recorded: 'Review', record: 'Record', set: 'set' };
                   if (!recorded && i !== slot.sets.findIndex((value) => !value.saved)) return null;
                   return (
                     <Button
-                      title={recorded ? `Review set ${i + 1}` : `Record set ${i + 1}`}
+                      title={`${recorded ? labels.recorded : labels.record} ${labels.set} ${i + 1}`}
                       icon={recorded ? 'eye' : 'camera'}
                       onPress={() =>
                         setChecking({
@@ -133,7 +142,7 @@ export function OngoingSession() {
     <View style={ui.gap}>
       <View
         testID="workout-pull-handle"
-        accessibilityLabel="Pull down to minimize workout"
+        accessibilityLabel={getTranslation(language)('training.pullDownToMinimizeWorkout_4ceeb5')}
         accessibilityState={{ disabled: session.pending }}
         onStartShouldSetResponder={() => !session.pending}
         onResponderTerminationRequest={() => false}
@@ -171,19 +180,19 @@ export function OngoingSession() {
           <WorkoutTimer startedAt={draft.startedAt} endedAt={draft.frozen?.ended_at} compact />
         </View>
         <Button
-          title={finishButtonTitle(session.pending, Boolean(draft.frozen))}
+          title={finishButtonTitle(session.pending, Boolean(draft.frozen), language)}
           onPress={finish}
           disabled={session.pending || dragging || session.storageError}
         />
       </View>
       {draft.frozen ? (
         <Text accessibilityRole="alert" style={{ color: p['ink-muted'] }}>
-          Results are locked. Retry Finish to save your workout.
+          {getTranslation(language)('training.resultsAreLockedRetryFinishToSave_24e526')}
         </Text>
       ) : null}
       {draft.frozen ? (
         <Button
-          title="Review locked sets"
+          title={getTranslation(language)('training.reviewLockedSets_a081f6')}
           onPress={() => void session.recoverFrozen()}
           disabled={session.pending}
           secondary
@@ -196,7 +205,7 @@ export function OngoingSession() {
       ) : null}
       {session.storageError ? (
         <Button
-          title="Retry storage"
+          title={getTranslation(language)('training.retryStorage_13babc')}
           onPress={() => {
             void session.retryStorage();
           }}
@@ -285,7 +294,9 @@ export function OngoingSession() {
                     sets: [...value.sets, emptyActualSet('kg')],
                   }))
                 }
-                addSetLabel={`Add set to exercise ${index + 1}`}
+                addSetLabel={
+                  es ? `Añadir serie al ejercicio ${index + 1}` : `Add set to exercise ${index + 1}`
+                }
                 canAddSet={item.sets.length < 100}
                 confirmSets
               >
@@ -296,16 +307,18 @@ export function OngoingSession() {
           ListFooterComponent={
             <View style={ui.gap}>
               {!draft.exercises.length ? (
-                <Text style={{ color: p['ink-muted'] }}>Add exercises to record your workout.</Text>
+                <Text style={{ color: p['ink-muted'] }}>
+                  {getTranslation(language)('training.addExercisesToRecordYourWorkout_9c4148')}
+                </Text>
               ) : null}
               <Button
-                title="Add exercise"
+                title={getTranslation(language)('training.addExercise_89dbcf')}
                 onPress={() => setPicker(true)}
                 tone="positive"
                 disabled={locked || dragging || draft.exercises.length >= 500}
               />
               <Button
-                title="More actions"
+                title={getTranslation(language)('training.moreActions_80a4a7')}
                 icon="more-horizontal"
                 onPress={() => setActions(true)}
                 secondary
@@ -334,17 +347,21 @@ export function OngoingSession() {
       ) : null}
       {actions ? (
         <ActionMenu
-          title="Workout actions"
+          title={getTranslation(language)('training.workoutActions_840795')}
           onClose={() => setActions(false)}
           actions={[
-            { title: 'Sync workout', onPress: () => void session.sync(), disabled: locked },
             {
-              title: finishButtonTitle(false, Boolean(draft.frozen)),
+              title: getTranslation(language)('training.syncWorkout_34738a'),
+              onPress: () => void session.sync(),
+              disabled: locked,
+            },
+            {
+              title: finishButtonTitle(false, Boolean(draft.frozen), language),
               onPress: finish,
               disabled: session.storageError,
             },
             {
-              title: 'Discard workout',
+              title: getTranslation(language)('training.discardWorkout_2f6be5'),
               onPress: () => setDiscard(true),
               tone: 'danger',
               disabled: locked,
@@ -388,14 +405,15 @@ export function OngoingSession() {
             style={[ui.card, { backgroundColor: p['surface-200'], width: '100%', maxWidth: 420 }]}
           >
             <Text accessibilityRole="header" style={[ui.heading, { color: p.ink }]}>
-              Update the routine?
+              {getTranslation(language)('training.updateTheRoutine_31c254')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              Finish this workout. Update the original routine with these exercises and saved sets,
-              or keep its current plan. Unticked sets will be left out.
+              {getTranslation(language)(
+                'training.finishThisWorkoutUpdateTheOriginalRoutine_974469',
+              )}
             </Text>
             <Button
-              title="Keep routine"
+              title={getTranslation(language)('training.keepRoutine_c9f850')}
               onPress={() => {
                 setFinishPrompt(false);
                 void session.finish(false);
@@ -403,14 +421,18 @@ export function OngoingSession() {
               secondary
             />
             <Button
-              title="Update routine"
+              title={getTranslation(language)('training.updateRoutine_6be511')}
               disabled={!draft.exercises.length}
               onPress={() => {
                 setFinishPrompt(false);
                 void session.finish(true);
               }}
             />
-            <Button title="Cancel" onPress={() => setFinishPrompt(false)} secondary />
+            <Button
+              title={getTranslation(language)('training.cancel_a25d0b')}
+              onPress={() => setFinishPrompt(false)}
+              secondary
+            />
           </View>
         </View>
       </Modal>
@@ -441,14 +463,18 @@ export function OngoingSession() {
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              Discard this workout?
+              {getTranslation(language)('training.discardThisWorkout_a7a3ef')}
             </Text>
             <Text style={{ color: p['ink-muted'] }}>
-              The draft workout and its recorded results will be removed.
+              {getTranslation(language)('training.theDraftWorkoutAndItsRecordedResults_271fea')}
             </Text>
-            <Button title="Keep recording" onPress={() => setDiscard(false)} secondary />
             <Button
-              title="Discard"
+              title={getTranslation(language)('training.keepRecording_97af35')}
+              onPress={() => setDiscard(false)}
+              secondary
+            />
+            <Button
+              title={getTranslation(language)('training.discard_671592')}
               tone="danger"
               onPress={() => {
                 setDiscard(false);
@@ -462,7 +488,8 @@ export function OngoingSession() {
   );
 }
 
-function finishButtonTitle(pending: boolean, frozen: boolean) {
-  if (pending) return 'Working…';
-  return frozen ? 'Retry Finish' : 'Finish';
+function finishButtonTitle(pending: boolean, frozen: boolean, language: Language) {
+  if (pending) return getTranslation(language)('training.working_195c9e');
+  if (frozen) return getTranslation(language)('training.retryFinish_24636b');
+  return getTranslation(language)('training.finish_5ad2b2');
 }

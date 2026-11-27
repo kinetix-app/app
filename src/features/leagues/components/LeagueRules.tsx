@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
@@ -7,44 +9,50 @@ import { LeagueCard, LeagueIconButton, leagueStyles } from './LeagueUI';
 
 const rules = [
   {
-    title: 'Score',
+    id: 'score',
     icon: 'calculator-outline',
-    summary: 'Gym volume × elapsed hours ÷ body weight (kg)',
-    detail:
-      'Volume is the sum of confirmed repetitions × weight in kg. Elapsed time includes pauses. Your profile weight is recorded at completion. Whole points are rounded half up. Missing or non-positive inputs earn no credit.',
+    titleKey: 'socialAdditional.ruleScoreTitle',
+    summaryKey: 'socialAdditional.ruleScoreSummary',
+    detailKey: 'socialAdditional.ruleScoreDetail',
   },
   {
-    title: 'Daily credit',
+    id: 'dailyCredit',
     icon: 'flash-outline',
-    summary: 'Your best gym workout each day',
-    detail:
-      'Only your highest rounded score each day counts. Start at or after joining and finish and submit before the round closes. For ties, the earliest completion wins, then the lowest workout ID. A workout can count in multiple leagues.',
+    titleKey: 'socialAdditional.ruleDailyCreditTitle',
+    summaryKey: 'socialAdditional.ruleDailyCreditSummary',
+    detailKey: 'socialAdditional.ruleDailyCreditDetail',
   },
   {
-    title: 'Weekly rounds',
+    id: 'weeklyRounds',
     icon: 'calendar-outline',
-    summary: 'Monday at midnight to the following Monday',
-    detail:
-      'The workout start determines its league-local day. Each round starts Monday 00:00 inclusive and ends the next Monday 00:00 exclusive, including daylight-saving changes.',
+    titleKey: 'socialAdditional.ruleWeeklyRoundsTitle',
+    summaryKey: 'socialAdditional.ruleWeeklyRoundsSummary',
+    detailKey: 'socialAdditional.ruleWeeklyRoundsDetail',
   },
   {
-    title: 'Standings',
+    id: 'standings',
     icon: 'podium-outline',
-    summary: 'All rounds count toward the overall total',
-    detail: 'General standings include the current and all past rounds. Equal totals share a rank.',
+    titleKey: 'socialAdditional.ruleStandingsTitle',
+    summaryKey: 'socialAdditional.ruleStandingsSummary',
+    detailKey: 'socialAdditional.ruleStandingsDetail',
   },
   {
-    title: 'Round outcome',
+    id: 'roundOutcome',
     icon: 'flag-outline',
-    summary: 'Lowest scores share the losing position',
-    detail:
-      'With at least two members, everyone tied for the lowest round total loses, including zero scores. Unseen results appear oldest first and are acknowledged after display.',
+    titleKey: 'socialAdditional.ruleRoundOutcomeTitle',
+    summaryKey: 'socialAdditional.ruleRoundOutcomeSummary',
+    detailKey: 'socialAdditional.ruleRoundOutcomeDetail',
   },
 ] as const;
 
 export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>) {
+  const language = useLanguage();
   const p = usePalette();
   const [tip, setTip] = useState<(typeof rules)[number] | null>(null);
+  let timezoneSuffix = '';
+  if (tip?.id === 'weeklyRounds' && timezone) {
+    timezoneSuffix = getTranslation(language)('leagues.leagueTimezone', { timezone });
+  }
   const dismiss = () => setTip(null);
   useEffect(() => {
     if (!tip) return;
@@ -55,15 +63,17 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
   return (
     <LeagueCard>
       <Text accessibilityRole="header" style={[textStyles['title-md'], { color: p.ink }]}>
-        League rules
+        {getTranslation(language)('leagues.leagueRules')}
       </Text>
       <View>
         {rules.map((rule, index) => (
           <Pressable
-            key={rule.title}
+            key={rule.id}
             accessibilityRole="button"
-            accessibilityLabel={`About ${rule.title.toLowerCase()}`}
-            accessibilityHint={rule.summary}
+            accessibilityLabel={getTranslation(language)('socialAdditional.aboutRule', {
+              title: getTranslation(language)(rule.titleKey).toLowerCase(),
+            })}
+            accessibilityHint={getTranslation(language)(rule.summaryKey)}
             onPress={() => setTip(rule)}
             style={({ pressed }) => [
               leagueStyles.row,
@@ -78,8 +88,12 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
           >
             <Ionicons name={rule.icon} size={20} color={p['brand-ink']} />
             <View style={{ flex: 1, minWidth: 0, gap: spacing['space-1'] }}>
-              <Text style={[textStyles.label, { color: p.ink }]}>{rule.title}</Text>
-              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>{rule.summary}</Text>
+              <Text style={[textStyles.label, { color: p.ink }]}>
+                {getTranslation(language)(rule.titleKey)}
+              </Text>
+              <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
+                {getTranslation(language)(rule.summaryKey)}
+              </Text>
             </View>
             <Ionicons name="information-circle-outline" size={20} color={p['ink-muted']} />
           </Pressable>
@@ -115,19 +129,21 @@ export function LeagueRules({ timezone }: Readonly<{ timezone: string | null }>)
                 <View style={leagueStyles.row}>
                   <Ionicons name="information-circle-outline" size={24} color={p.info} />
                   <Text style={[textStyles['title-md'], { flex: 1, color: p.ink }]}>
-                    {tip.title}
+                    {getTranslation(language)(tip.titleKey)}
                   </Text>
-                  <LeagueIconButton label="Dismiss rule tip" icon="close" onPress={dismiss} />
+                  <LeagueIconButton
+                    label={getTranslation(language)('leagues.dismissRuleTip')}
+                    icon="close"
+                    onPress={dismiss}
+                  />
                 </View>
                 <Text
                   accessibilityLiveRegion="polite"
                   role="status"
                   style={[textStyles.body, { color: p.ink }]}
                 >
-                  {tip.detail}
-                  {tip.title === 'Weekly rounds' && timezone
-                    ? ` League timezone: ${timezone}.`
-                    : ''}
+                  {getTranslation(language)(tip.detailKey)}
+                  {timezoneSuffix}
                 </Text>
               </ScrollView>
             </View>

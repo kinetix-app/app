@@ -1,9 +1,11 @@
+import { getTranslation } from '@/i18n/catalog';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { Modal } from 'react-native';
 import { InitialAvatar } from '@/components/InitialAvatar';
 import { getAccount } from '@/features/accounts/api';
 import { ProfileAvatar } from '@/features/accounts/components/ProfileAvatar';
+import { useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import type { CompletedSession } from '../schemas';
 import { WorkoutDetail, type WorkoutDetailData } from './WorkoutDetail';
@@ -38,7 +40,9 @@ export function SessionWorkoutDetail({
     queryFn: ({ signal }) => getAccount(undefined, signal),
     enabled: false,
   });
-  const name = account?.profile.display_name?.trim() || 'You';
+  const language = useLanguage();
+  const name =
+    account?.profile.display_name?.trim() || getTranslation(language)('training.you_715a9a');
   return (
     <WorkoutDetail
       workout={detail.isSuccess ? detail.data : undefined}

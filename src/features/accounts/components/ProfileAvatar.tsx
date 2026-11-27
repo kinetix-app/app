@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +34,7 @@ function getPictureUri(
 
 export function ProfileAvatar({ account, preview, size = 112, compact }: ProfileAvatarProps) {
   const p = usePalette();
+  const language = useLanguage();
   const [decoded, setDecoded] = useState<{ blob: Blob; uri?: string; failed?: boolean }>();
   const privatePhoto = account.profile.picture_url === profilePicturePath && !preview;
   const photo = useQuery({
@@ -67,19 +70,22 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
   if (uri) {
     picture = (
       <Image
-        accessibilityLabel="Profile picture"
+        accessibilityLabel={getTranslation(language)('accountsUi.profile_picture')}
         source={{ uri }}
         style={{ width: '100%', height: '100%' }}
       />
     );
   } else if (privatePhoto && (photo.isPending || (!failed && !uri))) {
     picture = (
-      <ActivityIndicator accessibilityLabel="Loading profile picture" color={p['brand-ink']} />
+      <ActivityIndicator
+        accessibilityLabel={getTranslation(language)('accountsUi.loading_profile_picture')}
+        color={p['brand-ink']}
+      />
     );
   } else {
     picture = (
       <Text
-        accessibilityLabel="No profile picture"
+        accessibilityLabel={getTranslation(language)('accountsUi.no_profile_picture')}
         style={[textStyles[size < 112 ? 'metric-md' : 'display-lg'], { color: p['brand-ink'] }]}
       >
         {account.profile.display_name?.slice(0, 1).toUpperCase() || '+'}
@@ -105,10 +111,10 @@ export function ProfileAvatar({ account, preview, size = 112, compact }: Profile
       {privatePhoto && failed && !compact ? (
         <>
           <Text accessibilityRole="alert" style={{ color: p.danger }}>
-            Could not load your picture.
+            {getTranslation(language)('accountsUi.could_not_load_your_picture')}
           </Text>
           <SetupButton
-            title="Retry picture"
+            title={getTranslation(language)('accountsUi.retry_picture')}
             secondary
             onPress={() => {
               void photo.refetch();

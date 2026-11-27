@@ -1,18 +1,21 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable } from 'react-native';
+import { useLanguage } from '@/i18n/Language';
 import { sizes, usePalette } from '@/theme/tokens';
 
 export function ProfileBack({
   onPress,
-  label = 'Back to profile',
+  label,
   disabled = false,
 }: Readonly<{ onPress: () => void; label?: string; disabled?: boolean }>) {
   const p = usePalette();
+  const language = useLanguage();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={label ?? getTranslation(language)('accountsUi.back_to_profile')}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}

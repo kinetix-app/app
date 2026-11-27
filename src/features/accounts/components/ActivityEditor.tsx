@@ -1,7 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '@/i18n/Language';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import { apiClient } from '@/services/apiClient';
@@ -25,6 +27,7 @@ export function ActivityEditor({
   active?: boolean;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const form = useForm<ProfileFormValues>({ defaultValues: profileDefaults(account) });
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState('');
@@ -47,7 +50,9 @@ export function ActivityEditor({
       const updated = await updateProfile(apiClient, { activity_level: activity });
       onSaved(updated);
     } catch {
-      setFailure('Could not save your activity. Please try again.');
+      setFailure(
+        getTranslation(language)('accountsUi.could_not_save_your_activity_please_try_again'),
+      );
     } finally {
       busy.current = false;
       setPending(false);
@@ -60,13 +65,13 @@ export function ActivityEditor({
     >
       <ScrollView contentContainerStyle={s.content}>
         <ScreenHeader
-          title="Usual activity"
+          title={getTranslation(language)('accountsUi.usual_activity')}
           leading={
             <ProfileBack
               onPress={() => {
                 if (!pending) onCancel();
               }}
-              label="Back to profile"
+              label={getTranslation(language)('accountsUi.back_to_profile')}
             />
           }
         />
@@ -81,13 +86,22 @@ export function ActivityEditor({
           </Text>
         ) : null}
         <SetupButton
-          title={pending ? 'Saving…' : 'Save activity'}
+          title={
+            pending
+              ? getTranslation(language)('accountsUi.saving')
+              : getTranslation(language)('accountsUi.save_activity')
+          }
           disabled={pending}
           onPress={() => {
             void save();
           }}
         />
-        <SetupButton title="Cancel" secondary disabled={pending} onPress={onCancel} />
+        <SetupButton
+          title={getTranslation(language)('accountsUi.cancel')}
+          secondary
+          disabled={pending}
+          onPress={onCancel}
+        />
       </ScrollView>
     </SafeAreaView>
   );

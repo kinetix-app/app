@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import { PersonAvatar } from '@/features/friends/components/PersonAvatar';
@@ -14,6 +16,7 @@ export function SharedWorkoutDetail({
   post,
   onBack,
 }: Readonly<{ accountId: number; post: Post; onBack: () => void }>) {
+  const language = useLanguage();
   const detail = useQuery({
     queryKey: ['feed', accountId, 'workout', post.id],
     queryFn: ({ signal }) => feedApi.workout(post.id, signal),
@@ -29,7 +32,7 @@ export function SharedWorkoutDetail({
       error={detail.error}
       onRetry={() => void detail.refetch()}
       onBack={onBack}
-      backLabel="Back to feed"
+      backLabel={getTranslation(language)('feed.backToFeed')}
     />
   );
 }

@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import React, { useEffect } from 'react';
 import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useTranslation } from '@/i18n/Language';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
 export function Toast({
@@ -10,6 +11,7 @@ export function Toast({
   duration = 4000,
 }: Readonly<{ message: string; onDismiss: () => void; duration?: number }>) {
   const p = usePalette();
+  const t = useTranslation();
   useEffect(() => {
     if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(message);
     const timeout = setTimeout(onDismiss, duration);
@@ -28,7 +30,7 @@ export function Toast({
           {message}
         </Text>
         <Pressable
-          accessibilityLabel="Dismiss notification"
+          accessibilityLabel={t('accountsUi.dismiss_notification')}
           accessibilityRole="button"
           onPress={onDismiss}
           style={styles.dismiss}

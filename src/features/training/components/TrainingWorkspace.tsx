@@ -1,3 +1,4 @@
+import { getTranslation } from '@/i18n/catalog';
 import type { ViewInstance } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -13,6 +14,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { ScreenHeader, screenContentStyle } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
+import { useLanguage } from '@/i18n/Language';
 import { trainingApi } from '../api';
 import { useSession } from './SessionProvider';
 import { RoutineActionsMenu } from './RoutineActionsMenu';
@@ -31,6 +33,7 @@ export function TrainingWorkspace({
   onEditingChange?: (editing: boolean) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const session = useSession();
   const cache = useQueryClient();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
@@ -96,7 +99,7 @@ export function TrainingWorkspace({
     try {
       let asset: ImagePickerAsset | undefined;
       if (mode === 'choose') {
-        const selected = await pickRoutinePicture();
+        const selected = await pickRoutinePicture(language);
         if (!alive.current || !selected) return;
         if ('error' in selected) {
           setCoverError(selected.error);
@@ -110,7 +113,8 @@ export function TrainingWorkspace({
       setFailedCover(asset ? { id: actions.item.id, asset } : null);
       await coverMutation.mutateAsync({ id: actions.item.id, asset });
     } catch {
-      if (alive.current) setCoverError('Could not update the cover. Try again.');
+      if (alive.current)
+        setCoverError(getTranslation(language)('training.couldNotUpdateTheCoverTryAgain_d478b5'));
     } finally {
       coverBusy.current = false;
       if (alive.current) setCoverWorking(false);
@@ -289,8 +293,8 @@ export function TrainingWorkspace({
           canStart={session.ready && !session.storageError && !session.draft && starting === null}
           startHint={
             session.draft
-              ? 'Finish or discard your ongoing workout to start another.'
-              : 'Workout starting is unavailable. Try again when synchronization finishes.'
+              ? getTranslation(language)('training.finishOrDiscardYourOngoingWorkoutTo_3f209e')
+              : getTranslation(language)('training.workoutStartingIsUnavailableTryAgainWhen_88ee0a')
           }
           canDelete={
             session.ready &&
@@ -357,23 +361,26 @@ function RoutineListHeader({
   onBackToRoutines,
 }: RoutineListHeaderProps) {
   const p = usePalette();
+  const language = useLanguage();
   const editingRoutine = typeof editing === 'number';
   return (
     <View style={ui.gap}>
-      <ScreenHeader title="Workouts">
+      <ScreenHeader title={getTranslation(language)('training.workouts_263b45')}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="New routine"
+          accessibilityLabel={getTranslation(language)('training.newRoutine_128760')}
           onPress={onNewRoutine}
           style={({ pressed }) => [styles.create, { opacity: pressed ? 0.55 : 1 }]}
         >
           <Feather name="plus" size={24} color={p['brand-ink']} />
-          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>Routine</Text>
+          <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
+            {getTranslation(language)('training.routine_ce7cd4')}
+          </Text>
         </Pressable>
       </ScreenHeader>
       <TextField
-        accessibilityLabel="Search routines"
-        placeholder="Search by name"
+        accessibilityLabel={getTranslation(language)('training.searchRoutines_240da1')}
+        placeholder={getTranslation(language)('training.searchByName_27f10c')}
         maxLength={150}
         value={search}
         onChangeText={onSearchChange}
@@ -381,7 +388,7 @@ function RoutineListHeader({
       />
       {saved ? (
         <Text accessibilityRole="alert" style={{ color: p.success }}>
-          Routine saved.
+          {getTranslation(language)('training.routineSaved_9682dd')}
         </Text>
       ) : null}
       {listPending || (editingRoutine && detailPending) ? <Loading /> : null}
@@ -389,7 +396,11 @@ function RoutineListHeader({
       {editingRoutine && detailError ? (
         <View style={ui.gap}>
           <Failure error={detailError} retry={onRetryDetail} />
-          <IconButton icon="arrow-left" label="Back to routines" onPress={onBackToRoutines} />
+          <IconButton
+            icon="arrow-left"
+            label={getTranslation(language)('training.backToRoutines_ca811d')}
+            onPress={onBackToRoutines}
+          />
         </View>
       ) : null}
     </View>
@@ -406,6 +417,7 @@ function EmptyRoutineState({
   onCreate: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   if (!visible) return null;
   return (
     <View style={[ui.card, styles.empty, { backgroundColor: p['surface-200'] }]}>
@@ -413,17 +425,19 @@ function EmptyRoutineState({
         <Feather name={name ? 'search' : 'layers'} size={28} color={p['brand-ink']} />
       </View>
       <Text style={[ui.heading, { color: p.ink, textAlign: 'center' }]}>
-        {name ? 'No routines found' : 'Build your first routine'}
+        {name
+          ? getTranslation(language)('training.noRoutinesFound_29995e')
+          : getTranslation(language)('training.buildYourFirstRoutine_68ab46')}
       </Text>
       <Text style={[textStyles.body, { color: p['ink-muted'], textAlign: 'center' }]}>
         {name
-          ? 'Try a different name to find your routine.'
-          : 'Choose your exercises, plan your sets and make your next workout easier to start.'}
+          ? getTranslation(language)('training.tryADifferentNameToFindYour_e21b06')
+          : getTranslation(language)('training.chooseYourExercisesPlanYourSetsAnd_c4af52')}
       </Text>
       {!name ? (
         <Button
-          title="Create routine"
-          accessibilityLabel="Create routine"
+          title={getTranslation(language)('training.createRoutine_564806')}
+          accessibilityLabel={getTranslation(language)('training.createRoutine_564806')}
           icon="plus"
           tone="positive"
           onPress={onCreate}
@@ -457,13 +471,22 @@ function RoutineRow({
   onRetry: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const trigger = useRef<ViewInstance>(null);
   const performed = item.last_performed_at ? new Date(item.last_performed_at) : null;
+  const locale = es ? 'es' : undefined;
   const date = performed
-    ? performed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Not trained yet';
-  const count = `${item.exercise_count} ${item.exercise_count === 1 ? 'exercise' : 'exercises'}`;
-  const dateLabel = performed ? `Last trained ${performed.toLocaleString()}` : date;
+    ? performed.toLocaleDateString(locale, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : getTranslation(language)('training.notTrainedYet_c16654');
+  const count = `${item.exercise_count} ${item.exercise_count === 1 ? getTranslation(language)('training.exercise_48600f') : getTranslation(language)('training.exercises_280e85')}`;
+  let dateLabel = date;
+  if (performed && es) dateLabel = `Último entrenamiento: ${performed.toLocaleString(language)}`;
+  else if (performed) dateLabel = `Last trained ${performed.toLocaleString()}`;
   return (
     <View style={[ui.card, styles.routineCard, { backgroundColor: p['surface-200'] }]}>
       <View style={styles.cardMain}>
@@ -475,8 +498,10 @@ function RoutineRow({
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Edit ${item.name}`}
-          accessibilityHint="Open routine details and edit"
+          accessibilityLabel={getTranslation(language)('dynamicMessages.edit_a899b6', {
+            value1: item.name,
+          })}
+          accessibilityHint={getTranslation(language)('training.openRoutineDetailsAndEdit_c708fd')}
           accessibilityState={{ disabled: false }}
           onPress={onEdit}
           style={({ pressed }) => [styles.routineDetails, { opacity: pressed ? 0.55 : 1 }]}
@@ -499,9 +524,13 @@ function RoutineRow({
         <Pressable
           ref={trigger}
           accessibilityRole="button"
-          accessibilityLabel={`Routine actions for ${item.name}`}
+          accessibilityLabel={getTranslation(language)('dynamicMessages.routineActionsFor_b301ae', {
+            value1: item.name,
+          })}
           accessibilityState={{ expanded: actionsOpen }}
-          accessibilityHint="Open train, edit, cover and delete options"
+          accessibilityHint={getTranslation(language)(
+            'training.openTrainEditCoverAndDeleteOptions_eaf126',
+          )}
           onPress={() => onActions(() => trigger.current?.focus())}
           style={({ pressed }) => [styles.actions, { opacity: pressed ? 0.55 : 1 }]}
         >
@@ -529,8 +558,10 @@ function RoutineRow({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Start ${item.name}`}
-          accessibilityHint="Train this routine"
+          accessibilityLabel={getTranslation(language)('dynamicMessages.start_794ce2', {
+            value1: item.name,
+          })}
+          accessibilityHint={getTranslation(language)('training.trainThisRoutine_f90cb0')}
           accessibilityState={{ disabled: !canStart || starting, busy: starting }}
           disabled={!canStart || starting}
           onPress={onStart}
@@ -596,8 +627,18 @@ function RoutineListFooter({
   loading,
   onMore,
 }: Readonly<{ visible: boolean; loading: boolean; onMore: () => void }>) {
+  const language = useLanguage();
   if (!visible) return null;
   return (
-    <Button title={loading ? 'Loading…' : 'More'} disabled={loading} onPress={onMore} secondary />
+    <Button
+      title={
+        loading
+          ? getTranslation(language)('training.loading_ab84a2')
+          : getTranslation(language)('training.more_3efa6b')
+      }
+      disabled={loading}
+      onPress={onMore}
+      secondary
+    />
   );
 }

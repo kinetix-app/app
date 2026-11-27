@@ -1,4 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React, { useEffect, useRef, useState } from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { cardioInput, cardioValues, type CardioValues } from '../cardio';
 import { useForm, Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
@@ -71,6 +73,8 @@ function RoutineExerciseEditor({
   >
 >) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const unit: WeightUnit = 'kg';
   const exercise = useWatch({ control, name: `exercises.${index}.exercise` });
   const cardio = exercise.activity_type === 'cardio';
@@ -94,14 +98,16 @@ function RoutineExerciseEditor({
                 : validWeight(value.weight, value.unit, 2) &&
                   /^\d+$/.test(value.reps) &&
                   Number(value.reps) >= 1 &&
-                  Number(value.reps) <= 2147483647) || 'Enter valid set values.',
+                  Number(value.reps) <= 2147483647) ||
+              getTranslation(language)('training.enterValidSetValues_af628f'),
           }}
           render={({ field, fieldState }) => (
             <View style={ui.gap}>
               {cardio && field.value.legacy ? (
                 <Text style={{ color: p['ink-muted'] }}>
-                  Previous default: {field.value.weight || '—'} kg · {field.value.reps || '—'} reps.
-                  Enter distance and time to replace it.
+                  {es
+                    ? `Plan anterior: ${field.value.weight || '—'} kg · ${field.value.reps || '—'} rep. Introduce la distancia y el tiempo para sustituirlo.`
+                    : `Previous default: ${field.value.weight || '—'} kg · ${field.value.reps || '—'} reps. Enter distance and time to replace it.`}
                 </Text>
               ) : null}
               <SetFields
@@ -116,7 +122,11 @@ function RoutineExerciseEditor({
                 unit={unit}
                 decimals={2}
                 number={i + 1}
-                label={`Exercise ${index + 1} set ${i + 1}`}
+                label={
+                  es
+                    ? `Ejercicio ${index + 1}, serie ${i + 1}`
+                    : `Exercise ${index + 1} set ${i + 1}`
+                }
                 disabled={card.disabled}
                 onChange={(next) =>
                   field.onChange({
@@ -161,6 +171,8 @@ export function RoutineEditor({
   onClose: () => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
@@ -255,7 +267,9 @@ export function RoutineEditor({
       if (issue && typeof issue.path[1] === 'number')
         setEditingSlot(fields[issue.path[1]]?.id ?? null);
       setError('root', {
-        message: parsed.error.issues[0]?.message ?? 'Check the routine fields.',
+        message:
+          parsed.error.issues[0]?.message ??
+          getTranslation(language)('training.checkTheRoutineFields_d1d993'),
       });
       return;
     }
@@ -274,16 +288,18 @@ export function RoutineEditor({
         <View style={[ui.row, { padding: spacing['space-4'] }]}>
           <IconButton
             icon="arrow-left"
-            label="Back to routines"
+            label={getTranslation(language)('training.backToRoutines_ca811d')}
             onPress={close}
             disabled={disabled}
           />
           <Text accessibilityRole="header" style={[ui.heading, { flex: 1, color: p.ink }]}>
-            {routine ? 'Edit routine' : 'New routine'}
+            {routine
+              ? getTranslation(language)('training.editRoutine_47c2f4')
+              : getTranslation(language)('training.newRoutine_128760')}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save routine"
+            accessibilityLabel={getTranslation(language)('training.saveRoutine_043f48')}
             accessibilityState={{ disabled }}
             disabled={disabled}
             onPress={() => void submit()}
@@ -296,7 +312,9 @@ export function RoutineEditor({
             })}
           >
             <Text style={[textStyles.label, { color: p['brand-ink'] }]}>
-              {save.isPending ? 'Saving…' : 'Save'}
+              {save.isPending
+                ? getTranslation(language)('training.saving_444c23')
+                : getTranslation(language)('training.save_5bd05a')}
             </Text>
           </Pressable>
         </View>
@@ -322,17 +340,19 @@ export function RoutineEditor({
                 control={control}
                 name="name"
                 rules={{
-                  validate: (value) => value.trim().length > 0 || 'Enter a routine name.',
+                  validate: (value) =>
+                    value.trim().length > 0 ||
+                    getTranslation(language)('training.enterARoutineName_0a0181'),
                   maxLength: {
                     value: 150,
-                    message: 'Use at most 150 characters.',
+                    message: getTranslation(language)('training.useAtMost150Characters_12750f'),
                   },
                 }}
                 render={({ field, fieldState }) => (
                   <>
                     <TextField
-                      accessibilityLabel="Routine name"
-                      placeholder="Name your routine"
+                      accessibilityLabel={getTranslation(language)('training.routineName_ccb21b')}
+                      placeholder={getTranslation(language)('training.nameYourRoutine_078a84')}
                       maxLength={150}
                       inputStyle={textStyles['title-lg']}
                       containerStyle={{
@@ -357,26 +377,41 @@ export function RoutineEditor({
               />
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={notesOpen ? 'Hide routine notes' : 'Add routine notes'}
+                accessibilityLabel={
+                  notesOpen
+                    ? getTranslation(language)('training.hideRoutineNotes_95c76f')
+                    : getTranslation(language)('training.addRoutineNotes_9d28ec')
+                }
                 accessibilityState={{ expanded: notesOpen, disabled }}
                 disabled={disabled}
                 onPress={() => setNotesOpen(!notesOpen)}
                 style={{ minHeight: sizes['tap-min'], justifyContent: 'center' }}
               >
                 <Text style={[textStyles.label, { color: p['ink-muted'] }]}>
-                  {notesOpen ? 'Notes (optional) −' : '+ Add notes'}
+                  {notesOpen
+                    ? getTranslation(language)('training.notesOptional_be0f4c')
+                    : getTranslation(language)('training.addNotes_a2d3d1')}
                 </Text>
               </Pressable>
               {notesOpen ? (
                 <Controller
                   control={control}
                   name="notes"
-                  rules={{ maxLength: { value: 1000, message: 'Use at most 1000 characters.' } }}
+                  rules={{
+                    maxLength: {
+                      value: 1000,
+                      message: getTranslation(language)('training.useAtMost1000Characters_732c2d'),
+                    },
+                  }}
                   render={({ field, fieldState }) => (
                     <View style={ui.gap}>
                       <TextField
-                        accessibilityLabel="Routine notes"
-                        placeholder="Focus, reminders or a plan for this routine…"
+                        accessibilityLabel={getTranslation(language)(
+                          'training.routineNotes_580086',
+                        )}
+                        placeholder={getTranslation(language)(
+                          'training.focusRemindersOrAPlanForThis_430fdd',
+                        )}
                         value={field.value}
                         onChangeText={field.onChange}
                         onBlur={field.onBlur}
@@ -427,7 +462,9 @@ export function RoutineEditor({
                   remove(index);
                   if (editingSlot === slot.id) setEditingSlot(null);
                 }}
-                addSetLabel={`Add set to exercise ${index + 1}`}
+                addSetLabel={
+                  es ? `Añadir serie al ejercicio ${index + 1}` : `Add set to exercise ${index + 1}`
+                }
                 disabled={disabled}
                 onSets={() => setEditingSlot(editingSlot === slot.id ? null : slot.id)}
                 expanded={editingSlot === slot.id}
@@ -438,7 +475,7 @@ export function RoutineEditor({
           ListFooterComponent={
             <View style={ui.gap}>
               <Button
-                title="Add exercise"
+                title={getTranslation(language)('training.addExercise_89dbcf')}
                 onPress={() => setPicker(true)}
                 disabled={disabled || fields.length >= 500}
                 tone="positive"
@@ -504,11 +541,21 @@ export function RoutineEditor({
             ]}
           >
             <Text accessibilityRole="alert" style={[ui.heading, { color: p.ink }]}>
-              Discard your unsaved changes?
+              {getTranslation(language)('training.discardYourUnsavedChanges_ec01af')}
             </Text>
-            <Text style={{ color: p['ink-muted'] }}>Your changes have not been saved.</Text>
-            <Button title="Keep editing" onPress={() => setDiscard(false)} secondary />
-            <Button title="Discard" onPress={onClose} tone="danger" />
+            <Text style={{ color: p['ink-muted'] }}>
+              {getTranslation(language)('training.yourChangesHaveNotBeenSaved_5fa8fc')}
+            </Text>
+            <Button
+              title={getTranslation(language)('training.keepEditing_ba7ea4')}
+              onPress={() => setDiscard(false)}
+              secondary
+            />
+            <Button
+              title={getTranslation(language)('training.discard_671592')}
+              onPress={onClose}
+              tone="danger"
+            />
           </View>
         </View>
       </Modal>

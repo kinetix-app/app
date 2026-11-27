@@ -1,4 +1,6 @@
+import { getTranslation } from '@/i18n/catalog';
 import React from 'react';
+import { useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Pressable, Text, View } from 'react-native';
 import { spacing, usePalette } from '@/theme/tokens';
@@ -17,6 +19,7 @@ export function ExerciseHistory({
   onOpenWorkout: (id: number) => void;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
   const history = useInfiniteQuery({
     queryKey: ['training', accountId, 'exercise-history', exerciseId, 'kg'],
     initialPageParam: 0,
@@ -31,7 +34,9 @@ export function ExerciseHistory({
   return (
     <View style={ui.gap}>
       {items.length === 0 ? (
-        <Text style={{ color: p['ink-muted'] }}>No previous sessions for this exercise.</Text>
+        <Text style={{ color: p['ink-muted'] }}>
+          {getTranslation(language)('training.noPreviousSessionsForThisExercise_652a75')}
+        </Text>
       ) : null}
       {items.map((item) => (
         <HistoryCard key={item.session_id} item={item} onOpenWorkout={onOpenWorkout} />
@@ -46,7 +51,9 @@ export function ExerciseHistory({
           onPress={() => void history.fetchNextPage()}
           style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
         >
-          <Text style={{ color: p.brand }}>Load more history</Text>
+          <Text style={{ color: p.brand }}>
+            {getTranslation(language)('training.loadMoreHistory_8923d1')}
+          </Text>
         </Pressable>
       ) : null}
     </View>
@@ -58,11 +65,15 @@ function HistoryCard({
   onOpenWorkout,
 }: Readonly<{ item: ExerciseHistoryItem; onOpenWorkout: (id: number) => void }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
   const sets = keyedSets(item.sets);
   return (
     <View style={[ui.card, { backgroundColor: p['surface-200'], gap: spacing['space-1'] }]}>
       <Text style={{ color: p.ink, fontWeight: '700' }}>{item.name}</Text>
-      <Text style={{ color: p['ink-muted'] }}>{new Date(item.ended_at).toLocaleString()}</Text>
+      <Text style={{ color: p['ink-muted'] }}>
+        {new Date(item.ended_at).toLocaleString(es ? 'es' : undefined)}
+      </Text>
       {item.sets.length ? (
         sets.map(({ key, measurement }, index) => (
           <Text key={key} style={{ color: p.ink }}>
@@ -70,12 +81,16 @@ function HistoryCard({
           </Text>
         ))
       ) : (
-        <Text style={{ color: p['ink-muted'] }}>No sets recorded.</Text>
+        <Text style={{ color: p['ink-muted'] }}>
+          {getTranslation(language)('training.noSetsRecorded_ab2cd2')}
+        </Text>
       )}
       <Button
-        title="View workout"
+        title={getTranslation(language)('training.viewWorkout_79f257')}
         secondary
-        accessibilityLabel={`View workout ${item.session_id}`}
+        accessibilityLabel={getTranslation(language)('dynamicMessages.viewWorkout_d0de35', {
+          value1: item.session_id,
+        })}
         onPress={() => onOpenWorkout(item.session_id)}
       />
     </View>

@@ -1,3 +1,5 @@
+import { getTranslation } from '@/i18n/catalog';
+import { useLanguage } from '@/i18n/Language';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
@@ -27,8 +29,20 @@ export function LeagueScoreHistory({
   backTo?: 'Standings' | 'League information';
   onBack: () => void;
 }>) {
+  const language = useLanguage();
+
   const p = usePalette();
-  const name = member.display_name ?? 'Member';
+  const name = member.display_name ?? getTranslation(language)('socialAdditional.member_10100e');
+  const backTitle = getTranslation(language)(
+    backTo === 'Standings'
+      ? 'socialAdditional.standingsBackTitle'
+      : 'socialAdditional.informationBackTitle',
+  );
+  const backAction = getTranslation(language)(
+    backTo === 'Standings'
+      ? 'socialAdditional.standingsBackAction'
+      : 'socialAdditional.informationBackAction',
+  );
   const [workoutId, setWorkoutId] = useState<number | null>(null);
   const ownHistory = member.user_id === accountId;
   const history = useInfiniteQuery({
@@ -45,9 +59,19 @@ export function LeagueScoreHistory({
   };
   function renderPagination() {
     if (history.isFetchingNextPage)
-      return <ActivityIndicator color={p.brand} accessibilityLabel="Loading more scores" />;
+      return (
+        <ActivityIndicator
+          color={p.brand}
+          accessibilityLabel={getTranslation(language)('socialAdditional.loadingMoreScores_97cdfb')}
+        />
+      );
     if (history.isFetchNextPageError)
-      return <LeagueAction label="Retry more scores" onPress={following} />;
+      return (
+        <LeagueAction
+          label={getTranslation(language)('socialAdditional.retryMoreScores_31f8a3')}
+          onPress={following}
+        />
+      );
     return null;
   }
 
@@ -71,23 +95,28 @@ export function LeagueScoreHistory({
               title={name}
               picture={member.picture_url}
               member
-              navigationLabel={backTo}
-              backLabel={`Back to ${backTo.toLowerCase()}`}
+              navigationLabel={backTitle}
+              backLabel={backAction}
               onBack={onBack}
             />
             <Text accessibilityRole="header" style={[textStyles['title-lg'], { color: p.ink }]}>
-              Score history
+              {getTranslation(language)('socialAdditional.scoreHistory_556af1')}
             </Text>
             {history.isPending ? (
-              <ActivityIndicator color={p.brand} accessibilityLabel="Loading score history" />
+              <ActivityIndicator
+                color={p.brand}
+                accessibilityLabel={getTranslation(language)(
+                  'socialAdditional.loadingScoreHistory_4c67b5',
+                )}
+              />
             ) : null}
             {history.isError && !history.data ? (
               <>
                 <Text accessibilityRole="alert" style={[textStyles.body, { color: p.danger }]}>
-                  Could not load score history.
+                  {getTranslation(language)('socialAdditional.couldNotLoadScoreHistory_c1012b')}
                 </Text>
                 <LeagueAction
-                  label="Retry score history"
+                  label={getTranslation(language)('socialAdditional.retryScoreHistory_a5facd')}
                   onPress={() => {
                     void history.refetch();
                   }}
@@ -99,7 +128,7 @@ export function LeagueScoreHistory({
         ListEmptyComponent={
           (history.isSuccess ? (
             <Text style={[textStyles.body, { color: p['ink-muted'] }]}>
-              No credited scores yet.
+              {getTranslation(language)('socialAdditional.noCreditedScoresYet_fcf5d9')}
             </Text>
           ) : null) ?? undefined
         }
@@ -124,7 +153,7 @@ export function LeagueScoreHistory({
         <SessionWorkoutDetailModal
           accountId={accountId}
           sessionId={workoutId}
-          backLabel="Back to score history"
+          backLabel={getTranslation(language)('socialAdditional.backToScoreHistory_a3ed5e')}
           onBack={() => setWorkoutId(null)}
         />
       ) : null}

@@ -1,7 +1,9 @@
+import { getTranslation } from '@/i18n/catalog';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage } from '@/i18n/Language';
 import type { MeasurementSystem } from '@/features/accounts/profileForm';
 import { radii, sizes, spacing, textStyles, usePalette } from '@/theme/tokens';
 
@@ -13,7 +15,7 @@ const systems = [
 export function MeasurementSystemSelector({
   value,
   onChange,
-  label = 'Measurement system',
+  label,
   disabled = false,
 }: Readonly<{
   value: MeasurementSystem | null;
@@ -22,17 +24,24 @@ export function MeasurementSystemSelector({
   disabled?: boolean;
 }>) {
   const p = usePalette();
+  const language = useLanguage();
+  const es = language === 'es';
 
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel={label} style={styles.group}>
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={label ?? getTranslation(language)('accountsUi.measurement_system')}
+      style={styles.group}
+    >
       {systems.map((system) => {
         const selected = value === system.value;
         return (
           <Pressable
             key={system.value}
             accessibilityRole="radio"
-            accessibilityLabel={system.label}
+            accessibilityLabel={es && system.value === 'metric' ? 'Métrico' : system.label}
             accessibilityState={{ checked: selected, selected, disabled }}
+            aria-checked={selected}
             disabled={disabled}
             onPress={() => onChange(system.value)}
             style={({ pressed }) => [
@@ -45,7 +54,7 @@ export function MeasurementSystemSelector({
             ]}
           >
             <Text style={[styles.label, { color: selected ? p['brand-ink'] : p.ink }]}>
-              {system.label}
+              {es && system.value === 'metric' ? 'Métrico' : system.label}
             </Text>
             <View style={styles.indicator} aria-hidden>
               {selected ? <Feather name="check" size={16} color={p['brand-ink']} /> : null}
