@@ -540,6 +540,29 @@ test('the Feed composer hides and restores bottom navigation', async () => {
   expect(await screen.findByRole('tab', { name: 'Feed', selected: true })).toBeTruthy();
 });
 
+test('changing profile language updates mounted navigation and screens immediately', async () => {
+  const spanishAccount = {
+    ...completeAccount,
+    profile: { ...completeAccount.profile, language: 'es' as const },
+  };
+  jest.mocked(updateProfile).mockResolvedValueOnce(spanishAccount);
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('No posts yet', undefined, { timeout: 10000 });
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
+  fireEvent.press(screen.getByText('Edit profile'));
+  fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+  expect(screen.getByText('Editar perfil')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar perfil' }));
+  await screen.findByRole('button', { name: 'Editar perfil' });
+  expect(screen.getByRole('tab', { name: 'Inicio' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Entreno' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Nutrición' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Liga' })).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Volver a inicio' }));
+  expect(await screen.findByRole('header', { name: 'Inicio' })).toBeTruthy();
+  expect(screen.getByText('Aún no hay publicaciones')).toBeTruthy();
+});
+
 test('a workout from Training history can be shared and opens the Feed composer', async () => {
   const finished = {
     id: 5,
@@ -582,4 +605,27 @@ test('a workout from Training history can be shared and opens the Feed composer'
   ).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Back to feed' }));
   expect(await screen.findByRole('tab', { name: 'Feed', selected: true })).toBeTruthy();
+});
+
+test('changing profile language updates mounted navigation and screens immediately', async () => {
+  const spanishAccount = {
+    ...completeAccount,
+    profile: { ...completeAccount.profile, language: 'es' as const },
+  };
+  jest.mocked(updateProfile).mockResolvedValueOnce(spanishAccount);
+  render(<HomeScreen accountId={1} onSignOut={jest.fn()} />);
+  await screen.findByText('No posts yet', undefined, { timeout: 10000 });
+  fireEvent.press(screen.getByRole('button', { name: 'Open profile' }));
+  fireEvent.press(screen.getByText('Edit profile'));
+  fireEvent.press(screen.getByRole('radio', { name: 'Español' }));
+  expect(screen.getByText('Editar perfil')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Guardar perfil' }));
+  await screen.findByRole('button', { name: 'Editar perfil' });
+  expect(screen.getByRole('tab', { name: 'Inicio' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Entreno' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Nutrición' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Liga' })).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Volver a inicio' }));
+  expect(await screen.findByRole('header', { name: 'Inicio' })).toBeTruthy();
+  expect(screen.getByText('Aún no hay publicaciones')).toBeTruthy();
 });

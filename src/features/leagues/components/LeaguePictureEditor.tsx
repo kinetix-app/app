@@ -77,7 +77,7 @@ export function LeaguePictureEditor({
           <Text style={[textStyles['body-sm'], { color: p['ink-muted'] }]}>
             {busy
               ? getTranslation(language)('socialAdditional.openingPhotos_6e286d')
-              : 'JPEG, PNG or WebP · up to 5 MB'}
+              : getTranslation(language)('accountsUi.jpeg_png_or_webp_up_to_5_mb')}
           </Text>
         </View>
         {hasPicture ? (

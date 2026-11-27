@@ -381,7 +381,6 @@ function RoutineCoverActions({
   const language = useLanguage();
   return (
     <>
-      {' '}
       <View
         style={{
           backgroundColor: p['surface-300'],
@@ -391,7 +390,10 @@ function RoutineCoverActions({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${hasCover ? 'Change' : 'Add'} cover for ${name}`}
+          accessibilityLabel={getTranslation(language)(
+            hasCover ? 'dynamicMessages.changeCoverFor' : 'dynamicMessages.addCoverFor',
+            { value1: name },
+          )}
           accessibilityState={{ disabled: busy, busy: coverPending }}
           disabled={busy}
           onPress={onChooseCover}

@@ -321,7 +321,7 @@ function FeedHeader({
   const p = usePalette();
   return (
     <View style={ui.gap}>
-      <ScreenHeader title="Feed">
+      <ScreenHeader title={getTranslation(language)('navigation.home')}>
         <View style={ui.row}>
           <IconButton
             icon={<Ionicons name="create-outline" size={24} color={p.ink} />}

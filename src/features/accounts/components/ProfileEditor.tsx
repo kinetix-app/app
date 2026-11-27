@@ -715,7 +715,7 @@ export function ProfileEditor({
     );
     if (!issues.length) setStep((value) => value + 1);
   }
-  const [failure, setFailure] = useState('');
+  const [failure, setFailure] = useState(false);
   const busy = useRef(false);
   async function save() {
     await handleSubmit(async (raw) => {
@@ -725,7 +725,7 @@ export function ProfileEditor({
       if (!value?.measurement_system) return;
       busy.current = true;
       setPending(true);
-      setFailure('');
+      setFailure(false);
       try {
         await applyPictureDraft(photoDraft, appliedPhoto, setPhotoAccount);
         const result = await updateProfile(apiClient, {
@@ -740,9 +740,7 @@ export function ProfileEditor({
         });
         onSaved(result);
       } catch {
-        setFailure(
-          'Could not save your profile. Your details and picture choice are kept. Try again.',
-        );
+        setFailure(true);
       } finally {
         busy.current = false;
         setPending(false);
@@ -848,9 +846,7 @@ export function ProfileEditor({
           </View>
           {failure ? (
             <Text accessibilityRole="alert" style={{ color: p.danger }}>
-              {es
-                ? 'No se pudo guardar tu perfil. Conservamos tus datos y la foto elegida. Inténtalo de nuevo.'
-                : failure}
+              {getTranslation(language)('accountsUi.could_not_save_your_profile')}
             </Text>
           ) : null}
           <SetupButton
@@ -962,13 +958,12 @@ function ProfileEditForm({
   errors: FieldErrors<ProfileFormValues>;
   form: ProfileFormApi;
   unit: ProfileFormValues['measurement_system'];
-  failure: string;
+  failure: boolean;
   onBack?: () => void;
   onSave: () => void;
 }>) {
   const p = usePalette();
   const language = useLanguage();
-  const es = language === 'es';
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
@@ -1046,9 +1041,7 @@ function ProfileEditForm({
           <ActivityFields form={form} disabled={disabled} error={errors.activity_level?.message} />
           {failure ? (
             <Text accessibilityRole="alert" style={[textStyles['body-sm'], { color: p.danger }]}>
-              {es
-                ? 'No se pudo guardar tu perfil. Conservamos tus datos y la foto elegida. Inténtalo de nuevo.'
-                : failure}
+              {getTranslation(language)('accountsUi.could_not_save_your_profile')}
             </Text>
           ) : null}
         </ScrollView>
